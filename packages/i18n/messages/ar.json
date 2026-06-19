@@ -1,0 +1,50 @@
+{
+  "common": {
+    "portalName": "العبور الجديد",
+    "brokerageName": "الصواري",
+    "language": "اللغة",
+    "arabic": "العربية",
+    "english": "English",
+    "appearance": "المظهر",
+    "themeLight": "فاتح",
+    "themeDark": "داكن",
+    "themeSystem": "تلقائي",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "loading": "جارٍ التحميل…",
+    "backToSite": "العودة إلى الموقع",
+    "admin": "لوحة التحكم"
+  },
+  "auth": {
+    "signIn": "تسجيل الدخول",
+    "signOut": "تسجيل الخروج",
+    "phone": "رقم الهاتف",
+    "sendCode": "إرسال رمز التحقق",
+    "enterCode": "أدخل رمز التحقق",
+    "verify": "تحقق",
+    "resend": "إعادة الإرسال",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "staffLogin": "دخول الموظفين",
+    "customerLogin": "دخول العملاء",
+    "invalidCredentials": "بيانات الدخول غير صحيحة",
+    "invalidCode": "رمز التحقق غير صحيح",
+    "codeSent": "تم إرسال رمز التحقق إلى هاتفك",
+    "sendFailed": "تعذّر إرسال الرمز، حاول مرة أخرى لاحقًا",
+    "loggedInAs": "مسجّل الدخول باسم",
+    "phonePlaceholder": "01XXXXXXXXX"
+  },
+  "admin": {
+    "dashboard": "الرئيسية",
+    "sections": "الأقسام",
+    "settings": "الإعدادات",
+    "settingsPlaceholder": "صفحة الإعدادات (نموذج أولي)",
+    "noAccess": "لا تملك صلاحية الوصول إلى هذا القسم"
+  },
+  "attachment": {
+    "drop": "اسحب الصورة هنا، أو الصقها، أو اضغط للرفع",
+    "tooLarge": "حجم الصورة يتجاوز 32 ميجابايت",
+    "invalidType": "نوع الملف غير مدعوم",
+    "uploading": "جارٍ الرفع…"
+  }
+}

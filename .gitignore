@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+
+# builds
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# turborepo
+.turbo/
+
+# env files (keep .env.example)
+.env
+.env.*
+!.env.example
+
+# user-generated uploads
+/uploads/
+
+# local dev database (portable MariaDB)
+/.devdb/
+
+# logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Word lock/temp artifacts
+~$*.docx
+~WRL*.tmp

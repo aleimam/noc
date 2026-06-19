@@ -1,0 +1,50 @@
+{
+  "common": {
+    "portalName": "New Obour",
+    "brokerageName": "ALSWARY",
+    "language": "Language",
+    "arabic": "العربية",
+    "english": "English",
+    "appearance": "Appearance",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading…",
+    "backToSite": "Back to site",
+    "admin": "Admin"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "phone": "Phone number",
+    "sendCode": "Send code",
+    "enterCode": "Enter verification code",
+    "verify": "Verify",
+    "resend": "Resend",
+    "email": "Email",
+    "password": "Password",
+    "staffLogin": "Staff login",
+    "customerLogin": "Customer login",
+    "invalidCredentials": "Invalid login details",
+    "invalidCode": "Invalid verification code",
+    "codeSent": "A verification code was sent to your phone",
+    "sendFailed": "Couldn't send the code, please try again later",
+    "loggedInAs": "Signed in as",
+    "phonePlaceholder": "01XXXXXXXXX"
+  },
+  "admin": {
+    "dashboard": "Dashboard",
+    "sections": "Sections",
+    "settings": "Settings",
+    "settingsPlaceholder": "Settings page (placeholder)",
+    "noAccess": "You don't have permission to access this section"
+  },
+  "attachment": {
+    "drop": "Drag an image here, paste, or click to upload",
+    "tooLarge": "Image exceeds the 32 MB limit",
+    "invalidType": "Unsupported file type",
+    "uploading": "Uploading…"
+  }
+}

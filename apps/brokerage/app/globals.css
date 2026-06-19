@@ -1,0 +1,10 @@
+@import 'tailwindcss';
+@import '../../../packages/ui/src/styles/theme.css';
+
+/* Include the shared UI package when scanning for Tailwind classes. */
+@source '../../../packages/ui/src/**/*.{ts,tsx}';
+
+html,
+body {
+  max-width: 100vw;
+}

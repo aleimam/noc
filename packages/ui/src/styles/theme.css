@@ -1,0 +1,44 @@
+/* ALSWARY brand theme — shared by the portal and brokerage apps (Tailwind v4).
+   Imported by each app's globals.css after `@import "tailwindcss"`. */
+
+/* Class-based dark mode (toggled by adding `.dark` on <html>). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Brand palette */
+  --color-navy: #0b1b33;
+  --color-gold: #c9983e;
+  --color-green: #2e7749;
+  --color-soft: #f7f7f5;
+  --color-graphite: #2d2d2d;
+
+  /* Semantic tokens — driven by the CSS vars below, so they switch with `.dark`. */
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+
+  /* Typography (Cairo is injected per-app via next/font as --font-cairo). */
+  --font-sans: var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --bg: #f7f7f5;
+  --fg: #2d2d2d;
+  --primary: #0b1b33;
+  --accent: #c9983e;
+}
+
+.dark {
+  --bg: #0b1b33;
+  --fg: #f7f7f5;
+  --primary: #c9983e;
+  --accent: #c9983e;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+  }
+}

@@ -1,0 +1,193 @@
+// NOC Platform — Prisma schema (MySQL).
+// Foundation models: users (3 types), RBAC, Auth.js (DB sessions), OTP,
+// customer preferences, and polymorphic media attachments.
+// Business-module models (sheets, lands, districts, owners…) are added later.
+
+generator client {
+  provider   = "prisma-client-js"
+  // Native (.node) engine has no Windows/ARM64 build; the binary engine runs the
+  // x64 query-engine.exe as a child process (works under Win11 ARM emulation,
+  // and natively on the Linux server).
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserType {
+  STAFF
+  CUSTOMER
+  PARTNER
+}
+
+enum PermAction {
+  VIEW
+  CREATE
+  UPDATE
+  DELETE
+  MANAGE
+}
+
+enum Appearance {
+  SYSTEM
+  LIGHT
+  DARK
+}
+
+enum Locale {
+  AR
+  EN
+}
+
+model User {
+  id              String    @id @default(cuid())
+  type            UserType
+  email           String?   @unique // staff
+  passwordHash    String? // staff
+  phone           String?   @unique // customer
+  phoneVerifiedAt DateTime?
+  name            String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  roles       UserRole[]
+  directPerms UserPermission[]
+  preference  CustomerPreference?
+  sessions    Session[]
+  accounts    Account[]
+  uploads     Attachment[]        @relation("Uploader")
+
+  @@index([type])
+}
+
+// ───────────────────────────── RBAC ─────────────────────────────
+
+model Role {
+  id          String           @id @default(cuid())
+  key         String           @unique // SUPER_ADMIN, EDITOR, SUPPORT…
+  name        String
+  description String?
+  permissions RolePermission[]
+  users       UserRole[]
+}
+
+model Permission {
+  id      String           @id @default(cuid())
+  section String // 'listings', 'customers', …
+  action  PermAction
+  roles   RolePermission[]
+  users   UserPermission[]
+
+  @@unique([section, action])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model UserPermission {
+  userId       String
+  permissionId String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, permissionId])
+}
+
+// ─────────────────────── Auth.js (DB sessions) ───────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ───────────────────────────── OTP ─────────────────────────────
+
+model OtpCode {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String // never store the plaintext code
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, consumedAt])
+}
+
+// ─────────────────────────── Preferences ───────────────────────────
+
+model CustomerPreference {
+  userId     String     @id
+  locale     Locale     @default(AR)
+  appearance Appearance @default(SYSTEM)
+  updatedAt  DateTime   @updatedAt
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ───────────────────────── Media (polymorphic) ─────────────────────────
+
+model Attachment {
+  id           String   @id @default(cuid())
+  filename     String // stored uuid filename
+  originalName String
+  path         String // public URL, e.g. /uploads/2026/06/uuid.webp
+  mime         String
+  size         Int // bytes (<= 32MB enforced in app)
+  width        Int?
+  height       Int?
+  ownerType    String? // 'Listing', 'HomepageBlock'… (null = draft)
+  ownerId      String?
+  uploaderId   String?
+  uploader     User?    @relation("Uploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([ownerType, ownerId])
+  @@index([uploaderId])
+}

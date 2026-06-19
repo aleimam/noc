@@ -1,0 +1,32 @@
+{
+  "name": "noc",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "npm@11.16.0",
+  "description": "New Obour City platform — free community portal (newobour.com) + ALSWARY real-estate brokerage (alsawarey.com), one shared backend.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "db:generate": "npm run generate -w @noc/db",
+    "db:migrate": "npm run migrate -w @noc/db",
+    "db:seed": "npm run seed -w @noc/db",
+    "db:studio": "npm run studio -w @noc/db",
+    "db:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-db.ps1"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "turbo": "^2.5.4",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
