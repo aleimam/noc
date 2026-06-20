@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `listing` ADD COLUMN `ownerId` VARCHAR(191) NULL,
+ALTER TABLE `Listing` ADD COLUMN `ownerId` VARCHAR(191) NULL,
     ADD COLUMN `ownerName` VARCHAR(191) NULL,
     ADD COLUMN `ownerType` ENUM('OWNER', 'COMPANY', 'BROKER', 'US') NULL,
     ADD COLUMN `showOnBrokerage` BOOLEAN NOT NULL DEFAULT false;

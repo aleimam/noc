@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `listing` ADD COLUMN `neighborhoodId` VARCHAR(191) NULL;
+ALTER TABLE `Listing` ADD COLUMN `neighborhoodId` VARCHAR(191) NULL;
 
 -- CreateTable
 CREATE TABLE `District` (
