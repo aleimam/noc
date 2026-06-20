@@ -35,10 +35,8 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
-# business requirement docs (kept local, not published)
-/NOC00.docx
-/NOC01.docx
+# business requirement & credential docs (kept local, NEVER published)
+*.docx
 
 # Word lock/temp artifacts
-~$*.docx
 ~WRL*.tmp
