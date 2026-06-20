@@ -32,27 +32,23 @@ BROKERAGE_URL="https://alsawarey.com"
 ## 3. Database + build
 ```bash
 npm run db:generate
-npm run -w @noc/db migrate:deploy   # applies committed migrations (no dev prompts)
-npm run db:seed                     # permissions + SUPER_ADMIN + bootstrap staff
+npm run db:migrate:deploy   # applies committed migrations (no dev prompts)
+npm run db:seed:all         # permissions + SUPER_ADMIN + staff, marketplace catalog, districts
 npm run build
 ```
+> `db:seed:all` = base seed + marketplace catalog (property types/attributes) + the 13
+> New Obour districts. Add sample rationing rows with `npm run db:seed:rationing` (test data;
+> skip in production). Re-running any seed is idempotent.
 > Prisma uses `engineType = "binary"` (required for the Windows/ARM64 dev machine; works
 > on Linux too). For a small perf gain on a Linux-only server you may drop that line in
 > `packages/db/prisma/schema.prisma` and re-`db:generate` to use the native library engine.
 
 ## 4. Run both apps with PM2 (ports 3001 / 3002)
-`ecosystem.config.js` at the repo root:
-```js
-module.exports = {
-  apps: [
-    { name: 'noc-portal',    cwd: './apps/portal',    script: 'npm', args: 'run start', env: { NODE_ENV: 'production' } },
-    { name: 'noc-brokerage', cwd: './apps/brokerage', script: 'npm', args: 'run start', env: { NODE_ENV: 'production' } },
-  ],
-};
-```
-(`start` scripts already pin `-p 3001` / `-p 3002`.)
+`ecosystem.config.js` is committed at the repo root (both apps, `NODE_ENV=production`;
+the `start` scripts already pin `-p 3001` / `-p 3002`).
 ```bash
 pm2 start ecosystem.config.js && pm2 save && pm2 startup
+pm2 reload all   # after a new release
 ```
 
 ## 5. Apache virtual hosts (reverse proxy + uploads)

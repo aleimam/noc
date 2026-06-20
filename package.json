@@ -17,7 +17,12 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "db:generate": "npm run generate -w @noc/db",
     "db:migrate": "npm run migrate -w @noc/db",
+    "db:migrate:deploy": "npm run migrate:deploy -w @noc/db",
     "db:seed": "npm run seed -w @noc/db",
+    "db:seed:marketplace": "npm run seed:marketplace -w @noc/db",
+    "db:seed:rationing": "npm run seed:rationing -w @noc/db",
+    "db:seed:lands": "npm run seed:lands -w @noc/db",
+    "db:seed:all": "npm run db:seed && npm run db:seed:marketplace && npm run db:seed:lands",
     "db:studio": "npm run studio -w @noc/db",
     "db:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-db.ps1"
   },
