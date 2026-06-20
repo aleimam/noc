@@ -18,6 +18,7 @@ export const SECTIONS = [
   'districts',
   'owners',
   'commissions',
+  'marketplace',
 ] as const;
 export type Section = (typeof SECTIONS)[number];
 

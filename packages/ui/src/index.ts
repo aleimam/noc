@@ -5,3 +5,5 @@ export { ThemeScript } from './components/ThemeScript';
 export { AdminShell, type AdminNavItem } from './components/AdminShell';
 export { ImageAttachment, type UploadedAttachment } from './components/ImageAttachment';
 export { Lightbox } from './components/Lightbox';
+export { PhotoGallery } from './components/PhotoGallery';
+export { ListingCard } from './components/ListingCard';

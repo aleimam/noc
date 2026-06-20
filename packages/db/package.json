@@ -13,6 +13,8 @@
     "migrate": "dotenv -e ../../.env -- prisma migrate dev",
     "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
     "seed": "dotenv -e ../../.env -- node prisma/seed.mjs",
+    "seed:marketplace": "dotenv -e ../../.env -- node prisma/seed-marketplace.mjs",
+    "seed:rationing": "dotenv -e ../../.env -- node prisma/seed-rationing.mjs",
     "studio": "dotenv -e ../../.env -- prisma studio",
     "reset": "dotenv -e ../../.env -- prisma migrate reset",
     "typecheck": "tsc --noEmit"

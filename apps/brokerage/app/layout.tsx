@@ -11,6 +11,7 @@ const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', di
 export const metadata: Metadata = {
   title: 'ALSWARY — alsawarey.com',
   description: 'الصواري للاستثمار العقاري — ALSWARY real-estate',
+  icons: { icon: '/logo.png' },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

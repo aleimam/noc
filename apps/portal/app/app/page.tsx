@@ -15,6 +15,7 @@ export default async function CustomerHome() {
 
   const ta = await getTranslations('auth');
   const tc = await getTranslations('common');
+  const tm = await getTranslations('mp');
 
   return (
     <main className="mx-auto max-w-2xl space-y-6 p-8">
@@ -26,6 +27,17 @@ export default async function CustomerHome() {
         {ta('loggedInAs')}:{' '}
         <strong dir="ltr">{dbUser?.phone ?? session.user.id}</strong>
       </p>
+      <div className="flex flex-wrap gap-3">
+        <a href="/app/listings/new" className="rounded-md bg-primary px-4 py-2 text-sm text-soft">
+          {tm('newOffer')}
+        </a>
+        <a href="/app/listings" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
+          {tm('myOffers')}
+        </a>
+        <a href="/market" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
+          {tm('title')}
+        </a>
+      </div>
       <a href="/" className="inline-block text-sm text-accent underline">
         {tc('backToSite')}
       </a>

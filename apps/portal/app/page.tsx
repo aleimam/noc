@@ -4,6 +4,8 @@ import { LanguageSwitcher, ThemeToggle } from '@noc/ui';
 export default function Home() {
   const t = useTranslations('common');
   const ta = useTranslations('auth');
+  const tm = useTranslations('mp');
+  const tr = useTranslations('rationing');
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8 text-center">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -11,13 +13,16 @@ export default function Home() {
       <h1 className="text-4xl font-bold text-primary">{t('portalName')}</h1>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <a href="/app" className="rounded-md bg-primary px-4 py-2 text-sm text-soft">
+        <a href="/rationing" className="rounded-md bg-primary px-4 py-2 text-sm text-soft">
+          {tr('title')}
+        </a>
+        <a href="/market" className="rounded-md border border-graphite/25 px-4 py-2 text-sm hover:bg-graphite/10">
+          {tm('browse')}
+        </a>
+        <a href="/app" className="rounded-md border border-graphite/25 px-4 py-2 text-sm hover:bg-graphite/10">
           {ta('customerLogin')}
         </a>
-        <a
-          href="/admin"
-          className="rounded-md border border-graphite/25 px-4 py-2 text-sm hover:bg-graphite/10"
-        >
+        <a href="/admin" className="rounded-md border border-graphite/25 px-4 py-2 text-sm hover:bg-graphite/10">
           {t('admin')}
         </a>
       </div>

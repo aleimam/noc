@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@noc/db": "*",
     "@noc/i18n": "*",
     "@noc/ui": "*",
     "dotenv": "^16.4.7",

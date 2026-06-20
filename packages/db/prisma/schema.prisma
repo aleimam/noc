@@ -59,6 +59,12 @@ model User {
   sessions    Session[]
   accounts    Account[]
   uploads     Attachment[]        @relation("Uploader")
+  listings        Listing[]       @relation("ListingSeller")
+  listingsCreated Listing[]       @relation("ListingCreator")
+  sheetUploads    RationingSheet[]   @relation("SheetUploader")
+  sheetBatches    SheetImportBatch[]
+  inquiries       InquiryRequest[]
+  sheetSearches   SheetSearchLog[]
 
   @@index([type])
 }
@@ -190,4 +196,298 @@ model Attachment {
 
   @@index([ownerType, ownerId])
   @@index([uploaderId])
+}
+
+// ─────────────────────────── Marketplace (EAV) ───────────────────────────
+
+enum ListingStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  REJECTED
+  SOLD
+  ARCHIVED
+}
+
+enum AttrType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  BOOLEAN
+  SELECT
+  MULTI_SELECT
+}
+
+/// Real-estate type (land, apartment, villa…). Bilingual catalog.
+model PropertyType {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  nameAr    String
+  nameEn    String
+  icon      String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attributes PropertyTypeAttribute[]
+  listings   Listing[]
+
+  @@index([isActive, order])
+}
+
+/// A group of attributes (الموقع / المواصفات / المرافق…). Bilingual.
+model AttributeSection {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  nameAr    String
+  nameEn    String
+  icon      String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attributes Attribute[]
+
+  @@index([isActive, order])
+}
+
+/// A single configurable characteristic. Bilingual label + optional unit.
+model Attribute {
+  id         String   @id @default(cuid())
+  key        String   @unique
+  sectionId  String
+  labelAr    String
+  labelEn    String
+  type       AttrType
+  unit       String?
+  helpAr     String?
+  helpEn     String?
+  filterable Boolean  @default(false)
+  order      Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  section   AttributeSection        @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  options   AttributeOption[]
+  typeLinks PropertyTypeAttribute[]
+  values    ListingValue[]
+
+  @@index([sectionId, order])
+  @@index([filterable])
+}
+
+/// Allowed choice for SELECT / MULTI_SELECT. Bilingual.
+model AttributeOption {
+  id          String  @id @default(cuid())
+  attributeId String
+  key         String
+  labelAr     String
+  labelEn     String
+  order       Int     @default(0)
+  isActive    Boolean @default(true)
+
+  attribute Attribute      @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  values    ListingValue[]
+
+  @@unique([attributeId, key])
+  @@index([attributeId, order])
+}
+
+/// type ↔ attribute mapping (which attributes apply to which property types).
+model PropertyTypeAttribute {
+  id             String  @id @default(cuid())
+  propertyTypeId String
+  attributeId    String
+  required       Boolean @default(false)
+  order          Int     @default(0)
+
+  propertyType PropertyType @relation(fields: [propertyTypeId], references: [id], onDelete: Cascade)
+  attribute    Attribute    @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyTypeId, attributeId])
+  @@index([attributeId])
+}
+
+/// A seller's offer. Free text is Arabic; structured values live in ListingValue.
+model Listing {
+  id              String        @id @default(cuid())
+  sellerId        String
+  createdById     String?
+  propertyTypeId  String
+  title           String
+  description     String?       @db.Text
+  price           Decimal?      @db.Decimal(14, 2)
+  priceNote       String?
+  contactPhone    String
+  contactWhatsapp Boolean       @default(true)
+  showOnBrokerage Boolean       @default(false)
+  ownerId         String?
+  ownerName       String?
+  ownerType       OwnerType?
+  status          ListingStatus @default(PENDING)
+  rejectionReason String?
+  publishedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  seller       User           @relation("ListingSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  createdBy    User?          @relation("ListingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  propertyType PropertyType   @relation(fields: [propertyTypeId], references: [id], onDelete: Restrict)
+  owner        Owner?         @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  values       ListingValue[]
+
+  @@index([status, propertyTypeId])
+  @@index([sellerId, status])
+  @@index([showOnBrokerage, status])
+  @@index([publishedAt])
+}
+
+/// EAV value store. MULTI_SELECT = one row per chosen option.
+model ListingValue {
+  id          String   @id @default(cuid())
+  listingId   String
+  attributeId String
+  text        String?  @db.Text
+  number      Decimal? @db.Decimal(14, 2)
+  bool        Boolean?
+  optionId    String?
+
+  listing   Listing          @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  attribute Attribute        @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  option    AttributeOption? @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, attributeId, optionId])
+  @@index([listingId])
+  @@index([attributeId, optionId])
+  @@index([attributeId, number])
+}
+
+enum OwnerType {
+  OWNER
+  COMPANY
+  BROKER
+  US
+}
+
+/// Reusable commercial owners/contacts list (staff-managed) — used for our inventory.
+model Owner {
+  id             String    @id @default(cuid())
+  name           String
+  type           OwnerType @default(OWNER)
+  phone1         String?
+  phone1Whatsapp Boolean   @default(false)
+  phone2         String?
+  phone2Whatsapp Boolean   @default(false)
+  details        String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  listings Listing[]
+
+  @@index([type])
+}
+
+/// Simple key/value app settings (e.g. the central ALSWARY contact number).
+model Setting {
+  key   String @id
+  value String @db.Text
+}
+
+// ─────────────────── Module 1: Rationing Sheets (كشوف التقنين) ───────────────────
+
+enum InquiryKind {
+  FOUND_FOLLOW // customer found their land → wants updates about it
+  NOT_FOUND_WATCH // customer didn't find it → notify when it appears
+}
+
+enum InquiryStatus {
+  OPEN
+  MATCHED
+  CLOSED
+}
+
+/// One row of a government rationing sheet (كشف تقنين). Staff import these from Excel.
+model RationingSheet {
+  id               String    @id @default(cuid())
+  numberInSheet    String? // "Number in Sheet"
+  ownerName        String // "Owner Name"
+  sheetNotes       String?   @db.Text
+  sheetDate        DateTime?
+  paymentDate      DateTime?
+  company          String?
+  originalPiece    String?
+  originalLocation String?
+  originalMember   String?
+  batchId          String?
+  uploadedById     String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  batch      SheetImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  uploadedBy User?             @relation("SheetUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  inquiries  InquiryRequest[]
+
+  @@index([ownerName])
+  @@index([originalPiece])
+  @@index([originalLocation])
+  @@index([company])
+  @@index([batchId])
+}
+
+/// An Excel import run — groups the rows it produced so staff can review/delete a batch.
+model SheetImportBatch {
+  id           String   @id @default(cuid())
+  fileName     String
+  rowCount     Int      @default(0)
+  note         String?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  uploadedBy User?            @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  sheets     RationingSheet[]
+
+  @@index([createdAt])
+}
+
+/// A customer's request to follow a found land OR be notified when their land appears.
+model InquiryRequest {
+  id               String        @id @default(cuid())
+  kind             InquiryKind
+  status           InquiryStatus @default(OPEN)
+  ownerName        String
+  company          String?
+  originalPiece    String?
+  originalLocation String?
+  originalMember   String?
+  phone            String
+  note             String?       @db.Text
+  userId           String?
+  matchedSheetId   String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user         User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  matchedSheet RationingSheet? @relation(fields: [matchedSheetId], references: [id], onDelete: SetNull)
+
+  @@index([status, kind])
+  @@index([phone])
+}
+
+/// Every search performed against the sheets — stored for admin review ("List of Sheets Inquiries").
+model SheetSearchLog {
+  id           String   @id @default(cuid())
+  query        String
+  resultsCount Int      @default(0)
+  matched      Boolean  @default(false)
+  userId       String?
+  phone        String?
+  createdAt    DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([matched])
 }

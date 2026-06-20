@@ -14,7 +14,11 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
 
   // Permission-filtered navigation. The dashboard is always shown; gated links
   // appear only for staff who can view them (more added with later modules).
-  const gated = [{ href: '/admin/settings', label: t('settings'), section: 'settings', action: 'VIEW' }];
+  const gated = [
+    { href: '/admin/marketplace', label: t('marketplace'), section: 'marketplace', action: 'VIEW' },
+    { href: '/admin/rationing', label: t('rationing'), section: 'sheets', action: 'VIEW' },
+    { href: '/admin/settings', label: t('settings'), section: 'settings', action: 'VIEW' },
+  ];
   const nav: AdminNavItem[] = [
     { href: '/admin', label: t('dashboard') },
     ...gated

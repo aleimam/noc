@@ -18,6 +18,7 @@ const SECTIONS = [
   'districts',
   'owners',
   'commissions',
+  'marketplace',
 ];
 const ACTIONS = ['VIEW', 'CREATE', 'UPDATE', 'DELETE', 'MANAGE'];
 
