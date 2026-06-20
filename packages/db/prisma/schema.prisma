@@ -65,6 +65,9 @@ model User {
   sheetBatches    SheetImportBatch[]
   inquiries       InquiryRequest[]
   sheetSearches   SheetSearchLog[]
+  landsCreated    Land[]             @relation("LandCreator")
+  geoUpdates      GeoUpdate[]        @relation("GeoUpdateAuthor")
+  landFollows     LandFollow[]
 
   @@index([type])
 }
@@ -327,6 +330,7 @@ model Listing {
   ownerId         String?
   ownerName       String?
   ownerType       OwnerType?
+  neighborhoodId  String? // optional location link into the geographic database (Module 2)
   status          ListingStatus @default(PENDING)
   rejectionReason String?
   publishedAt     DateTime?
@@ -337,11 +341,14 @@ model Listing {
   createdBy    User?          @relation("ListingCreator", fields: [createdById], references: [id], onDelete: SetNull)
   propertyType PropertyType   @relation(fields: [propertyTypeId], references: [id], onDelete: Restrict)
   owner        Owner?         @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  neighborhood Neighborhood?  @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)
+  sourceLand   Land?          @relation("LandListing")
   values       ListingValue[]
 
   @@index([status, propertyTypeId])
   @@index([sellerId, status])
   @@index([showOnBrokerage, status])
+  @@index([neighborhoodId])
   @@index([publishedAt])
 }
 
@@ -386,6 +393,7 @@ model Owner {
   updatedAt      DateTime  @updatedAt
 
   listings Listing[]
+  lands    Land[]
 
   @@index([type])
 }
@@ -490,4 +498,191 @@ model SheetSearchLog {
 
   @@index([createdAt])
   @@index([matched])
+}
+
+// ─────────────────── Module 2: Lands & community database ───────────────────
+
+enum LandType {
+  SHEETS // تقنين / كشف
+  ALLOCATED // تخصيص
+}
+
+enum LandOwnerKind {
+  BROKER
+  OWNER
+  PERSONAL // ours / not commercial
+}
+
+enum LandStatus {
+  DRAFT // raw find by the sales team (internal)
+  REFINED // redefined + standardized
+  READY // ready to publish
+  PUBLISHED // linked to a marketplace listing
+  ARCHIVED
+}
+
+/// Top-level area of the city (الحي). Bilingual name.
+model District {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  nameAr    String
+  nameEn    String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  neighborhoods Neighborhood[]
+  advantages    Advantage[]
+  updates       GeoUpdate[]
+  follows       LandFollow[]
+
+  @@index([isActive, order])
+}
+
+/// A neighborhood / مجاورة within a district, carrying the doc's metadata.
+model Neighborhood {
+  id            String   @id @default(cuid())
+  districtId    String
+  nameAr        String
+  nameEn        String
+  hasBlocks     Boolean  @default(false)
+  assortedAreas Boolean  @default(false) // "many different areas"
+  areas         Json? // selected area presets, e.g. [209, 276, 350]
+  buildingTypes Json? // ['home','building','villa']
+  mainRoads     Json? // ['R2','R3','ring','ismailia',...]
+  order         Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  district   District     @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  blocks     Block[]
+  lands      Land[]
+  advantages Advantage[]
+  updates    GeoUpdate[]
+  follows    LandFollow[]
+  listings   Listing[]
+
+  @@index([districtId, order])
+  @@index([isActive])
+}
+
+/// An optional block within a neighborhood (بلوك). Codes are language-neutral.
+model Block {
+  id             String   @id @default(cuid())
+  neighborhoodId String
+  name           String
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  neighborhood Neighborhood @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
+  lands        Land[]
+  updates      GeoUpdate[]
+  follows      LandFollow[]
+
+  @@index([neighborhoodId, order])
+}
+
+/// A land / piece record (قطعة) with the internal find→refine→publish workflow.
+model Land {
+  id              String         @id @default(cuid())
+  landType        LandType
+  neighborhoodId  String? // allocated lands use the hierarchy
+  blockId         String?
+  pieceNo         String?
+  sheetLocation   String? // for SHEETS: qadessia/amal/talaee
+  area            Decimal?       @db.Decimal(10, 2) // m²
+  allocationDate  DateTime?
+  utilitiesStatus String?
+  price           Decimal?       @db.Decimal(14, 2)
+  ownerKind       LandOwnerKind?
+  ownerId         String? // set when commercial (BROKER/OWNER)
+  details         String?        @db.Text
+  status          LandStatus     @default(DRAFT)
+  createdById     String?
+  listingId       String?        @unique // link to the published marketplace listing
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  neighborhood Neighborhood? @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)
+  block        Block?        @relation(fields: [blockId], references: [id], onDelete: SetNull)
+  owner        Owner?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy    User?         @relation("LandCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  listing      Listing?      @relation("LandListing", fields: [listingId], references: [id], onDelete: SetNull)
+  updates      GeoUpdate[]
+  follows      LandFollow[]
+
+  @@index([status])
+  @@index([neighborhoodId])
+  @@index([blockId])
+  @@index([landType])
+}
+
+/// A dated update on any geographic level; inherited downward at query time. Photos via Attachment.
+model GeoUpdate {
+  id             String   @id @default(cuid())
+  districtId     String?
+  neighborhoodId String?
+  blockId        String?
+  landId         String?
+  body           String   @db.Text // entered text — kept as-is across locales
+  happenedAt     DateTime @default(now())
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  district     District?     @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  neighborhood Neighborhood? @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
+  block        Block?        @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  land         Land?         @relation(fields: [landId], references: [id], onDelete: Cascade)
+  createdBy    User?         @relation("GeoUpdateAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([districtId, happenedAt])
+  @@index([neighborhoodId, happenedAt])
+  @@index([blockId, happenedAt])
+  @@index([landId, happenedAt])
+}
+
+/// A bilingual advantage / selling point for a district or neighborhood.
+model Advantage {
+  id             String   @id @default(cuid())
+  districtId     String?
+  neighborhoodId String?
+  textAr         String   @db.Text
+  textEn         String?  @db.Text
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  district     District?     @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  neighborhood Neighborhood? @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
+
+  @@index([districtId, order])
+  @@index([neighborhoodId, order])
+}
+
+/// A customer following a land / block / neighborhood / district for updates (free service).
+model LandFollow {
+  id             String   @id @default(cuid())
+  userId         String?
+  name           String?
+  phone          String
+  landId         String?
+  blockId        String?
+  neighborhoodId String?
+  districtId     String?
+  note           String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  land         Land?         @relation(fields: [landId], references: [id], onDelete: Cascade)
+  block        Block?        @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  neighborhood Neighborhood? @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
+  district     District?     @relation(fields: [districtId], references: [id], onDelete: Cascade)
+
+  @@index([phone])
+  @@index([userId])
+  @@index([landId])
+  @@index([neighborhoodId])
 }

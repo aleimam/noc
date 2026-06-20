@@ -15,6 +15,7 @@
     "seed": "dotenv -e ../../.env -- node prisma/seed.mjs",
     "seed:marketplace": "dotenv -e ../../.env -- node prisma/seed-marketplace.mjs",
     "seed:rationing": "dotenv -e ../../.env -- node prisma/seed-rationing.mjs",
+    "seed:lands": "dotenv -e ../../.env -- node prisma/seed-lands.mjs",
     "studio": "dotenv -e ../../.env -- prisma studio",
     "reset": "dotenv -e ../../.env -- prisma migrate reset",
     "typecheck": "tsc --noEmit"
