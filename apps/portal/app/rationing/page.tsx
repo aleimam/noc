@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma, Prisma } from '@noc/db';
 import { RegisterForm } from './RegisterForm';
+import { FoundResults } from './FoundResults';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,41 +62,18 @@ export default async function RationingSearch({
       </form>
 
       {searched && results.length > 0 && (
-        <>
-          <p className="text-sm opacity-70">{t('resultsN', { n: results.length })}</p>
-          <div className="overflow-x-auto rounded-lg border border-graphite/15">
-            <table className="w-full whitespace-nowrap text-sm">
-              <thead>
-                <tr className="opacity-60">
-                  <th className="p-2 text-start">{t('colNumber')}</th>
-                  <th className="p-2 text-start">{t('colOwner')}</th>
-                  <th className="p-2 text-start">{t('colCompany')}</th>
-                  <th className="p-2 text-start">{t('colPiece')}</th>
-                  <th className="p-2 text-start">{t('colLocation')}</th>
-                  <th className="p-2 text-start">{t('colMember')}</th>
-                  <th className="p-2 text-start">{t('colSheetDate')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((s) => (
-                  <tr key={s.id} className="border-t border-graphite/10">
-                    <td className="p-2">{s.numberInSheet ?? '—'}</td>
-                    <td className="p-2 font-medium">{s.ownerName}</td>
-                    <td className="p-2">{s.company ?? '—'}</td>
-                    <td className="p-2">{s.originalPiece ?? '—'}</td>
-                    <td className="p-2">{s.originalLocation ?? '—'}</td>
-                    <td className="p-2">{s.originalMember ?? '—'}</td>
-                    <td className="p-2" dir="ltr">{fmtDate(s.sheetDate, locale)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="rounded-lg border border-green/40 bg-green/5 p-4">
-            <p className="mb-3 font-medium text-primary">{t('foundCta')}</p>
-            <RegisterForm kind="FOUND_FOLLOW" defaultOwnerName={q} />
-          </div>
-        </>
+        <FoundResults
+          rows={results.map((s) => ({
+            id: s.id,
+            numberInSheet: s.numberInSheet,
+            ownerName: s.ownerName,
+            company: s.company,
+            originalPiece: s.originalPiece,
+            originalLocation: s.originalLocation,
+            originalMember: s.originalMember,
+            sheetDateLabel: fmtDate(s.sheetDate, locale),
+          }))}
+        />
       )}
 
       {searched && results.length === 0 && (

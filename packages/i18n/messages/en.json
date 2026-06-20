@@ -197,6 +197,7 @@
     "query": "Query",
     "results": "Results",
     "matched": "Matched",
+    "matchedSheet": "Matched sheet",
     "yes": "Yes",
     "no": "No",
     "noInquiries": "No requests",

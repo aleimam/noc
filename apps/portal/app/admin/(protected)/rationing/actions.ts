@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import ExcelJS from 'exceljs';
 import { auth, requirePermission } from '@noc/auth';
-import { prisma } from '@noc/db';
+import { prisma, Prisma } from '@noc/db';
 
 type Result = { ok: true; count?: number } | { ok: false; error: string };
 
@@ -87,8 +87,27 @@ export async function importSheets(formData: FormData): Promise<Result> {
       data: rows.map((r) => ({ ...r, batchId: batch.id, uploadedById })),
     });
 
+    // Notify-on-match: link any waiting "notify me when it appears" inquiries to a new row.
+    const waiting = await prisma.inquiryRequest.findMany({
+      where: { status: 'OPEN', kind: 'NOT_FOUND_WATCH' },
+      select: { id: true, ownerName: true, originalPiece: true, originalLocation: true },
+    });
+    for (const inq of waiting) {
+      const or: Prisma.RationingSheetWhereInput[] = [{ ownerName: { contains: inq.ownerName } }];
+      if (inq.originalPiece) {
+        const and: Prisma.RationingSheetWhereInput[] = [{ originalPiece: inq.originalPiece }];
+        if (inq.originalLocation) and.push({ originalLocation: inq.originalLocation });
+        or.push({ AND: and });
+      }
+      const hit = await prisma.rationingSheet.findFirst({ where: { batchId: batch.id, OR: or }, select: { id: true } });
+      if (hit) {
+        await prisma.inquiryRequest.update({ where: { id: inq.id }, data: { status: 'MATCHED', matchedSheetId: hit.id } });
+      }
+    }
+
     revalidatePath('/admin/rationing/sheets');
     revalidatePath('/admin/rationing');
+    revalidatePath('/admin/rationing/inquiries');
     return { ok: true, count: rows.length };
   } catch (e) {
     console.error('importSheets failed', e);

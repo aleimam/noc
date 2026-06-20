@@ -56,6 +56,7 @@ export default async function InquiriesPage() {
                 <th className="p-2 text-start">{t('colPiece')}</th>
                 <th className="p-2 text-start">{t('colLocation')}</th>
                 <th className="p-2 text-start">{t('colMember')}</th>
+                <th className="p-2 text-start">{t('matchedSheet')}</th>
                 <th className="p-2 text-start">{t('when')}</th>
                 <th className="p-2"></th>
               </tr>
@@ -73,6 +74,7 @@ export default async function InquiriesPage() {
                   <td className="p-2">{q.originalPiece ?? '—'}</td>
                   <td className="p-2">{q.originalLocation ?? '—'}</td>
                   <td className="p-2">{q.originalMember ?? '—'}</td>
+                  <td className="p-2">{q.matchedSheet ? `#${q.matchedSheet.numberInSheet ?? '—'} ${q.matchedSheet.ownerName}` : '—'}</td>
                   <td className="p-2" dir="ltr">{fmtDateTime(q.createdAt, locale)}</td>
                   <td className="p-2 text-end">
                     <InquiryActions id={q.id} status={q.status} />
