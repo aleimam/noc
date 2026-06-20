@@ -7,6 +7,9 @@
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
+    "@noc/db#build": {
+      "cache": false
+    },
     "dev": {
       "cache": false,
       "persistent": true
