@@ -1,6 +1,21 @@
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { prisma } from '@noc/db';
-import { getSmsProvider } from '@noc/sms';
+import { sendSms, type SmsConfig } from '@noc/sms';
+
+const SMS_KEYS = ['sms_provider', 'sms_username', 'sms_password', 'sms_sender', 'sms_environment'];
+
+/** Load SMS gateway config from the admin Settings table (env as fallback). */
+export async function loadSmsConfig(): Promise<SmsConfig> {
+  const rows = await prisma.setting.findMany({ where: { key: { in: SMS_KEYS } } });
+  const s = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  return {
+    provider: s.sms_provider || process.env.SMS_PROVIDER || 'console',
+    username: s.sms_username,
+    password: s.sms_password,
+    sender: s.sms_sender,
+    environment: s.sms_environment || '1',
+  };
+}
 
 const CODE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_ATTEMPTS = 5;
@@ -44,7 +59,8 @@ export async function requestOtp(rawPhone: string): Promise<OtpRequestResult> {
   await prisma.otpCode.create({
     data: { phone, codeHash: hashCode(phone, code), expiresAt: new Date(now + CODE_TTL_MS) },
   });
-  await getSmsProvider().sendSms(phone, `New Obour verification code: ${code}`);
+  const cfg = await loadSmsConfig();
+  await sendSms(phone, `New Obour verification code: ${code}`, cfg);
   return { ok: true };
 }
 

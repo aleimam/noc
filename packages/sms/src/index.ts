@@ -1,43 +1,59 @@
 /**
- * Provider-agnostic SMS sending. The OTP service depends only on `SmsProvider`,
- * so the console stub can be swapped for a real Egyptian gateway (SMSMisr,
- * VictoryLink) or Twilio without touching any call site.
+ * Provider-agnostic SMS sending. Credentials are passed in by the caller (which
+ * loads them from the admin Settings table), so no secrets live in this package.
  */
 export interface SmsResult {
   id: string;
   ok: boolean;
+  error?: string;
 }
 
-export interface SmsProvider {
-  readonly name: string;
-  sendSms(to: string, body: string): Promise<SmsResult>;
+export type SmsConfig = {
+  provider: string; // 'console' | 'smsmisr'
+  username?: string;
+  password?: string;
+  sender?: string;
+  environment?: string; // SMS Misr: '1' = live, '2' = test
+};
+
+function logConsole(to: string, body: string): SmsResult {
+  // eslint-disable-next-line no-console
+  console.info(`\n──────── SMS ────────\n→ ${to}\n${body}\n─────────────────────\n`);
+  return { id: `console-${Date.now()}`, ok: true };
 }
 
-/** Dev/default provider: logs to the server console. Never sends paid SMS. */
-export class ConsoleSmsProvider implements SmsProvider {
-  readonly name = 'console';
-  async sendSms(to: string, body: string): Promise<SmsResult> {
-    // eslint-disable-next-line no-console
-    console.info(`\n──────── SMS ────────\n→ ${to}\n${body}\n─────────────────────\n`);
-    return { id: `console-${Date.now()}`, ok: true };
+/** SMS Misr (sms.com.eg) — form-POST to /api/SMS/. Success response code is "1901". */
+async function sendViaSmsMisr(to: string, body: string, cfg: SmsConfig): Promise<SmsResult> {
+  if (!cfg.username || !cfg.password || !cfg.sender) {
+    return { id: 'smsmisr-unconfigured', ok: false, error: 'missing_credentials' };
+  }
+  const mobile = to.replace(/^\+/, ''); // E.164 +201… → 201…
+  const params = new URLSearchParams({
+    environment: cfg.environment || '1',
+    username: cfg.username,
+    password: cfg.password,
+    sender: cfg.sender,
+    mobile,
+    language: '1',
+    message: body,
+  });
+  try {
+    const res = await fetch('https://smsmisr.com/api/SMS/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    const json = (await res.json().catch(() => ({}))) as { code?: string | number; SMSID?: string | number };
+    const ok = String(json.code) === '1901';
+    return { id: String(json.SMSID ?? `smsmisr-${Date.now()}`), ok, error: ok ? undefined : `code_${json.code ?? 'unknown'}` };
+  } catch (e) {
+    return { id: 'smsmisr-error', ok: false, error: e instanceof Error ? e.message : 'request_failed' };
   }
 }
 
-export type SmsProviderName = 'console' | 'smsmisr' | 'victorylink' | 'twilio';
-
-let cached: SmsProvider | null = null;
-
-/** Returns the configured provider (singleton). Real adapters plug in here later. */
-export function getSmsProvider(): SmsProvider {
-  if (cached) return cached;
-  const name = (process.env.SMS_PROVIDER ?? 'console') as SmsProviderName;
-  switch (name) {
-    // case 'smsmisr':     cached = new SmsMisrProvider(); break;
-    // case 'victorylink': cached = new VictoryLinkProvider(); break;
-    // case 'twilio':      cached = new TwilioProvider(); break;
-    case 'console':
-    default:
-      cached = new ConsoleSmsProvider();
-  }
-  return cached;
+/** Send an SMS via the configured provider; defaults to logging on the console. */
+export async function sendSms(to: string, body: string, config?: SmsConfig): Promise<SmsResult> {
+  const provider = config?.provider || process.env.SMS_PROVIDER || 'console';
+  if (provider === 'smsmisr') return sendViaSmsMisr(to, body, config ?? { provider });
+  return logConsole(to, body);
 }

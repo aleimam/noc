@@ -42,7 +42,21 @@
     "lands": "Lands & Neighborhoods",
     "settings": "Settings",
     "settingsPlaceholder": "Settings page (placeholder)",
-    "noAccess": "You don't have permission to access this section"
+    "noAccess": "You don't have permission to access this section",
+    "smsTitle": "SMS gateway (OTP)",
+    "smsHint": "Credentials for the SMS provider (sms.com.eg / SMS Misr) — used to send customer verification codes.",
+    "smsProvider": "Provider",
+    "smsConsole": "Test mode (logs only)",
+    "smsEnvironment": "Environment",
+    "smsLive": "Live",
+    "smsTestEnv": "Test",
+    "smsUsername": "Username",
+    "smsPassword": "Password",
+    "smsSender": "Sender ID",
+    "smsTest": "Phone to test",
+    "smsSendTest": "Send test SMS",
+    "smsTestOk": "Sent successfully ✓",
+    "smsTestFail": "Send failed"
   },
   "attachment": {
     "drop": "Drag an image here, paste, or click to upload",
