@@ -4,6 +4,7 @@ import { prisma } from '@noc/db';
 import { PhotoGallery } from '@noc/ui';
 import { localizeUnit, type Locale } from '@noc/i18n';
 import { BUILDING_TYPES, MAIN_ROADS } from '@noc/config';
+import { FollowArea } from '../FollowArea';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,6 +86,8 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
           </div>
         )}
       </div>
+
+      <FollowArea neighborhoodId={id} />
 
       {advantages.length > 0 && (
         <section className="space-y-2">

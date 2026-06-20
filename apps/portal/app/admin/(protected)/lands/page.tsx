@@ -7,21 +7,21 @@ export const dynamic = 'force-dynamic';
 export default async function LandsHub() {
   await requirePermission('lands', 'VIEW');
   const t = await getTranslations('lands');
-  const [districts, neighborhoods, blocks, lands] = await Promise.all([
+  const [districts, neighborhoods, blocks, lands, follows] = await Promise.all([
     prisma.district.count(),
     prisma.neighborhood.count(),
     prisma.block.count(),
     prisma.land.count(),
+    prisma.landFollow.count(),
   ]);
 
   const links = [
     { href: '/admin/lands/districts', label: t('districts'), count: districts },
     { href: '/admin/lands/neighborhoods', label: t('neighborhoods'), count: neighborhoods },
+    { href: '/admin/lands/lands', label: t('landRecords'), count: lands },
+    { href: '/admin/lands/follows', label: t('follows'), count: follows },
   ];
-  const stats = [
-    { label: t('blocks'), count: blocks },
-    { label: t('lands'), count: lands },
-  ];
+  const stats = [{ label: t('blocks'), count: blocks }];
 
   return (
     <div className="space-y-6">
