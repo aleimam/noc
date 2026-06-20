@@ -44,13 +44,17 @@ async function sendViaSmsMisr(to: string, body: string, cfg: SmsConfig): Promise
     return { id: 'smsmisr-unconfigured', ok: false, error: 'missing_credentials' };
   }
   const mobile = to.replace(/^\+/, ''); // E.164 +201… → 201…
+  // SMS Misr language: 1=English (GSM-7, Latin only), 2=Arabic (UCS-2: Arabic, Latin,
+  // digits, symbols, emoji). Non-Latin text sent as language 1 is rejected with code 1909,
+  // and language 3 ("Unicode") is rejected outright on the account — so map to 1 or 2 only.
+  const language = /^[\x00-\x7F]*$/.test(body) ? '1' : '2';
   const params = new URLSearchParams({
     environment: cfg.environment || '1',
     username: cfg.username,
     password: cfg.password,
     sender: cfg.sender,
     mobile,
-    language: '1',
+    language,
     message: body,
   });
   try {
