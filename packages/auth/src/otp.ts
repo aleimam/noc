@@ -41,7 +41,14 @@ export type OtpRequestResult =
   | { ok: true }
   | { ok: false; error: 'invalid_phone' | 'cooldown' | 'rate_limited' };
 
-export async function requestOtp(rawPhone: string): Promise<OtpRequestResult> {
+/** Single-SMS OTP text in the customer's website language (kept well under 65 chars). */
+function otpMessage(code: string, locale: 'ar' | 'en'): string {
+  return locale === 'en'
+    ? `New Obour verification code: ${code}`
+    : `العبور الجديد - رمز التحقق: ${code}`;
+}
+
+export async function requestOtp(rawPhone: string, locale: 'ar' | 'en' = 'ar'): Promise<OtpRequestResult> {
   const phone = normalizePhone(rawPhone);
   if (!/^\+?\d{8,15}$/.test(phone)) return { ok: false, error: 'invalid_phone' };
 
@@ -60,7 +67,7 @@ export async function requestOtp(rawPhone: string): Promise<OtpRequestResult> {
     data: { phone, codeHash: hashCode(phone, code), expiresAt: new Date(now + CODE_TTL_MS) },
   });
   const cfg = await loadSmsConfig();
-  await sendSms(phone, `New Obour verification code: ${code}`, cfg);
+  await sendSms(phone, otpMessage(code, locale), cfg);
   return { ok: true };
 }
 

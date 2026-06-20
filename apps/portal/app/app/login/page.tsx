@@ -3,10 +3,11 @@
 import { useState, type FormEvent } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 
 export default function CustomerLoginPage() {
   const t = useTranslations('auth');
+  const locale = useLocale();
   const router = useRouter();
   const [step, setStep] = useState<'phone' | 'code'>('phone');
   const [phone, setPhone] = useState('');
@@ -23,7 +24,7 @@ export default function CustomerLoginPage() {
     const res = await fetch('/api/auth/otp/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ phone, locale }),
     });
     setLoading(false);
     if (res.ok) {

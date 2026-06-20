@@ -7,7 +7,12 @@ export async function POST(req: NextRequest) {
   if (!phone) {
     return NextResponse.json({ ok: false, error: 'invalid_phone' }, { status: 400 });
   }
-  const result = await requestOtp(phone);
+  // Send the OTP in the language the customer is viewing the site in:
+  // prefer the value the login form sends, fall back to the NEXT_LOCALE cookie, else Arabic.
+  const fromBody = body?.locale === 'en' || body?.locale === 'ar' ? body.locale : null;
+  const cookieLocale = req.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'ar';
+  const locale = (fromBody ?? cookieLocale) as 'ar' | 'en';
+  const result = await requestOtp(phone, locale);
   if (!result.ok) {
     return NextResponse.json(result, { status: result.error === 'invalid_phone' ? 400 : 429 });
   }
