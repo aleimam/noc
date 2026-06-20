@@ -53,6 +53,7 @@
     "smsUsername": "Username",
     "smsPassword": "Password",
     "smsSender": "Sender ID",
+    "smsSenderHint": "For SMS Misr, paste the Sender Token (smsmisr.com -> Sender IDs page, Sender Token column) - NOT the sender name. The Test environment only accepts the built-in Test Sender token.",
     "smsTest": "Phone to test",
     "smsSendTest": "Send test SMS",
     "smsTestOk": "Sent successfully ✓",

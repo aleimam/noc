@@ -53,6 +53,7 @@
     "smsUsername": "اسم المستخدم",
     "smsPassword": "كلمة المرور",
     "smsSender": "اسم المُرسِل (Sender)",
+    "smsSenderHint": "في SMS Misr الصق رمز المُرسِل (Sender Token من صفحة Sender IDs) وليس اسم المُرسِل. بيئة الاختبار تقبل فقط رمز Test Sender المدمج.",
     "smsTest": "رقم لاختبار الإرسال",
     "smsSendTest": "إرسال رسالة اختبار",
     "smsTestOk": "تم الإرسال بنجاح ✓",

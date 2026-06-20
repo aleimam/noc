@@ -61,7 +61,10 @@ export function SmsSettings({ initial }: { initial: S }) {
         </label>
         <label className="text-sm">{t('smsUsername')}<input value={f.username} onChange={up('username')} dir="ltr" className={inp} /></label>
         <label className="text-sm">{t('smsPassword')}<input value={f.password} onChange={up('password')} type="password" dir="ltr" placeholder="••••••" className={inp} /></label>
-        <label className="text-sm sm:col-span-2">{t('smsSender')}<input value={f.sender} onChange={up('sender')} dir="ltr" className={inp} /></label>
+        <label className="text-sm sm:col-span-2">{t('smsSender')}
+          <input value={f.sender} onChange={up('sender')} dir="ltr" className={inp} />
+          <span className="mt-1 block text-xs opacity-70">{t('smsSenderHint')}</span>
+        </label>
       </div>
       <div className="flex items-center gap-3">
         <button disabled={pending} onClick={save} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{tc('save')}</button>
