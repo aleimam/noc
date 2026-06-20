@@ -6,6 +6,7 @@ export default function Home() {
   const ta = useTranslations('auth');
   const tm = useTranslations('mp');
   const tr = useTranslations('rationing');
+  const tl = useTranslations('lands');
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8 text-center">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -18,6 +19,9 @@ export default function Home() {
         </a>
         <a href="/market" className="rounded-md border border-graphite/25 px-4 py-2 text-sm hover:bg-graphite/10">
           {tm('browse')}
+        </a>
+        <a href="/explore" className="rounded-md border border-graphite/25 px-4 py-2 text-sm hover:bg-graphite/10">
+          {tl('title')}
         </a>
         <a href="/app" className="rounded-md border border-graphite/25 px-4 py-2 text-sm hover:bg-graphite/10">
           {ta('customerLogin')}
