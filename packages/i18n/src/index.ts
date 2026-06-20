@@ -15,3 +15,28 @@ export function isLocale(value: string | undefined | null): value is Locale {
 export function dirForLocale(locale: Locale): 'rtl' | 'ltr' {
   return locale === 'ar' ? 'rtl' : 'ltr';
 }
+
+// Unit labels are stored/entered in Arabic. Only the unit SUFFIX is localized —
+// the entered value itself (a number, a typed note) never changes between locales.
+const UNIT_EN: Record<string, string> = {
+  'م²': 'm²',
+  'م': 'm',
+  'غرفة': 'room',
+  'حمام': 'bath',
+  'قطعة': 'pc',
+  'واجهة': 'frontage',
+  'سنة': 'yr',
+  '%': '%',
+  'ج.م': 'EGP',
+};
+
+/** Localize a unit label; unknown units fall back to the stored (Arabic) form. */
+export function localizeUnit(unit: string | null | undefined, locale: Locale): string {
+  if (!unit) return '';
+  return locale === 'en' ? (UNIT_EN[unit] ?? unit) : unit;
+}
+
+/** Currency label (Egyptian pound). */
+export function currency(locale: Locale): string {
+  return locale === 'en' ? 'EGP' : 'ج.م';
+}

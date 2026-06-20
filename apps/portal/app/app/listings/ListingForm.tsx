@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ImageAttachment, Lightbox, type UploadedAttachment } from '@noc/ui';
+import { localizeUnit } from '@noc/i18n';
 import { saveListing, type ListingInput, type ValueInput } from './actions';
 
 type AttrType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT';
@@ -138,7 +139,7 @@ export function ListingForm({
       return (
         <div className="flex items-center gap-2">
           <input type="number" value={(v as string) ?? ''} onChange={(e) => setVal(a.id, e.target.value)} className={inp} />
-          {a.unit && <span className="text-xs opacity-60">{a.unit}</span>}
+          {a.unit && <span className="text-xs opacity-60">{localizeUnit(a.unit, locale)}</span>}
         </div>
       );
     if (a.type === 'BOOLEAN') return <input type="checkbox" checked={v === true} onChange={(e) => setVal(a.id, e.target.checked)} />;

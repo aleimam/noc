@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { currency } from '@noc/i18n';
 import { MyListingActions } from './MyListingActions';
 
 const STATUS_COLOR: Record<string, string> = {
@@ -61,7 +62,7 @@ export default async function MyListings() {
               <div className="font-semibold">{l.title}</div>
               <div className="text-xs opacity-70">
                 {L(l.propertyType.nameAr, l.propertyType.nameEn)}
-                {l.price != null ? ` · ${String(l.price)} ج.م` : ''}
+                {l.price != null ? ` · ${String(l.price)} ${currency(locale)}` : ''}
               </div>
               <span className={`inline-block rounded px-2 py-0.5 text-xs ${STATUS_COLOR[l.status] ?? ''}`}>
                 {t(`status${l.status}`)}

@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { localizeUnit } from '@noc/i18n';
 
 type Opt = { key: string; labelAr: string; labelEn: string };
 type FAttr = { id: string; key: string; labelAr: string; labelEn: string; type: string; unit: string | null; options: Opt[] };
@@ -47,7 +48,7 @@ export function MarketFilters({
         <div className="grid gap-3 sm:grid-cols-2">
           {filterAttrs.map((a) => (
             <div key={a.id} className="text-sm">
-              <div className="mb-1 opacity-80">{L(a.labelAr, a.labelEn)}{a.unit ? ` (${a.unit})` : ''}</div>
+              <div className="mb-1 opacity-80">{L(a.labelAr, a.labelEn)}{a.unit ? ` (${localizeUnit(a.unit, locale)})` : ''}</div>
               {a.type === 'NUMBER' ? (
                 <div className="flex items-center gap-2">
                   <input type="number" dir="ltr" defaultValue={sp.get(`${a.key}_min`) ?? ''} placeholder={t('from')} onBlur={(e) => pushParams((p) => (e.target.value ? p.set(`${a.key}_min`, e.target.value) : p.delete(`${a.key}_min`)))} className="w-24 rounded border border-graphite/20 bg-transparent px-2 py-1" />

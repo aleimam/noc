@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { PhotoGallery } from '@noc/ui';
+import { localizeUnit, currency } from '@noc/i18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,7 @@ export default async function BrokerageListingDetail({ params }: { params: Promi
     if (!perAttr.has(a.id)) perAttr.set(a.id, { attr: a, texts: [] });
     const bucket = perAttr.get(a.id)!;
     if (v.option) bucket.texts.push(L(v.option.labelAr, v.option.labelEn));
-    else if (v.number != null) bucket.texts.push(`${String(v.number)}${a.unit ? ` ${a.unit}` : ''}`);
+    else if (v.number != null) { const u = localizeUnit(a.unit, locale); bucket.texts.push(`${String(v.number)}${u ? ` ${u}` : ''}`); }
     else if (v.bool) bucket.texts.push('✔');
     else if (v.text) bucket.texts.push(v.text);
   }
@@ -47,7 +48,7 @@ export default async function BrokerageListingDetail({ params }: { params: Promi
     if (!texts.length) continue;
     const sId = attr.section.id;
     if (!bySection.has(sId)) bySection.set(sId, { section: attr.section, items: [] });
-    bySection.get(sId)!.items.push({ label: L(attr.labelAr, attr.labelEn), value: texts.join('، ') });
+    bySection.get(sId)!.items.push({ label: L(attr.labelAr, attr.labelEn), value: texts.join(locale === 'ar' ? '، ' : ', ') });
   }
   const sections = [...bySection.values()].sort((a, b) => a.section.order - b.section.order);
 
@@ -72,7 +73,7 @@ export default async function BrokerageListingDetail({ params }: { params: Promi
         <h1 className="mt-2 text-2xl font-bold text-primary">{listing.title}</h1>
         {listing.price != null && (
           <div className="mt-1 text-xl font-bold text-primary">
-            {String(listing.price)} <span className="text-sm font-normal">ج.م</span>
+            {String(listing.price)} <span className="text-sm font-normal">{currency(locale)}</span>
             {listing.priceNote ? <span className="text-sm font-normal opacity-60"> · {listing.priceNote}</span> : null}
           </div>
         )}

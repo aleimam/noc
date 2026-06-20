@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma, Prisma } from '@noc/db';
 import { ListingCard } from '@noc/ui';
+import { currency } from '@noc/i18n';
 import { MarketFilters } from './MarketFilters';
 
 export default async function MarketPage({
@@ -91,6 +92,7 @@ export default async function MarketPage({
             title={l.title}
             subtitle={L(l.propertyType.nameAr, l.propertyType.nameEn)}
             price={l.price != null ? String(l.price) : null}
+            currency={currency(locale)}
           />
         ))}
       </div>

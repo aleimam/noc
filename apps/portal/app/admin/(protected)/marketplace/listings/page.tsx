@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { currency } from '@noc/i18n';
 import { ModerationActions } from './ModerationActions';
 
 const STATUS_COLOR: Record<string, string> = {
@@ -52,7 +53,7 @@ export default async function ModerationPage() {
               <div className="font-semibold">{l.title}</div>
               <div className="text-xs opacity-70">
                 {L(l.propertyType.nameAr, l.propertyType.nameEn)}
-                {l.price != null ? ` · ${String(l.price)} ج.م` : ''} · {t('seller')}: <span dir="ltr">{l.seller.phone ?? l.seller.name}</span> · {l.contactPhone}
+                {l.price != null ? ` · ${String(l.price)} ${currency(locale)}` : ''} · {t('seller')}: <span dir="ltr">{l.seller.phone ?? l.seller.name}</span> · {l.contactPhone}
               </div>
             </div>
             <div className="flex items-center gap-3">

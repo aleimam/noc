@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { ListingCard, LanguageSwitcher, ThemeToggle } from '@noc/ui';
+import { currency } from '@noc/i18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,6 +66,7 @@ export default async function Home() {
               title={l.title}
               subtitle={L(l.propertyType.nameAr, l.propertyType.nameEn)}
               price={l.price != null ? String(l.price) : null}
+              currency={currency(locale)}
             />
           ))}
         </div>
