@@ -22,10 +22,12 @@ export function CatalogTable({
   initial,
   upsert,
   remove,
+  detailBase,
 }: {
   initial: CatalogRow[];
   upsert: (i: UpsertInput) => Promise<Result>;
   remove: (id: string) => Promise<Result>;
+  detailBase?: string; // when set, the Arabic name links to `${detailBase}/${id}`
 }) {
   const t = useTranslations('mp');
   const router = useRouter();
@@ -82,7 +84,13 @@ export function CatalogTable({
               ) : (
                 <tr key={row.id} className="border-t border-graphite/10">
                   <td className="p-2">{row.order}</td>
-                  <td className="p-2">{row.nameAr}</td>
+                  <td className="p-2">
+                    {detailBase ? (
+                      <a href={`${detailBase}/${row.id}`} className="text-accent hover:underline">{row.nameAr}</a>
+                    ) : (
+                      row.nameAr
+                    )}
+                  </td>
                   <td className="p-2" dir="ltr">{row.nameEn}</td>
                   <td className="p-2 font-mono text-xs opacity-60">
                     {row.key}

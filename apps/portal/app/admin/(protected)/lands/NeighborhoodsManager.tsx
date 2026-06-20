@@ -91,17 +91,11 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
               <tr key={n.id} className="border-t border-graphite/10">
                 <td className="p-2">{dName(n.districtId)}</td>
                 <td className="p-2 font-medium">
-                  {L(n.nameAr, n.nameEn)}
+                  <a href={`/admin/lands/neighborhoods/${n.id}`} className="text-accent hover:underline">{L(n.nameAr, n.nameEn)}</a>
                   {!n.isActive && <span className="opacity-50"> · {t('active')}: —</span>}
                 </td>
                 <td className="p-2 text-xs opacity-70">{n.assortedAreas ? t('assorted') : n.areas.join(', ') || '—'}</td>
-                <td className="p-2">
-                  {n.hasBlocks ? (
-                    <a href={`/admin/lands/neighborhoods/${n.id}`} className="text-accent">{n.blockCount} · {t('manageBlocks')}</a>
-                  ) : (
-                    '—'
-                  )}
-                </td>
+                <td className="p-2">{n.hasBlocks ? n.blockCount : '—'}</td>
                 <td className="whitespace-nowrap p-2 text-end">
                   <button onClick={() => setDraft({ id: n.id, districtId: n.districtId, nameAr: n.nameAr, nameEn: n.nameEn, hasBlocks: n.hasBlocks, assortedAreas: n.assortedAreas, areas: n.areas, buildingTypes: n.buildingTypes, mainRoads: n.mainRoads, order: n.order, isActive: n.isActive })} className="px-2 py-1 text-accent">{t('edit')}</button>
                   <button disabled={pending} onClick={() => del(n.id)} className="px-2 py-1 text-red-600">{t('delete')}</button>
