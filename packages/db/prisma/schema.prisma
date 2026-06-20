@@ -22,6 +22,11 @@ enum UserType {
   PARTNER
 }
 
+enum PartnerKind {
+  BROKER
+  COMPANY
+}
+
 enum PermAction {
   VIEW
   CREATE
@@ -49,6 +54,7 @@ model User {
   phone           String?   @unique // customer
   phoneVerifiedAt DateTime?
   name            String?
+  partnerKind     PartnerKind? // for PARTNER users: broker vs company
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
