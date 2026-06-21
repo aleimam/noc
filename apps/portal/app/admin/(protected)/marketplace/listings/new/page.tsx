@@ -42,6 +42,7 @@ export default async function StaffNewListing() {
           showOnBrokerage: true,
           vals: {},
           photos: [],
+          attachs: {},
         }}
       />
     </div>

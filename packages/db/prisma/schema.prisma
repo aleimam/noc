@@ -199,6 +199,7 @@ model Attachment {
   height       Int?
   ownerType    String? // 'Listing', 'HomepageBlock'… (null = draft)
   ownerId      String?
+  attributeId  String? // set when this file belongs to a specific PHOTOS/DOCUMENTS attribute (null = main listing gallery)
   uploaderId   String?
   uploader     User?    @relation("Uploader", fields: [uploaderId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
@@ -225,10 +226,13 @@ enum AttrType {
   BOOLEAN
   SELECT
   MULTI_SELECT
+  DATE // month + year
+  PHOTOS // image attachments (shown publicly)
+  DOCUMENTS // file attachments (kept internal / admin-only)
 }
 
-/// Real-estate type (land, apartment, villa…). Bilingual catalog.
-model PropertyType {
+/// Top-level real-estate category (Land, Residential, Commercial…). Bilingual.
+model PropertyCategory {
   id        String   @id @default(cuid())
   key       String   @unique
   nameAr    String
@@ -239,10 +243,49 @@ model PropertyType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  groups PropertyGroup[]
+
+  @@index([isActive, order])
+}
+
+/// Middle grouping under a category (Housing, Commercial…). Bilingual.
+model PropertyGroup {
+  id         String   @id @default(cuid())
+  categoryId String
+  key        String
+  nameAr     String
+  nameEn     String
+  order      Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category PropertyCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  types    PropertyType[]
+
+  @@unique([categoryId, key])
+  @@index([categoryId, order])
+}
+
+/// Real-estate type (land, apartment, villa…). Leaf of category → group → type. Bilingual.
+model PropertyType {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  groupId   String?
+  nameAr    String
+  nameEn    String
+  icon      String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group      PropertyGroup?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
   attributes PropertyTypeAttribute[]
   listings   Listing[]
 
   @@index([isActive, order])
+  @@index([groupId, order])
 }
 
 /// A group of attributes (الموقع / المواصفات / المرافق…). Bilingual.

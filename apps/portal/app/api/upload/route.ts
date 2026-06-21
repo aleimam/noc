@@ -16,6 +16,13 @@ const EXT: Record<string, string> = {
   'image/avif': 'avif',
 };
 
+// Document formats — only accepted when the caller passes kind=document (internal use).
+const DOC_EXT: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+};
+
 // Trust the bytes, not the client-declared type. (SVG is intentionally excluded.)
 function sniffMime(buf: Buffer): string | null {
   if (buf.length < 12) return null;
@@ -26,6 +33,18 @@ function sniffMime(buf: Buffer): string | null {
     return 'image/webp';
   if (buf.toString('ascii', 4, 8) === 'ftyp' && buf.toString('ascii', 8, 12).startsWith('avif'))
     return 'image/avif';
+  return null;
+}
+
+// PDF by magic bytes; ZIP-based Office formats keyed by extension (internal docs only).
+function sniffDoc(buf: Buffer, name: string): string | null {
+  if (buf.length < 4) return null;
+  if (buf.toString('ascii', 0, 4) === '%PDF') return 'application/pdf';
+  if (buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04) {
+    const ext = name.toLowerCase().split('.').pop();
+    if (ext === 'docx') return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    if (ext === 'xlsx') return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  }
   return null;
 }
 
@@ -45,14 +64,20 @@ export async function POST(req: NextRequest) {
   }
 
   const buf = Buffer.from(await file.arrayBuffer());
-  const mime = sniffMime(buf);
-  if (!mime || !EXT[mime]) {
+  const isDoc = form.get('kind') === 'document';
+  let mime = sniffMime(buf);
+  let ext = mime ? EXT[mime] : null;
+  if (!mime && isDoc) {
+    mime = sniffDoc(buf, file.name || '');
+    ext = mime ? DOC_EXT[mime] : null;
+  }
+  if (!mime || !ext) {
     return NextResponse.json({ ok: false, error: 'invalid_type' }, { status: 415 });
   }
 
   const now = new Date();
   const sub = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const filename = `${randomUUID()}.${EXT[mime]}`;
+  const filename = `${randomUUID()}.${ext}`;
   const dir = path.join(uploadRoot(), sub);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, filename), buf);

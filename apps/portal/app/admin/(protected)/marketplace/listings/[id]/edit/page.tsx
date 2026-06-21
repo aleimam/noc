@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { ListingForm } from '@/app/app/listings/ListingForm';
-import { loadCatalog, buildVals } from '@/app/app/listings/catalog';
+import { loadCatalog, buildVals, loadListingAttachments } from '@/app/app/listings/catalog';
 
 export default async function StaffEditListing({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission('marketplace', 'UPDATE');
@@ -14,10 +14,11 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const { propertyTypes, sections, attributes } = await loadCatalog();
-  const [owners, photos] = await Promise.all([
+  const [owners, attachData] = await Promise.all([
     prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } }),
-    prisma.attachment.findMany({ where: { ownerType: 'Listing', ownerId: id }, select: { id: true, path: true, originalName: true } }),
+    loadListingAttachments(id),
   ]);
+  const { photos, attachs } = attachData;
   const vals = buildVals(listing.values, new Map(attributes.map((a) => [a.id, a.type])));
 
   return (
@@ -47,7 +48,8 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
           ownerType: listing.ownerType ?? 'OWNER',
           showOnBrokerage: listing.showOnBrokerage,
           vals,
-          photos: photos.map((p) => ({ id: p.id, path: p.path, originalName: p.originalName })),
+          photos,
+          attachs,
         }}
       />
     </div>

@@ -4,6 +4,21 @@ import { prisma } from '@noc/db';
 import { PhotoGallery } from '@noc/ui';
 import { localizeUnit, currency } from '@noc/i18n';
 
+/** "YYYY-MM" → localized "Month Year". */
+function formatMonthYear(s: string, locale: string): string {
+  const [y, m] = s.split('-').map(Number);
+  if (!y || !m) return s;
+  try {
+    return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en', { month: 'long', year: 'numeric' }).format(
+      new Date(y, m - 1, 1),
+    );
+  } catch {
+    return s;
+  }
+}
+
+type Item = { label: string; value?: string; photos?: string[] };
+
 export default async function ListingDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const listing = await prisma.listing.findUnique({
@@ -16,36 +31,63 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const t = await getTranslations('mp');
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
-  const photos = await prisma.attachment.findMany({
-    where: { ownerType: 'Listing', ownerId: id },
-    orderBy: { createdAt: 'asc' },
-    select: { path: true },
-  });
+  // Main gallery = attachments with no attribute. Per-property files carry an attributeId.
+  const [photos, propRows] = await Promise.all([
+    prisma.attachment.findMany({
+      where: { ownerType: 'Listing', ownerId: id, attributeId: null },
+      orderBy: { createdAt: 'asc' },
+      select: { path: true },
+    }),
+    prisma.attachment.findMany({
+      where: { ownerType: 'Listing', ownerId: id, attributeId: { not: null } },
+      orderBy: { createdAt: 'asc' },
+      select: { path: true, attributeId: true },
+    }),
+  ]);
+  const photosByAttr = new Map<string, string[]>();
+  for (const r of propRows) {
+    if (!r.attributeId) continue;
+    const arr = photosByAttr.get(r.attributeId) ?? [];
+    arr.push(r.path);
+    photosByAttr.set(r.attributeId, arr);
+  }
+
   const attrIds = [...new Set(listing.values.map((v) => v.attributeId))];
   const attrs = attrIds.length
     ? await prisma.attribute.findMany({ where: { id: { in: attrIds } }, include: { section: true } })
     : [];
   const attrById = new Map(attrs.map((a) => [a.id, a]));
 
-  // Aggregate values per attribute (MULTI_SELECT collapses into one row).
+  // Aggregate scalar values per attribute. DOCUMENTS are internal (never shown); PHOTOS render as a grid below.
   const perAttr = new Map<string, { attr: (typeof attrs)[number]; texts: string[] }>();
   for (const v of listing.values) {
     const a = attrById.get(v.attributeId);
-    if (!a) continue;
+    if (!a || a.type === 'DOCUMENTS' || a.type === 'PHOTOS') continue;
     if (!perAttr.has(a.id)) perAttr.set(a.id, { attr: a, texts: [] });
     const bucket = perAttr.get(a.id)!;
     if (v.option) bucket.texts.push(L(v.option.labelAr, v.option.labelEn));
-    else if (v.number != null) { const u = localizeUnit(a.unit, locale); bucket.texts.push(`${String(v.number)}${u ? ` ${u}` : ''}`); }
-    else if (v.bool) bucket.texts.push('✔');
+    else if (v.number != null) {
+      const u = localizeUnit(a.unit, locale);
+      bucket.texts.push(`${String(v.number)}${u ? ` ${u}` : ''}`);
+    } else if (v.bool) bucket.texts.push('✔');
+    else if (a.type === 'DATE' && v.text) bucket.texts.push(formatMonthYear(v.text, locale));
     else if (v.text) bucket.texts.push(v.text);
   }
-  // Group by section.
-  const bySection = new Map<string, { section: (typeof attrs)[number]['section']; items: { label: string; value: string }[] }>();
+
+  // Group items by section (text items + per-property photo grids).
+  const bySection = new Map<string, { section: (typeof attrs)[number]['section']; items: Item[] }>();
+  const pushItem = (section: (typeof attrs)[number]['section'], item: Item) => {
+    if (!bySection.has(section.id)) bySection.set(section.id, { section, items: [] });
+    bySection.get(section.id)!.items.push(item);
+  };
   for (const { attr, texts } of perAttr.values()) {
     if (!texts.length) continue;
-    const sId = attr.section.id;
-    if (!bySection.has(sId)) bySection.set(sId, { section: attr.section, items: [] });
-    bySection.get(sId)!.items.push({ label: L(attr.labelAr, attr.labelEn), value: texts.join(locale === 'ar' ? '، ' : ', ') });
+    pushItem(attr.section, { label: L(attr.labelAr, attr.labelEn), value: texts.join(locale === 'ar' ? '، ' : ', ') });
+  }
+  for (const a of attrs) {
+    if (a.type !== 'PHOTOS') continue;
+    const ph = photosByAttr.get(a.id);
+    if (ph?.length) pushItem(a.section, { label: L(a.labelAr, a.labelEn), photos: ph });
   }
   const sections = [...bySection.values()].sort((a, b) => a.section.order - b.section.order);
 
@@ -84,12 +126,19 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         <div key={s.section.id} className="space-y-2">
           <h2 className="font-semibold text-primary">{L(s.section.nameAr, s.section.nameEn)}</h2>
           <div className="grid gap-x-6 sm:grid-cols-2">
-            {s.items.map((it, i) => (
-              <div key={i} className="flex justify-between gap-3 border-b border-graphite/10 py-1.5 text-sm">
-                <span className="opacity-70">{it.label}</span>
-                <span className="text-end font-medium">{it.value}</span>
-              </div>
-            ))}
+            {s.items.map((it, i) =>
+              it.photos ? (
+                <div key={i} className="space-y-1 py-1.5 sm:col-span-2">
+                  <div className="text-sm opacity-70">{it.label}</div>
+                  <PhotoGallery photos={it.photos} />
+                </div>
+              ) : (
+                <div key={i} className="flex justify-between gap-3 border-b border-graphite/10 py-1.5 text-sm">
+                  <span className="opacity-70">{it.label}</span>
+                  <span className="text-end font-medium">{it.value}</span>
+                </div>
+              ),
+            )}
           </div>
         </div>
       ))}

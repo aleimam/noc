@@ -10,6 +10,7 @@ export type ValueInput = {
   number?: number | null;
   bool?: boolean | null;
   optionIds?: string[];
+  attachmentIds?: string[]; // PHOTOS / DOCUMENTS — ids of files for this attribute
 };
 
 export type ListingInput = {
@@ -37,6 +38,11 @@ async function writeValues(tx: any, listingId: string, values: ValueInput[]) {
   await tx.listingValue.deleteMany({ where: { listingId } });
   const rows: Array<Record<string, unknown>> = [];
   for (const v of values) {
+    if (v.attachmentIds) {
+      // PHOTOS / DOCUMENTS: marker row records the attribute (+ its file ids) so it shows in its section.
+      if (v.attachmentIds.length) rows.push({ listingId, attributeId: v.attributeId, text: JSON.stringify(v.attachmentIds) });
+      continue;
+    }
     if (v.optionIds && v.optionIds.length) {
       for (const optionId of v.optionIds) rows.push({ listingId, attributeId: v.attributeId, optionId });
     } else if (typeof v.text === 'string' && v.text.trim() !== '') {
@@ -96,21 +102,43 @@ export async function saveListing(input: ListingInput): Promise<Result> {
 
       await writeValues(tx, listingId, input.values);
 
-      // Claim newly-attached photos uploaded by this user.
+      // ── Main gallery photos (attributeId = null) ──
       if (input.photoIds.length) {
         await tx.attachment.updateMany({
           where: { id: { in: input.photoIds }, uploaderId: user.id },
-          data: { ownerType: 'Listing', ownerId: listingId },
+          data: { ownerType: 'Listing', ownerId: listingId, attributeId: null },
         });
       }
-      // Release photos that were on this listing but are no longer selected.
       await tx.attachment.updateMany({
         where: {
           ownerType: 'Listing',
           ownerId: listingId,
+          attributeId: null,
           ...(input.photoIds.length ? { id: { notIn: input.photoIds } } : {}),
         },
         data: { ownerType: null, ownerId: null },
+      });
+
+      // ── Per-property PHOTOS/DOCUMENTS (attributeId = the attribute) ──
+      const keepIds: string[] = [];
+      for (const v of input.values) {
+        if (!v.attachmentIds) continue;
+        keepIds.push(...v.attachmentIds);
+        if (v.attachmentIds.length) {
+          await tx.attachment.updateMany({
+            where: { id: { in: v.attachmentIds }, uploaderId: user.id },
+            data: { ownerType: 'Listing', ownerId: listingId, attributeId: v.attributeId },
+          });
+        }
+      }
+      await tx.attachment.updateMany({
+        where: {
+          ownerType: 'Listing',
+          ownerId: listingId,
+          attributeId: { not: null },
+          ...(keepIds.length ? { id: { notIn: keepIds } } : {}),
+        },
+        data: { ownerType: null, ownerId: null, attributeId: null },
       });
 
       return listingId;

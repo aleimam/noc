@@ -42,6 +42,7 @@ export default async function NewListing() {
           showOnBrokerage: false,
           vals: {},
           photos: [],
+          attachs: {},
         }}
       />
     </main>

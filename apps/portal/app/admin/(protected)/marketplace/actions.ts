@@ -29,6 +29,7 @@ export async function upsertPropertyType(input: {
   nameAr: string;
   nameEn: string;
   icon?: string | null;
+  groupId?: string | null;
   order?: number;
   isActive?: boolean;
 }): Promise<Result> {
@@ -37,6 +38,7 @@ export async function upsertPropertyType(input: {
     nameAr: input.nameAr.trim(),
     nameEn: input.nameEn.trim(),
     icon: input.icon?.trim() || null,
+    groupId: input.groupId || null,
     order: input.order ?? 0,
     isActive: input.isActive ?? true,
   };
@@ -54,6 +56,79 @@ export async function deletePropertyType(id: string): Promise<Result> {
   await requirePermission('marketplace', 'DELETE');
   try {
     await prisma.propertyType.delete({ where: { id } });
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ──────────────────────── Categories + Groups ────────────────────────
+
+export async function upsertPropertyCategory(input: {
+  id?: string;
+  key: string;
+  nameAr: string;
+  nameEn: string;
+  icon?: string | null;
+  order?: number;
+  isActive?: boolean;
+}): Promise<Result> {
+  await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
+  const data = {
+    nameAr: input.nameAr.trim(),
+    nameEn: input.nameEn.trim(),
+    icon: input.icon?.trim() || null,
+    order: input.order ?? 0,
+    isActive: input.isActive ?? true,
+  };
+  try {
+    if (input.id) await prisma.propertyCategory.update({ where: { id: input.id }, data });
+    else await prisma.propertyCategory.create({ data: { key: input.key.trim(), ...data } });
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function deletePropertyCategory(id: string): Promise<Result> {
+  await requirePermission('marketplace', 'DELETE');
+  try {
+    await prisma.propertyCategory.delete({ where: { id } });
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Groups are scoped to a category — bind categoryId on the server page. */
+export async function upsertPropertyGroup(
+  categoryId: string,
+  input: { id?: string; key: string; nameAr: string; nameEn: string; order?: number; isActive?: boolean },
+): Promise<Result> {
+  await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
+  const data = {
+    nameAr: input.nameAr.trim(),
+    nameEn: input.nameEn.trim(),
+    order: input.order ?? 0,
+    isActive: input.isActive ?? true,
+  };
+  try {
+    if (input.id) await prisma.propertyGroup.update({ where: { id: input.id }, data });
+    else await prisma.propertyGroup.create({ data: { categoryId, key: input.key.trim(), ...data } });
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function deletePropertyGroup(id: string): Promise<Result> {
+  await requirePermission('marketplace', 'DELETE');
+  try {
+    await prisma.propertyGroup.delete({ where: { id } });
     revalidate();
     return { ok: true };
   } catch (e) {
@@ -118,7 +193,7 @@ export async function upsertAttribute(input: {
   sectionId: string;
   labelAr: string;
   labelEn: string;
-  type: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT';
+  type: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS';
   unit?: string | null;
   helpAr?: string | null;
   helpEn?: string | null;

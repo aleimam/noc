@@ -29,7 +29,7 @@ export default async function MyListings() {
   const ids = listings.map((l) => l.id);
   const covers = ids.length
     ? await prisma.attachment.findMany({
-        where: { ownerType: 'Listing', ownerId: { in: ids } },
+        where: { ownerType: 'Listing', ownerId: { in: ids }, attributeId: null },
         orderBy: { createdAt: 'asc' },
         select: { ownerId: true, path: true },
       })

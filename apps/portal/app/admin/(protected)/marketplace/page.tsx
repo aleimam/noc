@@ -6,7 +6,8 @@ import { ContactSettings } from './ContactSettings';
 export default async function MarketplaceHub() {
   await requirePermission('marketplace', 'VIEW');
   const t = await getTranslations('mp');
-  const [types, sections, attributes, owners, pending, settings] = await Promise.all([
+  const [categories, types, sections, attributes, owners, pending, settings] = await Promise.all([
+    prisma.propertyCategory.count(),
     prisma.propertyType.count(),
     prisma.attributeSection.count(),
     prisma.attribute.count(),
@@ -16,6 +17,7 @@ export default async function MarketplaceHub() {
   ]);
   const sett = Object.fromEntries(settings.map((s) => [s.key, s.value]));
   const cards = [
+    { href: '/admin/marketplace/categories', label: t('categories'), count: categories },
     { href: '/admin/marketplace/types', label: t('propertyTypes'), count: types },
     { href: '/admin/marketplace/sections', label: t('sections'), count: sections },
     { href: '/admin/marketplace/attributes', label: t('attributes'), count: attributes },

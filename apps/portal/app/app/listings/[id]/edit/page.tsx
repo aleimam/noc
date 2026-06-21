@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { ListingForm } from '../../ListingForm';
-import { loadCatalog, buildVals } from '../../catalog';
+import { loadCatalog, buildVals, loadListingAttachments } from '../../catalog';
 
 export default async function EditListing({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -17,13 +17,8 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const { propertyTypes, sections, attributes } = await loadCatalog();
-  const photos = await prisma.attachment.findMany({
-    where: { ownerType: 'Listing', ownerId: id },
-    select: { id: true, path: true, originalName: true },
-  });
-
-  const attrType = new Map(attributes.map((a) => [a.id, a.type]));
-  const vals = buildVals(listing.values, attrType);
+  const { photos, attachs } = await loadListingAttachments(id);
+  const vals = buildVals(listing.values, new Map(attributes.map((a) => [a.id, a.type])));
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
@@ -50,7 +45,8 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
           ownerType: listing.ownerType ?? 'OWNER',
           showOnBrokerage: listing.showOnBrokerage,
           vals,
-          photos: photos.map((p) => ({ id: p.id, path: p.path, originalName: p.originalName })),
+          photos,
+          attachs,
         }}
       />
     </main>

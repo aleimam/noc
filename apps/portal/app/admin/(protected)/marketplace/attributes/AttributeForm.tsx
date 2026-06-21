@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-type AttrType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT';
+type AttrType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS';
 type Opt = { id?: string; key: string; labelAr: string; labelEn: string };
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -25,7 +25,7 @@ export type AttrData = {
 
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
 const cell = 'flex-1 rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm';
-const ATTR_TYPES: AttrType[] = ['TEXT', 'TEXTAREA', 'NUMBER', 'BOOLEAN', 'SELECT', 'MULTI_SELECT'];
+const ATTR_TYPES: AttrType[] = ['TEXT', 'TEXTAREA', 'NUMBER', 'BOOLEAN', 'SELECT', 'MULTI_SELECT', 'DATE', 'PHOTOS', 'DOCUMENTS'];
 
 export function AttributeForm({
   initial,

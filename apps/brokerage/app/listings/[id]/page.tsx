@@ -20,7 +20,7 @@ export default async function BrokerageListingDetail({ params }: { params: Promi
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
   const photos = await prisma.attachment.findMany({
-    where: { ownerType: 'Listing', ownerId: id },
+    where: { ownerType: 'Listing', ownerId: id, attributeId: null },
     orderBy: { createdAt: 'asc' },
     select: { path: true },
   });

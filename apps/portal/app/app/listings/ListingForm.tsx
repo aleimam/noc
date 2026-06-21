@@ -7,11 +7,11 @@ import { ImageAttachment, Lightbox, type UploadedAttachment } from '@noc/ui';
 import { localizeUnit } from '@noc/i18n';
 import { saveListing, type ListingInput, type ValueInput } from './actions';
 
-type AttrType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT';
+type AttrType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS';
 type Opt = { id: string; labelAr: string; labelEn: string };
 type Attr = { id: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; order: number; options: Opt[]; typeIds: string[] };
 type Section = { id: string; nameAr: string; nameEn: string; order: number };
-type PType = { id: string; nameAr: string; nameEn: string };
+type PType = { id: string; nameAr: string; nameEn: string; catAr: string; catEn: string };
 type OwnerOpt = { id: string; name: string; type: string };
 
 export type ListingFormInitial = {
@@ -29,6 +29,7 @@ export type ListingFormInitial = {
   showOnBrokerage: boolean;
   vals: Record<string, string | boolean | string[]>;
   photos: UploadedAttachment[];
+  attachs: Record<string, UploadedAttachment[]>; // per-property PHOTOS/DOCUMENTS, keyed by attributeId
 };
 
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
@@ -69,9 +70,30 @@ export function ListingForm({
   const [showOnBrokerage, setShowOnBrokerage] = useState(initial.showOnBrokerage);
   const [vals, setVals] = useState<Record<string, string | boolean | string[]>>(initial.vals);
   const [photos, setPhotos] = useState<UploadedAttachment[]>(initial.photos);
+  const [attachs, setAttachs] = useState<Record<string, UploadedAttachment[]>>(initial.attachs);
 
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const setVal = (id: string, v: string | boolean | string[]) => setVals((p) => ({ ...p, [id]: v }));
+
+  const typesByCat = useMemo(() => {
+    const m: Record<string, PType[]> = {};
+    for (const p of propertyTypes) {
+      const cat = (locale === 'ar' ? p.catAr : p.catEn) || '—';
+      (m[cat] ??= []).push(p);
+    }
+    return m;
+  }, [propertyTypes, locale]);
+
+  async function uploadDoc(file: File, attrId: string) {
+    setError('');
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('kind', 'document');
+    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const json = await res.json().catch(() => ({}));
+    if (res.ok && json?.ok) setAttachs((s) => ({ ...s, [attrId]: [...(s[attrId] ?? []), json.attachment as UploadedAttachment] }));
+    else setError('failed');
+  }
 
   const grouped = useMemo(() => {
     const applicable = attributes.filter((a) => a.typeIds.includes(typeId));
@@ -95,7 +117,10 @@ export function ListingForm({
         if (typeof v === 'string' && v) out.push({ attributeId: a.id, optionIds: [v] });
       } else if (a.type === 'MULTI_SELECT') {
         if (Array.isArray(v) && v.length) out.push({ attributeId: a.id, optionIds: v });
+      } else if (a.type === 'PHOTOS' || a.type === 'DOCUMENTS') {
+        out.push({ attributeId: a.id, attachmentIds: (attachs[a.id] ?? []).map((x) => x.id) });
       } else if (typeof v === 'string' && v.trim() !== '') {
+        // TEXT / TEXTAREA / DATE ("YYYY-MM")
         out.push({ attributeId: a.id, text: v });
       }
     }
@@ -163,6 +188,44 @@ export function ListingForm({
         </div>
       );
     }
+    if (a.type === 'DATE')
+      return <input type="month" dir="ltr" value={(v as string) ?? ''} onChange={(e) => setVal(a.id, e.target.value)} className={inp} />;
+    if (a.type === 'PHOTOS') {
+      const list = attachs[a.id] ?? [];
+      return (
+        <div className="space-y-2">
+          {list.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {list.map((p) => (
+                <div key={p.id} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.path} alt="" onClick={() => setZoom(p.path)} className="h-16 w-16 cursor-pointer rounded object-cover ring-1 ring-graphite/20" />
+                  <button type="button" onClick={() => setAttachs((s) => ({ ...s, [a.id]: list.filter((x) => x.id !== p.id) }))} className="absolute -end-1 -top-1 rounded-full bg-red-600 px-1 text-[10px] text-white">✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="w-44"><ImageAttachment value={null} onChange={(att) => att && setAttachs((s) => ({ ...s, [a.id]: [...(s[a.id] ?? []), att] }))} /></div>
+        </div>
+      );
+    }
+    if (a.type === 'DOCUMENTS') {
+      const list = attachs[a.id] ?? [];
+      return (
+        <div className="space-y-2">
+          {list.map((p) => (
+            <div key={p.id} className="flex items-center gap-2 text-sm">
+              <a href={p.path} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">📄 {p.originalName}</a>
+              <button type="button" onClick={() => setAttachs((s) => ({ ...s, [a.id]: list.filter((x) => x.id !== p.id) }))} className="text-red-600">✕</button>
+            </div>
+          ))}
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-graphite/25 px-3 py-1.5 text-xs hover:bg-graphite/10">
+            + {t('addDocument')}
+            <input type="file" accept=".pdf,.docx,.xlsx" hidden onChange={(e) => { const fl = e.target.files?.[0]; if (fl) void uploadDoc(fl, a.id); e.target.value = ''; }} />
+          </label>
+        </div>
+      );
+    }
     return <input value={(v as string) ?? ''} onChange={(e) => setVal(a.id, e.target.value)} className={inp} />;
   }
 
@@ -174,7 +237,11 @@ export function ListingForm({
         {t('pickType')}
         <select value={typeId} onChange={(e) => setTypeId(e.target.value)} className={inp}>
           <option value="">—</option>
-          {propertyTypes.map((p) => (<option key={p.id} value={p.id}>{L(p.nameAr, p.nameEn)}</option>))}
+          {Object.entries(typesByCat).map(([cat, list]) => (
+            <optgroup key={cat} label={cat}>
+              {list.map((p) => (<option key={p.id} value={p.id}>{L(p.nameAr, p.nameEn)}</option>))}
+            </optgroup>
+          ))}
         </select>
       </label>
 
