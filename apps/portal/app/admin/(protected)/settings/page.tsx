@@ -10,7 +10,6 @@ export default async function SettingsHub() {
     { href: '/admin/settings/account', label: t('settingsAccount'), desc: t('settingsAccountDesc') },
     { href: '/admin/settings/users', label: t('settingsUsers'), desc: t('settingsUsersDesc') },
     { href: '/admin/settings/customers', label: t('settingsCustomers'), desc: t('settingsCustomersDesc') },
-    { href: '/admin/settings/partners', label: t('settingsPartners'), desc: t('settingsPartnersDesc') },
     { href: '/admin/settings/apis', label: t('settingsApis'), desc: t('settingsApisDesc') },
     { href: '/admin/settings/appearance', label: t('settingsAppearance'), desc: t('settingsAppearanceDesc') },
   ];

@@ -164,6 +164,7 @@
     "appliesHint": "Tick the values this property applies to. Leave a classifier blank to apply to all of its values.",
     "clear": "Clear",
     "pickClassifiers": "Choose Type, Purpose and Condition to see the relevant properties.",
+    "listedByUs": "Listed by us",
     "deleted": "Deleted",
     "newOffer": "New Offer",
     "myOffers": "My Offers",

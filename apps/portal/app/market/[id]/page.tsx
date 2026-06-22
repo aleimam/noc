@@ -23,7 +23,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const listing = await prisma.listing.findUnique({
     where: { id },
-    include: { values: { include: { option: true } }, typeOption: true, purposeOption: true, conditionOption: true },
+    include: { values: { include: { option: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: true },
   });
   if (!listing || listing.status !== 'PUBLISHED') notFound();
 
@@ -91,16 +91,23 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   }
   const sections = [...bySection.values()].sort((a, b) => a.section.order - b.section.order);
 
-  // Our listings (staff-created) use the central ALSWARY contact; sellers use their own number.
+  // Contact rule: an individual owner is reached directly; anything owned by us, a company
+  // or a broker routes to our central ALSWARY number (we broker those).
+  const effOwnerType = listing.owner?.type ?? listing.ownerType ?? 'OWNER';
+  const weAreContact = effOwnerType !== 'OWNER';
   let contactPhone = listing.contactPhone;
   let contactWhatsapp = listing.contactWhatsapp;
-  if (listing.createdById) {
+  const ownerName = listing.owner?.name ?? listing.ownerName ?? '';
+  if (weAreContact) {
     const s = await prisma.setting.findMany({ where: { key: { in: ['alswarey_phone', 'alswarey_whatsapp'] } } });
     const m = Object.fromEntries(s.map((x) => [x.key, x.value]));
     if (m.alswarey_phone) {
       contactPhone = m.alswarey_phone;
       contactWhatsapp = !!m.alswarey_whatsapp;
     }
+  } else if (listing.owner?.phone1) {
+    contactPhone = listing.owner.phone1;
+    contactWhatsapp = listing.owner.phone1Whatsapp;
   }
   const waNumber = contactPhone.replace(/\D/g, '');
 
@@ -122,6 +129,11 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
             {listing.priceNote ? <span className="text-sm font-normal opacity-60"> · {listing.priceNote}</span> : null}
           </div>
         )}
+      </div>
+
+      <div className="rounded-lg border border-graphite/15 px-4 py-2 text-sm">
+        <span className="opacity-70">{t('owner')}: </span>
+        <span className="font-medium">{weAreContact ? t('listedByUs') : ownerName || '—'}</span>
       </div>
 
       {listing.description && <p className="whitespace-pre-wrap opacity-90">{listing.description}</p>}

@@ -24,6 +24,7 @@ export default async function ModerationPage() {
     orderBy: { createdAt: 'asc' },
     include: {
       typeOption: { select: { nameAr: true, nameEn: true } },
+      owner: { select: { name: true, phone1: true } },
       seller: { select: { phone: true, name: true } },
     },
   });
@@ -53,7 +54,8 @@ export default async function ModerationPage() {
               <div className="font-semibold">{l.title}</div>
               <div className="text-xs opacity-70">
                 {L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
-                {l.price != null ? ` · ${String(l.price)} ${currency(locale)}` : ''} · {t('seller')}: <span dir="ltr">{l.seller.phone ?? l.seller.name}</span> · {l.contactPhone}
+                {l.price != null ? ` · ${String(l.price)} ${currency(locale)}` : ''} · {t('owner')}: {l.owner?.name ?? l.ownerName ?? '—'}
+                {l.owner?.phone1 ? <span dir="ltr"> ({l.owner.phone1})</span> : ''} · {t('seller')}: <span dir="ltr">{l.seller.phone ?? l.seller.name}</span> · {l.contactPhone}
               </div>
             </div>
             <div className="flex items-center gap-3">
