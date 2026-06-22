@@ -40,27 +40,23 @@ const TYPES = [
   { key: T.factory, ar: 'مصنع', en: 'Factory' },
 ];
 
-// ── Category → Group → Type taxonomy. Organizes the types above into a 3-level
-//    tree (admins can rearrange / extend it in /admin/marketplace). `types` lists
-//    the PropertyType keys that belong to each group. ────────────────────────────
-const CATEGORIES = [
-  { key: 'cat_land', ar: 'أراضٍ', en: 'Land', groups: [
-    { key: 'grp_plots', ar: 'قطع أراضٍ', en: 'Plots', types: [T.land] },
-  ] },
-  { key: 'cat_residential', ar: 'سكني', en: 'Residential', groups: [
-    { key: 'grp_apartments', ar: 'شقق', en: 'Apartments', types: [T.apartment, T.studio, T.duplex, T.roof] },
-    { key: 'grp_houses', ar: 'فيلات ومنازل', en: 'Houses & Villas', types: [T.villa, T.townhouse, T.chalet] },
-  ] },
-  { key: 'cat_commercial', ar: 'تجاري وإداري', en: 'Commercial & Admin', groups: [
-    { key: 'grp_retail', ar: 'محلات', en: 'Retail', types: [T.shop, T.pharmacy] },
-    { key: 'grp_offices', ar: 'مكاتب وعيادات', en: 'Offices & Clinics', types: [T.office, T.clinic] },
-  ] },
-  { key: 'cat_industrial', ar: 'صناعي وتخزين', en: 'Industrial & Storage', groups: [
-    { key: 'grp_industrial', ar: 'مصانع ومخازن', en: 'Factories & Warehouses', types: [T.warehouse, T.factory] },
-  ] },
-  { key: 'cat_buildings', ar: 'مبانٍ كاملة', en: 'Whole Buildings', groups: [
-    { key: 'grp_buildings', ar: 'عمارات', en: 'Buildings', types: [T.building] },
-  ] },
+// ── Classifier option lists. Type options reuse TYPES above; Purpose + Condition are
+//    new admin-editable lists. Every listing picks one option of each. ──────────────
+const PURPOSES = [
+  { key: 'residential', ar: 'سكني', en: 'Residential' },
+  { key: 'commercial', ar: 'تجاري', en: 'Commercial' },
+  { key: 'administrative', ar: 'إداري', en: 'Administrative' },
+  { key: 'medical', ar: 'طبي', en: 'Medical' },
+  { key: 'mixed', ar: 'تجاري سكني', en: 'Mixed-use' },
+  { key: 'industrial', ar: 'صناعي', en: 'Industrial' },
+];
+const CONDITIONS = [
+  { key: 'new', ar: 'جديد', en: 'New' },
+  { key: 'under_construction', ar: 'تحت الإنشاء', en: 'Under construction' },
+  { key: 'finished', ar: 'تشطيب كامل', en: 'Fully finished' },
+  { key: 'semi_finished', ar: 'نصف تشطيب', en: 'Semi-finished' },
+  { key: 'core_shell', ar: 'على المحارة', en: 'Core & shell' },
+  { key: 'resale', ar: 'إعادة بيع', en: 'Resale' },
 ];
 
 const SECTIONS = [
@@ -314,28 +310,31 @@ async function main() {
     });
   }
 
-  // Categories → Groups, then assign each PropertyType to its group.
-  let groupCount = 0;
-  for (const [ci, c] of CATEGORIES.entries()) {
-    const cat = await prisma.propertyCategory.upsert({
+  // Classifiers: Type / Purpose / Condition, each with its option list.
+  const CLASSIFIERS = [
+    { key: 'type', ar: 'النوع', en: 'Type', opts: TYPES },
+    { key: 'purpose', ar: 'الغرض', en: 'Purpose', opts: PURPOSES },
+    { key: 'condition', ar: 'الحالة', en: 'Condition', opts: CONDITIONS },
+  ];
+  const optionId = {}; // `${classifierKey}:${optionKey}` -> option id
+  let optionCount = 0;
+  for (const [ci, c] of CLASSIFIERS.entries()) {
+    const cls = await prisma.classifier.upsert({
       where: { key: c.key },
       update: { nameAr: c.ar, nameEn: c.en, order: ci },
       create: { key: c.key, nameAr: c.ar, nameEn: c.en, order: ci },
     });
-    for (const [gi, g] of c.groups.entries()) {
-      const grp = await prisma.propertyGroup.upsert({
-        where: { categoryId_key: { categoryId: cat.id, key: g.key } },
-        update: { nameAr: g.ar, nameEn: g.en, order: gi },
-        create: { categoryId: cat.id, key: g.key, nameAr: g.ar, nameEn: g.en, order: gi },
+    for (const [oi, o] of c.opts.entries()) {
+      const opt = await prisma.classifierOption.upsert({
+        where: { classifierId_key: { classifierId: cls.id, key: o.key } },
+        update: { nameAr: o.ar, nameEn: o.en, order: oi },
+        create: { classifierId: cls.id, key: o.key, nameAr: o.ar, nameEn: o.en, order: oi },
       });
-      groupCount++;
-      for (const tk of g.types) {
-        await prisma.propertyType.update({ where: { key: tk }, data: { groupId: grp.id } }).catch(() => {});
-      }
+      optionId[`${c.key}:${o.key}`] = opt.id;
+      optionCount++;
     }
   }
 
-  const typeId = Object.fromEntries((await prisma.propertyType.findMany()).map((t) => [t.key, t.id]));
   const sectionId = Object.fromEntries((await prisma.attributeSection.findMany()).map((s) => [s.key, s.id]));
 
   let mappings = 0;
@@ -352,17 +351,29 @@ async function main() {
         create: { attributeId: attr.id, key: o.key, labelAr: o.ar, labelEn: o.en, order: j },
       });
     }
+    // Applicability: map the attribute's type keys to Type-classifier options (Purpose/Condition left open).
     const types = a.to === 'ALL' ? ALL : a.to;
     for (const tk of types) {
-      const tid = typeId[tk];
-      if (!tid) continue;
-      await prisma.propertyTypeAttribute.upsert({
-        where: { propertyTypeId_attributeId: { propertyTypeId: tid, attributeId: attr.id } },
+      const oid = optionId[`type:${tk}`];
+      if (!oid) continue;
+      await prisma.attributeClassifier.upsert({
+        where: { attributeId_optionId: { attributeId: attr.id, optionId: oid } },
         update: {},
-        create: { propertyTypeId: tid, attributeId: attr.id },
+        create: { attributeId: attr.id, optionId: oid },
       });
       mappings++;
     }
+  }
+
+  // Migrate any existing listings onto the Type classifier (match legacy propertyType by key).
+  const ptById = Object.fromEntries((await prisma.propertyType.findMany()).map((t) => [t.id, t.key]));
+  const legacy = await prisma.listing.findMany({
+    where: { typeOptionId: null, propertyTypeId: { not: null } },
+    select: { id: true, propertyTypeId: true },
+  });
+  for (const l of legacy) {
+    const oid = optionId[`type:${ptById[l.propertyTypeId]}`];
+    if (oid) await prisma.listing.update({ where: { id: l.id }, data: { typeOptionId: oid } });
   }
 
   // Central ALSWARY contact (editable in admin) + drop the redundant seller_role
@@ -376,7 +387,7 @@ async function main() {
   }
   await prisma.attribute.deleteMany({ where: { key: 'seller_role' } });
 
-  console.log(`✓ Marketplace catalog: ${CATEGORIES.length} categories, ${groupCount} groups, ${TYPES.length} types, ${SECTIONS.length} sections, ${ATTRS.length} attributes, ${mappings} type-mappings.`);
+  console.log(`✓ Marketplace catalog: 3 classifiers, ${optionCount} options, ${SECTIONS.length} sections, ${ATTRS.length} attributes, ${mappings} applicability links.`);
 }
 
 main()

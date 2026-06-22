@@ -8,13 +8,16 @@ import { upsertAttribute } from '../../actions';
 export default async function EditAttribute({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission('marketplace', 'VIEW');
   const { id } = await params;
-  const [attr, sections, types] = await Promise.all([
+  const [attr, sections, classifiers] = await Promise.all([
     prisma.attribute.findUnique({
       where: { id },
-      include: { options: { orderBy: { order: 'asc' } }, typeLinks: true },
+      include: { options: { orderBy: { order: 'asc' } }, classifierLinks: true },
     }),
     prisma.attributeSection.findMany({ orderBy: { order: 'asc' } }),
-    prisma.propertyType.findMany({ orderBy: { order: 'asc' } }),
+    prisma.classifier.findMany({
+      orderBy: { order: 'asc' },
+      include: { options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true } } },
+    }),
   ]);
   if (!attr) notFound();
   const t = await getTranslations('mp');
@@ -31,7 +34,7 @@ export default async function EditAttribute({ params }: { params: Promise<{ id: 
     order: attr.order,
     isActive: attr.isActive,
     options: attr.options.map((o) => ({ id: o.id, key: o.key, labelAr: o.labelAr, labelEn: o.labelEn })),
-    typeIds: attr.typeLinks.map((l) => l.propertyTypeId),
+    optionIds: attr.classifierLinks.map((l) => l.optionId),
   };
 
   return (
@@ -43,7 +46,7 @@ export default async function EditAttribute({ params }: { params: Promise<{ id: 
       <AttributeForm
         initial={initial}
         sections={sections.map((s) => ({ id: s.id, nameAr: s.nameAr, nameEn: s.nameEn }))}
-        types={types.map((x) => ({ id: x.id, nameAr: x.nameAr, nameEn: x.nameEn }))}
+        classifiers={classifiers.map((c) => ({ id: c.id, nameAr: c.nameAr, nameEn: c.nameEn, options: c.options }))}
         action={upsertAttribute}
       />
     </div>

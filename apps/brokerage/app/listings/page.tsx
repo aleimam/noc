@@ -14,7 +14,7 @@ export default async function BrokerageListings() {
     where: { showOnBrokerage: true, status: 'PUBLISHED' },
     orderBy: { publishedAt: 'desc' },
     take: 60,
-    include: { propertyType: true },
+    include: { typeOption: true },
   });
   const ids = listings.map((l) => l.id);
   const covers = ids.length
@@ -43,7 +43,7 @@ export default async function BrokerageListings() {
             href={`/listings/${l.id}`}
             cover={cover.get(l.id) ?? null}
             title={l.title}
-            subtitle={L(l.propertyType.nameAr, l.propertyType.nameEn)}
+            subtitle={L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
             price={l.price != null ? String(l.price) : null}
             currency={currency(locale)}
           />

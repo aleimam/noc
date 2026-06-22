@@ -9,14 +9,16 @@ import { saveListing, type ListingInput, type ValueInput } from './actions';
 
 type AttrType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS';
 type Opt = { id: string; labelAr: string; labelEn: string };
-type Attr = { id: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; order: number; options: Opt[]; typeIds: string[] };
+type Attr = { id: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; order: number; options: Opt[]; optionIds: string[] };
 type Section = { id: string; nameAr: string; nameEn: string; order: number };
-type PType = { id: string; nameAr: string; nameEn: string; catAr: string; catEn: string };
+type Classifier = { id: string; key: string; nameAr: string; nameEn: string; options: { id: string; nameAr: string; nameEn: string }[] };
 type OwnerOpt = { id: string; name: string; type: string };
 
 export type ListingFormInitial = {
   id?: string;
-  propertyTypeId: string;
+  typeOptionId: string;
+  purposeOptionId: string;
+  conditionOptionId: string;
   title: string;
   description: string;
   price: string;
@@ -29,13 +31,13 @@ export type ListingFormInitial = {
   showOnBrokerage: boolean;
   vals: Record<string, string | boolean | string[]>;
   photos: UploadedAttachment[];
-  attachs: Record<string, UploadedAttachment[]>; // per-property PHOTOS/DOCUMENTS, keyed by attributeId
+  attachs: Record<string, UploadedAttachment[]>;
 };
 
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
 
 export function ListingForm({
-  propertyTypes,
+  classifiers,
   sections,
   attributes,
   initial,
@@ -43,7 +45,7 @@ export function ListingForm({
   staffMode = false,
   owners = [],
 }: {
-  propertyTypes: PType[];
+  classifiers: Classifier[];
   sections: Section[];
   attributes: Attr[];
   initial: ListingFormInitial;
@@ -57,7 +59,24 @@ export function ListingForm({
   const [error, setError] = useState('');
   const [zoom, setZoom] = useState<string | null>(null);
 
-  const [typeId, setTypeId] = useState(initial.propertyTypeId);
+  const optCls = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of classifiers) for (const o of c.options) m.set(o.id, c.id);
+    return m;
+  }, [classifiers]);
+
+  const [selected, setSelected] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    for (const c of classifiers) {
+      init[c.id] =
+        c.key === 'type' ? initial.typeOptionId : c.key === 'purpose' ? initial.purposeOptionId : c.key === 'condition' ? initial.conditionOptionId : '';
+    }
+    return init;
+  });
+  const selOf = (key: string) => {
+    const c = classifiers.find((x) => x.key === key);
+    return c ? selected[c.id] ?? '' : '';
+  };
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description);
   const [price, setPrice] = useState(initial.price);
@@ -74,15 +93,36 @@ export function ListingForm({
 
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const setVal = (id: string, v: string | boolean | string[]) => setVals((p) => ({ ...p, [id]: v }));
+  const setSel = (cid: string, oid: string) => setSelected((p) => ({ ...p, [cid]: oid }));
 
-  const typesByCat = useMemo(() => {
-    const m: Record<string, PType[]> = {};
-    for (const p of propertyTypes) {
-      const cat = (locale === 'ar' ? p.catAr : p.catEn) || '—';
-      (m[cat] ??= []).push(p);
+  const allChosen = classifiers.length > 0 && classifiers.every((c) => selected[c.id]);
+
+  // An attribute applies when, for every classifier it constrains, the chosen option is allowed.
+  function applies(a: Attr): boolean {
+    const byCls = new Map<string, string[]>();
+    for (const oid of a.optionIds) {
+      const cid = optCls.get(oid);
+      if (!cid) continue;
+      const arr = byCls.get(cid) ?? [];
+      arr.push(oid);
+      byCls.set(cid, arr);
     }
-    return m;
-  }, [propertyTypes, locale]);
+    for (const [cid, allowed] of byCls) {
+      const sel = selected[cid];
+      if (!sel || !allowed.includes(sel)) return false;
+    }
+    return true;
+  }
+
+  const grouped = useMemo(() => {
+    const applicable = attributes.filter(applies);
+    return sections
+      .slice()
+      .sort((a, b) => a.order - b.order)
+      .map((s) => ({ section: s, attrs: applicable.filter((a) => a.sectionId === s.id).sort((a, b) => a.order - b.order) }))
+      .filter((g) => g.attrs.length > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attributes, sections, selected, optCls]);
 
   async function uploadDoc(file: File, attrId: string) {
     setError('');
@@ -95,19 +135,10 @@ export function ListingForm({
     else setError('failed');
   }
 
-  const grouped = useMemo(() => {
-    const applicable = attributes.filter((a) => a.typeIds.includes(typeId));
-    return sections
-      .slice()
-      .sort((a, b) => a.order - b.order)
-      .map((s) => ({ section: s, attrs: applicable.filter((a) => a.sectionId === s.id).sort((a, b) => a.order - b.order) }))
-      .filter((g) => g.attrs.length > 0);
-  }, [attributes, sections, typeId]);
-
   function buildValues(): ValueInput[] {
     const out: ValueInput[] = [];
     for (const a of attributes) {
-      if (!a.typeIds.includes(typeId)) continue;
+      if (!applies(a)) continue;
       const v = vals[a.id];
       if (a.type === 'BOOLEAN') {
         if (v === true) out.push({ attributeId: a.id, bool: true });
@@ -120,7 +151,6 @@ export function ListingForm({
       } else if (a.type === 'PHOTOS' || a.type === 'DOCUMENTS') {
         out.push({ attributeId: a.id, attachmentIds: (attachs[a.id] ?? []).map((x) => x.id) });
       } else if (typeof v === 'string' && v.trim() !== '') {
-        // TEXT / TEXTAREA / DATE ("YYYY-MM")
         out.push({ attributeId: a.id, text: v });
       }
     }
@@ -129,13 +159,15 @@ export function ListingForm({
 
   function submit(status: 'DRAFT' | 'PENDING') {
     setError('');
-    if (!typeId || !title.trim() || !contactPhone.trim()) {
+    if (!allChosen || !title.trim() || !contactPhone.trim()) {
       setError('failed');
       return;
     }
     const input: ListingInput = {
       id: initial.id,
-      propertyTypeId: typeId,
+      typeOptionId: selOf('type'),
+      purposeOptionId: selOf('purpose'),
+      conditionOptionId: selOf('condition'),
       title,
       description,
       price: price.trim() ? Number(price) : null,
@@ -233,17 +265,18 @@ export function ListingForm({
     <div className="max-w-3xl space-y-5">
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <label className="block text-sm">
-        {t('pickType')}
-        <select value={typeId} onChange={(e) => setTypeId(e.target.value)} className={inp}>
-          <option value="">—</option>
-          {Object.entries(typesByCat).map(([cat, list]) => (
-            <optgroup key={cat} label={cat}>
-              {list.map((p) => (<option key={p.id} value={p.id}>{L(p.nameAr, p.nameEn)}</option>))}
-            </optgroup>
-          ))}
-        </select>
-      </label>
+      {/* Type / Purpose / Condition classifiers */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        {classifiers.map((c) => (
+          <label key={c.id} className="block text-sm">
+            {L(c.nameAr, c.nameEn)}
+            <select value={selected[c.id] ?? ''} onChange={(e) => setSel(c.id, e.target.value)} className={inp}>
+              <option value="">—</option>
+              {c.options.map((o) => (<option key={o.id} value={o.id}>{L(o.nameAr, o.nameEn)}</option>))}
+            </select>
+          </label>
+        ))}
+      </div>
 
       <label className="block text-sm">{t('listingTitle')}<input value={title} onChange={(e) => setTitle(e.target.value)} className={inp} /></label>
       <label className="block text-sm">{t('description')}<textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inp} /></label>
@@ -278,7 +311,7 @@ export function ListingForm({
         </div>
       )}
 
-      {typeId &&
+      {allChosen ? (
         grouped.map((g) => (
           <div key={g.section.id} className="space-y-3 rounded-lg border border-graphite/15 p-4">
             <h3 className="font-semibold text-primary">{L(g.section.nameAr, g.section.nameEn)}</h3>
@@ -291,7 +324,10 @@ export function ListingForm({
               ))}
             </div>
           </div>
-        ))}
+        ))
+      ) : (
+        <p className="rounded-lg border border-dashed border-graphite/25 p-4 text-sm opacity-60">{t('pickClassifiers')}</p>
+      )}
 
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">{t('photos')}</h3>

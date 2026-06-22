@@ -13,17 +13,10 @@ export type CatalogAttrType =
 
 /** Loads the active catalog shaped for the listing form (types grouped by category, sections, attributes). */
 export async function loadCatalog() {
-  const [ptRaw, sections, attrs] = await Promise.all([
-    prisma.propertyType.findMany({
-      where: { isActive: true },
+  const [classifiers, sections, attrs] = await Promise.all([
+    prisma.classifier.findMany({
       orderBy: { order: 'asc' },
-      select: {
-        id: true,
-        nameAr: true,
-        nameEn: true,
-        order: true,
-        group: { select: { order: true, category: { select: { nameAr: true, nameEn: true, order: true } } } },
-      },
+      include: { options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true } } },
     }),
     prisma.attributeSection.findMany({
       where: { isActive: true },
@@ -39,23 +32,10 @@ export async function loadCatalog() {
           orderBy: { order: 'asc' },
           select: { id: true, labelAr: true, labelEn: true },
         },
-        typeLinks: { select: { propertyTypeId: true } },
+        classifierLinks: { select: { optionId: true } },
       },
     }),
   ]);
-
-  const propertyTypes = ptRaw
-    .map((p) => ({
-      id: p.id,
-      nameAr: p.nameAr,
-      nameEn: p.nameEn,
-      order: p.order,
-      catAr: p.group?.category.nameAr ?? '',
-      catEn: p.group?.category.nameEn ?? '',
-      catOrder: p.group?.category.order ?? 999,
-      grpOrder: p.group?.order ?? 999,
-    }))
-    .sort((a, b) => a.catOrder - b.catOrder || a.grpOrder - b.grpOrder || a.order - b.order);
 
   const attributes = attrs.map((a) => ({
     id: a.id,
@@ -66,10 +46,14 @@ export async function loadCatalog() {
     unit: a.unit,
     order: a.order,
     options: a.options,
-    typeIds: a.typeLinks.map((l) => l.propertyTypeId),
+    optionIds: a.classifierLinks.map((l) => l.optionId),
   }));
 
-  return { propertyTypes, sections, attributes };
+  return {
+    classifiers: classifiers.map((c) => ({ id: c.id, key: c.key, nameAr: c.nameAr, nameEn: c.nameEn, options: c.options })),
+    sections,
+    attributes,
+  };
 }
 
 /** Splits a listing's attachments into the main gallery (no attribute) and per-property files. */

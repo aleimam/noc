@@ -24,7 +24,7 @@ export default async function MyListings() {
   const listings = await prisma.listing.findMany({
     where: { sellerId: session.user.id },
     orderBy: { updatedAt: 'desc' },
-    include: { propertyType: { select: { nameAr: true, nameEn: true } } },
+    include: { typeOption: { select: { nameAr: true, nameEn: true } } },
   });
   const ids = listings.map((l) => l.id);
   const covers = ids.length
@@ -61,7 +61,7 @@ export default async function MyListings() {
             <div className="flex-1 space-y-1">
               <div className="font-semibold">{l.title}</div>
               <div className="text-xs opacity-70">
-                {L(l.propertyType.nameAr, l.propertyType.nameEn)}
+                {L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
                 {l.price != null ? ` · ${String(l.price)} ${currency(locale)}` : ''}
               </div>
               <span className={`inline-block rounded px-2 py-0.5 text-xs ${STATUS_COLOR[l.status] ?? ''}`}>

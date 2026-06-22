@@ -231,47 +231,62 @@ enum AttrType {
   DOCUMENTS // file attachments (kept internal / admin-only)
 }
 
-/// Top-level real-estate category (Land, Residential, Commercial…). Bilingual.
-model PropertyCategory {
+/// Classifier dimension — Type, Purpose, Condition. Fixed set; options are admin-editable.
+model Classifier {
   id        String   @id @default(cuid())
-  key       String   @unique
+  key       String   @unique // 'type' | 'purpose' | 'condition'
   nameAr    String
   nameEn    String
-  icon      String?
   order     Int      @default(0)
-  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  groups PropertyGroup[]
+  options ClassifierOption[]
 
-  @@index([isActive, order])
+  @@index([order])
 }
 
-/// Middle grouping under a category (Housing, Commercial…). Bilingual.
-model PropertyGroup {
-  id         String   @id @default(cuid())
-  categoryId String
-  key        String
-  nameAr     String
-  nameEn     String
-  order      Int      @default(0)
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+/// An option within a classifier (Type: Apartment; Purpose: Residential; Condition: Finished…).
+model ClassifierOption {
+  id           String   @id @default(cuid())
+  classifierId String
+  key          String
+  nameAr       String
+  nameEn       String
+  order        Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  category PropertyCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  types    PropertyType[]
+  classifier        Classifier            @relation(fields: [classifierId], references: [id], onDelete: Cascade)
+  attrLinks         AttributeClassifier[]
+  typeListings      Listing[]             @relation("ListingType")
+  purposeListings   Listing[]             @relation("ListingPurpose")
+  conditionListings Listing[]             @relation("ListingCondition")
 
-  @@unique([categoryId, key])
-  @@index([categoryId, order])
+  @@unique([classifierId, key])
+  @@index([classifierId, order])
 }
 
-/// Real-estate type (land, apartment, villa…). Leaf of category → group → type. Bilingual.
+/// Attribute applicability: which classifier OPTIONS an attribute applies to. For each
+/// classifier the attribute constrains, a listing's selected option must be linked here;
+/// no link for a classifier means the attribute applies to ALL of that classifier's options.
+model AttributeClassifier {
+  id          String @id @default(cuid())
+  attributeId String
+  optionId    String
+
+  attribute Attribute        @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  option    ClassifierOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([attributeId, optionId])
+  @@index([optionId])
+}
+
+/// Legacy real-estate type — superseded by the Type classifier. Kept dormant for old listings.
 model PropertyType {
   id        String   @id @default(cuid())
   key       String   @unique
-  groupId   String?
   nameAr    String
   nameEn    String
   icon      String?
@@ -280,12 +295,10 @@ model PropertyType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  group      PropertyGroup?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
   attributes PropertyTypeAttribute[]
   listings   Listing[]
 
   @@index([isActive, order])
-  @@index([groupId, order])
 }
 
 /// A group of attributes (الموقع / المواصفات / المرافق…). Bilingual.
@@ -322,10 +335,11 @@ model Attribute {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  section   AttributeSection        @relation(fields: [sectionId], references: [id], onDelete: Restrict)
-  options   AttributeOption[]
-  typeLinks PropertyTypeAttribute[]
-  values    ListingValue[]
+  section        AttributeSection        @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  options        AttributeOption[]
+  typeLinks      PropertyTypeAttribute[] // legacy
+  classifierLinks AttributeClassifier[]
+  values         ListingValue[]
 
   @@index([sectionId, order])
   @@index([filterable])
@@ -368,7 +382,10 @@ model Listing {
   id              String        @id @default(cuid())
   sellerId        String
   createdById     String?
-  propertyTypeId  String
+  propertyTypeId  String? // legacy (superseded by typeOptionId)
+  typeOptionId      String?
+  purposeOptionId   String?
+  conditionOptionId String?
   title           String
   description     String?       @db.Text
   price           Decimal?      @db.Decimal(14, 2)
@@ -388,7 +405,10 @@ model Listing {
 
   seller       User           @relation("ListingSeller", fields: [sellerId], references: [id], onDelete: Cascade)
   createdBy    User?          @relation("ListingCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  propertyType PropertyType   @relation(fields: [propertyTypeId], references: [id], onDelete: Restrict)
+  propertyType    PropertyType?     @relation(fields: [propertyTypeId], references: [id], onDelete: SetNull)
+  typeOption      ClassifierOption? @relation("ListingType", fields: [typeOptionId], references: [id], onDelete: SetNull)
+  purposeOption   ClassifierOption? @relation("ListingPurpose", fields: [purposeOptionId], references: [id], onDelete: SetNull)
+  conditionOption ClassifierOption? @relation("ListingCondition", fields: [conditionOptionId], references: [id], onDelete: SetNull)
   owner        Owner?         @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   neighborhood Neighborhood?  @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)
   sourceLand   Land?          @relation("LandListing")

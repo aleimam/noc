@@ -23,7 +23,7 @@ export default async function ModerationPage() {
     where: { status: 'PENDING' },
     orderBy: { createdAt: 'asc' },
     include: {
-      propertyType: { select: { nameAr: true, nameEn: true } },
+      typeOption: { select: { nameAr: true, nameEn: true } },
       seller: { select: { phone: true, name: true } },
     },
   });
@@ -31,7 +31,7 @@ export default async function ModerationPage() {
     where: { status: { not: 'PENDING' } },
     orderBy: { updatedAt: 'desc' },
     take: 30,
-    include: { propertyType: { select: { nameAr: true, nameEn: true } } },
+    include: { typeOption: { select: { nameAr: true, nameEn: true } } },
   });
 
   return (
@@ -52,7 +52,7 @@ export default async function ModerationPage() {
             <div>
               <div className="font-semibold">{l.title}</div>
               <div className="text-xs opacity-70">
-                {L(l.propertyType.nameAr, l.propertyType.nameEn)}
+                {L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
                 {l.price != null ? ` · ${String(l.price)} ${currency(locale)}` : ''} · {t('seller')}: <span dir="ltr">{l.seller.phone ?? l.seller.name}</span> · {l.contactPhone}
               </div>
             </div>
@@ -72,7 +72,7 @@ export default async function ModerationPage() {
               {recent.map((l) => (
                 <tr key={l.id} className="border-t border-graphite/10 first:border-t-0">
                   <td className="p-2">{l.title}</td>
-                  <td className="p-2 text-xs opacity-70">{L(l.propertyType.nameAr, l.propertyType.nameEn)}</td>
+                  <td className="p-2 text-xs opacity-70">{L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}</td>
                   <td className="p-2">
                     <span className={`inline-block rounded px-2 py-0.5 text-xs ${STATUS_COLOR[l.status] ?? ''}`}>{t(`status${l.status}`)}</span>
                   </td>

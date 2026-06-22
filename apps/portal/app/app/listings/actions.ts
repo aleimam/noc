@@ -15,7 +15,9 @@ export type ValueInput = {
 
 export type ListingInput = {
   id?: string;
-  propertyTypeId: string;
+  typeOptionId: string;
+  purposeOptionId: string;
+  conditionOptionId: string;
   title: string;
   description?: string;
   price?: number | null;
@@ -60,7 +62,7 @@ export async function saveListing(input: ListingInput): Promise<Result> {
   const session = await auth();
   const user = session?.user;
   if (!user) return { ok: false, error: 'unauthorized' };
-  if (!input.propertyTypeId || !input.title.trim() || !input.contactPhone.trim()) {
+  if (!input.typeOptionId || !input.purposeOptionId || !input.conditionOptionId || !input.title.trim() || !input.contactPhone.trim()) {
     return { ok: false, error: 'failed' };
   }
   const isStaff = user.type === 'STAFF';
@@ -68,7 +70,9 @@ export async function saveListing(input: ListingInput): Promise<Result> {
   try {
     const id = await prisma.$transaction(async (tx) => {
       const base = {
-        propertyTypeId: input.propertyTypeId,
+        typeOptionId: input.typeOptionId,
+        purposeOptionId: input.purposeOptionId,
+        conditionOptionId: input.conditionOptionId,
         title: input.title.trim(),
         description: input.description?.trim() || null,
         price: input.price ?? null,

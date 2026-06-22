@@ -16,7 +16,7 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
 
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
-  const { propertyTypes, sections, attributes } = await loadCatalog();
+  const { classifiers, sections, attributes } = await loadCatalog();
   const { photos, attachs } = await loadListingAttachments(id);
   const vals = buildVals(listing.values, new Map(attributes.map((a) => [a.id, a.type])));
 
@@ -27,13 +27,15 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
         <a href="/app/listings" className="text-sm text-accent">← {t('myOffers')}</a>
       </div>
       <ListingForm
-        propertyTypes={propertyTypes}
+        classifiers={classifiers}
         sections={sections}
         attributes={attributes}
         locale={locale}
         initial={{
           id: listing.id,
-          propertyTypeId: listing.propertyTypeId,
+          typeOptionId: listing.typeOptionId ?? '',
+          purposeOptionId: listing.purposeOptionId ?? '',
+          conditionOptionId: listing.conditionOptionId ?? '',
           title: listing.title,
           description: listing.description ?? '',
           price: listing.price != null ? String(listing.price) : '',

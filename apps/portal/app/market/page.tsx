@@ -15,20 +15,24 @@ export default async function MarketPage({
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const get = (k: string) => (typeof sp[k] === 'string' ? (sp[k] as string) : '');
 
-  const types = await prisma.propertyType.findMany({ where: { isActive: true }, orderBy: { order: 'asc' } });
+  const typeCls = await prisma.classifier.findUnique({
+    where: { key: 'type' },
+    include: { options: { where: { isActive: true }, orderBy: { order: 'asc' } } },
+  });
+  const types = typeCls?.options ?? [];
   const typeKey = get('type');
   const selectedType = types.find((x) => x.key === typeKey) ?? null;
 
   const filterAttrs = selectedType
     ? await prisma.attribute.findMany({
-        where: { isActive: true, filterable: true, typeLinks: { some: { propertyTypeId: selectedType.id } } },
+        where: { isActive: true, filterable: true, classifierLinks: { some: { optionId: selectedType.id } } },
         orderBy: { order: 'asc' },
         include: { options: { where: { isActive: true }, orderBy: { order: 'asc' } } },
       })
     : [];
 
   const and: Prisma.ListingWhereInput[] = [{ status: 'PUBLISHED' }];
-  if (selectedType) and.push({ propertyTypeId: selectedType.id });
+  if (selectedType) and.push({ typeOptionId: selectedType.id });
   for (const a of filterAttrs) {
     if (a.type === 'NUMBER') {
       const numCond: Prisma.DecimalNullableFilter = {};
@@ -52,7 +56,7 @@ export default async function MarketPage({
     where: { AND: and },
     orderBy: { publishedAt: 'desc' },
     take: 60,
-    include: { propertyType: true },
+    include: { typeOption: true },
   });
   const ids = listings.map((l) => l.id);
   const covers = ids.length
@@ -90,7 +94,7 @@ export default async function MarketPage({
             href={`/market/${l.id}`}
             cover={cover.get(l.id) ?? null}
             title={l.title}
-            subtitle={L(l.propertyType.nameAr, l.propertyType.nameEn)}
+            subtitle={L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
             price={l.price != null ? String(l.price) : null}
             currency={currency(locale)}
           />

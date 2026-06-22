@@ -365,7 +365,7 @@ export async function publishLand(id: string): Promise<Result> {
     if (land.listingId) return { ok: false, error: 'duplicate_key' };
 
     const [landType, settings] = await Promise.all([
-      prisma.propertyType.findUnique({ where: { key: 'land' } }),
+      prisma.classifierOption.findFirst({ where: { key: 'land', classifier: { key: 'type' } } }),
       prisma.setting.findMany({ where: { key: { in: ['alswarey_phone', 'alswarey_whatsapp'] } } }),
     ]);
     if (!landType) return { ok: false, error: 'failed' };
@@ -378,7 +378,7 @@ export async function publishLand(id: string): Promise<Result> {
       data: {
         sellerId: uid,
         createdById: uid,
-        propertyTypeId: landType.id,
+        typeOptionId: landType.id,
         title,
         description: land.details ?? null,
         price: land.price,

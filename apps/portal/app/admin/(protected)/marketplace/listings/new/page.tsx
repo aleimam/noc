@@ -8,7 +8,7 @@ export default async function StaffNewListing() {
   await requirePermission('marketplace', 'CREATE');
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
-  const { propertyTypes, sections, attributes } = await loadCatalog();
+  const { classifiers, sections, attributes } = await loadCatalog();
   const [owners, settings] = await Promise.all([
     prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } }),
     prisma.setting.findMany({ where: { key: { in: ['alswarey_phone', 'alswarey_whatsapp'] } } }),
@@ -24,12 +24,14 @@ export default async function StaffNewListing() {
       <ListingForm
         staffMode
         owners={owners.map((o) => ({ id: o.id, name: o.name, type: o.type }))}
-        propertyTypes={propertyTypes}
+        classifiers={classifiers}
         sections={sections}
         attributes={attributes}
         locale={locale}
         initial={{
-          propertyTypeId: '',
+          typeOptionId: '',
+          purposeOptionId: '',
+          conditionOptionId: '',
           title: '',
           description: '',
           price: '',

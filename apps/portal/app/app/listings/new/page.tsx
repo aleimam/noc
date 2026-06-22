@@ -11,7 +11,7 @@ export default async function NewListing() {
 
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
-  const { propertyTypes, sections, attributes } = await loadCatalog();
+  const { classifiers, sections, attributes } = await loadCatalog();
   const dbUser = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { phone: true },
@@ -24,12 +24,14 @@ export default async function NewListing() {
         <a href="/app/listings" className="text-sm text-accent">← {t('myOffers')}</a>
       </div>
       <ListingForm
-        propertyTypes={propertyTypes}
+        classifiers={classifiers}
         sections={sections}
         attributes={attributes}
         locale={locale}
         initial={{
-          propertyTypeId: '',
+          typeOptionId: '',
+          purposeOptionId: '',
+          conditionOptionId: '',
           title: '',
           description: '',
           price: '',

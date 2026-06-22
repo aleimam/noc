@@ -23,7 +23,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const listing = await prisma.listing.findUnique({
     where: { id },
-    include: { values: { include: { option: true } }, propertyType: true },
+    include: { values: { include: { option: true } }, typeOption: true, purposeOption: true, conditionOption: true },
   });
   if (!listing || listing.status !== 'PUBLISHED') notFound();
 
@@ -110,7 +110,11 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       <PhotoGallery photos={photos.map((p) => p.path)} />
 
       <div>
-        <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{L(listing.propertyType.nameAr, listing.propertyType.nameEn)}</span>
+        <div className="flex flex-wrap gap-1">
+          {[listing.typeOption, listing.purposeOption, listing.conditionOption].map((o, i) => o && (
+            <span key={i} className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{L(o.nameAr, o.nameEn)}</span>
+          ))}
+        </div>
         <h1 className="mt-2 text-2xl font-bold text-primary">{listing.title}</h1>
         {listing.price != null && (
           <div className="mt-1 text-xl font-bold text-primary">

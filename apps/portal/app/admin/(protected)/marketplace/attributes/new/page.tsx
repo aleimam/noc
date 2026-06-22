@@ -6,9 +6,12 @@ import { upsertAttribute } from '../../actions';
 
 export default async function NewAttribute() {
   await requirePermission('marketplace', 'CREATE');
-  const [sections, types] = await Promise.all([
+  const [sections, classifiers] = await Promise.all([
     prisma.attributeSection.findMany({ orderBy: { order: 'asc' } }),
-    prisma.propertyType.findMany({ orderBy: { order: 'asc' } }),
+    prisma.classifier.findMany({
+      orderBy: { order: 'asc' },
+      include: { options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true } } },
+    }),
   ]);
   const t = await getTranslations('mp');
 
@@ -23,7 +26,7 @@ export default async function NewAttribute() {
     order: 0,
     isActive: true,
     options: [],
-    typeIds: [],
+    optionIds: [],
   };
 
   return (
@@ -35,7 +38,7 @@ export default async function NewAttribute() {
       <AttributeForm
         initial={initial}
         sections={sections.map((s) => ({ id: s.id, nameAr: s.nameAr, nameEn: s.nameEn }))}
-        types={types.map((x) => ({ id: x.id, nameAr: x.nameAr, nameEn: x.nameEn }))}
+        classifiers={classifiers.map((c) => ({ id: c.id, nameAr: c.nameAr, nameEn: c.nameEn, options: c.options }))}
         action={upsertAttribute}
       />
     </div>

@@ -21,91 +21,11 @@ function fail(e: unknown): Result {
   return { ok: false, error: 'failed' };
 }
 
-// ─────────────────────────── Property Types ───────────────────────────
+// ───────────────── Classifiers (Type / Purpose / Condition) options ─────────────────
 
-export async function upsertPropertyType(input: {
-  id?: string;
-  key: string;
-  nameAr: string;
-  nameEn: string;
-  icon?: string | null;
-  groupId?: string | null;
-  order?: number;
-  isActive?: boolean;
-}): Promise<Result> {
-  await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
-  const data = {
-    nameAr: input.nameAr.trim(),
-    nameEn: input.nameEn.trim(),
-    icon: input.icon?.trim() || null,
-    groupId: input.groupId || null,
-    order: input.order ?? 0,
-    isActive: input.isActive ?? true,
-  };
-  try {
-    if (input.id) await prisma.propertyType.update({ where: { id: input.id }, data });
-    else await prisma.propertyType.create({ data: { key: input.key.trim(), ...data } });
-    revalidate();
-    return { ok: true };
-  } catch (e) {
-    return fail(e);
-  }
-}
-
-export async function deletePropertyType(id: string): Promise<Result> {
-  await requirePermission('marketplace', 'DELETE');
-  try {
-    await prisma.propertyType.delete({ where: { id } });
-    revalidate();
-    return { ok: true };
-  } catch (e) {
-    return fail(e);
-  }
-}
-
-// ──────────────────────── Categories + Groups ────────────────────────
-
-export async function upsertPropertyCategory(input: {
-  id?: string;
-  key: string;
-  nameAr: string;
-  nameEn: string;
-  icon?: string | null;
-  order?: number;
-  isActive?: boolean;
-}): Promise<Result> {
-  await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
-  const data = {
-    nameAr: input.nameAr.trim(),
-    nameEn: input.nameEn.trim(),
-    icon: input.icon?.trim() || null,
-    order: input.order ?? 0,
-    isActive: input.isActive ?? true,
-  };
-  try {
-    if (input.id) await prisma.propertyCategory.update({ where: { id: input.id }, data });
-    else await prisma.propertyCategory.create({ data: { key: input.key.trim(), ...data } });
-    revalidate();
-    return { ok: true };
-  } catch (e) {
-    return fail(e);
-  }
-}
-
-export async function deletePropertyCategory(id: string): Promise<Result> {
-  await requirePermission('marketplace', 'DELETE');
-  try {
-    await prisma.propertyCategory.delete({ where: { id } });
-    revalidate();
-    return { ok: true };
-  } catch (e) {
-    return fail(e);
-  }
-}
-
-/** Groups are scoped to a category — bind categoryId on the server page. */
-export async function upsertPropertyGroup(
-  categoryId: string,
+/** Options are scoped to a classifier — bind classifierId on the server page. */
+export async function upsertClassifierOption(
+  classifierId: string,
   input: { id?: string; key: string; nameAr: string; nameEn: string; order?: number; isActive?: boolean },
 ): Promise<Result> {
   await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
@@ -116,8 +36,8 @@ export async function upsertPropertyGroup(
     isActive: input.isActive ?? true,
   };
   try {
-    if (input.id) await prisma.propertyGroup.update({ where: { id: input.id }, data });
-    else await prisma.propertyGroup.create({ data: { categoryId, key: input.key.trim(), ...data } });
+    if (input.id) await prisma.classifierOption.update({ where: { id: input.id }, data });
+    else await prisma.classifierOption.create({ data: { classifierId, key: input.key.trim(), ...data } });
     revalidate();
     return { ok: true };
   } catch (e) {
@@ -125,10 +45,10 @@ export async function upsertPropertyGroup(
   }
 }
 
-export async function deletePropertyGroup(id: string): Promise<Result> {
+export async function deleteClassifierOption(id: string): Promise<Result> {
   await requirePermission('marketplace', 'DELETE');
   try {
-    await prisma.propertyGroup.delete({ where: { id } });
+    await prisma.classifierOption.delete({ where: { id } });
     revalidate();
     return { ok: true };
   } catch (e) {
@@ -201,7 +121,7 @@ export async function upsertAttribute(input: {
   order?: number;
   isActive?: boolean;
   options?: AttrOptionInput[];
-  typeIds?: string[];
+  optionIds?: string[]; // ClassifierOption ids the attribute applies to (Type/Purpose/Condition)
 }): Promise<Result> {
   await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
   const core = {
@@ -218,7 +138,7 @@ export async function upsertAttribute(input: {
   };
   const hasOptions = input.type === 'SELECT' || input.type === 'MULTI_SELECT';
   const options = hasOptions ? (input.options ?? []) : [];
-  const typeIds = input.typeIds ?? [];
+  const optionIds = input.optionIds ?? [];
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -243,16 +163,16 @@ export async function upsertAttribute(input: {
         else await tx.attributeOption.create({ data: { attributeId: attr.id, ...odata } });
       }
 
-      // Sync type mappings (delete missing, create new).
-      const links = await tx.propertyTypeAttribute.findMany({ where: { attributeId: attr.id } });
-      const want = new Set(typeIds);
-      const have = new Set(links.map((l) => l.propertyTypeId));
-      const removeLinks = links.filter((l) => !want.has(l.propertyTypeId)).map((l) => l.id);
+      // Sync classifier applicability (delete missing, create new).
+      const links = await tx.attributeClassifier.findMany({ where: { attributeId: attr.id } });
+      const want = new Set(optionIds);
+      const have = new Set(links.map((l) => l.optionId));
+      const removeLinks = links.filter((l) => !want.has(l.optionId)).map((l) => l.id);
       if (removeLinks.length)
-        await tx.propertyTypeAttribute.deleteMany({ where: { id: { in: removeLinks } } });
-      const addTypes = typeIds.filter((t) => !have.has(t));
-      for (const t of addTypes) {
-        await tx.propertyTypeAttribute.create({ data: { propertyTypeId: t, attributeId: attr.id } });
+        await tx.attributeClassifier.deleteMany({ where: { id: { in: removeLinks } } });
+      const addOpts = optionIds.filter((o) => !have.has(o));
+      for (const o of addOpts) {
+        await tx.attributeClassifier.create({ data: { optionId: o, attributeId: attr.id } });
       }
     });
     revalidate();
