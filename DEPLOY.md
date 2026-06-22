@@ -75,8 +75,12 @@ Then add TLS (Let's Encrypt / `certbot`) and reload Apache.
 
 ## Updating a release
 ```bash
-git pull && npm install && npm run -w @noc/db migrate:deploy && npm run build && pm2 reload all
+git pull && npm install && npm run db:release && npm run build && pm2 reload all
 ```
+`db:release` runs migrate-deploy → **generate** → seed-marketplace **in that order**. The
+generate step is essential: the seed uses the generated Prisma client, so it must be
+regenerated *before* seeding (otherwise new models like `classifier` are `undefined`).
+It does NOT run the base seed, so the admin password is never reset.
 
 ## Notes
 - **SMS:** `SMS_PROVIDER=console` only logs codes (dev). Production needs a real Egyptian
