@@ -755,3 +755,55 @@ model LandFollow {
   @@index([landId])
   @@index([neighborhoodId])
 }
+
+// ─────────────────────── City services: News & Build Guide ───────────────────────
+
+enum NewsCategory {
+  FACILITIES // مرافق
+  ROADS // طرق
+  HANDOVERS // تسليمات
+  REGULATIONS // لوائح وقوانين
+  GENERAL // عام
+}
+
+/// Official city news posted by staff. Free text kept as entered; English optional.
+/// Photos attach via Attachment (ownerType = 'News').
+model News {
+  id          String       @id @default(cuid())
+  titleAr     String
+  titleEn     String?
+  bodyAr      String       @db.Text
+  bodyEn      String?      @db.Text
+  category    NewsCategory @default(GENERAL)
+  pinned      Boolean      @default(false)
+  publishedAt DateTime? // null = draft
+  createdById String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([publishedAt])
+  @@index([category, publishedAt])
+}
+
+enum GuideSection {
+  LICENSING // خطوات الترخيص
+  HANDOVER // إجراءات الاستلام
+  COMPANIES // شركات الترخيص والبناء
+  COSTS // تكاليف البناء
+}
+
+/// Licensing & build guide entries, grouped by section and ordered.
+model GuideEntry {
+  id        String       @id @default(cuid())
+  section   GuideSection
+  titleAr   String
+  titleEn   String?
+  bodyAr    String       @db.Text
+  bodyEn    String?      @db.Text
+  order     Int          @default(0)
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([section, order])
+}

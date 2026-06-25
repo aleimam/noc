@@ -19,6 +19,8 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
     { href: '/admin/rationing', label: t('rationing'), section: 'sheets', action: 'VIEW' },
     { href: '/admin/lands', label: t('lands'), section: 'lands', action: 'VIEW' },
     { href: '/admin/lands/lands', label: t('landPlots'), section: 'lands', action: 'VIEW' },
+    { href: '/admin/news', label: t('news'), section: 'news', action: 'VIEW' },
+    { href: '/admin/guide', label: t('guide'), section: 'guide', action: 'VIEW' },
     { href: '/admin/settings', label: t('settings'), section: 'settings', action: 'VIEW' },
   ];
   const nav: AdminNavItem[] = [

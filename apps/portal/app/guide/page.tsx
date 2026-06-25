@@ -1,0 +1,49 @@
+import { getLocale, getTranslations } from 'next-intl/server';
+import { prisma } from '@noc/db';
+import { PublicShell } from '@noc/ui';
+
+export const dynamic = 'force-dynamic';
+const SECS = ['LICENSING', 'HANDOVER', 'COMPANIES', 'COSTS'] as const;
+
+export default async function GuidePage() {
+  const locale = (await getLocale()) as 'ar' | 'en';
+  const t = await getTranslations('guide');
+  const L = (ar: string, en: string | null) => (locale === 'ar' ? ar : en || ar);
+
+  const rows = await prisma.guideEntry.findMany({ where: { isActive: true }, orderBy: [{ section: 'asc' }, { order: 'asc' }] });
+  const bySec = new Map<string, typeof rows>();
+  for (const r of rows) {
+    const arr = bySec.get(r.section) ?? [];
+    arr.push(r);
+    bySec.set(r.section, arr);
+  }
+
+  return (
+    <PublicShell active="guide">
+      <div className="mx-auto max-w-[900px] space-y-10 px-6 py-10">
+        <div>
+          <h1 className="text-3xl font-extrabold text-navy-800">{t('title')}</h1>
+          <p className="mt-2 text-ink-500">{t('subtitle')}</p>
+        </div>
+        {rows.length === 0 && <p className="text-ink-500">{t('none')}</p>}
+        {SECS.map((s) => {
+          const items = bySec.get(s);
+          if (!items?.length) return null;
+          return (
+            <section key={s} className="space-y-4">
+              <h2 className="border-s-4 border-gold ps-3 text-xl font-bold text-navy-800">{t(`sec${s}`)}</h2>
+              <div className="space-y-3">
+                {items.map((g) => (
+                  <div key={g.id} className="rounded-lg border border-ink-200 bg-white p-5 shadow-sm">
+                    <h3 className="font-bold text-navy-800">{L(g.titleAr, g.titleEn)}</h3>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-700">{L(g.bodyAr, g.bodyEn)}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </PublicShell>
+  );
+}
