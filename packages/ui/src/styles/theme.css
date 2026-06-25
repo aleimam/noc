@@ -1,25 +1,99 @@
-/* ALSWARY brand theme — shared by the portal and brokerage apps (Tailwind v4).
-   Imported by each app's globals.css after `@import "tailwindcss"`. */
+/* New Obour brand theme — shared by the portal and brokerage apps (Tailwind v4).
+   Ported from the NewObour Design System: navy spine + gold accent (used sparingly),
+   Tajawal for Arabic/UI + Playfair Display for Latin figures, soft-rounded shapes,
+   restrained navy-tinted elevation. Green is demoted to a status/success color only. */
 
 /* Class-based dark mode (toggled by adding `.dark` on <html>). */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Brand palette */
+  /* ── Navy ramp — the brand spine (navbars, headings, primary CTAs, hero bands) ── */
+  --color-navy-50: #eef2f8;
+  --color-navy-100: #dce4ee;
+  --color-navy-200: #b4c4d8;
+  --color-navy-300: #7e98ba;
+  --color-navy-400: #4a6c9b;
+  --color-navy-500: #2a4d7d;
+  --color-navy-600: #1c3a63;
+  --color-navy-700: #13294b;
+  --color-navy-800: #0b1b33;
+  --color-navy-900: #060f1e;
   --color-navy: #0b1b33;
+
+  /* ── Gold ramp — the accent / trust-mark, used sparingly ── */
+  --color-gold-50: #fbf6ec;
+  --color-gold-100: #f7eedd;
+  --color-gold-200: #f0dfc2;
+  --color-gold-300: #e7cd9b;
+  --color-gold-400: #ddba76;
+  --color-gold-500: #d4a857;
+  --color-gold-600: #c9983e;
+  --color-gold-700: #a87e2e;
+  --color-gold-800: #8a6622;
+  --color-gold-900: #6e4f18;
   --color-gold: #c9983e;
-  --color-green: #2e7749;
+
+  /* ── Ink / neutrals ── */
+  --color-ink-100: #eeeeea;
+  --color-ink-200: #e2e2de;
+  --color-ink-300: #c2c2c0;
+  --color-ink-400: #9a9a9a;
+  --color-ink-500: #767676;
+  --color-ink-600: #5c5c5c;
+  --color-ink-700: #404040;
+  --color-ink-800: #2d2d2d;
+  --color-ink-900: #1a1a1a;
+
+  /* ── Brand aliases ── */
   --color-soft: #f7f7f5;
   --color-graphite: #2d2d2d;
+  --color-green: #2f9e7d; /* status-alloc / success / WhatsApp only — never a UI accent */
 
-  /* Semantic tokens — driven by the CSS vars below, so they switch with `.dark`. */
+  /* ── Land legal-status colors ── */
+  --color-status-mail: #5b7da6;
+  --color-status-ledger: #c9983e;
+  --color-status-alloc: #2f9e7d;
+  --color-status-license: #2563a8;
+  --color-status-build: #d08a3a;
+
+  /* ── Feedback ── */
+  --color-success: #1f8a5b;
+  --color-success-soft: #dcefe5;
+  --color-warning: #c97f1e;
+  --color-warning-soft: #f7ecd7;
+  --color-danger: #c0392b;
+  --color-danger-soft: #f6dedb;
+  --color-info: #2563a8;
+  --color-info-soft: #dde9f6;
+
+  /* ── Semantic tokens — driven by the CSS vars below, so they switch with `.dark`. ── */
   --color-bg: var(--bg);
   --color-fg: var(--fg);
   --color-primary: var(--primary);
   --color-accent: var(--accent);
 
-  /* Typography (Cairo is injected per-app via next/font as --font-cairo). */
-  --font-sans: var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
+  /* ── Typography (Tajawal + Playfair injected per-app via next/font). ── */
+  --font-sans: var(--font-tajawal), 'Segoe UI', system-ui, sans-serif;
+  --font-num: var(--font-playfair), var(--font-tajawal), serif;
+  --font-serif: var(--font-playfair), 'Times New Roman', serif;
+
+  /* ── Soft-rounded shape (DS: card 16, input/button 12, search 20). ── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+
+  /* ── Restrained, navy-tinted elevation; gold shadow for accent CTAs only. ── */
+  --shadow-xs: 0 1px 2px rgba(11, 27, 51, 0.06);
+  --shadow-sm: 0 1px 3px rgba(11, 27, 51, 0.08), 0 1px 2px rgba(11, 27, 51, 0.05);
+  --shadow-md: 0 4px 12px rgba(11, 27, 51, 0.08), 0 2px 4px rgba(11, 27, 51, 0.05);
+  --shadow-lg: 0 12px 28px rgba(11, 27, 51, 0.12), 0 4px 10px rgba(11, 27, 51, 0.06);
+  --shadow-xl: 0 24px 56px rgba(11, 27, 51, 0.16);
+  --shadow-gold: 0 6px 20px rgba(201, 152, 62, 0.28);
+
+  /* Sticky navbar height (→ h-navbar / pt-navbar utilities). */
+  --spacing-navbar: 72px;
 }
 
 :root {
@@ -30,7 +104,7 @@
 }
 
 .dark {
-  --bg: #0b1b33;
+  --bg: #060f1e;
   --fg: #f7f7f5;
   --primary: #c9983e;
   --accent: #c9983e;
@@ -40,5 +114,9 @@
   body {
     background-color: var(--color-bg);
     color: var(--color-fg);
+  }
+  /* Latin numerals/prices: tabular figures for scannability in data-dense tables. */
+  .font-num {
+    font-feature-settings: 'tnum' 1, 'lnum' 1;
   }
 }

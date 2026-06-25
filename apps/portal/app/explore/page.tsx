@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
+import { PublicShell } from '@noc/ui';
 import { localizeUnit } from '@noc/i18n';
 
 export const dynamic = 'force-dynamic';
@@ -18,13 +19,11 @@ export default async function ExplorePage() {
   const withNb = districts.filter((d) => d.neighborhoods.length > 0);
 
   return (
-    <main className="mx-auto max-w-5xl space-y-8 p-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-primary">{t('exploreTitle')}</h1>
-          <p className="text-sm opacity-70">{t('exploreManage')}</p>
-        </div>
-        <a href="/" className="text-sm text-accent">← {t('back')}</a>
+    <PublicShell active="explore">
+      <div className="mx-auto max-w-5xl space-y-8 p-6">
+      <div>
+        <h1 className="text-2xl font-extrabold text-navy-800">{t('exploreTitle')}</h1>
+        <p className="text-sm text-ink-500">{t('exploreManage')}</p>
       </div>
 
       {withNb.length === 0 && <p className="py-12 text-center opacity-60">{t('noNeighborhoods')}</p>}
@@ -47,6 +46,7 @@ export default async function ExplorePage() {
           </div>
         </section>
       ))}
-    </main>
+      </div>
+    </PublicShell>
   );
 }

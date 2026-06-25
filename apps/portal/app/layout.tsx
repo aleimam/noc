@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
-import { Cairo } from 'next/font/google';
+import { Tajawal, Playfair_Display } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { dirForLocale, type Locale } from '@noc/i18n';
 import { ThemeScript } from '@noc/ui';
 import './globals.css';
 
-const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' });
+const tajawal = Tajawal({ subsets: ['arabic', 'latin'], weight: ['300', '400', '500', '700', '800', '900'], variable: '--font-tajawal', display: 'swap' });
+const playfair = Playfair_Display({ subsets: ['latin'], weight: ['400', '600', '700'], variable: '--font-playfair', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'New Obour — newobour.com',
@@ -21,7 +22,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang={locale}
       dir={dirForLocale(locale)}
-      className={cairo.variable}
+      className={`${tajawal.variable} ${playfair.variable}`}
       suppressHydrationWarning
     >
       <head>

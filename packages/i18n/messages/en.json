@@ -118,6 +118,19 @@
     "invalidType": "Unsupported file type",
     "uploading": "Uploading…"
   },
+  "nav": {
+    "brand": "New Obour",
+    "tagline": "City services & real-estate marketplace",
+    "copyright": "© New Obour City Services Portal",
+    "home": "Home",
+    "market": "Marketplace",
+    "explore": "Districts",
+    "rationing": "Ledger Search",
+    "news": "News",
+    "guide": "Guide",
+    "priceIndex": "Price Index",
+    "login": "Login"
+  },
   "mp": {
     "title": "Marketplace",
     "propertyTypes": "Property Types",

@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma, Prisma } from '@noc/db';
-import { ListingCard } from '@noc/ui';
+import { ListingCard, PublicShell } from '@noc/ui';
 import { currency } from '@noc/i18n';
 import { MarketFilters } from './MarketFilters';
 
@@ -70,11 +70,9 @@ export default async function MarketPage({
   for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
 
   return (
-    <main className="mx-auto max-w-5xl space-y-5 p-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-primary">{t('title')}</h1>
-        <a href="/" className="text-sm text-accent">{t('cancel')}</a>
-      </div>
+    <PublicShell active="market">
+      <div className="mx-auto max-w-5xl space-y-5 p-6">
+      <h1 className="text-2xl font-extrabold text-navy-800">{t('title')}</h1>
 
       <MarketFilters
         types={types.map((x) => ({ key: x.key, nameAr: x.nameAr, nameEn: x.nameEn }))}
@@ -100,6 +98,7 @@ export default async function MarketPage({
           />
         ))}
       </div>
-    </main>
+      </div>
+    </PublicShell>
   );
 }

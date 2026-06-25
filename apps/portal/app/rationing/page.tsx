@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma, Prisma } from '@noc/db';
+import { PublicShell } from '@noc/ui';
 import { RegisterForm } from './RegisterForm';
 import { FoundResults } from './FoundResults';
 
@@ -44,21 +45,21 @@ export default async function RationingSearch({
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
-      <a href="/" className="text-sm text-accent">← {t('backHome')}</a>
+    <PublicShell active="rationing">
+      <div className="mx-auto max-w-3xl space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold text-primary">{t('searchTitle')}</h1>
-        <p className="text-sm opacity-70">{t('searchSubtitle')}</p>
+        <h1 className="text-2xl font-extrabold text-navy-800">{t('searchTitle')}</h1>
+        <p className="text-sm text-ink-500">{t('searchSubtitle')}</p>
       </div>
 
-      <form method="get" className="flex gap-2">
+      <form method="get" className="flex items-center gap-2 rounded-xl border border-ink-200 bg-white p-2 shadow-md">
         <input
           name="q"
           defaultValue={q}
           placeholder={t('searchPlaceholder')}
-          className="flex-1 rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm"
+          className="flex-1 border-none bg-transparent px-3 py-2 text-base outline-none"
         />
-        <button className="rounded-md bg-primary px-5 py-2 text-sm text-soft">{t('search')}</button>
+        <button className="flex-none rounded-md bg-navy px-6 py-2.5 text-sm font-bold text-soft transition hover:brightness-110">{t('search')}</button>
       </form>
 
       {searched && results.length > 0 && (
@@ -83,6 +84,7 @@ export default async function RationingSearch({
           <RegisterForm kind="NOT_FOUND_WATCH" defaultOwnerName={q} />
         </div>
       )}
-    </main>
+      </div>
+    </PublicShell>
   );
 }
