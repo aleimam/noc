@@ -38,5 +38,9 @@ Thumbs.db
 # business requirement & credential docs (kept local, NEVER published)
 *.docx
 
+# local design-system reference + archives (not app code)
+/NewObour Design System/
+*.zip
+
 # Word lock/temp artifacts
 ~WRL*.tmp
