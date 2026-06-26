@@ -84,8 +84,13 @@ EOF
 # --- 1) Database ------------------------------------------------------------
 db_out="$DB_DIR/noc-db-$ts.sql.gz"
 log "dumping database '$DB_NAME' -> $db_out"
+# --single-transaction: consistent InnoDB snapshot without locking / extra privs.
+# --no-tablespaces: avoid the global PROCESS privilege a plain dump needs on
+#   MySQL 8 / MariaDB (a non-root app user like noc_user usually lacks it).
+# Triggers are included by default; routines/events are omitted (NOC has none
+# and dumping them would need extra grants on the app user).
 if "$DUMP" --defaults-extra-file="$CNF" --single-transaction --quick \
-       --routines --triggers "$DB_NAME" | gzip -c > "$db_out.partial"; then
+       --no-tablespaces "$DB_NAME" | gzip -c > "$db_out.partial"; then
   mv "$db_out.partial" "$db_out"
   log "database OK ($(du -h "$db_out" | cut -f1))"
 else
