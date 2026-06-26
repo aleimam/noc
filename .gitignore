@@ -23,6 +23,9 @@ next-env.d.ts
 # local dev database (portable MariaDB)
 /.devdb/
 
+# optional server-side backup credential override (lives only on the server)
+ops/backup.env
+
 # logs
 *.log
 npm-debug.log*

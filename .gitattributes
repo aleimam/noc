@@ -1,0 +1,5 @@
+# Shell scripts must use LF endings so the shebang and `set` lines work when the
+# files are pulled and run on the Linux server, even though this repo is edited
+# on Windows. Without this, Git could check them out with CRLF and bash would
+# fail with `bad interpreter` / `\r` errors.
+*.sh text eol=lf
