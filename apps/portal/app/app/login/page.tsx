@@ -95,6 +95,9 @@ export default function CustomerLoginPage() {
         ) : (
           <form onSubmit={verify} className="space-y-4">
             {msg && <p className="text-sm text-green">{msg}</p>}
+            <p className="text-sm opacity-80">
+              {t('codeSentTo')} <strong dir="ltr">{phone}</strong>
+            </p>
             <div className="space-y-1">
               <label className="block text-sm">{t('enterCode')}</label>
               <input

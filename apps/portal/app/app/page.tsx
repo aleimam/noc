@@ -34,6 +34,9 @@ export default async function CustomerHome() {
         <a href="/app/listings" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
           {tm('myOffers')}
         </a>
+        <a href="/app/profile" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
+          {ta('myProfile')}
+        </a>
         <a href="/market" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
           {tm('title')}
         </a>

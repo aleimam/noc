@@ -5,6 +5,14 @@ import createNextIntlPlugin from 'next-intl/plugin';
 // AUTH_SECRET, etc. — Next only auto-loads .env from the app directory.
 loadEnv({ path: '../../.env' });
 
+// Behind the reverse proxy, next-auth (running via `next start`) can't infer the
+// public origin from the request — it sees `localhost:3002` — so auth redirects
+// (e.g. sign-out, provider callbacks) would point at localhost. Pin AUTH_URL to
+// this app's public origin. BROKERAGE_URL is per-environment in .env (prod domain
+// in prod, localhost in dev), so this stays correct everywhere; an explicit
+// AUTH_URL still wins via `||=`.
+process.env.AUTH_URL ||= process.env.BROKERAGE_URL;
+
 const withNextIntl = createNextIntlPlugin('../../packages/i18n/src/request.ts');
 
 /** @type {import('next').NextConfig} */

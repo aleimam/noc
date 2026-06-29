@@ -32,7 +32,20 @@
     "codeSent": "تم إرسال رمز التحقق إلى هاتفك",
     "sendFailed": "تعذّر إرسال الرمز، حاول مرة أخرى لاحقًا",
     "loggedInAs": "مسجّل الدخول باسم",
-    "phonePlaceholder": "01XXXXXXXXX"
+    "phonePlaceholder": "01XXXXXXXXX",
+    "codeSentTo": "تم إرسال الرمز إلى",
+    "myProfile": "ملفي الشخصي"
+  },
+  "profile": {
+    "title": "ملفي الشخصي",
+    "name": "الاسم",
+    "namePlaceholder": "اسمك",
+    "phone": "رقم الهاتف",
+    "phoneNote": "رقم هاتفك هو معرّف الدخول ولا يمكن تغييره من هنا.",
+    "save": "حفظ",
+    "saved": "تم الحفظ",
+    "error": "تعذّر الحفظ، حاول مرة أخرى",
+    "back": "رجوع"
   },
   "admin": {
     "dashboard": "الرئيسية",

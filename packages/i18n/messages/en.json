@@ -32,7 +32,20 @@
     "codeSent": "A verification code was sent to your phone",
     "sendFailed": "Couldn't send the code, please try again later",
     "loggedInAs": "Signed in as",
-    "phonePlaceholder": "01XXXXXXXXX"
+    "phonePlaceholder": "01XXXXXXXXX",
+    "codeSentTo": "Code sent to",
+    "myProfile": "My profile"
+  },
+  "profile": {
+    "title": "My profile",
+    "name": "Name",
+    "namePlaceholder": "Your name",
+    "phone": "Phone number",
+    "phoneNote": "Your phone is your login and can't be changed here.",
+    "save": "Save",
+    "saved": "Saved",
+    "error": "Couldn't save, please try again",
+    "back": "Back"
   },
   "admin": {
     "dashboard": "Dashboard",
