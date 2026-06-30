@@ -108,6 +108,31 @@
   --fg: #f7f7f5;
   --primary: #c9983e;
   --accent: #c9983e;
+
+  /* Neutral tokens that are only ever ink (text/border) or light tints (never a dark
+     brand surface) can be remapped wholesale — this flips text-ink-*/border-ink-* and
+     the navy-50/100 tints everywhere at once, including hover/opacity variants. */
+  --color-ink-100: #172033;
+  --color-ink-200: #243149;
+  --color-ink-300: #3a4763;
+  --color-ink-400: #7e8aa0;
+  --color-ink-500: #9aa6bd;
+  --color-ink-600: #bcc6d8;
+  --color-ink-700: #d4dbe8;
+  --color-ink-800: #e6ebf3;
+  --color-ink-900: #f2f5fa;
+  --color-navy-50: #0f2138;
+  --color-navy-100: #16294a;
+
+  /* Graphite is admin chrome's neutral (borders/dividers/hover, faint text) — never a
+     dark brand surface; lightening it makes admin hairlines visible on the dark bg. */
+  --color-graphite: #c8d0dc;
+
+  /* Status tint backgrounds are light-only fills → darken so alerts read on dark. */
+  --color-success-soft: #10261d;
+  --color-warning-soft: #2c2310;
+  --color-danger-soft: #2e1513;
+  --color-info-soft: #0f2138;
 }
 
 @layer base {
@@ -119,4 +144,25 @@
   .font-num {
     font-feature-settings: 'tnum' 1, 'lnum' 1;
   }
+}
+
+/* Dark-mode surface/text flips, keyed by utility CLASS (not token) so dual-used ramps
+   stay correct: bg-navy-800/text-white brand bands keep their navy+white, while
+   bg-white surfaces and text-navy-* headings flip. Class selectors (0,2,0) outrank the
+   base utilities (0,1,0). Components needing a special case can still override inline. */
+@layer utilities {
+  .dark .bg-soft { background-color: #060f1e; }
+  .dark .bg-white { background-color: #0f2138; }
+  .dark .text-navy,
+  .dark .text-navy-900,
+  .dark .text-navy-800,
+  .dark .text-navy-700 { color: #eef2f8; }
+  .dark .text-navy-600,
+  .dark .text-navy-500 { color: #b4c4d8; }
+
+  /* Rendered rich text (static pages / tiptap output). */
+  .dark .page-content th { background: rgba(255, 255, 255, 0.06); }
+  .dark .page-content th,
+  .dark .page-content td { border-color: rgba(255, 255, 255, 0.15); }
+  .dark .page-content a { color: var(--color-gold-400); }
 }
