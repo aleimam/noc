@@ -14,7 +14,7 @@ export default async function SettingsHub() {
     { href: '/admin/settings/appearance', label: t('settingsAppearance'), desc: t('settingsAppearanceDesc') },
     { href: '/admin/settings/branding', label: 'الشعارات والهوية', desc: 'شعار وأيقونة كل موقع' },
     { href: '/admin/settings/modules', label: 'الخدمات الظاهرة', desc: 'تفعيل/إخفاء خدمات العبور الجديد' },
-    { href: '/admin/settings/calculator', label: 'حاسبة التصالح', desc: 'أرقام ونسب حاسبة المساحة والتصالح' },
+    { href: '/admin/settings/calculator', label: 'حساب التسوية', desc: 'أرقام ونسب حساب المساحة والتسوية' },
     { href: '/admin/settings/site', label: 'إعدادات الموقع العامة', desc: 'قائمة الجوال، حقوق النشر، واتساب المساعدة' },
     { href: '/admin/settings/analytics', label: 'التحليلات والتتبّع', desc: 'GA4 و Meta Pixel و Search Console' },
   ];

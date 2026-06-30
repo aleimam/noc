@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { netArea, reconcile, type CalculatorConfig, type ReconcileResult } from '../../lib/calculator/calc';
+import { netArea, deriveStandard, reconcile, type CalculatorConfig, type ReconcileResult } from '../../lib/calculator/calc';
 
 type Tab = 'area' | 'reconcile';
 
@@ -37,7 +37,9 @@ function AreaCalc({ config }: { config: CalculatorConfig }) {
   const t = useTranslations('calculator');
   const [original, setOriginal] = useState('');
   const orig = parseFloat(original);
-  const net = isFinite(orig) && orig > 0 ? netArea(orig, config) : null;
+  const ready = isFinite(orig) && orig > 0;
+  const net = ready ? netArea(orig, config) : null;
+  const standard = net !== null ? deriveStandard(net, config) : null;
 
   return (
     <div className="space-y-5 rounded-2xl bg-white p-5 shadow-md sm:p-6">
@@ -46,11 +48,23 @@ function AreaCalc({ config }: { config: CalculatorConfig }) {
         <p className="mt-1 text-sm text-ink-600">{t('areaHint')}</p>
       </div>
       <NumberField label={t('originalArea')} value={original} onChange={setOriginal} />
-      {net !== null && (
-        <div className="rounded-2xl bg-navy-800 p-5 text-center text-white">
-          <div className="text-sm text-navy-200">{t('netArea')}</div>
-          <div className="mt-1 font-num text-4xl font-black text-gold" dir="ltr">
-            {fmtArea(net)} <span className="text-xl">{t('meters')}</span>
+      {net !== null && standard !== null && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-navy-50 p-4 text-center">
+              <div className="text-sm text-ink-600">{t('originalArea')}</div>
+              <div className="font-num mt-1 text-2xl font-black text-navy-800" dir="ltr">{fmtArea(orig)}</div>
+            </div>
+            <div className="rounded-2xl bg-navy-50 p-4 text-center">
+              <div className="text-sm text-ink-600">{t('discountedArea')}</div>
+              <div className="font-num mt-1 text-2xl font-black text-navy-800" dir="ltr">{fmtArea(net)}</div>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-navy-800 p-6 text-center text-white">
+            <div className="text-base text-navy-200">{t('standardArea')}</div>
+            <div className="font-num mt-1 text-5xl font-black text-gold sm:text-6xl" dir="ltr">
+              {fmtArea(standard)} <span className="text-2xl">{t('meters')}</span>
+            </div>
           </div>
         </div>
       )}
@@ -412,27 +426,22 @@ async function renderStatement(
     }
   }
 
-  // footer
+  // footer — fixed New Obour contacts, brand colors + icons (not admin-editable)
   const fy = H - footerH;
   ctx.fillStyle = NAVY;
   ctx.fillRect(0, fy, W, footerH);
-  ctx.textAlign = rtl ? 'right' : 'left';
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(0, fy, W, 3);
+  ctx.textAlign = 'center';
+  if ('direction' in ctx) ctx.direction = 'ltr';
   ctx.fillStyle = '#ffffff';
-  ctx.font = '13px Tajawal, Arial, sans-serif';
-  const contactBits = [
-    cfg.contact.phone && `${rtl ? 'هاتف' : 'Tel'}: ${cfg.contact.phone}`,
-    cfg.contact.whatsapp && `WhatsApp: ${cfg.contact.whatsapp}`,
-    cfg.contact.address,
-  ].filter(Boolean) as string[];
-  let cy = fy + 24;
-  for (const bit of contactBits.slice(0, 2)) {
-    ctx.fillText(bit, startX, cy);
-    cy += 20;
-  }
+  ctx.font = 'bold 18px Tajawal, Arial, sans-serif';
+  ctx.fillText('📞  010 408 10000        🌐  newobour.com', W / 2, fy + 32);
+  if ('direction' in ctx) ctx.direction = rtl ? 'rtl' : 'ltr';
   ctx.fillStyle = '#9aa6b8';
-  ctx.font = '11px Tajawal, Arial, sans-serif';
+  ctx.font = '12px Tajawal, Arial, sans-serif';
   const disc = locale === 'en' ? cfg.disclaimerEn : cfg.disclaimerAr;
-  ctx.fillText(truncate(disc, 92), startX, fy + footerH - 16);
+  ctx.fillText(truncate(disc, 95), W / 2, fy + 62);
 
   return canvas.toDataURL('image/png');
 }

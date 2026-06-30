@@ -11,7 +11,7 @@ export default async function CalculatorSettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-primary">حاسبة التصالح</h1>
+        <h1 className="text-2xl font-bold text-primary">حساب التسوية</h1>
         <a href="/admin/settings" className="text-sm text-accent">← الإعدادات</a>
       </div>
       <p className="text-sm opacity-70">

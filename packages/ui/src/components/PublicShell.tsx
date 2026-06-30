@@ -126,16 +126,16 @@ export function PublicShell({
       <main className="flex-1">{children}</main>
 
       <footer className="border-t border-ink-200 bg-white">
-        <div className="mx-auto flex max-w-[1320px] flex-col gap-6 px-6 py-10 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex max-w-[1320px] flex-col gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/logo" alt="" className="h-10 w-auto" />
+            <img src="/brand/logo" alt="" className="h-9 w-auto" />
             <div>
-              <div className="font-extrabold text-navy-800">{t('brand')}</div>
-              <div className="text-xs text-ink-500">{t('tagline')}</div>
+              <div className="text-lg font-extrabold text-navy-800">{t('brand')}</div>
+              <div className="text-sm text-ink-500">{t('tagline')}</div>
             </div>
           </div>
-          <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-600">
+          <nav className="flex flex-wrap gap-x-5 gap-y-2 text-base font-medium text-ink-600">
             {nav.map((n) => (
               <a key={n.href} href={n.href} className="hover:text-navy-800">{t(n.key)}</a>
             ))}

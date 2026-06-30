@@ -52,7 +52,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
         { href: '/admin/settings/analytics', label: L('التحليلات والتتبّع', 'Analytics'), section: 'settings' },
         { href: '/admin/settings/apis', label: L('الرسائل والواجهات', 'SMS & APIs'), section: 'settings' },
         { href: '/admin/settings/site', label: L('إعدادات الموقع العامة', 'Site settings'), section: 'settings' },
-        { href: '/admin/settings/calculator', label: L('حاسبة التصالح', 'Calculator'), section: 'settings' },
+        { href: '/admin/settings/calculator', label: L('حساب التسوية', 'Settlement'), section: 'settings' },
         { href: '/admin/settings/appearance', label: L('المظهر', 'Appearance') },
         { href: '/admin/settings/account', label: L('حسابي', 'My account') },
       ],

@@ -127,19 +127,9 @@ export function CalculatorSettingsClient({ initial }: { initial: CalculatorConfi
         />
       </Section>
 
-      {/* contact + disclaimer (shown on the image) */}
-      <Section title="بيانات صورة النتيجة">
-        <Grid>
-          <Field label="الهاتف">
-            <Inp text value={cfg.contact.phone} onChange={(v) => patch({ contact: { ...cfg.contact, phone: v } })} />
-          </Field>
-          <Field label="واتساب">
-            <Inp text value={cfg.contact.whatsapp} onChange={(v) => patch({ contact: { ...cfg.contact, whatsapp: v } })} />
-          </Field>
-          <Field label="العنوان">
-            <Inp text value={cfg.contact.address} onChange={(v) => patch({ contact: { ...cfg.contact, address: v } })} />
-          </Field>
-        </Grid>
+      {/* disclaimer (shown on the image; contacts on the image are fixed) */}
+      <Section title="إخلاء المسؤولية (صورة النتيجة)">
+        <p className="mb-2 text-xs opacity-60">بيانات التواصل في صورة النتيجة ثابتة: 010 408 10000 · newobour.com.</p>
         <Field label="إخلاء المسؤولية (عربي)">
           <textarea
             value={cfg.disclaimerAr}

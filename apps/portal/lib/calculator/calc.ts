@@ -49,8 +49,10 @@ export const DEFAULT_CALC_CONFIG: CalculatorConfig = {
   ],
   maxArea: 4200,
   contact: { phone: '', whatsapp: '', address: '' },
-  disclaimerAr: 'هذه القيم تقديرية للاسترشاد فقط وليست بيانًا رسميًا من جهاز مدينة العبور الجديدة.',
-  disclaimerEn: 'These figures are indicative estimates only and are not an official statement from the New Obour City Authority.',
+  disclaimerAr:
+    'هذه القيم تقديرية للاسترشاد فقط وليست بيانًا رسميًا من جهاز مدينة العبور الجديدة. رجاء زيارة جهاز المدينة للحصول على القيم الفعلية الدقيقة للمدفوعات المطلوبة.',
+  disclaimerEn:
+    'These figures are indicative estimates only and are not an official statement from the New Obour City Authority. Please visit the City Authority for the exact, official payment values.',
 };
 
 /** Net area from the original area (Area Calculator). */
