@@ -11,6 +11,7 @@ const KEYS = [
   'brand_alsawarey_logo',
   'brand_alsawarey_logo_dark',
   'brand_alsawarey_favicon',
+  'brand_alsawarey_hero',
 ];
 
 export default async function BrandingPage() {

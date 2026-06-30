@@ -20,6 +20,7 @@ const BRANDS: { title: string; fields: Field[] }[] = [
       { key: 'brand_alsawarey_logo', label: 'الشعار' },
       { key: 'brand_alsawarey_logo_dark', label: 'الشعار (الوضع الداكن)' },
       { key: 'brand_alsawarey_favicon', label: 'أيقونة الموقع (favicon)' },
+      { key: 'brand_alsawarey_hero', label: 'صورة الواجهة (الهيرو في الصفحة الرئيسية)' },
     ],
   },
 ];

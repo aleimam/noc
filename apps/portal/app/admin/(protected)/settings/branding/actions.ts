@@ -11,6 +11,7 @@ const ALLOWED = new Set([
   'brand_alsawarey_logo',
   'brand_alsawarey_logo_dark',
   'brand_alsawarey_favicon',
+  'brand_alsawarey_hero',
 ]);
 
 export async function saveBrandAsset(key: string, value: string | null): Promise<{ ok: true } | { ok: false; error: string }> {
