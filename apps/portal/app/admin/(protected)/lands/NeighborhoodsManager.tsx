@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { AREA_PRESETS, BUILDING_TYPES, MAIN_ROADS } from '@noc/config';
@@ -43,6 +43,31 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
 
   const blank: Draft = { districtId: districts[0]?.id ?? '', nameAr: '', nameEn: '', hasBlocks: false, assortedAreas: false, areas: [], buildingTypes: [], mainRoads: [], order: neighborhoods.length, isActive: true };
 
+  const [q, setQ] = useState('');
+  const [districtFilter, setDistrictFilter] = useState('');
+  const [sortKey, setSortKey] = useState<'district' | 'neighborhood' | 'blocks'>('neighborhood');
+  const [dir, setDir] = useState<'asc' | 'desc'>('asc');
+  function toggleSort(k: 'district' | 'neighborhood' | 'blocks') {
+    if (sortKey === k) setDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(k); setDir('asc'); }
+  }
+  const arrow = (k: 'district' | 'neighborhood' | 'blocks') => (sortKey === k ? (dir === 'asc' ? ' ▲' : ' ▼') : '');
+  const view = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const rows = neighborhoods.filter(
+      (n) => (!districtFilter || n.districtId === districtFilter) && (!needle || `${n.nameAr} ${n.nameEn} ${dName(n.districtId)}`.toLowerCase().includes(needle)),
+    );
+    rows.sort((a, b) => {
+      let r = 0;
+      if (sortKey === 'district') r = dName(a.districtId).localeCompare(dName(b.districtId), 'ar');
+      else if (sortKey === 'blocks') r = (a.hasBlocks ? a.blockCount : 0) - (b.hasBlocks ? b.blockCount : 0);
+      else r = L(a.nameAr, a.nameEn).localeCompare(L(b.nameAr, b.nameEn), 'ar');
+      return dir === 'asc' ? r : -r;
+    });
+    return rows;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [neighborhoods, q, districtFilter, sortKey, dir]);
+
   function save() {
     if (!draft) return;
     setError('');
@@ -70,24 +95,32 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
     <div className="space-y-4">
       {error && <p className="text-sm text-red-600">{error === 'in_use' ? t('inUse') : error}</p>}
 
+      <div className="flex flex-wrap items-center gap-3">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('search')} className="w-full max-w-xs rounded-md border border-graphite/20 bg-transparent px-3 py-1.5 text-sm" />
+        <select value={districtFilter} onChange={(e) => setDistrictFilter(e.target.value)} className="rounded-md border border-graphite/20 bg-transparent px-3 py-1.5 text-sm">
+          <option value="">{t('allDistricts')}</option>
+          {districts.map((d) => (<option key={d.id} value={d.id}>{L(d.nameAr, d.nameEn)}</option>))}
+        </select>
+        <span className="text-xs opacity-60">{view.length}/{neighborhoods.length}</span>
+      </div>
       <div className="overflow-x-auto rounded-lg border border-graphite/15">
         <table className="w-full text-sm">
           <thead className="bg-graphite/5">
             <tr>
-              <th className="p-2 text-start">{t('district')}</th>
-              <th className="p-2 text-start">{t('neighborhood')}</th>
+              <th className="p-2 text-start"><button type="button" onClick={() => toggleSort('district')} className="font-semibold hover:text-accent">{t('district')}{arrow('district')}</button></th>
+              <th className="p-2 text-start"><button type="button" onClick={() => toggleSort('neighborhood')} className="font-semibold hover:text-accent">{t('neighborhood')}{arrow('neighborhood')}</button></th>
               <th className="p-2 text-start">{t('areas')}</th>
-              <th className="p-2 text-start">{t('blocks')}</th>
+              <th className="p-2 text-start"><button type="button" onClick={() => toggleSort('blocks')} className="font-semibold hover:text-accent">{t('blocks')}{arrow('blocks')}</button></th>
               <th className="p-2"></th>
             </tr>
           </thead>
           <tbody>
-            {neighborhoods.length === 0 && (
+            {view.length === 0 && (
               <tr>
                 <td colSpan={5} className="p-4 text-center opacity-60">{t('noNeighborhoods')}</td>
               </tr>
             )}
-            {neighborhoods.map((n) => (
+            {view.map((n) => (
               <tr key={n.id} className="border-t border-graphite/10">
                 <td className="p-2">{dName(n.districtId)}</td>
                 <td className="p-2 font-medium">

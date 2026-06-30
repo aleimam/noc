@@ -340,6 +340,7 @@
     "from": "From",
     "to": "To",
     "reset": "Reset",
+    "search": "Search…",
     "owners": "Owners / Contacts",
     "owner": "Owner",
     "ownerName": "Name",
@@ -698,6 +699,9 @@
     "confirmNotifyGeneric": "Send this update to all followers by SMS?",
     "addNeighborhood": "Add neighborhood",
     "addNeighborhoodHint": "Enter just the name now; you can fill the rest after it's created.",
-    "actionFailed": "Couldn't complete the action"
+    "actionFailed": "Couldn't complete the action",
+    "search": "Search…",
+    "allStatuses": "All statuses",
+    "allTypes": "All types"
   }
 }

@@ -15,6 +15,8 @@ export function BlocksManager({ neighborhoodId, blocks }: { neighborhoodId: stri
   const [name, setName] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [q, setQ] = useState('');
+  const shown = q.trim() ? blocks.filter((b) => b.name.toLowerCase().includes(q.trim().toLowerCase())) : blocks;
 
   function add() {
     if (!name.trim()) return;
@@ -42,9 +44,12 @@ export function BlocksManager({ neighborhoodId, blocks }: { neighborhoodId: stri
 
   return (
     <div className="space-y-3">
+      {blocks.length > 6 && (
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('search')} className={`${inp} max-w-xs`} />
+      )}
       <div className="flex flex-wrap gap-2">
-        {blocks.length === 0 && <p className="text-sm opacity-60">{t('noBlocks')}</p>}
-        {blocks.map((b) => (
+        {shown.length === 0 && <p className="text-sm opacity-60">{t('noBlocks')}</p>}
+        {shown.map((b) => (
           <div key={b.id} className="flex items-center gap-2 rounded border border-graphite/20 px-2 py-1 text-sm">
             {editId === b.id ? (
               <>

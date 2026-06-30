@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
@@ -15,6 +15,7 @@ export type CatalogRow = {
 };
 type UpsertInput = { id?: string; key: string; nameAr: string; nameEn: string; order: number; isActive: boolean };
 type Result = { ok: true } | { ok: false; error: string };
+type SortKey = 'order' | 'nameAr' | 'nameEn' | 'key' | 'isActive';
 
 const input = 'w-full rounded border border-graphite/20 bg-transparent px-2 py-1';
 
@@ -36,6 +37,9 @@ export function CatalogTable({
   const [pending, start] = useTransition();
   const [draft, setDraft] = useState<UpsertInput | null>(null); // edit OR add (add has no id)
   const [error, setError] = useState('');
+  const [q, setQ] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('order');
+  const [dir, setDir] = useState<'asc' | 'desc'>('asc');
 
   function run(fn: () => Promise<Result>, done?: () => void) {
     setError('');
@@ -50,25 +54,61 @@ export function CatalogTable({
     });
   }
 
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortKey(key);
+      setDir('asc');
+    }
+  }
+  const arrow = (key: SortKey) => (sortKey === key ? (dir === 'asc' ? ' ▲' : ' ▼') : '');
+
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const filtered = needle
+      ? initial.filter((r) => `${r.nameAr} ${r.nameEn} ${r.key} ${r.meta ?? ''}`.toLowerCase().includes(needle))
+      : initial.slice();
+    filtered.sort((a, b) => {
+      let r = 0;
+      if (sortKey === 'order') r = a.order - b.order;
+      else if (sortKey === 'isActive') r = (a.isActive ? 1 : 0) - (b.isActive ? 1 : 0);
+      else r = String(a[sortKey] ?? '').localeCompare(String(b[sortKey] ?? ''), 'ar');
+      return dir === 'asc' ? r : -r;
+    });
+    return filtered;
+  }, [initial, q, sortKey, dir]);
+
   const editing = (row: CatalogRow) => draft?.id === row.id;
+  const Th = ({ k, label }: { k: SortKey; label: string }) => (
+    <th className="p-2 text-start">
+      <button type="button" onClick={() => toggleSort(k)} className="font-semibold hover:text-accent">{label}{arrow(k)}</button>
+    </th>
+  );
 
   return (
     <div className="space-y-3">
       {error && <p className="text-sm text-red-600">{t('delete')}: {error}</p>}
+      <div className="flex items-center justify-between gap-3">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('search')} className="w-full max-w-xs rounded-md border border-graphite/20 bg-transparent px-3 py-1.5 text-sm" />
+        <span className="whitespace-nowrap text-xs opacity-60">{rows.length}/{initial.length}</span>
+      </div>
       <div className="overflow-x-auto rounded-lg border border-graphite/15">
         <table className="w-full text-sm">
           <thead className="bg-graphite/5 text-start">
             <tr>
-              <th className="p-2 text-start">{t('order')}</th>
-              <th className="p-2 text-start">{t('nameAr')}</th>
-              <th className="p-2 text-start">{t('nameEn')}</th>
-              <th className="p-2 text-start">{t('key')}</th>
-              <th className="p-2 text-start">{t('active')}</th>
+              <Th k="order" label={t('order')} />
+              <Th k="nameAr" label={t('nameAr')} />
+              <Th k="nameEn" label={t('nameEn')} />
+              <Th k="key" label={t('key')} />
+              <Th k="isActive" label={t('active')} />
               <th className="p-2"></th>
             </tr>
           </thead>
           <tbody>
-            {initial.map((row) =>
+            {rows.length === 0 && (
+              <tr><td colSpan={6} className="p-4 text-center opacity-60">{t('none')}</td></tr>
+            )}
+            {rows.map((row) =>
               editing(row) && draft ? (
                 <tr key={row.id} className="border-t border-graphite/10">
                   <td className="p-1">

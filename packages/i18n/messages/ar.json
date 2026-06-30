@@ -340,6 +340,7 @@
     "from": "من",
     "to": "إلى",
     "reset": "إعادة ضبط",
+    "search": "بحث…",
     "owners": "الملاك / جهات الاتصال",
     "owner": "المالك",
     "ownerName": "الاسم",
@@ -698,6 +699,9 @@
     "confirmNotifyGeneric": "إرسال هذا التحديث لكل المتابعين عبر رسالة SMS؟",
     "addNeighborhood": "إضافة مجاورة",
     "addNeighborhoodHint": "أدخل الاسم فقط الآن؛ يمكنك إكمال باقي التفاصيل بعد الإنشاء.",
-    "actionFailed": "تعذّر إتمام العملية"
+    "actionFailed": "تعذّر إتمام العملية",
+    "search": "بحث…",
+    "allStatuses": "كل الحالات",
+    "allTypes": "كل الأنواع"
   }
 }
