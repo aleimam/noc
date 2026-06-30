@@ -17,22 +17,25 @@ export default async function MarketplaceHub() {
   ]);
   const sett = Object.fromEntries(settings.map((s) => [s.key, s.value]));
   const cards = [
+    // store management
+    { href: '/admin/marketplace/listings', label: t('moderation'), count: pending },
+    { href: '/admin/marketplace/offers', label: t('offers'), count: offers },
+    { href: '/admin/marketplace/owners', label: t('owners'), count: owners },
+    { href: '/admin/marketplace/wishlists', label: 'قوائم المفضلة', count: null },
+    { href: '/admin/marketplace/storefront', label: 'واجهة موقع الصواري', count: null },
+    { href: '/admin/marketplace/sell-content', label: t('sellContent'), count: null },
+    { href: '/admin/settings/watermark', label: 'العلامة المائية للصور', count: null },
+    // product catalog (shared taxonomy)
     { href: '/admin/marketplace/classifiers', label: t('classifiers'), count: classifiers },
     { href: '/admin/marketplace/sections', label: t('sections'), count: sections },
     { href: '/admin/marketplace/attributes', label: t('attributes'), count: attributes },
-    { href: '/admin/marketplace/owners', label: t('owners'), count: owners },
-    { href: '/admin/marketplace/listings', label: t('moderation'), count: pending },
-    { href: '/admin/marketplace/offers', label: t('offers'), count: offers },
-    { href: '/admin/marketplace/wishlists', label: 'قوائم المفضلة', count: null },
-    { href: '/admin/marketplace/sell-content', label: t('sellContent'), count: null },
-    { href: '/admin/marketplace/storefront', label: 'واجهة موقع الصواري', count: null },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-primary">{t('title')}</h1>
-        <p className="text-sm opacity-70">{t('manage')}</p>
+        <h1 className="text-2xl font-bold text-primary">إدارة موقع الصواري</h1>
+        <p className="text-sm opacity-70">كل ما يخص متجر الصواري: العروض، الملاك، واجهة الموقع، ومحتواه.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (

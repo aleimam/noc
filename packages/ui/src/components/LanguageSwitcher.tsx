@@ -1,14 +1,15 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 
 const LOCALE_COOKIE = 'NEXT_LOCALE';
+// Short, self-labelling toggle (shows both, highlights the current): En / العربية.
+const LABELS: Record<'ar' | 'en', string> = { ar: 'العربية', en: 'En' };
 
 export function LanguageSwitcher() {
   const router = useRouter();
   const locale = useLocale();
-  const t = useTranslations('common');
 
   function switchTo(next: 'ar' | 'en') {
     if (next === locale) return;
@@ -36,7 +37,7 @@ export function LanguageSwitcher() {
               : 'rounded px-2 py-1 hover:bg-graphite/10'
           }
         >
-          {code === 'ar' ? t('arabic') : t('english')}
+          {LABELS[code]}
         </button>
       ))}
     </div>

@@ -7,9 +7,14 @@ export interface AdminNavItem {
   label: string;
 }
 
+export interface AdminNavGroup {
+  title?: string;
+  items: AdminNavItem[];
+}
+
 /**
- * Admin chrome: a navy sidebar (nav is permission-filtered by the caller) plus a
- * topbar with the signed-in user, language + theme switchers, a back-to-site
+ * Admin chrome: a navy sidebar (nav is permission-filtered + grouped by the caller)
+ * plus a topbar with the signed-in user, language + theme switchers, a back-to-site
  * link, and a sign-out slot. RTL-aware via logical properties.
  */
 export function AdminShell({
@@ -23,7 +28,7 @@ export function AdminShell({
 }: {
   brand: string;
   userLabel: string;
-  nav: AdminNavItem[];
+  nav: AdminNavGroup[];
   backToSiteLabel: string;
   storeLinks?: { label: string; href: string }[];
   signOut?: ReactNode;
@@ -31,17 +36,24 @@ export function AdminShell({
 }) {
   return (
     <div className="grid min-h-screen grid-cols-[15rem_1fr]">
-      <aside className="flex flex-col gap-2 border-e border-graphite/15 bg-navy p-3 text-soft">
+      <aside className="flex flex-col gap-1 border-e border-graphite/15 bg-navy p-3 text-soft">
         <div className="px-2 py-3 text-lg font-bold text-gold">{brand}</div>
         <nav className="flex flex-col gap-1">
-          {nav.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-3 py-2 text-sm text-soft/90 hover:bg-soft/10"
-            >
-              {item.label}
-            </a>
+          {nav.map((group, gi) => (
+            <div key={gi} className="flex flex-col gap-0.5">
+              {group.title && (
+                <div className="px-3 pb-1 pt-3 text-xs font-bold uppercase tracking-wide text-gold/70">{group.title}</div>
+              )}
+              {group.items.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-md px-3 py-2 text-sm text-soft/90 hover:bg-soft/10"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
           ))}
         </nav>
       </aside>

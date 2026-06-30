@@ -9,7 +9,7 @@ import { uploadRoot } from '../../../../../lib/uploads';
 import { applyWatermark, getWatermarkConfig, saveWatermarkConfig, type WatermarkConfig } from '../../../../../lib/watermark';
 
 export async function saveWatermark(cfg: Partial<WatermarkConfig>): Promise<{ ok: true } | { ok: false; error: string }> {
-  await requirePermission('settings', 'UPDATE');
+  await requirePermission('marketplace', 'UPDATE');
   try {
     await saveWatermarkConfig(cfg);
     revalidatePath('/admin/settings/watermark');
@@ -22,7 +22,7 @@ export async function saveWatermark(cfg: Partial<WatermarkConfig>): Promise<{ ok
 
 /** Re-stamp every brokerage land photo in place with the current watermark. Run on request. */
 export async function restampLandPhotos(): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
-  await requirePermission('settings', 'UPDATE');
+  await requirePermission('marketplace', 'UPDATE');
   const cfg = await getWatermarkConfig();
   if (!cfg.enabled || !cfg.logoPath) return { ok: false, error: 'disabled' };
   try {
