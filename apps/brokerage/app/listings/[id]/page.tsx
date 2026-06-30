@@ -130,6 +130,22 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
           </section>
         )}
 
+        {land.amenities.length > 0 && (
+          <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
+            <h2 className="mb-3 text-lg font-bold text-navy-800">{L('مرافق المنطقة', 'Area amenities')}</h2>
+            <ul className="space-y-3">
+              {land.amenities.map((a, i) => (
+                <li key={i} className="border-b border-ink-100 pb-3 last:border-0 last:pb-0">
+                  <span className="rounded bg-navy-50 px-2 py-0.5 text-xs text-navy-700">{a.type}</span>
+                  <span className="ms-2 font-semibold text-navy-800">{a.title}</span>
+                  {a.details && <p className="mt-1 whitespace-pre-line text-sm text-ink-600">{a.details}</p>}
+                  {a.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={a.photos} /></div>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {similar.length > 0 && (
           <section className="mt-8">
             <h2 className="mb-4 text-xl font-bold text-navy-800 dark:text-soft">{L('أراضٍ مشابهة', 'Similar lands')}</h2>

@@ -87,6 +87,25 @@ export async function followerCount(level: 'district' | 'neighborhood', targetId
   return new Set(follows.map((f) => f.phone)).size;
 }
 
+export type AmenityRow = { id: string; typeId: string; titleAr: string; titleEn: string | null; detailsAr: string | null; detailsEn: string | null; photos: string[] };
+
+/** A neighborhood's public-realm amenities with their photos. */
+export async function loadAmenities(neighborhoodId: string): Promise<AmenityRow[]> {
+  const rows = await prisma.amenity.findMany({ where: { neighborhoodId }, orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] });
+  const ids = rows.map((r) => r.id);
+  const photos = ids.length
+    ? await prisma.attachment.findMany({ where: { ownerType: 'Amenity', ownerId: { in: ids } }, orderBy: { createdAt: 'asc' }, select: { ownerId: true, path: true } })
+    : [];
+  const byA = new Map<string, string[]>();
+  for (const p of photos) {
+    if (!p.ownerId) continue;
+    const arr = byA.get(p.ownerId) ?? [];
+    arr.push(p.path);
+    byA.set(p.ownerId, arr);
+  }
+  return rows.map((r) => ({ id: r.id, typeId: r.typeId, titleAr: r.titleAr, titleEn: r.titleEn, detailsAr: r.detailsAr, detailsEn: r.detailsEn, photos: byA.get(r.id) ?? [] }));
+}
+
 /** Currently-adjacent area ids for the given area. */
 export async function loadAdjacency(level: 'district' | 'neighborhood', id: string): Promise<string[]> {
   if (level === 'district') return (await prisma.districtLink.findMany({ where: { fromId: id }, select: { toId: true } })).map((l) => l.toId);

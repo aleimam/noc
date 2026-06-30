@@ -151,6 +151,7 @@ export type LandDetail = {
   typeAr: string | null;
   gallery: string[];
   specs: { label: string; value: string }[]; // public attributes, localized
+  amenities: { type: string; title: string; details: string | null; photos: string[] }[]; // inherited from the neighborhood
 };
 
 export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<LandDetail | null> {
@@ -215,6 +216,29 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
     if (value) specs.push({ label, value });
   }
 
+  // Public-realm amenities inherited from the land's neighborhood.
+  const amenities: LandDetail['amenities'] = [];
+  if (l.neighborhoodId) {
+    const rows = await prisma.amenity.findMany({ where: { neighborhoodId: l.neighborhoodId }, orderBy: [{ order: 'asc' }], include: { type: true } });
+    const ids = rows.map((r) => r.id);
+    const ph = ids.length ? await prisma.attachment.findMany({ where: { ownerType: 'Amenity', ownerId: { in: ids } }, orderBy: { createdAt: 'asc' }, select: { ownerId: true, path: true } }) : [];
+    const byA = new Map<string, string[]>();
+    for (const p of ph) {
+      if (!p.ownerId) continue;
+      const arr = byA.get(p.ownerId) ?? [];
+      arr.push(p.path);
+      byA.set(p.ownerId, arr);
+    }
+    for (const r of rows) {
+      amenities.push({
+        type: L(r.type.titleAr, r.type.titleEn),
+        title: L(r.titleAr, r.titleEn || r.titleAr),
+        details: locale === 'ar' ? r.detailsAr : r.detailsEn || r.detailsAr,
+        photos: byA.get(r.id) ?? [],
+      });
+    }
+  }
+
   return {
     id: l.id,
     adNumber: l.adNumber ?? null,
@@ -227,6 +251,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
     typeAr: locale === 'ar' ? l.typeOption?.nameAr ?? null : l.typeOption?.nameEn ?? null,
     gallery,
     specs,
+    amenities,
   };
 }
 

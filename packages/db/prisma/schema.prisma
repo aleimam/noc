@@ -890,6 +890,7 @@ model Neighborhood {
   follows    LandFollow[]
   listings   Listing[]
   landOffers LandOffer[]
+  amenities  Amenity[]
   linksFrom  NeighborhoodLink[] @relation("NeighborhoodLinkFrom")
   linksTo    NeighborhoodLink[] @relation("NeighborhoodLinkTo")
 
@@ -1020,6 +1021,41 @@ model DistrictLink {
 
   @@unique([fromId, toId])
   @@index([fromId])
+}
+
+/// Public-realm amenity type (Roads, Services, …) — admin-managed taxonomy.
+model AmenityType {
+  id        String   @id @default(cuid())
+  titleAr   String
+  titleEn   String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  amenities Amenity[]
+
+  @@index([isActive, order])
+}
+
+/// A public-realm amenity attached to a neighborhood (photos via Attachment 'Amenity').
+model Amenity {
+  id             String   @id @default(cuid())
+  neighborhoodId String
+  typeId         String
+  titleAr        String
+  titleEn        String?
+  detailsAr      String?  @db.Text
+  detailsEn      String?  @db.Text
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  neighborhood Neighborhood @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
+  type         AmenityType  @relation(fields: [typeId], references: [id], onDelete: Restrict)
+
+  @@index([neighborhoodId])
+  @@index([typeId])
 }
 
 /// Reciprocal neighborhood adjacency.

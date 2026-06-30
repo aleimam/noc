@@ -8,8 +8,13 @@ import { stampMapCopy } from '../../../../lib/mapStamp';
 
 type GeoLevel = 'district' | 'neighborhood' | 'block' | 'land';
 function revDetail(level: GeoLevel, id: string) {
-  if (level === 'district') revalidatePath(`/admin/lands/districts/${id}`);
-  else if (level === 'neighborhood') revalidatePath(`/admin/lands/neighborhoods/${id}`);
+  if (level === 'district') {
+    revalidatePath(`/admin/lands/districts/${id}`);
+    revalidatePath(`/admin/lands/districts/${id}/edit`);
+  } else if (level === 'neighborhood') {
+    revalidatePath(`/admin/lands/neighborhoods/${id}`);
+    revalidatePath(`/admin/lands/neighborhoods/${id}/edit`);
+  }
 }
 function geoField(level: GeoLevel, id: string) {
   return level === 'district'
@@ -536,6 +541,111 @@ export async function setNeighborhoodAdjacency(id: string, neighborIds: string[]
     if (toAdd.length) await prisma.neighborhoodLink.createMany({ data: toAdd.flatMap((nb) => [{ fromId: id, toId: nb }, { fromId: nb, toId: id }]), skipDuplicates: true });
     for (const nb of toRemove) await prisma.neighborhoodLink.deleteMany({ where: { OR: [{ fromId: id, toId: nb }, { fromId: nb, toId: id }] } });
     revDetail('neighborhood', id);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ── Public-realm amenity types (admin taxonomy) ──
+export async function upsertAmenityType(input: { id?: string; titleAr: string; titleEn: string; order?: number; isActive?: boolean }): Promise<Result> {
+  await requirePermission('lands', input.id ? 'UPDATE' : 'CREATE');
+  try {
+    const data = { titleAr: input.titleAr.trim(), titleEn: input.titleEn.trim(), order: input.order ?? 0, isActive: input.isActive ?? true };
+    if (!data.titleAr) return { ok: false, error: 'failed' };
+    if (input.id) await prisma.amenityType.update({ where: { id: input.id }, data });
+    else await prisma.amenityType.create({ data });
+    revalidatePath('/admin/lands/amenity-types');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function deleteAmenityType(id: string): Promise<Result> {
+  await requirePermission('lands', 'DELETE');
+  try {
+    await prisma.amenityType.delete({ where: { id } });
+    revalidatePath('/admin/lands/amenity-types');
+    return { ok: true };
+  } catch (e) {
+    return fail(e); // P2003 → in_use when amenities still reference it
+  }
+}
+
+// ── Amenities (per neighborhood; photos via Attachment 'Amenity') ──
+export async function upsertAmenity(input: {
+  id?: string;
+  neighborhoodId: string;
+  typeId: string;
+  titleAr: string;
+  titleEn?: string;
+  detailsAr?: string;
+  detailsEn?: string;
+  order?: number;
+  photoIds?: string[];
+}): Promise<Result> {
+  await requirePermission('lands', input.id ? 'UPDATE' : 'CREATE');
+  const session = await auth();
+  const uid = session?.user?.id ?? null;
+  try {
+    const data = {
+      typeId: input.typeId,
+      titleAr: input.titleAr.trim(),
+      titleEn: input.titleEn?.trim() || null,
+      detailsAr: input.detailsAr?.trim() || null,
+      detailsEn: input.detailsEn?.trim() || null,
+      order: input.order ?? 0,
+    };
+    if (!data.titleAr || !data.typeId) return { ok: false, error: 'failed' };
+    let amenityId: string;
+    if (input.id) {
+      await prisma.amenity.update({ where: { id: input.id }, data });
+      amenityId = input.id;
+    } else {
+      const a = await prisma.amenity.create({ data: { ...data, neighborhoodId: input.neighborhoodId } });
+      amenityId = a.id;
+    }
+    if (input.photoIds && uid) {
+      if (input.photoIds.length) await prisma.attachment.updateMany({ where: { id: { in: input.photoIds }, uploaderId: uid }, data: { ownerType: 'Amenity', ownerId: amenityId } });
+      await prisma.attachment.updateMany({
+        where: { ownerType: 'Amenity', ownerId: amenityId, ...(input.photoIds.length ? { id: { notIn: input.photoIds } } : {}) },
+        data: { ownerType: null, ownerId: null },
+      });
+    }
+    revDetail('neighborhood', input.neighborhoodId);
+    return { ok: true, id: amenityId };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function deleteAmenity(id: string): Promise<Result> {
+  await requirePermission('lands', 'DELETE');
+  try {
+    await prisma.attachment.updateMany({ where: { ownerType: 'Amenity', ownerId: id }, data: { ownerType: null, ownerId: null } });
+    const a = await prisma.amenity.delete({ where: { id } });
+    revDetail('neighborhood', a.neighborhoodId);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ── Edit an existing update (central Updates section) ──
+export async function updateGeoUpdate(input: { id: string; title?: string; body: string; happenedAt?: string }): Promise<Result> {
+  await requirePermission('lands', 'UPDATE');
+  try {
+    const body = input.body?.trim();
+    if (!body) return { ok: false, error: 'failed' };
+    let happenedAt: Date | undefined;
+    if (input.happenedAt) {
+      const d = new Date(input.happenedAt);
+      if (!isNaN(d.getTime())) happenedAt = d;
+    }
+    await prisma.geoUpdate.update({ where: { id: input.id }, data: { title: input.title?.trim() || null, body, ...(happenedAt ? { happenedAt } : {}) } });
+    revalidatePath('/admin/lands/updates');
+    revalidatePath('/admin/lands', 'layout');
     return { ok: true };
   } catch (e) {
     return fail(e);

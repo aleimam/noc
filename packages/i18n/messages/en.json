@@ -684,6 +684,17 @@
     "notifyFollowers": "Notify followers",
     "sent": "Sent",
     "confirmNotify": "This update will be sent to followers by SMS. Followers:",
-    "saved": "Saved"
+    "saved": "Saved",
+    "publicRealm": "Public realm (amenities)",
+    "amenityTypes": "Amenity types",
+    "amenityTypesHint": "The list of amenity types (Roads, Services, …) — add and edit freely.",
+    "amenityType": "Type",
+    "amenityNoTypes": "Add amenity types first from the \"Amenity types\" page.",
+    "amenityTypeInUse": "Can't delete a type that's still used by amenities.",
+    "detailsAr": "Details (Arabic)",
+    "detailsEn": "Details (English)",
+    "updatesSection": "District & neighborhood updates",
+    "addUpdate": "Add update",
+    "confirmNotifyGeneric": "Send this update to all followers by SMS?"
   }
 }
