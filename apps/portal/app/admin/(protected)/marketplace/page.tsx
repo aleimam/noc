@@ -23,6 +23,7 @@ export default async function MarketplaceHub() {
     { href: '/admin/marketplace/owners', label: t('owners'), count: owners },
     { href: '/admin/marketplace/listings', label: t('moderation'), count: pending },
     { href: '/admin/marketplace/offers', label: t('offers'), count: offers },
+    { href: '/admin/marketplace/wishlists', label: 'قوائم المفضلة', count: null },
     { href: '/admin/marketplace/sell-content', label: t('sellContent'), count: null },
   ];
 

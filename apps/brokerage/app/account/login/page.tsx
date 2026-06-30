@@ -54,7 +54,7 @@ export default function CustomerLogin() {
       <div className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-md">
         <a href="/" className="block text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="الصواري" className="mx-auto h-12 w-auto" />
+          <img src="/brand/logo" alt="الصواري" className="mx-auto h-12 w-auto" />
         </a>
         <h1 className="text-center text-xl font-bold text-navy-800">{L('تسجيل الدخول', 'Sign in')}</h1>
 

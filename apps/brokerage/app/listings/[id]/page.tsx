@@ -2,14 +2,29 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import { PhotoGallery } from '@noc/ui';
-import { auth } from '@noc/auth';
 import { StoreShell } from '../../_components/StoreShell';
-import { getLandDetail, wishlistIds } from '../../../lib/listings';
+import { StoreLandCard } from '../../_components/StoreLandCard';
+import { getLandDetail, similarLands } from '../../../lib/listings';
+import { wishlistListingIds } from '../../../lib/wishlist';
 import { BuyButton } from './BuyButton';
 import { WishlistButton } from '../../_components/WishlistButton';
 
 export const dynamic = 'force-dynamic';
 const fmt = (n: number) => n.toLocaleString('en');
+const BASE = (process.env.BROKERAGE_URL || 'https://alsawarey.com').replace(/\/$/, '');
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const land = await getLandDetail(id, 'ar');
+  if (!land) return { title: 'الصواري' };
+  const desc = [land.typeAr, ...land.specs.slice(0, 4).map((s) => `${s.label}: ${s.value}`)].filter(Boolean).join(' · ');
+  const img = land.gallery[0] ? `${BASE}${land.gallery[0]}` : undefined;
+  return {
+    title: `${land.title} — الصواري`,
+    description: desc.slice(0, 160),
+    openGraph: { title: land.title, description: desc.slice(0, 160), images: img ? [img] : [], type: 'website' },
+  };
+}
 
 export default async function LandDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,8 +32,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const land = await getLandDetail(id, locale);
   if (!land) notFound();
-  const session = await auth();
-  const wished = await wishlistIds(session?.user?.id);
+  const [wished, similar] = await Promise.all([wishlistListingIds(), similarLands(id, 4)]);
 
   const sold = land.status === 'SOLD';
   const waText = L(
@@ -26,8 +40,25 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     `Hello, I'm interested in buying: ${land.title}`,
   );
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: land.title,
+    image: land.gallery.map((g) => `${BASE}${g}`),
+    description: land.specs.map((s) => `${s.label}: ${s.value}`).join(' · '),
+    category: 'Real Estate Land',
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'EGP',
+      price: land.price ?? undefined,
+      availability: land.status === 'SOLD' ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
+      url: `${BASE}/listings/${land.id}`,
+    },
+  };
+
   return (
     <StoreShell>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="mx-auto max-w-5xl px-4 py-6">
         <Link href="/listings" className="text-sm text-navy-600">‹ {L('كل الأراضي', 'All lands')}</Link>
 
@@ -95,6 +126,15 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
           <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
             <h2 className="mb-2 text-lg font-bold text-navy-800">{L('الوصف', 'Description')}</h2>
             <p className="whitespace-pre-line leading-relaxed text-ink-700">{land.description}</p>
+          </section>
+        )}
+
+        {similar.length > 0 && (
+          <section className="mt-8">
+            <h2 className="mb-4 text-xl font-bold text-navy-800 dark:text-soft">{L('أراضٍ مشابهة', 'Similar lands')}</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {similar.map((s) => <StoreLandCard key={s.id} land={s} locale={locale} wishlisted={wished.has(s.id)} />)}
+            </div>
           </section>
         )}
       </div>

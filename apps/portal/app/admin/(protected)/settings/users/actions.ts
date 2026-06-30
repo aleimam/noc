@@ -13,16 +13,14 @@ function fail(e: unknown): Result {
   return { ok: false, error: 'failed' };
 }
 
-/** Grant SUPER_ADMIN, or MANAGE on the chosen sections (replaces any existing grants). */
-async function applyStaffPerms(userId: string, superAdmin: boolean, sections: string[]) {
+/** Assign the chosen roles to a staff user (replaces any existing roles + legacy direct perms). */
+async function applyStaffRoles(userId: string, roleKeys: string[]) {
   await prisma.userRole.deleteMany({ where: { userId } });
-  await prisma.userPermission.deleteMany({ where: { userId } });
-  if (superAdmin) {
-    const role = await prisma.role.findUnique({ where: { key: 'SUPER_ADMIN' } });
-    if (role) await prisma.userRole.create({ data: { userId, roleId: role.id } });
-  } else if (sections.length) {
-    const perms = await prisma.permission.findMany({ where: { section: { in: sections }, action: 'MANAGE' } });
-    if (perms.length) await prisma.userPermission.createMany({ data: perms.map((p) => ({ userId, permissionId: p.id })) });
+  await prisma.userPermission.deleteMany({ where: { userId } }); // drop legacy per-section grants
+  const keys = [...new Set(roleKeys)].filter(Boolean);
+  if (keys.length) {
+    const roles = await prisma.role.findMany({ where: { key: { in: keys } }, select: { id: true } });
+    if (roles.length) await prisma.userRole.createMany({ data: roles.map((r) => ({ userId, roleId: r.id })) });
   }
 }
 
@@ -32,8 +30,7 @@ export async function upsertStaff(input: {
   name?: string;
   password?: string;
   isActive?: boolean;
-  superAdmin?: boolean;
-  sections?: string[];
+  roleKeys?: string[];
 }): Promise<Result> {
   await requirePermission('staff', input.id ? 'UPDATE' : 'CREATE');
   const email = input.email.trim().toLowerCase();
@@ -53,7 +50,7 @@ export async function upsertStaff(input: {
       const u = await prisma.user.create({ data: { ...base, passwordHash: await hashPassword(input.password!) } });
       userId = u.id;
     }
-    await applyStaffPerms(userId, !!input.superAdmin, input.sections ?? []);
+    await applyStaffRoles(userId, input.roleKeys ?? []);
     revalidatePath('/admin/settings/users');
     return { ok: true, id: userId };
   } catch (e) {

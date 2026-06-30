@@ -13,7 +13,10 @@
     "cancel": "إلغاء",
     "loading": "جارٍ التحميل…",
     "backToSite": "العودة إلى الموقع",
-    "admin": "لوحة التحكم"
+    "admin": "لوحة التحكم",
+    "consentText": "نستخدم ملفات تعريف الارتباط لتحليل الزيارات وتحسين الخدمة.",
+    "consentAccept": "موافق",
+    "consentDecline": "رفض"
   },
   "auth": {
     "signIn": "تسجيل الدخول",
@@ -125,7 +128,9 @@
     "section_partners": "الشركاء",
     "section_settings": "الإعدادات",
     "section_media": "الوسائط",
-    "section_homepage": "الصفحة الرئيسية"
+    "section_homepage": "الصفحة الرئيسية",
+    "roles": "الأدوار",
+    "pages": "الصفحات"
   },
   "attachment": {
     "drop": "اسحب الصورة هنا، أو الصقها، أو اضغط للرفع",
@@ -501,7 +506,19 @@
     "chartByDay": "الحضور حسب اليوم",
     "chartByMonth": "المتقدّمون حسب الشهر",
     "chartTopOwners": "أكثر الملاك الأصليين (عدد المتقدّمين)",
-    "show": "عرض"
+    "show": "عرض",
+    "tabApplicants": "المتقدّمون",
+    "tabPlots": "القطع",
+    "tabAnalytics": "تحليلات",
+    "perPage": "لكل صفحة",
+    "sortBy": "ترتيب",
+    "sortName": "الاسم",
+    "sortPlot": "القطعة",
+    "sortNewest": "الأحدث",
+    "sortMostApplicants": "الأكثر متقدّمين",
+    "plotsTitle": "القطع",
+    "plotsSearchPh": "ابحث عن قطعة أو مالك أو مدينة…",
+    "colApplicantsCount": "عدد المتقدّمين"
   },
   "lands": {
     "title": "الأحياء والمجاورات",

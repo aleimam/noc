@@ -3,6 +3,7 @@
 import { useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { Lightbox } from './Lightbox';
+import { compressImage } from '../lib/compress';
 
 const MAX_BYTES = 32 * 1024 * 1024;
 
@@ -35,13 +36,17 @@ export function ImageAttachment({
   const [dragOver, setDragOver] = useState(false);
   const [zoom, setZoom] = useState(false);
 
-  async function upload(file: File | null | undefined) {
-    if (!file) return;
+  async function upload(input: File | null | undefined) {
+    if (!input) return;
     setError('');
-    if (!file.type.startsWith('image/')) return setError(t('invalidType'));
-    if (file.size > MAX_BYTES) return setError(t('tooLarge'));
+    if (!input.type.startsWith('image/')) return setError(t('invalidType'));
     setBusy(true);
     try {
+      const file = await compressImage(input);
+      if (file.size > MAX_BYTES) {
+        setBusy(false);
+        return setError(t('tooLarge'));
+      }
       const fd = new FormData();
       fd.append('file', file);
       const res = await fetch(uploadUrl, { method: 'POST', body: fd });

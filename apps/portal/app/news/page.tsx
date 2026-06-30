@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
-import { PublicShell, Badge } from '@noc/ui';
+import { Badge } from '@noc/ui';
+import { SiteShell } from '../_components/SiteShell';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,7 @@ export default async function NewsPage() {
   for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
 
   return (
-    <PublicShell active="news">
+    <SiteShell active="news">
       <div className="mx-auto max-w-[1000px] space-y-6 px-6 py-10">
         <h1 className="text-3xl font-extrabold text-navy-800">{t('title')}</h1>
         {rows.length === 0 && <p className="text-ink-500">{t('none')}</p>}
@@ -46,6 +47,6 @@ export default async function NewsPage() {
           })}
         </div>
       </div>
-    </PublicShell>
+    </SiteShell>
   );
 }

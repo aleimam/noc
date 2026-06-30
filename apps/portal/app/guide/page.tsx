@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
-import { PublicShell } from '@noc/ui';
+import { SiteShell } from '../_components/SiteShell';
 
 export const dynamic = 'force-dynamic';
 const SECS = ['LICENSING', 'HANDOVER', 'COMPANIES', 'COSTS'] as const;
@@ -19,7 +19,7 @@ export default async function GuidePage() {
   }
 
   return (
-    <PublicShell active="guide">
+    <SiteShell active="guide">
       <div className="mx-auto max-w-[900px] space-y-10 px-6 py-10">
         <div>
           <h1 className="text-3xl font-extrabold text-navy-800">{t('title')}</h1>
@@ -44,6 +44,6 @@ export default async function GuidePage() {
           );
         })}
       </div>
-    </PublicShell>
+    </SiteShell>
   );
 }

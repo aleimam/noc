@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
-import { PublicShell } from '@noc/ui';
+import { SiteShell } from '../_components/SiteShell';
 import { localizeUnit } from '@noc/i18n';
 
 export const dynamic = 'force-dynamic';
@@ -48,7 +48,7 @@ export default async function PriceIndexPage() {
   const top = dists[0];
 
   return (
-    <PublicShell active="priceIndex">
+    <SiteShell active="priceIndex">
       <div className="mx-auto max-w-[1000px] space-y-8 px-6 py-10">
         <div>
           <h1 className="text-3xl font-extrabold text-navy-800">{t('title')}</h1>
@@ -89,6 +89,6 @@ export default async function PriceIndexPage() {
           </>
         )}
       </div>
-    </PublicShell>
+    </SiteShell>
   );
 }

@@ -340,7 +340,7 @@ export function ListingForm({
             </div>
           ))}
           <div className="w-48">
-            <ImageAttachment value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} />
+            <ImageAttachment uploadUrl="/api/upload?watermark=1" value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} />
           </div>
         </div>
       </div>

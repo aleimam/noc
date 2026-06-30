@@ -4,6 +4,13 @@ import { prisma, Prisma } from '@noc/db';
 import { normalizeArabic, similarity } from './text';
 
 export type SearchField = 'all' | 'name' | 'owner' | 'plot' | 'block';
+export type SortKey = 'name' | 'plot' | 'newest';
+
+function sheetOrderBy(sort?: SortKey): Prisma.RationingSheetOrderByWithRelationInput[] {
+  if (sort === 'plot') return [{ plotNo: 'asc' }, { applicantName: 'asc' }];
+  if (sort === 'newest') return [{ listDate: 'desc' }, { applicantName: 'asc' }];
+  return [{ applicantName: 'asc' }];
+}
 
 export type SheetCard = {
   id: string;
@@ -100,6 +107,7 @@ export async function searchSheets(opts: {
   cityId?: string;
   take?: number;
   skip?: number;
+  sort?: SortKey;
   withSuggestions?: boolean;
 }): Promise<SearchOutcome> {
   const norm = normalizeArabic(opts.q);
@@ -121,7 +129,7 @@ export async function searchSheets(opts: {
     prisma.rationingSheet.findMany({
       where,
       include: { city: { select: { name: true } } },
-      orderBy: { applicantName: 'asc' },
+      orderBy: sheetOrderBy(opts.sort),
       take,
       skip,
     }),
@@ -133,7 +141,7 @@ export async function searchSheets(opts: {
 }
 
 /** Browse mode (no query): paginated list, optional city filter. */
-export async function browseSheets(opts: { cityId?: string; take?: number; skip?: number }): Promise<{ results: SheetCard[]; total: number }> {
+export async function browseSheets(opts: { cityId?: string; take?: number; skip?: number; sort?: SortKey }): Promise<{ results: SheetCard[]; total: number }> {
   const take = opts.take ?? 50;
   const skip = opts.skip ?? 0;
   const where: Prisma.RationingSheetWhereInput = opts.cityId ? { cityId: opts.cityId } : {};
@@ -141,11 +149,43 @@ export async function browseSheets(opts: { cityId?: string; take?: number; skip?
     prisma.rationingSheet.findMany({
       where,
       include: { city: { select: { name: true } } },
-      orderBy: [{ listDate: 'desc' }, { applicantName: 'asc' }],
+      orderBy: sheetOrderBy(opts.sort ?? 'newest'),
       take,
       skip,
     }),
     prisma.rationingSheet.count({ where }),
   ]);
   return { results: rows.map(toCard), total };
+}
+
+export type PlotRow = { ref: string; plotNo: string; blockNo: string; cityName: string | null; owner: string | null; count: number };
+
+/** Plots tab: distinct plots (by plot full reference) with applicant counts. Filter/sort/paginate in JS. */
+export async function plotGroups(opts: { q?: string; sort?: 'plot' | 'count'; take?: number; skip?: number } = {}): Promise<{ rows: PlotRow[]; total: number }> {
+  const [counts, reps] = await Promise.all([
+    prisma.rationingSheet.groupBy({ by: ['plotFullRef'], where: { plotFullRef: { not: null } }, _count: { _all: true } }),
+    prisma.rationingSheet.findMany({
+      where: { plotFullRef: { not: null } },
+      distinct: ['plotFullRef'],
+      select: { plotFullRef: true, plotNo: true, blockNo: true, originalOwner: true, city: { select: { name: true } } },
+    }),
+  ]);
+  const countByRef = new Map(counts.map((c) => [c.plotFullRef as string, c._count._all]));
+  let rows: PlotRow[] = reps.map((r) => ({
+    ref: r.plotFullRef as string,
+    plotNo: r.plotNo,
+    blockNo: r.blockNo,
+    cityName: r.city?.name ?? null,
+    owner: r.originalOwner,
+    count: countByRef.get(r.plotFullRef as string) ?? 0,
+  }));
+
+  const q = normalizeArabic(opts.q ?? '');
+  if (q) rows = rows.filter((r) => normalizeArabic(`${r.ref} ${r.owner ?? ''} ${r.cityName ?? ''}`).includes(q));
+  rows.sort((a, b) => (opts.sort === 'plot' ? a.ref.localeCompare(b.ref, 'ar') : b.count - a.count));
+
+  const total = rows.length;
+  const skip = opts.skip ?? 0;
+  const take = opts.take ?? 10;
+  return { rows: rows.slice(skip, skip + take), total };
 }

@@ -3,6 +3,7 @@ import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { currency } from '@noc/i18n';
 import { ModerationActions } from './ModerationActions';
+import { FeaturedToggle } from './FeaturedToggle';
 
 const STATUS_COLOR: Record<string, string> = {
   PUBLISHED: 'bg-green/15 text-green',
@@ -78,6 +79,7 @@ export default async function ModerationPage() {
                   <td className="p-2">
                     <span className={`inline-block rounded px-2 py-0.5 text-xs ${STATUS_COLOR[l.status] ?? ''}`}>{t(`status${l.status}`)}</span>
                   </td>
+                  <td className="p-2">{l.showOnBrokerage && l.status === 'PUBLISHED' ? <FeaturedToggle id={l.id} initial={l.featured} /> : null}</td>
                   <td className="p-2 text-end"><a href={`/admin/marketplace/listings/${l.id}/edit`} className="text-accent">{t('edit')}</a></td>
                 </tr>
               ))}

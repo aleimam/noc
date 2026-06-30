@@ -4,8 +4,6 @@ import { getLocale } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { StoreShell } from '../_components/StoreShell';
-import { StoreLandCard } from '../_components/StoreLandCard';
-import { listLands } from '../../lib/listings';
 import { SignOutButton } from './SignOutButton';
 
 export const dynamic = 'force-dynamic';
@@ -25,9 +23,8 @@ export default async function AccountPage() {
   if (!userId) redirect('/account/login?next=/account');
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
-  const [dbUser, wish, requests] = await Promise.all([
+  const [dbUser, requests] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { phone: true, name: true } }),
-    prisma.wishlist.findMany({ where: { userId }, select: { listingId: true } }),
     prisma.contactRequest.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -35,9 +32,6 @@ export default async function AccountPage() {
       include: { listing: { select: { id: true, title: true, adNumber: true } } },
     }),
   ]);
-
-  const wishIds = wish.map((w) => w.listingId);
-  const { cards } = wishIds.length ? await listLands({ where: { id: { in: wishIds } }, take: 100 }) : { cards: [] };
 
   return (
     <StoreShell>
@@ -51,16 +45,9 @@ export default async function AccountPage() {
         </div>
 
         <section className="mt-8">
-          <h2 className="mb-3 text-lg font-bold text-navy-800">{L('المفضلة', 'Wishlist')}</h2>
-          {cards.length === 0 ? (
-            <p className="rounded-2xl bg-white p-8 text-center text-ink-500 shadow-sm">
-              {L('لم تقم بحفظ أي أرض بعد.', 'You haven’t saved any lands yet.')} <Link href="/listings" className="font-bold text-gold-700">{L('تصفّح الأراضي', 'Browse lands')}</Link>
-            </p>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {cards.map((land) => <StoreLandCard key={land.id} land={land} locale={locale} wishlisted />)}
-            </div>
-          )}
+          <Link href="/wishlist" className="inline-flex items-center gap-2 rounded-xl border border-ink-200 bg-white px-5 py-3 font-bold text-navy-800 hover:border-gold dark:bg-navy-800 dark:text-soft">
+            ♥ {L('قوائم المفضلة', 'My wishlists')}
+          </Link>
         </section>
 
         <section className="mt-10">

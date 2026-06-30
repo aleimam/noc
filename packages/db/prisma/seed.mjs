@@ -19,8 +19,40 @@ const SECTIONS = [
   'owners',
   'commissions',
   'marketplace',
+  'news',
+  'guide',
+  'pages',
 ];
 const ACTIONS = ['VIEW', 'CREATE', 'UPDATE', 'DELETE', 'MANAGE'];
+
+// Fixed role presets (Super Admin is seeded separately with every permission).
+const ROLE_PRESETS = [
+  {
+    key: 'SALES_MANAGER',
+    name: 'Sales Manager',
+    perms: [['marketplace', 'MANAGE'], ['owners', 'MANAGE'], ['commissions', 'MANAGE'], ['lands', 'VIEW'], ['sheets', 'VIEW'], ['customers', 'VIEW']],
+  },
+  {
+    key: 'SALES_REP',
+    name: 'Sales Rep',
+    perms: [['marketplace', 'VIEW'], ['marketplace', 'UPDATE'], ['owners', 'VIEW'], ['customers', 'VIEW']],
+  },
+  {
+    key: 'EDITOR',
+    name: 'Editor',
+    perms: [['news', 'MANAGE'], ['guide', 'MANAGE'], ['pages', 'MANAGE'], ['homepage', 'MANAGE'], ['media', 'MANAGE'], ['marketplace', 'VIEW'], ['marketplace', 'UPDATE']],
+  },
+  {
+    key: 'DATA_ENTRY',
+    name: 'Data Entry',
+    perms: [
+      ['sheets', 'VIEW'], ['sheets', 'CREATE'], ['sheets', 'UPDATE'],
+      ['lands', 'VIEW'], ['lands', 'CREATE'], ['lands', 'UPDATE'], ['districts', 'VIEW'],
+      ['marketplace', 'VIEW'], ['marketplace', 'CREATE'], ['marketplace', 'UPDATE'],
+      ['owners', 'VIEW'], ['owners', 'CREATE'],
+    ],
+  },
+];
 
 async function main() {
   // 1) Permissions: every section × action pair.
@@ -73,7 +105,40 @@ async function main() {
     console.warn('! SUPERADMIN_EMAIL/PASSWORD not set — skipped bootstrap staff user.');
   }
 
-  console.log(`✓ Seeded ${SECTIONS.length * ACTIONS.length} permissions and SUPER_ADMIN role.`);
+  // 4) Fixed role presets. Recreate each role's permission set so preset edits apply on re-seed.
+  const permByKey = new Map(allPerms.map((p) => [`${p.section}:${p.action}`, p.id]));
+  for (const preset of ROLE_PRESETS) {
+    const role = await prisma.role.upsert({
+      where: { key: preset.key },
+      update: { name: preset.name },
+      create: { key: preset.key, name: preset.name },
+    });
+    await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
+    const data = preset.perms
+      .map(([section, action]) => permByKey.get(`${section}:${action}`))
+      .filter(Boolean)
+      .map((permissionId) => ({ roleId: role.id, permissionId }));
+    if (data.length) await prisma.rolePermission.createMany({ data });
+  }
+
+  // 5) Default static pages per brand (created once, unpublished, for staff to fill).
+  const PAGE_DEFAULTS = [
+    { slug: 'about', titleAr: 'من نحن', titleEn: 'About us', order: 1 },
+    { slug: 'contact', titleAr: 'اتصل بنا', titleEn: 'Contact us', order: 2 },
+    { slug: 'privacy', titleAr: 'سياسة الخصوصية', titleEn: 'Privacy Policy', order: 3 },
+    { slug: 'terms', titleAr: 'الشروط والأحكام', titleEn: 'Terms of Service', order: 4 },
+  ];
+  for (const brand of ['newobour', 'alsawarey']) {
+    for (const p of PAGE_DEFAULTS) {
+      await prisma.page.upsert({
+        where: { brand_slug: { brand, slug: p.slug } },
+        update: {}, // never overwrite staff edits
+        create: { brand, slug: p.slug, titleAr: p.titleAr, titleEn: p.titleEn, bodyAr: '', bodyEn: '', published: false, footerOrder: p.order },
+      });
+    }
+  }
+
+  console.log(`✓ Seeded ${SECTIONS.length * ACTIONS.length} permissions, SUPER_ADMIN + ${ROLE_PRESETS.length} roles, default pages.`);
 }
 
 main()

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { compressImage, track } from '@noc/ui';
 import { createLandOffer, type OfferInput } from './actions';
 
 type Opt = { id: string; name: string };
@@ -26,7 +27,7 @@ export function SellForm({ cities, districts, neighborhoods }: { cities: Opt[]; 
     setUploading(true);
     for (const file of Array.from(files)) {
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('file', await compressImage(file));
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
       const j = await res.json().catch(() => ({}));
       if (res.ok && j?.attachment) setPhotos((p) => [...p, { id: j.attachment.id, path: j.attachment.path }]);
@@ -40,7 +41,7 @@ export function SellForm({ cities, districts, neighborhoods }: { cities: Opt[]; 
     setError('');
     start(async () => {
       const r = await createLandOffer({ ...f, mode, attachmentIds: photos.map((p) => p.id) });
-      if (r.ok) setDone(true);
+      if (r.ok) { track('sell_offer', { mode }); setDone(true); }
       else setError('تعذّر الإرسال، حاول مرة أخرى');
     });
   }

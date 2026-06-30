@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { Prisma } from '@noc/db';
-import { auth } from '@noc/auth';
 import { StoreShell } from '../_components/StoreShell';
 import { StoreLandCard } from '../_components/StoreLandCard';
-import { listLands, wishlistIds, ATTR } from '../../lib/listings';
+import { listLands, ATTR } from '../../lib/listings';
+import { wishlistListingIds } from '../../lib/wishlist';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +36,7 @@ export default async function Catalogue({
   const corner = str(sp.corner) === '1';
   const main = str(sp.main) === '1';
   const services = str(sp.services) === '1';
+  const featured = str(sp.featured) === '1';
   const statusSold = str(sp.status) === 'sold';
   const sort = str(sp.sort);
   const page = Math.max(1, num(sp.page) ?? 1);
@@ -49,15 +50,15 @@ export default async function Catalogue({
   if (corner) and.push(attr(ATTR.corner, { bool: true }));
   if (main) and.push(attr(ATTR.mainStreet, { bool: true }));
   if (services) and.push(attr('electricity', { option: { key: 'connected' } }));
+  if (featured) and.push({ featured: true });
   if (statusSold) and.push({ status: 'SOLD' });
 
   const orderBy: Prisma.ListingOrderByWithRelationInput[] =
     sort === 'price_asc' ? [{ price: 'asc' }] : sort === 'price_desc' ? [{ price: 'desc' }] : [{ status: 'asc' }, { publishedAt: 'desc' }];
 
-  const session = await auth();
   const [{ cards, total }, wished] = await Promise.all([
     listLands({ where: and.length ? { AND: and } : {}, orderBy, take: PAGE, skip: (page - 1) * PAGE }),
-    wishlistIds(session?.user?.id),
+    wishlistListingIds(),
   ]);
   const totalPages = Math.ceil(total / PAGE);
 
@@ -72,7 +73,7 @@ export default async function Catalogue({
 
   const chip = 'rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm hover:border-gold';
   const chipOn = 'rounded-lg border-2 border-gold bg-gold-50 px-3 py-1.5 text-sm font-bold text-gold-800';
-  const noFilters = !corner && !main && !services && area == null && areaMin == null && areaMax == null && !statusSold;
+  const noFilters = !corner && !main && !services && !featured && area == null && areaMin == null && areaMax == null && !statusSold;
 
   return (
     <StoreShell>
@@ -81,6 +82,7 @@ export default async function Catalogue({
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Link href="/listings" className={noFilters ? chipOn : chip}>{L('الكل', 'All')}</Link>
+          <Link href={withParam('featured', '1')} className={featured ? chipOn : chip}>★ {L('مميز', 'Featured')}</Link>
           <Link href={withParam('corner', '1')} className={corner ? chipOn : chip}>{L('ناصية', 'Corner')}</Link>
           <Link href={withParam('main', '1')} className={main ? chipOn : chip}>{L('شارع رئيسي', 'Main road')}</Link>
           <Link href={withParam('services', '1')} className={services ? chipOn : chip}>{L('بالمرافق', 'Services')}</Link>

@@ -77,7 +77,7 @@ model User {
   landFollows     LandFollow[]
   rationingFollows RationingFollow[]
   contactRequests ContactRequest[]
-  wishlist        Wishlist[]
+  wishlists       WishlistList[]
   landOffers      LandOffer[]
 
   @@index([type])
@@ -396,6 +396,7 @@ model Listing {
   price           Decimal?      @db.Decimal(14, 2)
   soldPrice       Decimal?      @db.Decimal(14, 2) // set by staff when marked SOLD; optionally shown publicly
   adNumber        String?       @unique // public ad reference YYMM+owner(2)+seq, frozen at publish
+  featured        Boolean       @default(false) // promoted on the storefront (manual)
   priceNote       String?
   contactPhone    String
   contactWhatsapp Boolean       @default(true)
@@ -413,7 +414,7 @@ model Listing {
   seller          User              @relation("ListingSeller", fields: [sellerId], references: [id], onDelete: Cascade)
   createdBy       User?             @relation("ListingCreator", fields: [createdById], references: [id], onDelete: SetNull)
   contactRequests ContactRequest[]
-  wishlistedBy    Wishlist[]
+  wishlistItems   WishlistItem[]
   propertyType    PropertyType?     @relation(fields: [propertyTypeId], references: [id], onDelete: SetNull)
   typeOption      ClassifierOption? @relation("ListingType", fields: [typeOptionId], references: [id], onDelete: SetNull)
   purposeOption   ClassifierOption? @relation("ListingPurpose", fields: [purposeOptionId], references: [id], onDelete: SetNull)
@@ -552,24 +553,60 @@ model LandOffer {
   @@index([status, createdAt])
 }
 
-/// A customer's saved/favorite land on the storefront.
-model Wishlist {
+/// A named wishlist/collection on the storefront. Owned by a logged-in customer
+/// (userId) or an anonymous visitor via a cookie id. ownerKey = 'u:<userId>' | 'a:<anonId>'.
+model WishlistList {
   id        String   @id @default(cuid())
-  userId    String
+  ownerKey  String
+  userId    String?
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items WishlistItem[]
+
+  @@index([ownerKey])
+  @@index([userId])
+}
+
+/// A land saved into a wishlist.
+model WishlistItem {
+  id        String   @id @default(cuid())
+  listId    String
   listingId String
   createdAt DateTime @default(now())
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  list    WishlistList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  listing Listing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, listingId])
-  @@index([userId])
+  @@unique([listId, listingId])
+  @@index([listingId])
 }
 
 /// Simple key/value app settings (e.g. the central ALSWARY contact number).
 model Setting {
   key   String @id
   value String @db.Text
+}
+
+/// Admin-managed static page (about, contact, privacy, terms…). Per-brand, bilingual,
+/// rich HTML body. Listed in the site footer when published.
+model Page {
+  id          String   @id @default(cuid())
+  brand       String // 'newobour' | 'alsawarey'
+  slug        String
+  titleAr     String
+  titleEn     String?
+  bodyAr      String   @db.Text
+  bodyEn      String?  @db.Text
+  published   Boolean  @default(false)
+  footerOrder Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([brand, slug])
+  @@index([brand, published, footerOrder])
 }
 
 // ─────────────────── Module 1: Rationing Sheets (كشوف التقنين) ───────────────────

@@ -1,4 +1,7 @@
 export * from './lib/cn';
+export { compressImage } from './lib/compress';
+export { track, getConsent, setConsent } from './lib/track';
+export { Analytics, ConsentBanner } from './components/Analytics';
 export { LanguageSwitcher } from './components/LanguageSwitcher';
 export { ThemeToggle } from './components/ThemeToggle';
 export { ThemeScript } from './components/ThemeScript';

@@ -212,6 +212,17 @@ export async function approveListing(id: string): Promise<Result> {
   }
 }
 
+export async function toggleFeatured(id: string, featured: boolean): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    await prisma.listing.update({ where: { id }, data: { featured } });
+    revalidatePath('/admin/marketplace/listings', 'page');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function rejectListing(id: string, reason: string): Promise<Result> {
   await requirePermission('marketplace', 'UPDATE');
   try {

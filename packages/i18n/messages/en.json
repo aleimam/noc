@@ -13,7 +13,10 @@
     "cancel": "Cancel",
     "loading": "Loading…",
     "backToSite": "Back to site",
-    "admin": "Admin"
+    "admin": "Admin",
+    "consentText": "We use cookies to analyze traffic and improve our service.",
+    "consentAccept": "Accept",
+    "consentDecline": "Decline"
   },
   "auth": {
     "signIn": "Sign in",
@@ -125,7 +128,9 @@
     "section_partners": "Partners",
     "section_settings": "Settings",
     "section_media": "Media",
-    "section_homepage": "Homepage"
+    "section_homepage": "Homepage",
+    "roles": "Roles",
+    "pages": "Pages"
   },
   "attachment": {
     "drop": "Drag an image here, paste, or click to upload",
@@ -501,7 +506,19 @@
     "chartByDay": "Attendance by day",
     "chartByMonth": "Applicants by month",
     "chartTopOwners": "Top original owners (by applicants)",
-    "show": "Show"
+    "show": "Show",
+    "tabApplicants": "Applicants",
+    "tabPlots": "Plots",
+    "tabAnalytics": "Analytics",
+    "perPage": "Per page",
+    "sortBy": "Sort",
+    "sortName": "Name",
+    "sortPlot": "Plot",
+    "sortNewest": "Newest",
+    "sortMostApplicants": "Most applicants",
+    "plotsTitle": "Plots",
+    "plotsSearchPh": "Search a plot, owner or city…",
+    "colApplicantsCount": "Applicants"
   },
   "lands": {
     "title": "Districts & Neighborhoods",

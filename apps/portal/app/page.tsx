@@ -42,7 +42,7 @@ export default async function Home() {
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
         <div className="relative mx-auto max-w-[1000px] px-6 py-20 text-center sm:py-24">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="" className="mx-auto mb-6 h-20 w-auto" />
+          <img src="/brand/logo" alt="" className="mx-auto mb-6 h-20 w-auto" />
           <h1 className="text-4xl font-black tracking-tight sm:text-5xl">{tn('brand')}</h1>
           <p className="mx-auto mt-4 max-w-xl text-lg text-soft/80">
             {L('بوابتك الرسمية لخدمات وعقارات مدينة العبور الجديدة', 'Your official portal for New Obour City services & real estate')}

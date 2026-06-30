@@ -17,6 +17,7 @@ export type LandCard = {
   corner: boolean;
   onMainStreet: boolean;
   adNumber: string | null;
+  featured: boolean;
 };
 
 // Attribute keys we surface on cards / filters.
@@ -63,6 +64,7 @@ const cardSelect = {
   soldPrice: true,
   status: true,
   adNumber: true,
+  featured: true,
   typeOption: { select: { nameAr: true, nameEn: true } },
   values: {
     select: {
@@ -104,6 +106,7 @@ function toCard(l: Prisma.ListingGetPayload<{ select: typeof cardSelect }>, cove
     corner: r.corner,
     onMainStreet: r.onMainStreet,
     adNumber: l.adNumber ?? null,
+    featured: l.featured,
   };
 }
 
@@ -113,17 +116,22 @@ const STOREFRONT_STATUS: Prisma.ListingWhereInput = {
   status: { in: ['PUBLISHED', 'SOLD'] },
 };
 
-/** The set of listing IDs the given user has wishlisted (empty when not signed in). */
-export async function wishlistIds(userId?: string | null): Promise<Set<string>> {
-  if (!userId) return new Set();
-  const rows = await prisma.wishlist.findMany({ where: { userId }, select: { listingId: true } });
-  return new Set(rows.map((r) => r.listingId));
-}
-
 export async function latestLands(take = 6): Promise<LandCard[]> {
   const rows = await prisma.listing.findMany({
     where: STOREFRONT_STATUS,
-    orderBy: [{ status: 'asc' }, { publishedAt: 'desc' }],
+    orderBy: [{ featured: 'desc' }, { status: 'asc' }, { publishedAt: 'desc' }],
+    take,
+    select: cardSelect,
+  });
+  const cover = await coversFor(rows.map((r) => r.id));
+  return rows.map((r) => toCard(r, cover));
+}
+
+/** Promoted lands for the home "featured" row (available only). */
+export async function featuredLands(take = 8): Promise<LandCard[]> {
+  const rows = await prisma.listing.findMany({
+    where: { showOnBrokerage: true, status: 'PUBLISHED', featured: true },
+    orderBy: { publishedAt: 'desc' },
     take,
     select: cardSelect,
   });
@@ -211,11 +219,58 @@ export async function listLands(
   opts: { where?: Prisma.ListingWhereInput; orderBy?: Prisma.ListingOrderByWithRelationInput[]; take?: number; skip?: number } = {},
 ): Promise<{ cards: LandCard[]; total: number }> {
   const where: Prisma.ListingWhereInput = { AND: [STOREFRONT_STATUS, opts.where ?? {}] };
-  const orderBy = opts.orderBy ?? [{ status: 'asc' }, { publishedAt: 'desc' }];
+  const orderBy = opts.orderBy ?? [{ featured: 'desc' }, { status: 'asc' }, { publishedAt: 'desc' }];
   const [rows, total] = await Promise.all([
     prisma.listing.findMany({ where, orderBy, take: opts.take ?? 24, skip: opts.skip ?? 0, select: cardSelect }),
     prisma.listing.count({ where }),
   ]);
   const cover = await coversFor(rows.map((r) => r.id));
   return { cards: rows.map((r) => toCard(r, cover)), total };
+}
+
+/** Recently sold lands (social proof on the home page). */
+export async function recentlySold(take = 6): Promise<LandCard[]> {
+  const rows = await prisma.listing.findMany({
+    where: { showOnBrokerage: true, status: 'SOLD' },
+    orderBy: { updatedAt: 'desc' },
+    take,
+    select: cardSelect,
+  });
+  const cover = await coversFor(rows.map((r) => r.id));
+  return rows.map((r) => toCard(r, cover));
+}
+
+/** Lands similar to the given one — same district + similar area, available only. */
+export async function similarLands(listingId: string, take = 4): Promise<LandCard[]> {
+  const base = await prisma.listing.findUnique({
+    where: { id: listingId },
+    select: { values: { select: { number: true, attribute: { select: { key: true } }, optionId: true } } },
+  });
+  let area: number | null = null;
+  let districtOptionId: string | null = null;
+  for (const v of base?.values ?? []) {
+    if (v.attribute.key === ATTR.area && v.number != null) area = Number(v.number);
+    if (v.attribute.key === ATTR.district && v.optionId) districtOptionId = v.optionId;
+  }
+  const and: Prisma.ListingWhereInput[] = [{ id: { not: listingId } }];
+  if (districtOptionId) and.push({ values: { some: { attribute: { key: ATTR.district }, optionId: districtOptionId } } });
+  if (area != null) and.push({ values: { some: { attribute: { key: ATTR.area }, number: { gte: area * 0.7, lte: area * 1.3 } } } });
+
+  const rows = await prisma.listing.findMany({
+    where: { AND: [{ showOnBrokerage: true, status: 'PUBLISHED' }, ...and] },
+    orderBy: [{ featured: 'desc' }, { publishedAt: 'desc' }],
+    take,
+    select: cardSelect,
+  });
+  const cover = await coversFor(rows.map((r) => r.id));
+  return rows.map((r) => toCard(r, cover));
+}
+
+/** Cards for an explicit set of ids (compare view), keeping the storefront visibility rule. */
+export async function landsByIds(ids: string[]): Promise<LandCard[]> {
+  if (!ids.length) return [];
+  const rows = await prisma.listing.findMany({ where: { id: { in: ids }, ...STOREFRONT_STATUS }, select: cardSelect });
+  const cover = await coversFor(rows.map((r) => r.id));
+  const map = new Map(rows.map((r) => [r.id, toCard(r, cover)]));
+  return ids.map((id) => map.get(id)).filter((x): x is LandCard => !!x);
 }

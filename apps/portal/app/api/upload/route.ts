@@ -5,6 +5,7 @@ import path from 'node:path';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { uploadRoot } from '@/lib/uploads';
+import { applyWatermark } from '@/lib/watermark';
 
 const MAX_BYTES = 32 * 1024 * 1024;
 
@@ -75,12 +76,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'invalid_type' }, { status: 415 });
   }
 
+  // Optional baked watermark (land photos pass ?watermark=1). No-op while disabled.
+  let outBuf: Buffer = buf;
+  if (!isDoc && req.nextUrl.searchParams.get('watermark') === '1') {
+    outBuf = Buffer.from(await applyWatermark(buf));
+  }
+
   const now = new Date();
   const sub = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
   const filename = `${randomUUID()}.${ext}`;
   const dir = path.join(uploadRoot(), sub);
   await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, filename), buf);
+  await writeFile(path.join(dir, filename), outBuf);
 
   const attachment = await prisma.attachment.create({
     data: {
@@ -88,7 +95,7 @@ export async function POST(req: NextRequest) {
       originalName: file.name || filename,
       path: `/uploads/${sub}/${filename}`,
       mime,
-      size: file.size,
+      size: outBuf.length,
       uploaderId: session.user.id,
     },
   });

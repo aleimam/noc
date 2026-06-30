@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
-import { PublicShell } from '@noc/ui';
+import { SiteShell } from '../_components/SiteShell';
 import { localizeUnit } from '@noc/i18n';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +19,7 @@ export default async function ExplorePage() {
   const withNb = districts.filter((d) => d.neighborhoods.length > 0);
 
   return (
-    <PublicShell active="explore">
+    <SiteShell active="explore">
       <div className="mx-auto max-w-5xl space-y-8 p-6">
       <div>
         <h1 className="text-2xl font-extrabold text-navy-800">{t('exploreTitle')}</h1>
@@ -47,6 +47,6 @@ export default async function ExplorePage() {
         </section>
       ))}
       </div>
-    </PublicShell>
+    </SiteShell>
   );
 }

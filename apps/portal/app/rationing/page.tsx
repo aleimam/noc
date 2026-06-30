@@ -2,15 +2,17 @@ import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { PublicShell } from '@noc/ui';
+import { SiteShell } from '../_components/SiteShell';
 import { SearchBar } from './SearchBar';
 import { RegisterCards } from './RegisterCards';
-import { searchSheets, browseSheets, type SearchField, type SheetCard } from '../../lib/rationing/search';
+import { RationingTabs } from './RationingTabs';
+import { ListControls } from './ListControls';
+import { searchSheets, browseSheets, type SearchField, type SheetCard, type SortKey } from '../../lib/rationing/search';
 import { getRationingConfig } from '../../lib/rationing/settings';
 
 export const dynamic = 'force-dynamic';
 
-const PAGE_SIZE = 50;
+const PER_OPTIONS = [10, 25, 50];
 
 function str(v: string | string[] | undefined): string {
   return (typeof v === 'string' ? v : '').trim();
@@ -28,6 +30,8 @@ export default async function RationingSearch({
   const dymOptOut = str(sp.dym) === '0';
   const usedSuggestion = str(sp.sug) === '1';
   const page = Math.max(1, parseInt(str(sp.page) || '1', 10) || 1);
+  const per = PER_OPTIONS.includes(parseInt(str(sp.per), 10)) ? parseInt(str(sp.per), 10) : 10;
+  const sort = (['name', 'plot', 'newest'].includes(str(sp.sort)) ? str(sp.sort) : 'name') as SortKey;
 
   const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('rationing');
@@ -49,8 +53,9 @@ export default async function RationingSearch({
       q,
       field,
       cityId: cityId || undefined,
-      take: PAGE_SIZE,
-      skip: (page - 1) * PAGE_SIZE,
+      take: per,
+      skip: (page - 1) * per,
+      sort,
       withSuggestions: config.didYouMeanEnabled && !dymOptOut,
     });
     results = out.results;
@@ -62,14 +67,14 @@ export default async function RationingSearch({
       data: { query: q, field, resultsCount: total, matched: total > 0, usedSuggestion, userId: session?.user?.id ?? null },
     });
   } else if (config.showBrowseAll) {
-    const out = await browseSheets({ cityId: cityId || undefined, take: PAGE_SIZE, skip: (page - 1) * PAGE_SIZE });
+    const out = await browseSheets({ cityId: cityId || undefined, take: per, skip: (page - 1) * per, sort });
     results = out.results;
     total = out.total;
   }
 
   const heroTitle = config.text?.[locale]?.heroTitle || t('searchTitle');
   const heroSubtitle = config.text?.[locale]?.heroSubtitle || t('searchSubtitle');
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const totalPages = Math.ceil(total / per);
 
   const pageHref = (p: number) => {
     const params = new URLSearchParams();
@@ -77,22 +82,21 @@ export default async function RationingSearch({
     if (field !== 'all') params.set('field', field);
     if (cityId) params.set('city', cityId);
     if (dymOptOut) params.set('dym', '0');
+    if (per !== 10) params.set('per', String(per));
+    if (sort !== 'name') params.set('sort', sort);
     params.set('page', String(p));
     return `/rationing?${params.toString()}`;
   };
 
   return (
-    <PublicShell active="rationing">
+    <SiteShell active="rationing">
       <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6">
         <div className="pt-2 text-center">
           <h1 className="text-3xl font-black text-navy-800 sm:text-4xl">{heroTitle}</h1>
           <p className="mt-2 text-lg text-ink-600">{heroSubtitle}</p>
-          {config.showDashboard && (
-            <Link href="/rationing/dashboard" className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-navy-600 hover:text-navy-800">
-              📊 {t('viewDashboard')}
-            </Link>
-          )}
         </div>
+
+        <RationingTabs active="applicants" showDashboard={config.showDashboard} />
 
         <SearchBar
           initialQ={q}
@@ -119,11 +123,21 @@ export default async function RationingSearch({
         )}
 
         {(searched || (config.showBrowseAll && results.length > 0)) && (
-          <div className="text-sm text-ink-500">
-            {searched
-              ? t('resultsN', { n: total })
-              : t('browsingN', { n: total })}
-            {results.length > 0 && ` — ${t('clickToView')}`}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="text-sm text-ink-500">
+              {searched ? t('resultsN', { n: total }) : t('browsingN', { n: total })}
+              {results.length > 0 && ` — ${t('clickToView')}`}
+            </div>
+            {results.length > 0 && (
+              <ListControls
+                defaultSort="name"
+                sortOptions={[
+                  { value: 'name', label: t('sortName') },
+                  { value: 'plot', label: t('sortPlot') },
+                  { value: 'newest', label: t('sortNewest') },
+                ]}
+              />
+            )}
           </div>
         )}
 
@@ -146,7 +160,7 @@ export default async function RationingSearch({
 
         <RegisterCards q={q} />
       </div>
-    </PublicShell>
+    </SiteShell>
   );
 }
 

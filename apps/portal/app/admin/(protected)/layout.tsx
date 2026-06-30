@@ -21,6 +21,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
     { href: '/admin/lands/lands', label: t('landPlots'), section: 'lands', action: 'VIEW' },
     { href: '/admin/news', label: t('news'), section: 'news', action: 'VIEW' },
     { href: '/admin/guide', label: t('guide'), section: 'guide', action: 'VIEW' },
+    { href: '/admin/pages', label: t('pages'), section: 'pages', action: 'VIEW' },
     { href: '/admin/settings', label: t('settings'), section: 'settings', action: 'VIEW' },
   ];
   const nav: AdminNavItem[] = [
@@ -36,6 +37,10 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
       userLabel={user.email ?? user.id}
       nav={nav}
       backToSiteLabel={tc('backToSite')}
+      storeLinks={[
+        { label: 'العبور الجديد', href: process.env.PORTAL_URL || '/' },
+        { label: 'الصواري', href: process.env.BROKERAGE_URL || 'https://alsawarey.com' },
+      ]}
       signOut={<SignOutButton />}
     >
       {children}

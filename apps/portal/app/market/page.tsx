@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma, Prisma } from '@noc/db';
-import { ListingCard, PublicShell } from '@noc/ui';
+import { ListingCard } from '@noc/ui';
+import { SiteShell } from '../_components/SiteShell';
 import { currency } from '@noc/i18n';
 import { MarketFilters } from './MarketFilters';
 
@@ -70,7 +71,7 @@ export default async function MarketPage({
   for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
 
   return (
-    <PublicShell active="market">
+    <SiteShell active="market">
       <div className="mx-auto max-w-5xl space-y-5 p-6">
       <h1 className="text-2xl font-extrabold text-navy-800">{t('title')}</h1>
 
@@ -99,6 +100,6 @@ export default async function MarketPage({
         ))}
       </div>
       </div>
-    </PublicShell>
+    </SiteShell>
   );
 }

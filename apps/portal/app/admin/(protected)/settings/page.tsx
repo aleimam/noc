@@ -12,6 +12,10 @@ export default async function SettingsHub() {
     { href: '/admin/settings/customers', label: t('settingsCustomers'), desc: t('settingsCustomersDesc') },
     { href: '/admin/settings/apis', label: t('settingsApis'), desc: t('settingsApisDesc') },
     { href: '/admin/settings/appearance', label: t('settingsAppearance'), desc: t('settingsAppearanceDesc') },
+    { href: '/admin/settings/branding', label: 'الشعارات والهوية', desc: 'شعار وأيقونة كل موقع' },
+    { href: '/admin/settings/watermark', label: 'العلامة المائية', desc: 'ختم صور الأراضي (الصواري)' },
+    { href: '/admin/settings/modules', label: 'الخدمات الظاهرة', desc: 'تفعيل/إخفاء خدمات العبور الجديد' },
+    { href: '/admin/settings/analytics', label: 'التحليلات والتتبّع', desc: 'GA4 و Meta Pixel و Search Console' },
   ];
   return (
     <div className="space-y-6">

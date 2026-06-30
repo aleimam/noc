@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { upsertStaff, deleteUser } from './actions';
 
-type Staff = { id: string; email: string; name: string; isActive: boolean; superAdmin: boolean; sections: string[] };
-type Draft = { id?: string; email: string; name: string; password: string; isActive: boolean; superAdmin: boolean; sections: string[] };
+type RoleOption = { key: string; name: string };
+type Staff = { id: string; email: string; name: string; isActive: boolean; roleKeys: string[] };
+type Draft = { id?: string; email: string; name: string; password: string; isActive: boolean; roleKeys: string[] };
 const inp = 'w-full rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm';
 
-export function StaffManager({ staff, sectionOptions }: { staff: Staff[]; sectionOptions: { key: string; label: string }[] }) {
+export function StaffManager({ staff, roleOptions }: { staff: Staff[]; roleOptions: RoleOption[] }) {
   const t = useTranslations('admin');
   const tc = useTranslations('common');
   const router = useRouter();
@@ -17,8 +18,9 @@ export function StaffManager({ staff, sectionOptions }: { staff: Staff[]; sectio
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState('');
 
-  const blank: Draft = { email: '', name: '', password: '', isActive: true, superAdmin: true, sections: [] };
+  const blank: Draft = { email: '', name: '', password: '', isActive: true, roleKeys: [] };
   const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+  const roleName = (k: string) => roleOptions.find((r) => r.key === k)?.name ?? k;
 
   function save() {
     if (!draft) return;
@@ -63,10 +65,10 @@ export function StaffManager({ staff, sectionOptions }: { staff: Staff[]; sectio
               <tr key={u.id} className="border-t border-graphite/10">
                 <td className="p-2 font-medium">{u.name || '—'}</td>
                 <td className="p-2" dir="ltr">{u.email}</td>
-                <td className="p-2 text-xs opacity-70">{u.superAdmin ? t('superAdmin') : `${u.sections.length} ${t('sectionsAccess')}`}</td>
+                <td className="p-2 text-xs opacity-70">{u.roleKeys.length ? u.roleKeys.map(roleName).join('، ') : '—'}</td>
                 <td className="p-2">{u.isActive ? '✔' : '—'}</td>
                 <td className="whitespace-nowrap p-2 text-end">
-                  <button onClick={() => setDraft({ id: u.id, email: u.email, name: u.name, password: '', isActive: u.isActive, superAdmin: u.superAdmin, sections: u.sections })} className="px-2 py-1 text-accent">{t('edit')}</button>
+                  <button onClick={() => setDraft({ id: u.id, email: u.email, name: u.name, password: '', isActive: u.isActive, roleKeys: u.roleKeys })} className="px-2 py-1 text-accent">{t('edit')}</button>
                   <button disabled={pending} onClick={() => del(u.id)} className="px-2 py-1 text-red-600">{t('delete')}</button>
                 </td>
               </tr>
@@ -83,19 +85,16 @@ export function StaffManager({ staff, sectionOptions }: { staff: Staff[]; sectio
             <label className="text-sm">{draft.id ? t('newPasswordOptional') : t('password')}<input type="password" value={draft.password} onChange={(e) => setDraft({ ...draft, password: e.target.value })} dir="ltr" placeholder={draft.id ? '••••••' : ''} className={inp} /></label>
             <label className="flex items-end gap-2 text-sm"><input type="checkbox" checked={draft.isActive} onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })} /> {t('active')}</label>
           </div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.superAdmin} onChange={(e) => setDraft({ ...draft, superAdmin: e.target.checked })} /> {t('superAdmin')}</label>
-          {!draft.superAdmin && (
-            <div className="text-sm">
-              <div className="mb-1 opacity-70">{t('sectionsAccess')}</div>
-              <div className="flex flex-wrap gap-2">
-                {sectionOptions.map((s) => (
-                  <label key={s.key} className={`cursor-pointer rounded border px-2 py-1 ${draft.sections.includes(s.key) ? 'border-accent bg-accent/10' : 'border-graphite/20'}`}>
-                    <input type="checkbox" className="hidden" checked={draft.sections.includes(s.key)} onChange={() => setDraft({ ...draft, sections: toggle(draft.sections, s.key) })} /> {s.label}
-                  </label>
-                ))}
-              </div>
+          <div className="text-sm">
+            <div className="mb-1 opacity-70">{t('roles')}</div>
+            <div className="flex flex-wrap gap-2">
+              {roleOptions.map((r) => (
+                <label key={r.key} className={`cursor-pointer rounded border px-3 py-1.5 ${draft.roleKeys.includes(r.key) ? 'border-accent bg-accent/10' : 'border-graphite/20'}`}>
+                  <input type="checkbox" className="hidden" checked={draft.roleKeys.includes(r.key)} onChange={() => setDraft({ ...draft, roleKeys: toggle(draft.roleKeys, r.key) })} /> {r.name}
+                </label>
+              ))}
             </div>
-          )}
+          </div>
           <div className="flex items-center gap-2">
             <button disabled={pending || !draft.email.trim()} onClick={save} className="rounded bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{tc('save')}</button>
             <button onClick={() => setDraft(null)} className="px-3 py-2 text-sm opacity-70">{tc('cancel')}</button>

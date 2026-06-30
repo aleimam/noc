@@ -8,3 +8,17 @@ html,
 body {
   max-width: 100vw;
 }
+
+/* Rendered rich-text (static pages, tiptap output) */
+.page-content h2 { font-size: 1.5rem; font-weight: 800; margin: 1.2rem 0 .6rem; }
+.page-content h3 { font-size: 1.25rem; font-weight: 700; margin: 1rem 0 .5rem; }
+.page-content p { margin: .6rem 0; }
+.page-content ul { list-style: disc; padding-inline-start: 1.5rem; margin: .6rem 0; }
+.page-content ol { list-style: decimal; padding-inline-start: 1.5rem; margin: .6rem 0; }
+.page-content a { color: #c9983e; text-decoration: underline; }
+.page-content img { max-width: 100%; height: auto; border-radius: 8px; margin: .8rem 0; }
+.page-content table { border-collapse: collapse; width: 100%; margin: .8rem 0; }
+.page-content th, .page-content td { border: 1px solid rgba(0,0,0,.15); padding: .5rem; }
+.page-content th { background: rgba(0,0,0,.04); font-weight: 700; }
+.tiptap table { border-collapse: collapse; }
+.tiptap th, .tiptap td { border: 1px solid rgba(0,0,0,.2); padding: .4rem; min-width: 3rem; }

@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { compressImage } from '@noc/ui';
 import { registerScans, deleteScan } from './actions';
 import type { ScanReport } from '../types';
 
@@ -30,7 +31,8 @@ export function ScansManager({ report }: { report: ScanReport }) {
       for (let i = 0; i < files.length; i++) {
         const f = files[i]!;
         const fd = new FormData();
-        fd.append('file', f);
+        // keep scans legible — higher resolution cap than the gallery default
+        fd.append('file', await compressImage(f, { maxDim: 2400, quality: 0.85 }));
         const res = await fetch('/api/upload', { method: 'POST', body: fd });
         const json = await res.json().catch(() => ({}));
         if (res.ok && json?.attachment) {

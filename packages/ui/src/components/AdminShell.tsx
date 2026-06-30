@@ -17,6 +17,7 @@ export function AdminShell({
   userLabel,
   nav,
   backToSiteLabel,
+  storeLinks,
   signOut,
   children,
 }: {
@@ -24,6 +25,7 @@ export function AdminShell({
   userLabel: string;
   nav: AdminNavItem[];
   backToSiteLabel: string;
+  storeLinks?: { label: string; href: string }[];
   signOut?: ReactNode;
   children: ReactNode;
 }) {
@@ -50,12 +52,17 @@ export function AdminShell({
           <div className="flex flex-wrap items-center gap-2">
             <LanguageSwitcher />
             <ThemeToggle />
-            <a
-              href="/"
-              className="rounded-md border border-graphite/20 px-3 py-1.5 text-sm hover:bg-graphite/10"
-            >
-              {backToSiteLabel}
-            </a>
+            {(storeLinks ?? [{ label: backToSiteLabel, href: '/' }]).map((s) => (
+              <a
+                key={s.href}
+                href={s.href}
+                target={s.href.startsWith('http') ? '_blank' : undefined}
+                rel={s.href.startsWith('http') ? 'noreferrer' : undefined}
+                className="inline-flex items-center gap-1 rounded-md border border-graphite/20 px-3 py-1.5 text-sm hover:bg-graphite/10"
+              >
+                <span aria-hidden>🏬</span> {s.label}
+              </a>
+            ))}
             {signOut}
           </div>
         </header>
