@@ -5,7 +5,7 @@ import path from 'node:path';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { uploadRoot } from '@/lib/uploads';
-import { applyWatermark } from '@/lib/watermark';
+import { stampForCategory } from '@/lib/stamp';
 
 const MAX_BYTES = 32 * 1024 * 1024;
 
@@ -76,10 +76,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'invalid_type' }, { status: 415 });
   }
 
-  // Optional baked watermark (land photos pass ?watermark=1). No-op while disabled.
+  // Optional baked stamp (listing/land photos pass ?watermark=1). No-op while disabled.
   let outBuf: Buffer = buf;
   if (!isDoc && req.nextUrl.searchParams.get('watermark') === '1') {
-    outBuf = Buffer.from(await applyWatermark(buf));
+    outBuf = Buffer.from(await stampForCategory(buf, 'listing'));
   }
 
   const now = new Date();

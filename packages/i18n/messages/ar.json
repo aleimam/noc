@@ -702,6 +702,9 @@
     "actionFailed": "تعذّر إتمام العملية",
     "search": "بحث…",
     "allStatuses": "كل الحالات",
-    "allTypes": "كل الأنواع"
+    "allTypes": "كل الأنواع",
+    "saveAll": "حفظ",
+    "savedAll": "تم حفظ كل التعديلات",
+    "autosaveHint": "كل تعديل يُحفظ تلقائياً عند إضافته"
   }
 }

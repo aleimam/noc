@@ -5,6 +5,7 @@ import { prisma } from '@noc/db';
 import { BlocksManager } from '../../../BlocksManager';
 import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, AmenitiesEditor, UpdatesEditor, InheritedUpdates } from '../../../GeoContentEditors';
 import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency, loadAmenities } from '../../../geo';
+import { EditSaveBar } from '@/app/_components/EditSaveBar';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +37,10 @@ export default async function NeighborhoodEdit({ params }: { params: Promise<{ i
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">{t('edit')}: {L(n.district.nameAr, n.district.nameEn)} · {L(n.nameAr, n.nameEn)}</h1>
-        <a href={`/admin/lands/neighborhoods/${id}`} className="text-sm text-accent">← {t('details')}</a>
+        <div className="flex items-center gap-3">
+          <a href={`/admin/lands/neighborhoods/${id}`} className="text-sm text-accent">← {t('details')}</a>
+          <EditSaveBar hint />
+        </div>
       </div>
 
       {n.hasBlocks && (
@@ -82,6 +86,8 @@ export default async function NeighborhoodEdit({ params }: { params: Promise<{ i
           </>
         )}
       </section>
+
+      <div className="flex justify-end border-t border-graphite/15 pt-4"><EditSaveBar /></div>
     </div>
   );
 }

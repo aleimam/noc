@@ -4,6 +4,7 @@ import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, UpdatesEditor } from '../../../GeoContentEditors';
 import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency } from '../../../geo';
+import { EditSaveBar } from '@/app/_components/EditSaveBar';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,10 @@ export default async function DistrictEdit({ params }: { params: Promise<{ id: s
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">{t('edit')}: {L(district.nameAr, district.nameEn)}</h1>
-        <a href={`/admin/lands/districts/${id}`} className="text-sm text-accent">← {t('details')}</a>
+        <div className="flex items-center gap-3">
+          <a href={`/admin/lands/districts/${id}`} className="text-sm text-accent">← {t('details')}</a>
+          <EditSaveBar hint />
+        </div>
       </div>
 
       <section className="space-y-2">
@@ -59,6 +63,8 @@ export default async function DistrictEdit({ params }: { params: Promise<{ id: s
         <h2 className="font-semibold text-primary">{t('updates')}</h2>
         <UpdatesEditor level="district" targetId={id} updates={updates} followerCount={followers} locale={locale} />
       </section>
+
+      <div className="flex justify-end border-t border-graphite/15 pt-4"><EditSaveBar /></div>
     </div>
   );
 }

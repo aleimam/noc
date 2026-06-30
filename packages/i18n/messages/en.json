@@ -702,6 +702,9 @@
     "actionFailed": "Couldn't complete the action",
     "search": "Search…",
     "allStatuses": "All statuses",
-    "allTypes": "All types"
+    "allTypes": "All types",
+    "saveAll": "Save",
+    "savedAll": "All changes saved",
+    "autosaveHint": "each change is saved as you add it"
   }
 }
