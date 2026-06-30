@@ -10,12 +10,18 @@ import './globals.css';
 const tajawal = Tajawal({ subsets: ['arabic', 'latin'], weight: ['300', '400', '500', '700', '800', '900'], variable: '--font-tajawal', display: 'swap' });
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['400', '600', '700'], variable: '--font-playfair', display: 'swap' });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.PORTAL_URL || 'https://newobour.com'),
-  title: 'New Obour — newobour.com',
-  description: 'New Obour City — community services portal',
-  icons: { icon: '/brand/favicon' },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const en = locale === 'en';
+  return {
+    metadataBase: new URL(process.env.PORTAL_URL || 'https://newobour.com'),
+    title: en
+      ? 'New Obour | Free services portal of New Obour City'
+      : 'العبور الجديد | بوابة خدمات مدينة العبور الجديدة المجانية',
+    description: en ? 'New Obour City — free community services portal' : 'بوابة خدمات مدينة العبور الجديدة المجانية',
+    icons: { icon: '/brand/favicon' },
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as Locale;

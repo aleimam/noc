@@ -10,12 +10,18 @@ import './globals.css';
 const tajawal = Tajawal({ subsets: ['arabic', 'latin'], weight: ['300', '400', '500', '700', '800', '900'], variable: '--font-tajawal', display: 'swap' });
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['400', '600', '700'], variable: '--font-playfair', display: 'swap' });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.BROKERAGE_URL || 'https://alsawarey.com'),
-  title: 'ALSWARY — alsawarey.com',
-  description: 'الصواري للاستثمار العقاري — أراضٍ مختارة للبيع في العبور الجديدة وما حولها',
-  icons: { icon: '/brand/favicon' },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const en = locale === 'en';
+  return {
+    metadataBase: new URL(process.env.BROKERAGE_URL || 'https://alsawarey.com'),
+    title: en ? 'ALSWARY Real-estate Investment' : 'الصواري للاستثمار العقاري',
+    description: en
+      ? 'ALSWARY Real-estate Investment — selected lands for sale in New Obour and beyond'
+      : 'الصواري للاستثمار العقاري — أراضٍ مختارة للبيع في العبور الجديدة وما حولها',
+    icons: { icon: '/brand/favicon' },
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as Locale;
