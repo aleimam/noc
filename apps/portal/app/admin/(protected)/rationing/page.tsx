@@ -8,15 +8,21 @@ export default async function RationingHub() {
   await requirePermission('sheets', 'VIEW');
   const t = await getTranslations('rationing');
 
-  const [sheets, inquiries, searches] = await Promise.all([
+  const [sheets, inquiries, searches, cities, scans, review] = await Promise.all([
     prisma.rationingSheet.count(),
     prisma.inquiryRequest.count({ where: { status: 'OPEN' } }),
     prisma.sheetSearchLog.count(),
+    prisma.rationingCity.count(),
+    prisma.rationingScan.count(),
+    prisma.rationingSheet.count({ where: { needsReview: true } }),
   ]);
   const cards = [
     { href: '/admin/rationing/sheets', label: t('sheets'), count: sheets },
+    { href: '/admin/rationing/scans', label: t('scansTitle'), count: scans },
+    { href: '/admin/rationing/review', label: t('reviewTitle'), count: review },
     { href: '/admin/rationing/inquiries', label: t('inquiries'), count: inquiries },
     { href: '/admin/rationing/searches', label: t('searches'), count: searches },
+    { href: '/admin/rationing/settings', label: t('settingsTitle'), count: cities },
   ];
 
   return (

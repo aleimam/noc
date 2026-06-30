@@ -12,15 +12,20 @@ export async function GET() {
   ws.columns = SHEET_COLUMNS.map((c) => ({ header: `${c.ar} / ${c.en}`, key: c.key, width: 22 }));
   ws.getRow(1).font = { bold: true };
   ws.addRow({
-    numberInSheet: '1',
-    ownerName: 'محمد أحمد',
-    company: 'جمعية الأمل',
-    originalPiece: '125',
-    originalLocation: 'القادسية',
-    originalMember: '457',
-    sheetDate: '2018-03-12',
-    paymentDate: '2019-06-01',
-    sheetNotes: 'سداد كامل',
+    applicantNo: 1,
+    applicantName: 'محمد منصور علي',
+    plotNo: '2094',
+    blockNo: '2',
+    plotFullRef: 'قطعة 2094 - مربع 2',
+    city: 'القادسية',
+    originalOwner: 'صبري عبدالكريم عبدالجواد',
+    attendanceDay: 'الأحد',
+    attendanceDate: '2026-06-01',
+    listDate: '2026-06-01',
+    declarationRequired: 'No',
+    declarationDetails: '',
+    remarks: '',
+    sourceFile: '1 06 2026 02.jpg',
   });
 
   const buf = await wb.xlsx.writeBuffer();

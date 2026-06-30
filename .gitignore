@@ -47,3 +47,6 @@ Thumbs.db
 
 # Word lock/temp artifacts
 ~WRL*.tmp
+
+# source data drops (PII — never commit)
+/input data/

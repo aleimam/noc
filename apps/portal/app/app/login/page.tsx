@@ -2,13 +2,20 @@
 
 import { useState, type FormEvent } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
+
+// Only allow same-site relative paths as a post-login destination (no open redirects).
+function safeNext(raw: string | null): string {
+  if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw;
+  return '/app';
+}
 
 export default function CustomerLoginPage() {
   const t = useTranslations('auth');
   const locale = useLocale();
   const router = useRouter();
+  const next = safeNext(useSearchParams().get('next'));
   const [step, setStep] = useState<'phone' | 'code'>('phone');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
@@ -55,7 +62,7 @@ export default function CustomerLoginPage() {
       } catch {
         /* ignore */
       }
-      router.push('/app');
+      router.push(next);
       return;
     }
     setLoading(false);

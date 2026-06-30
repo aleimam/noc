@@ -22,7 +22,7 @@ export default async function SheetsPage() {
   const [total, batches, sheets] = await Promise.all([
     prisma.rationingSheet.count(),
     prisma.sheetImportBatch.findMany({ orderBy: { createdAt: 'desc' }, take: 50 }),
-    prisma.rationingSheet.findMany({ orderBy: { createdAt: 'desc' }, take: 100 }),
+    prisma.rationingSheet.findMany({ orderBy: { createdAt: 'desc' }, take: 100, include: { city: true } }),
   ]);
 
   return (
@@ -45,6 +45,9 @@ export default async function SheetsPage() {
                 <tr className="opacity-60">
                   <th className="p-2 text-start">{t('fileName')}</th>
                   <th className="p-2 text-start">{t('rows')}</th>
+                  <th className="p-2 text-start">{t('willAdd')}</th>
+                  <th className="p-2 text-start">{t('updated')}</th>
+                  <th className="p-2 text-start">{t('duplicates')}</th>
                   <th className="p-2 text-start">{t('uploadedAt')}</th>
                   <th className="p-2"></th>
                 </tr>
@@ -54,6 +57,9 @@ export default async function SheetsPage() {
                   <tr key={b.id} className="border-t border-graphite/10">
                     <td className="p-2">{b.fileName}</td>
                     <td className="p-2">{b.rowCount}</td>
+                    <td className="p-2 text-green">{b.createdCount}</td>
+                    <td className="p-2">{b.updatedCount}</td>
+                    <td className="p-2 opacity-70">{b.duplicateCount}</td>
                     <td className="p-2" dir="ltr">{fmtDate(b.createdAt, locale)}</td>
                     <td className="p-2 text-end">
                       <DeleteBatchButton id={b.id} />
@@ -74,29 +80,28 @@ export default async function SheetsPage() {
             <table className="w-full whitespace-nowrap text-sm">
               <thead>
                 <tr className="opacity-60">
-                  <th className="p-2 text-start">{t('colNumber')}</th>
+                  <th className="p-2 text-start">{t('colApplicant')}</th>
+                  <th className="p-2 text-start">{t('colPlot')}</th>
+                  <th className="p-2 text-start">{t('colBlock')}</th>
+                  <th className="p-2 text-start">{t('colCity')}</th>
                   <th className="p-2 text-start">{t('colOwner')}</th>
-                  <th className="p-2 text-start">{t('colCompany')}</th>
-                  <th className="p-2 text-start">{t('colPiece')}</th>
-                  <th className="p-2 text-start">{t('colLocation')}</th>
-                  <th className="p-2 text-start">{t('colMember')}</th>
-                  <th className="p-2 text-start">{t('colSheetDate')}</th>
-                  <th className="p-2 text-start">{t('colPaymentDate')}</th>
-                  <th className="p-2 text-start">{t('colNotes')}</th>
+                  <th className="p-2 text-start">{t('colListDate')}</th>
+                  <th className="p-2 text-start">{t('colRemarks')}</th>
                 </tr>
               </thead>
               <tbody>
                 {sheets.map((s) => (
                   <tr key={s.id} className="border-t border-graphite/10">
-                    <td className="p-2">{s.numberInSheet ?? '—'}</td>
-                    <td className="p-2 font-medium">{s.ownerName}</td>
-                    <td className="p-2">{s.company ?? '—'}</td>
-                    <td className="p-2">{s.originalPiece ?? '—'}</td>
-                    <td className="p-2">{s.originalLocation ?? '—'}</td>
-                    <td className="p-2">{s.originalMember ?? '—'}</td>
-                    <td className="p-2" dir="ltr">{fmtDate(s.sheetDate, locale)}</td>
-                    <td className="p-2" dir="ltr">{fmtDate(s.paymentDate, locale)}</td>
-                    <td className="max-w-[16rem] truncate p-2">{s.sheetNotes ?? '—'}</td>
+                    <td className="p-2 font-medium">
+                      {s.applicantName}
+                      {s.needsReview && <span className="ms-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">{t('needsReview')}</span>}
+                    </td>
+                    <td className="p-2">{s.plotNo}</td>
+                    <td className="p-2">{s.blockNo || '—'}</td>
+                    <td className="p-2">{s.city?.name ?? '—'}</td>
+                    <td className="p-2">{s.originalOwner ?? '—'}</td>
+                    <td className="p-2" dir="ltr">{fmtDate(s.listDate, locale)}</td>
+                    <td className="max-w-[16rem] truncate p-2 opacity-70">{s.remarks ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>

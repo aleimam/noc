@@ -68,12 +68,14 @@ model User {
   listings        Listing[]       @relation("ListingSeller")
   listingsCreated Listing[]       @relation("ListingCreator")
   sheetUploads    RationingSheet[]   @relation("SheetUploader")
+  scanUploads     RationingScan[]    @relation("ScanUploader")
   sheetBatches    SheetImportBatch[]
   inquiries       InquiryRequest[]
   sheetSearches   SheetSearchLog[]
   landsCreated    Land[]             @relation("LandCreator")
   geoUpdates      GeoUpdate[]        @relation("GeoUpdateAuthor")
   landFollows     LandFollow[]
+  rationingFollows RationingFollow[]
 
   @@index([type])
 }
@@ -486,42 +488,157 @@ enum InquiryStatus {
   CLOSED
 }
 
-/// One row of a government rationing sheet (كشف تقنين). Staff import these from Excel.
-model RationingSheet {
-  id               String    @id @default(cuid())
-  numberInSheet    String? // "Number in Sheet"
-  ownerName        String // "Owner Name"
-  sheetNotes       String?   @db.Text
-  sheetDate        DateTime?
-  paymentDate      DateTime?
-  company          String?
-  originalPiece    String?
-  originalLocation String?
-  originalMember   String?
-  batchId          String?
-  uploadedById     String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+/// An admin-editable city / zone list for rationing sheets (e.g. القادسية، الكيلو 48).
+/// Deliberately separate from the Module-2 geo District/Neighborhood hierarchy.
+model RationingCity {
+  id         String   @id @default(cuid())
+  name       String   @unique // Arabic name as entered
+  nameEn     String?
+  normalized String   @unique // normalized form for soft matching / import upsert
+  order      Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
+  sheets  RationingSheet[]
+  follows RationingFollow[]
+
+  @@index([isActive, order])
+}
+
+/// One applicant row of a government rationing sheet (كشف تقنين). Staff import these from Excel.
+/// Applicant-centric: a plot's original owner is split among many applicants (beneficiaries).
+model RationingSheet {
+  id            String  @id @default(cuid())
+  applicantNo   Int? // "Applicant No" within the source file
+  applicantName String // raw applicant cell, kept exactly as imported (may hold several people)
+  plotNo        String // "Plot No" (قطعة)
+  blockNo       String // "Block No" (مربع / مجموعة)
+  plotFullRef   String? // "Plot Full Reference" — merge of plot + block
+  cityId        String?
+  originalOwner String? // the original (pre-split) land owner
+
+  attendanceDay  String? // weekday label (الأحد…)
+  attendanceDate DateTime?
+  listDate       DateTime?
+
+  declarationRequired Boolean @default(false) // "Declaration Required" (Yes/No)
+  declarationDetails  String? @db.Text
+
+  // Internal-only — never shown to visitors:
+  remarks    String? @db.Text // e.g. "OCR needs verification"
+  sourceFile String? // scanned page filename; links to a scan in phase 2
+
+  // Soft-search helpers (normalized: de-diacritized, unified letters, Latin digits):
+  ownerNorm String?
+  plotNorm  String?
+  blockNorm String?
+  dedupeKey String // normalized applicantName|plotNo|blockNo — duplicate detection
+
+  // OCR-verification workflow:
+  needsReview Boolean   @default(false) // seeded from a non-empty Remarks on import
+  reviewedAt  DateTime?
+
+  batchId      String?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  city       RationingCity?    @relation(fields: [cityId], references: [id], onDelete: SetNull)
   batch      SheetImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
   uploadedBy User?             @relation("SheetUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  names      RationingName[]
   inquiries  InquiryRequest[]
+  follows    RationingFollow[] @relation("FollowSheet")
 
-  @@index([ownerName])
-  @@index([originalPiece])
-  @@index([originalLocation])
-  @@index([company])
+  @@index([plotNo, blockNo])
+  @@index([dedupeKey])
+  @@index([ownerNorm])
+  @@index([plotNorm])
+  @@index([blockNorm])
+  @@index([cityId])
   @@index([batchId])
+  @@index([needsReview])
+}
+
+/// A searchable person name derived from a RationingSheet.applicantName — the raw cell
+/// is expanded into one row per real person (multi-owner names share a surname).
+model RationingName {
+  id         String  @id @default(cuid())
+  sheetId    String
+  fullName   String // expanded display name for this person
+  normalized String // normalized form for soft matching
+  isPrimary  Boolean @default(false) // the first / whole-cell name
+
+  sheet RationingSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+
+  @@index([normalized])
+  @@index([sheetId])
+}
+
+enum RationingFollowKind {
+  FOUND // customer found their name → wants updates about that land
+  WATCH // customer didn't find it → notify (SMS) when it appears in a future sheet
+}
+
+/// A logged-in customer following the rationing ledger. Never implies ownership (#12).
+/// FOUND links to the sheet row they recognised; WATCH is an alert/saved-search by name.
+/// Designed to later graduate into a Module-2 LandFollow once concrete land details exist.
+model RationingFollow {
+  id             String              @id @default(cuid())
+  userId         String
+  kind           RationingFollowKind
+  applicantName  String
+  nameNorm       String // normalized — matched against new imports for WATCH alerts
+  plotNo         String?
+  blockNo        String?
+  originalOwner  String?
+  cityId         String?
+  sheetId        String? // source row (FOUND) or the row that matched a WATCH
+  status         String              @default("active") // active | matched | closed
+  lastNotifiedAt DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city  RationingCity?  @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  sheet RationingSheet? @relation("FollowSheet", fields: [sheetId], references: [id], onDelete: SetNull)
+
+  @@index([nameNorm])
+  @@index([userId])
+  @@index([status, kind])
+}
+
+/// A scanned rationing-sheet page. Linked to applicant rows by file name == RationingSheet.sourceFile.
+/// One scan typically covers many applicants (a whole page). Stored via the upload pipeline.
+model RationingScan {
+  id           String   @id @default(cuid())
+  fileName     String   @unique // must equal RationingSheet.sourceFile (e.g. "1 06 2026 02.jpg")
+  path         String // public URL, e.g. /uploads/2026/06/uuid.jpg
+  mime         String
+  width        Int?
+  height       Int?
+  attachmentId String?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  uploadedBy User? @relation("ScanUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
 }
 
 /// An Excel import run — groups the rows it produced so staff can review/delete a batch.
 model SheetImportBatch {
-  id           String   @id @default(cuid())
-  fileName     String
-  rowCount     Int      @default(0)
-  note         String?
-  uploadedById String?
-  createdAt    DateTime @default(now())
+  id             String   @id @default(cuid())
+  fileName       String
+  rowCount       Int      @default(0) // applicant rows attached to this batch
+  createdCount   Int      @default(0) // new rows inserted
+  updatedCount   Int      @default(0) // existing rows updated (conflict=update)
+  duplicateCount Int      @default(0) // duplicates skipped (conflict=skip)
+  flaggedCount   Int      @default(0) // rows imported with a verification remark
+  note           String?
+  uploadedById   String?
+  createdAt      DateTime @default(now())
 
   uploadedBy User?            @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   sheets     RationingSheet[]
@@ -555,13 +672,15 @@ model InquiryRequest {
 
 /// Every search performed against the sheets — stored for admin review ("List of Sheets Inquiries").
 model SheetSearchLog {
-  id           String   @id @default(cuid())
-  query        String
-  resultsCount Int      @default(0)
-  matched      Boolean  @default(false)
-  userId       String?
-  phone        String?
-  createdAt    DateTime @default(now())
+  id             String   @id @default(cuid())
+  query          String
+  field          String   @default("all") // all | name | owner | plot | block
+  resultsCount   Int      @default(0)
+  matched        Boolean  @default(false)
+  usedSuggestion Boolean  @default(false) // visitor clicked a "did you mean?" suggestion
+  userId         String?
+  phone          String?
+  createdAt      DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 

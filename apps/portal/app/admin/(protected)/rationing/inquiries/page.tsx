@@ -29,7 +29,7 @@ export default async function InquiriesPage() {
   const inquiries = await prisma.inquiryRequest.findMany({
     orderBy: { createdAt: 'desc' },
     take: 100,
-    include: { matchedSheet: { select: { ownerName: true, numberInSheet: true } } },
+    include: { matchedSheet: { select: { applicantName: true, plotFullRef: true } } },
   });
 
   return (
@@ -74,7 +74,7 @@ export default async function InquiriesPage() {
                   <td className="p-2">{q.originalPiece ?? '—'}</td>
                   <td className="p-2">{q.originalLocation ?? '—'}</td>
                   <td className="p-2">{q.originalMember ?? '—'}</td>
-                  <td className="p-2">{q.matchedSheet ? `#${q.matchedSheet.numberInSheet ?? '—'} ${q.matchedSheet.ownerName}` : '—'}</td>
+                  <td className="p-2">{q.matchedSheet ? `${q.matchedSheet.applicantName} · ${q.matchedSheet.plotFullRef ?? ''}` : '—'}</td>
                   <td className="p-2" dir="ltr">{fmtDateTime(q.createdAt, locale)}</td>
                   <td className="p-2 text-end">
                     <InquiryActions id={q.id} status={q.status} />
