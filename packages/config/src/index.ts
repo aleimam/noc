@@ -126,3 +126,147 @@ export const DEFAULT_SELL_CONTENT: SellContent = {
     price: ['نساعدك في تقييم القطعة', 'يتم الاتفاق على السعر النهائي مع البائع'],
   },
 };
+
+// ---------------------------------------------------------------------------
+// ALSWARY storefront content — homepage + global chrome, editable from the New
+// Obour backend. Shared shape so the portal editor and the brokerage app agree.
+// Content-only (bilingual text, links, images, toggles, order); no theming.
+// ---------------------------------------------------------------------------
+
+export type Loc = { ar: string; en: string };
+export type StoreLink = { label: Loc; href: string };
+export type StoreMenuGroup = { title: Loc; links: StoreLink[] };
+export type StoreSectionKey = 'quickFilters' | 'featured' | 'latest' | 'sellBand' | 'sold';
+export type StoreSection = { key: StoreSectionKey; enabled: boolean };
+
+export type StorefrontContent = {
+  hero: {
+    title: Loc;
+    subtitle: Loc;
+    searchPlaceholder: Loc;
+    showSearch: boolean;
+    primaryCta: StoreLink;
+    secondaryCta: StoreLink;
+    stats: { show: boolean; availableLabel: Loc; soldLabel: Loc; extraValue: Loc; extraLabel: Loc };
+  };
+  sections: StoreSection[]; // render order + visibility (hero is always first, not listed)
+  titles: { featured: Loc; latest: Loc; sold: Loc };
+  sellBand: { title: Loc; body: Loc; cta: StoreLink };
+  featurePills: StoreLink[];
+  areaChips: StoreLink[];
+  nav: { allLands: StoreLink; featured: StoreLink; sell: StoreLink; groups: StoreMenuGroup[] };
+  contact: { whatsapp: string };
+  footer: { brandLine: Loc };
+};
+
+const loc = (ar: string, en: string): Loc => ({ ar, en });
+
+export const DEFAULT_STOREFRONT: StorefrontContent = {
+  hero: {
+    title: loc('استثمارك العقاري يبدأ من هنا', 'Your land investment starts here'),
+    subtitle: loc(
+      'أراضٍ مختارة للبيع في العبور الجديدة وما حولها — تصفّح، قارن، وتواصل معنا للشراء',
+      'Selected lands for sale in New Obour and beyond — browse, compare, and contact us to buy',
+    ),
+    searchPlaceholder: loc('ابحث بالمساحة، المنطقة، أو رقم الإعلان…', 'Search by area, district, or ad number…'),
+    showSearch: true,
+    primaryCta: { label: loc('تصفّح الأراضي', 'Browse lands'), href: '/listings' },
+    secondaryCta: { label: loc('اعرض أرضك للبيع', 'Sell your land'), href: '/sell' },
+    stats: {
+      show: true,
+      availableLabel: loc('أرض متاحة', 'lands available'),
+      soldLabel: loc('تم بيعها', 'sold'),
+      extraValue: loc('مجانًا', 'Free'),
+      extraLabel: loc('وساطة للمشتري', 'brokerage for buyers'),
+    },
+  },
+  sections: [
+    { key: 'quickFilters', enabled: true },
+    { key: 'featured', enabled: true },
+    { key: 'latest', enabled: true },
+    { key: 'sellBand', enabled: true },
+    { key: 'sold', enabled: true },
+  ],
+  titles: {
+    featured: loc('عروض مميزة', 'Featured lands'),
+    latest: loc('أحدث الأراضي', 'Latest lands'),
+    sold: loc('تم بيعها مؤخراً', 'Recently sold'),
+  },
+  sellBand: {
+    title: loc('عندك أرض للبيع؟', 'Have land to sell?'),
+    body: loc('اعرضها معنا — كشف أو تخصيص — ونتواصل معك', 'List it with us — reconciliation or allocated — and we’ll reach out'),
+    cta: { label: loc('اعرض أرضك', 'List your land'), href: '/sell' },
+  },
+  featurePills: [
+    { label: loc('ناصية', 'Corner'), href: '/listings?corner=1' },
+    { label: loc('شارع رئيسي', 'Main road'), href: '/listings?main=1' },
+    { label: loc('متوصلة بالمرافق', 'With services'), href: '/listings?services=1' },
+    { label: loc('على حديقة', 'Garden view'), href: '/listings?view=garden' },
+    { label: loc('الأرخص سعراً', 'Best price'), href: '/listings?sort=price_asc' },
+  ],
+  areaChips: [
+    { label: loc('209 م²', '209 m²'), href: '/listings?area=209' },
+    { label: loc('276 م²', '276 m²'), href: '/listings?area=276' },
+    { label: loc('350 م²', '350 m²'), href: '/listings?area=350' },
+    { label: loc('400 م²', '400 m²'), href: '/listings?area=400' },
+    { label: loc('450 م²', '450 m²'), href: '/listings?area=450' },
+    { label: loc('500 م²', '500 m²'), href: '/listings?area=500' },
+    { label: loc('600–750 م²', '600–750 m²'), href: '/listings?areaMin=600&areaMax=750' },
+    { label: loc('751–1000 م²', '751–1000 m²'), href: '/listings?areaMin=751&areaMax=1000' },
+    { label: loc('+1000 م²', '1000+ m²'), href: '/listings?areaMin=1000' },
+  ],
+  nav: {
+    allLands: { label: loc('كل الأراضي', 'All lands'), href: '/listings' },
+    featured: { label: loc('مميز', 'Featured'), href: '/listings?featured=1' },
+    sell: { label: loc('بيع أرضك', 'Sell your land'), href: '/sell' },
+    groups: [
+      {
+        title: loc('المساحات', 'Areas'),
+        links: [
+          { label: loc('209 م²', '209 m²'), href: '/listings?area=209' },
+          { label: loc('276 م²', '276 m²'), href: '/listings?area=276' },
+          { label: loc('350 م²', '350 m²'), href: '/listings?area=350' },
+          { label: loc('400 م²', '400 m²'), href: '/listings?area=400' },
+          { label: loc('450 م²', '450 m²'), href: '/listings?area=450' },
+          { label: loc('500 م²', '500 m²'), href: '/listings?area=500' },
+          { label: loc('600 – 750 م²', '600–750 m²'), href: '/listings?areaMin=600&areaMax=750' },
+          { label: loc('751 – 1000 م²', '751–1000 m²'), href: '/listings?areaMin=751&areaMax=1000' },
+          { label: loc('أكثر من 1000 م²', 'Over 1000 m²'), href: '/listings?areaMin=1000' },
+        ],
+      },
+      {
+        title: loc('المميزات', 'Features'),
+        links: [
+          { label: loc('أراضي ناصية', 'Corner'), href: '/listings?corner=1' },
+          { label: loc('على شارع رئيسي', 'Main road'), href: '/listings?main=1' },
+          { label: loc('متوصلة بالمرافق', 'With services'), href: '/listings?services=1' },
+          { label: loc('الأرخص سعراً', 'Best price'), href: '/listings?sort=price_asc' },
+        ],
+      },
+    ],
+  },
+  contact: { whatsapp: '+201040810000' },
+  footer: { brandLine: loc('الصواري للاستثمار العقاري', 'ALSWARY Real-estate Investment') },
+};
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+// Merge `override` onto `base`, keeping base's shape: recurse into plain objects,
+// replace arrays/primitives outright. Keys absent from base are ignored.
+function deepMerge<T>(base: T, override: unknown): T {
+  if (!isPlainObject(base) || !isPlainObject(override)) return base;
+  const out: Record<string, unknown> = { ...base };
+  for (const key of Object.keys(base)) {
+    if (!(key in override)) continue;
+    const b = (base as Record<string, unknown>)[key];
+    out[key] = isPlainObject(b) ? deepMerge(b, override[key]) : override[key];
+  }
+  return out as T;
+}
+
+/** Merge an admin override blob over the storefront defaults (shape-preserving). */
+export function mergeStorefront(override: unknown): StorefrontContent {
+  return deepMerge(DEFAULT_STOREFRONT, override);
+}

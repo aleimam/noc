@@ -4,8 +4,8 @@
 
 export const WHATSAPP = '+201040810000';
 
-export function waLink(text: string): string {
-  return `https://wa.me/${WHATSAPP.replace(/[^\d]/g, '')}?text=${encodeURIComponent(text)}`;
+export function waLink(text: string, number: string = WHATSAPP): string {
+  return `https://wa.me/${number.replace(/[^\d]/g, '')}?text=${encodeURIComponent(text)}`;
 }
 
 export type MenuLink = { labelAr: string; labelEn: string; href: string };

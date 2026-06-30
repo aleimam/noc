@@ -6,6 +6,7 @@ import { StoreShell } from '../../_components/StoreShell';
 import { StoreLandCard } from '../../_components/StoreLandCard';
 import { getLandDetail, similarLands } from '../../../lib/listings';
 import { wishlistListingIds } from '../../../lib/wishlist';
+import { getStorefront } from '../../../lib/storefront';
 import { BuyButton } from './BuyButton';
 import { WishlistButton } from '../../_components/WishlistButton';
 
@@ -32,7 +33,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const land = await getLandDetail(id, locale);
   if (!land) notFound();
-  const [wished, similar] = await Promise.all([wishlistListingIds(), similarLands(id, 4)]);
+  const [wished, similar, store] = await Promise.all([wishlistListingIds(), similarLands(id, 4), getStorefront()]);
 
   const sold = land.status === 'SOLD';
   const waText = L(
@@ -100,7 +101,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
 
               {!sold && (
                 <div className="mt-4">
-                  <BuyButton listingId={land.id} waText={waText} label={L('أريد شراءها', 'I want to buy it')} sentLabel={L('تم الإرسال ✓', 'Sent ✓')} />
+                  <BuyButton listingId={land.id} waText={waText} whatsapp={store.contact.whatsapp} label={L('أريد شراءها', 'I want to buy it')} sentLabel={L('تم الإرسال ✓', 'Sent ✓')} />
                   <p className="mt-2 text-center text-xs text-ink-500">{L('سيتم تحويلك إلى واتساب لإتمام الطلب', 'You will be taken to WhatsApp to continue')}</p>
                 </div>
               )}
