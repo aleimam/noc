@@ -1,15 +1,15 @@
 /*
   Warnings:
 
-  - You are about to drop the column `company` on the `rationingsheet` table. All the data in the column will be lost.
-  - You are about to drop the column `numberInSheet` on the `rationingsheet` table. All the data in the column will be lost.
-  - You are about to drop the column `originalLocation` on the `rationingsheet` table. All the data in the column will be lost.
-  - You are about to drop the column `originalMember` on the `rationingsheet` table. All the data in the column will be lost.
-  - You are about to drop the column `originalPiece` on the `rationingsheet` table. All the data in the column will be lost.
-  - You are about to drop the column `ownerName` on the `rationingsheet` table. All the data in the column will be lost.
-  - You are about to drop the column `paymentDate` on the `rationingsheet` table. All the data in the column will be lost.
-  - You are about to drop the column `sheetDate` on the `rationingsheet` table. All the data in the column will be lost.
-  - You are about to drop the column `sheetNotes` on the `rationingsheet` table. All the data in the column will be lost.
+  - You are about to drop the column `company` on the `RationingSheet` table. All the data in the column will be lost.
+  - You are about to drop the column `numberInSheet` on the `RationingSheet` table. All the data in the column will be lost.
+  - You are about to drop the column `originalLocation` on the `RationingSheet` table. All the data in the column will be lost.
+  - You are about to drop the column `originalMember` on the `RationingSheet` table. All the data in the column will be lost.
+  - You are about to drop the column `originalPiece` on the `RationingSheet` table. All the data in the column will be lost.
+  - You are about to drop the column `ownerName` on the `RationingSheet` table. All the data in the column will be lost.
+  - You are about to drop the column `paymentDate` on the `RationingSheet` table. All the data in the column will be lost.
+  - You are about to drop the column `sheetDate` on the `RationingSheet` table. All the data in the column will be lost.
+  - You are about to drop the column `sheetNotes` on the `RationingSheet` table. All the data in the column will be lost.
   - Added the required column `applicantName` to the `RationingSheet` table without a default value. This is not possible if the table is not empty.
   - Added the required column `blockNo` to the `RationingSheet` table without a default value. This is not possible if the table is not empty.
   - Added the required column `dedupeKey` to the `RationingSheet` table without a default value. This is not possible if the table is not empty.
@@ -17,19 +17,19 @@
 
 */
 -- DropIndex
-DROP INDEX `RationingSheet_company_idx` ON `rationingsheet`;
+DROP INDEX `RationingSheet_company_idx` ON `RationingSheet`;
 
 -- DropIndex
-DROP INDEX `RationingSheet_originalLocation_idx` ON `rationingsheet`;
+DROP INDEX `RationingSheet_originalLocation_idx` ON `RationingSheet`;
 
 -- DropIndex
-DROP INDEX `RationingSheet_originalPiece_idx` ON `rationingsheet`;
+DROP INDEX `RationingSheet_originalPiece_idx` ON `RationingSheet`;
 
 -- DropIndex
-DROP INDEX `RationingSheet_ownerName_idx` ON `rationingsheet`;
+DROP INDEX `RationingSheet_ownerName_idx` ON `RationingSheet`;
 
 -- AlterTable
-ALTER TABLE `rationingsheet` DROP COLUMN `company`,
+ALTER TABLE `RationingSheet` DROP COLUMN `company`,
     DROP COLUMN `numberInSheet`,
     DROP COLUMN `originalLocation`,
     DROP COLUMN `originalMember`,
@@ -60,13 +60,13 @@ ALTER TABLE `rationingsheet` DROP COLUMN `company`,
     ADD COLUMN `sourceFile` VARCHAR(191) NULL;
 
 -- AlterTable
-ALTER TABLE `sheetimportbatch` ADD COLUMN `createdCount` INTEGER NOT NULL DEFAULT 0,
+ALTER TABLE `SheetImportBatch` ADD COLUMN `createdCount` INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN `duplicateCount` INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN `flaggedCount` INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN `updatedCount` INTEGER NOT NULL DEFAULT 0;
 
 -- AlterTable
-ALTER TABLE `sheetsearchlog` ADD COLUMN `field` VARCHAR(191) NOT NULL DEFAULT 'all',
+ALTER TABLE `SheetSearchLog` ADD COLUMN `field` VARCHAR(191) NOT NULL DEFAULT 'all',
     ADD COLUMN `usedSuggestion` BOOLEAN NOT NULL DEFAULT false;
 
 -- CreateTable
