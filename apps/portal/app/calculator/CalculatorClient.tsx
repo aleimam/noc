@@ -64,7 +64,23 @@ function ReconcileCalc({ config, locale }: { config: CalculatorConfig; locale: '
   const t = useTranslations('calculator');
   const [original, setOriginal] = useState('');
   const [actual, setActual] = useState('');
+  const [actualEdited, setActualEdited] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // (A) Actual defaults to the Net computed from the Original (factor × original) and
+  // stays editable; the standard chips / manual entry override it.
+  function onOriginal(v: string) {
+    setOriginal(v);
+    if (!actualEdited) {
+      const o = parseFloat(v);
+      const net = isFinite(o) && o > 0 ? netArea(o, config) : NaN;
+      setActual(isFinite(net) ? String(Math.round(net * 100) / 100) : '');
+    }
+  }
+  function setActualManual(v: string) {
+    setActualEdited(true);
+    setActual(v);
+  }
 
   const orig = parseFloat(original);
   const act = parseFloat(actual);
@@ -100,15 +116,15 @@ function ReconcileCalc({ config, locale }: { config: CalculatorConfig; locale: '
           <h2 className="text-xl font-black text-navy-800">{t('reconcileTitle')}</h2>
           <p className="mt-1 text-sm text-ink-600">{t('reconcileHint')}</p>
         </div>
-        <NumberField label={t('originalArea')} value={original} onChange={setOriginal} />
+        <NumberField label={t('originalArea')} value={original} onChange={onOriginal} />
         <div>
-          <NumberField label={t('actualArea')} value={actual} onChange={setActual} hint={t('actualAreaHint')} />
+          <NumberField label={t('actualArea')} value={actual} onChange={setActualManual} hint={t('actualAutoHint')} />
           <div className="mt-2 flex flex-wrap gap-1.5">
             {config.standardAreas.map((s) => (
               <button
                 key={s}
                 type="button"
-                onClick={() => setActual(String(s))}
+                onClick={() => setActualManual(String(s))}
                 className={`font-num rounded-lg border px-3 py-1 text-sm transition ${
                   act === s ? 'border-gold bg-gold-50 text-gold-800' : 'border-ink-200 text-navy-700 hover:border-gold'
                 }`}

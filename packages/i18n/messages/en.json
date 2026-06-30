@@ -162,6 +162,7 @@
     "originalArea": "Original area (m²)",
     "actualArea": "Actual area (m²)",
     "actualAreaHint": "Pick a standard area or enter a non-standard one.",
+    "actualAutoHint": "Auto-calculated from the original area — you can edit it or pick a standard area.",
     "pickStandard": "Pick a standard area…",
     "customArea": "Other (enter)",
     "netArea": "Net area",
