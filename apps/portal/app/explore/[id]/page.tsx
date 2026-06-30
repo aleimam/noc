@@ -25,9 +25,9 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const m2 = localizeUnit('م²', locale);
 
-  const [advantages, masterplan, updates] = await Promise.all([
+  const [advantages, areaMaps, updates] = await Promise.all([
     prisma.advantage.findMany({ where: { neighborhoodId: id }, orderBy: { order: 'asc' } }),
-    prisma.attachment.findFirst({ where: { ownerType: 'Masterplan', ownerId: id }, orderBy: { createdAt: 'desc' } }),
+    prisma.areaMap.findMany({ where: { level: 'neighborhood', areaId: id } }),
     // neighborhood updates + inherited district updates, newest first
     prisma.geoUpdate.findMany({
       where: { OR: [{ neighborhoodId: id }, { districtId: n.districtId }] },
@@ -35,6 +35,12 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
       take: 50,
     }),
   ]);
+  const pickMap = (kind: string) => {
+    const r = areaMaps.find((x) => x.kind === kind);
+    return r ? r.newobourPath || r.cleanPath : null;
+  };
+  const locationMap = pickMap('location');
+  const masterplanMap = pickMap('masterplan');
   const updIds = updates.map((u) => u.id);
   const photos = updIds.length
     ? await prisma.attachment.findMany({ where: { ownerType: 'GeoUpdate', ownerId: { in: updIds } }, orderBy: { createdAt: 'asc' }, select: { ownerId: true, path: true } })
@@ -100,10 +106,16 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
         </section>
       )}
 
-      {masterplan && (
+      {locationMap && (
+        <section className="space-y-2">
+          <h2 className="font-semibold text-primary">{t('locationMap')}</h2>
+          <PhotoGallery photos={[locationMap]} />
+        </section>
+      )}
+      {masterplanMap && (
         <section className="space-y-2">
           <h2 className="font-semibold text-primary">{t('masterplan')}</h2>
-          <PhotoGallery photos={[masterplan.path]} />
+          <PhotoGallery photos={[masterplanMap]} />
         </section>
       )}
 
@@ -116,7 +128,8 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
             return (
               <li key={u.id} className="rounded-lg border border-graphite/15 p-3">
                 <div className="text-xs opacity-60" dir="ltr">{fmt(u.happenedAt)}</div>
-                <p className="mt-1 whitespace-pre-wrap text-sm">{u.body}</p>
+                {u.title && <div className="mt-1 font-bold text-primary">{u.title}</div>}
+                <div className="page-content mt-1 text-sm" dangerouslySetInnerHTML={{ __html: u.body }} />
                 {pics.length > 0 && <div className="mt-2"><PhotoGallery photos={pics} /></div>}
               </li>
             );

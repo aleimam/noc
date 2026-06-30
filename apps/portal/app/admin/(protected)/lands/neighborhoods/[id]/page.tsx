@@ -3,8 +3,8 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { BlocksManager } from '../../BlocksManager';
-import { AdvantagesEditor, MasterplanEditor, UpdatesEditor, InheritedUpdates } from '../../GeoContentEditors';
-import { loadUpdates } from '../../geo';
+import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, UpdatesEditor, InheritedUpdates } from '../../GeoContentEditors';
+import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency } from '../../geo';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,12 +21,16 @@ export default async function NeighborhoodDetail({ params }: { params: Promise<{
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
-  const [advantages, updates, masterplan, inherited] = await Promise.all([
+  const [advantages, updates, maps, followers, adjacency, others, inherited] = await Promise.all([
     prisma.advantage.findMany({ where: { neighborhoodId: id }, orderBy: { order: 'asc' } }),
     loadUpdates({ neighborhoodId: id }),
-    prisma.attachment.findFirst({ where: { ownerType: 'Masterplan', ownerId: id }, orderBy: { createdAt: 'desc' } }),
+    loadAreaMaps('neighborhood', id),
+    followerCount('neighborhood', id),
+    loadAdjacency('neighborhood', id),
+    prisma.neighborhood.findMany({ where: { id: { not: id } }, orderBy: [{ order: 'asc' }], include: { district: true } }),
     loadUpdates({ districtId: n.districtId }), // inherited from the district
   ]);
+  const candidates = others.map((o) => ({ id: o.id, name: `${L(o.district.nameAr, o.district.nameEn)} · ${L(o.nameAr, o.nameEn)}` }));
 
   return (
     <div className="space-y-6">
@@ -49,14 +53,25 @@ export default async function NeighborhoodDetail({ params }: { params: Promise<{
         <AdvantagesEditor level="neighborhood" targetId={id} advantages={advantages.map((a) => ({ id: a.id, textAr: a.textAr, textEn: a.textEn, order: a.order }))} locale={locale} />
       </section>
 
+      <div className="grid gap-6 sm:grid-cols-2">
+        <section className="space-y-2">
+          <h2 className="font-semibold text-primary">{t('locationMap')}</h2>
+          <AreaMapEditor level="neighborhood" targetId={id} kind="location" map={maps.location} />
+        </section>
+        <section className="space-y-2">
+          <h2 className="font-semibold text-primary">{t('masterplan')}</h2>
+          <AreaMapEditor level="neighborhood" targetId={id} kind="masterplan" map={maps.masterplan} />
+        </section>
+      </div>
+
       <section className="space-y-2">
-        <h2 className="font-semibold text-primary">{t('masterplan')}</h2>
-        <MasterplanEditor level="neighborhood" targetId={id} current={masterplan ? { id: masterplan.id, path: masterplan.path, originalName: masterplan.originalName } : null} />
+        <h2 className="font-semibold text-primary">{t('adjacency')}</h2>
+        <AdjacencyEditor level="neighborhood" targetId={id} candidates={candidates} selected={adjacency} />
       </section>
 
       <section className="space-y-2">
         <h2 className="font-semibold text-primary">{t('updates')}</h2>
-        <UpdatesEditor level="neighborhood" targetId={id} updates={updates} locale={locale} />
+        <UpdatesEditor level="neighborhood" targetId={id} updates={updates} followerCount={followers} locale={locale} />
         {inherited.length > 0 && (
           <>
             <h3 className="pt-2 text-sm font-semibold opacity-70">{L(n.district.nameAr, n.district.nameEn)}</h3>

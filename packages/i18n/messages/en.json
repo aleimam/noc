@@ -673,6 +673,17 @@
     "photos": "Photos",
     "pickNeighborhood": "Choose neighborhood",
     "pickBlock": "No block",
-    "openInternal": "Internal entry (visible to our team until published)"
+    "openInternal": "Internal entry (visible to our team until published)",
+    "locationMap": "Location map",
+    "adjacency": "Adjacent areas",
+    "adjacencyHint": "Pick directly-adjacent areas — the link is saved both ways automatically.",
+    "mapHint": "Upload one clean map; the system bakes a stamped copy per site automatically.",
+    "copyAlswarey": "ALSWARY copy",
+    "copyNewobour": "New Obour copy",
+    "updateTitle": "Update title",
+    "notifyFollowers": "Notify followers",
+    "sent": "Sent",
+    "confirmNotify": "This update will be sent to followers by SMS. Followers:",
+    "saved": "Saved"
   }
 }

@@ -1,8 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { auth, requirePermission } from '@noc/auth';
+import { auth, requirePermission, loadSmsConfig } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { sendSms } from '@noc/sms';
+import { stampMapCopy } from '../../../../lib/mapStamp';
 
 type GeoLevel = 'district' | 'neighborhood' | 'block' | 'land';
 function revDetail(level: GeoLevel, id: string) {
@@ -154,6 +156,7 @@ export async function deleteBlock(id: string): Promise<Result> {
 export async function addGeoUpdate(input: {
   level: GeoLevel;
   targetId: string;
+  title?: string;
   body: string;
   happenedAt?: string;
   photoIds?: string[];
@@ -170,7 +173,7 @@ export async function addGeoUpdate(input: {
       if (!isNaN(d.getTime())) happenedAt = d;
     }
     const u = await prisma.geoUpdate.create({
-      data: { body, createdById: uid, ...(happenedAt ? { happenedAt } : {}), ...geoField(input.level, input.targetId) },
+      data: { title: input.title?.trim() || null, body, createdById: uid, ...(happenedAt ? { happenedAt } : {}), ...geoField(input.level, input.targetId) },
     });
     if (input.photoIds?.length && uid) {
       await prisma.attachment.updateMany({
@@ -395,6 +398,145 @@ export async function publishLand(id: string): Promise<Result> {
     await prisma.land.update({ where: { id }, data: { status: 'PUBLISHED', listingId: listing.id } });
     revalidatePath('/admin/lands/lands');
     return { ok: true, id: listing.id };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ── Area maps (location + masterplan; clean original + per-brand stamped copies) ──
+export async function setAreaMap(input: {
+  level: 'district' | 'neighborhood';
+  targetId: string;
+  kind: 'location' | 'masterplan';
+  attachmentId: string;
+}): Promise<Result> {
+  await requirePermission('lands', 'UPDATE');
+  try {
+    const att = await prisma.attachment.findUnique({ where: { id: input.attachmentId } });
+    if (!att) return { ok: false, error: 'failed' };
+    await prisma.attachment.update({ where: { id: att.id }, data: { ownerType: 'AreaMap', ownerId: input.targetId } });
+
+    const logos = await prisma.setting.findMany({ where: { key: { in: ['brand_alsawarey_logo', 'brand_newobour_logo'] } } });
+    const lm = Object.fromEntries(logos.map((s) => [s.key, s.value]));
+    const [alswareyPath, newobourPath] = await Promise.all([
+      stampMapCopy(att.path, lm['brand_alsawarey_logo'] ?? null),
+      stampMapCopy(att.path, lm['brand_newobour_logo'] ?? null),
+    ]);
+
+    await prisma.areaMap.upsert({
+      where: { level_areaId_kind: { level: input.level, areaId: input.targetId, kind: input.kind } },
+      update: { cleanPath: att.path, alswareyPath, newobourPath },
+      create: { level: input.level, areaId: input.targetId, kind: input.kind, cleanPath: att.path, alswareyPath, newobourPath },
+    });
+    revDetail(input.level, input.targetId);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function clearAreaMap(input: { level: 'district' | 'neighborhood'; targetId: string; kind: 'location' | 'masterplan' }): Promise<Result> {
+  await requirePermission('lands', 'UPDATE');
+  try {
+    await prisma.areaMap.deleteMany({ where: { level: input.level, areaId: input.targetId, kind: input.kind } });
+    revDetail(input.level, input.targetId);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ── Notify followers of an update (cascade: area + everything inside it) ──
+type FollowSource = { districtId: string | null; neighborhoodId: string | null; blockId: string | null; landId: string | null };
+
+async function followWhere(u: FollowSource): Promise<Record<string, unknown> | null> {
+  const or: Record<string, unknown>[] = [];
+  if (u.districtId) {
+    const nIds = (await prisma.neighborhood.findMany({ where: { districtId: u.districtId }, select: { id: true } })).map((n) => n.id);
+    const bIds = nIds.length ? (await prisma.block.findMany({ where: { neighborhoodId: { in: nIds } }, select: { id: true } })).map((b) => b.id) : [];
+    const landOr: Record<string, unknown>[] = [];
+    if (nIds.length) landOr.push({ neighborhoodId: { in: nIds } });
+    if (bIds.length) landOr.push({ blockId: { in: bIds } });
+    const lIds = landOr.length ? (await prisma.land.findMany({ where: { OR: landOr }, select: { id: true } })).map((l) => l.id) : [];
+    or.push({ districtId: u.districtId });
+    if (nIds.length) or.push({ neighborhoodId: { in: nIds } });
+    if (bIds.length) or.push({ blockId: { in: bIds } });
+    if (lIds.length) or.push({ landId: { in: lIds } });
+  } else if (u.neighborhoodId) {
+    const bIds = (await prisma.block.findMany({ where: { neighborhoodId: u.neighborhoodId }, select: { id: true } })).map((b) => b.id);
+    const landOr: Record<string, unknown>[] = [{ neighborhoodId: u.neighborhoodId }];
+    if (bIds.length) landOr.push({ blockId: { in: bIds } });
+    const lIds = (await prisma.land.findMany({ where: { OR: landOr }, select: { id: true } })).map((l) => l.id);
+    or.push({ neighborhoodId: u.neighborhoodId });
+    if (bIds.length) or.push({ blockId: { in: bIds } });
+    if (lIds.length) or.push({ landId: { in: lIds } });
+  } else if (u.blockId) {
+    const lIds = (await prisma.land.findMany({ where: { blockId: u.blockId }, select: { id: true } })).map((l) => l.id);
+    or.push({ blockId: u.blockId });
+    if (lIds.length) or.push({ landId: { in: lIds } });
+  } else if (u.landId) {
+    or.push({ landId: u.landId });
+  }
+  return or.length ? { OR: or } : null;
+}
+
+export async function notifyGeoUpdate(id: string): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+  await requirePermission('lands', 'UPDATE');
+  try {
+    const u = await prisma.geoUpdate.findUnique({ where: { id } });
+    if (!u) return { ok: false, error: 'failed' };
+    const where = await followWhere(u);
+    const follows = where ? await prisma.landFollow.findMany({ where: where as never, select: { phone: true } }) : [];
+    const phones = [...new Set(follows.map((f) => f.phone).filter(Boolean))];
+
+    await prisma.geoUpdate.update({ where: { id }, data: { notifiedAt: new Date() } });
+
+    if (phones.length) {
+      const cfg = await loadSmsConfig();
+      const base = (process.env.PORTAL_URL || process.env.NEXTAUTH_URL || '').replace(/\/$/, '');
+      const areaId = u.districtId || u.neighborhoodId || u.blockId || u.landId;
+      const url = base && areaId ? `${base}/explore/${areaId}` : null;
+      const body = `العبور الجديد: ${u.title || 'تحديث جديد عن أرضك'}${url ? ' ' + url : ''}`;
+      for (const phone of phones) {
+        await sendSms(phone, body, cfg).catch((e) => console.error('geo update sms failed', e));
+      }
+    }
+    revalidatePath('/admin/lands', 'layout');
+    return { ok: true, count: phones.length };
+  } catch (e) {
+    console.error('notifyGeoUpdate failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
+// ── Reciprocal adjacency (both directions written/removed together) ──
+export async function setDistrictAdjacency(id: string, neighborIds: string[]): Promise<Result> {
+  await requirePermission('lands', 'UPDATE');
+  try {
+    const next = new Set(neighborIds.filter((x) => x && x !== id));
+    const cur = new Set((await prisma.districtLink.findMany({ where: { fromId: id }, select: { toId: true } })).map((c) => c.toId));
+    const toAdd = [...next].filter((x) => !cur.has(x));
+    const toRemove = [...cur].filter((x) => !next.has(x));
+    if (toAdd.length) await prisma.districtLink.createMany({ data: toAdd.flatMap((nb) => [{ fromId: id, toId: nb }, { fromId: nb, toId: id }]), skipDuplicates: true });
+    for (const nb of toRemove) await prisma.districtLink.deleteMany({ where: { OR: [{ fromId: id, toId: nb }, { fromId: nb, toId: id }] } });
+    revDetail('district', id);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function setNeighborhoodAdjacency(id: string, neighborIds: string[]): Promise<Result> {
+  await requirePermission('lands', 'UPDATE');
+  try {
+    const next = new Set(neighborIds.filter((x) => x && x !== id));
+    const cur = new Set((await prisma.neighborhoodLink.findMany({ where: { fromId: id }, select: { toId: true } })).map((c) => c.toId));
+    const toAdd = [...next].filter((x) => !cur.has(x));
+    const toRemove = [...cur].filter((x) => !next.has(x));
+    if (toAdd.length) await prisma.neighborhoodLink.createMany({ data: toAdd.flatMap((nb) => [{ fromId: id, toId: nb }, { fromId: nb, toId: id }]), skipDuplicates: true });
+    for (const nb of toRemove) await prisma.neighborhoodLink.deleteMany({ where: { OR: [{ fromId: id, toId: nb }, { fromId: nb, toId: id }] } });
+    revDetail('neighborhood', id);
+    return { ok: true };
   } catch (e) {
     return fail(e);
   }

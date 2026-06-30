@@ -860,6 +860,8 @@ model District {
   updates       GeoUpdate[]
   follows       LandFollow[]
   landOffers    LandOffer[]
+  linksFrom     DistrictLink[] @relation("DistrictLinkFrom")
+  linksTo       DistrictLink[] @relation("DistrictLinkTo")
 
   @@index([isActive, order])
 }
@@ -888,6 +890,8 @@ model Neighborhood {
   follows    LandFollow[]
   listings   Listing[]
   landOffers LandOffer[]
+  linksFrom  NeighborhoodLink[] @relation("NeighborhoodLinkFrom")
+  linksTo    NeighborhoodLink[] @relation("NeighborhoodLinkTo")
 
   @@index([districtId, order])
   @@index([isActive])
@@ -952,10 +956,12 @@ model GeoUpdate {
   neighborhoodId String?
   blockId        String?
   landId         String?
-  body           String   @db.Text // entered text — kept as-is across locales
+  title          String?  @db.Text // headline of the update
+  body           String   @db.Text // rich HTML details — kept as-is across locales
   happenedAt     DateTime @default(now())
   createdById    String?
   createdAt      DateTime @default(now())
+  notifiedAt     DateTime? // set when followers have been SMS-notified
 
   district     District?     @relation(fields: [districtId], references: [id], onDelete: Cascade)
   neighborhood Neighborhood? @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
@@ -985,6 +991,47 @@ model Advantage {
 
   @@index([districtId, order])
   @@index([neighborhoodId, order])
+}
+
+/// Location / masterplan map for a district or neighborhood. One clean original is
+/// uploaded; the system bakes a per-brand stamped copy for each site.
+model AreaMap {
+  id           String   @id @default(cuid())
+  level        String // 'district' | 'neighborhood'
+  areaId       String
+  kind         String // 'location' | 'masterplan'
+  cleanPath    String   @db.Text
+  alswareyPath String?  @db.Text
+  newobourPath String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([level, areaId, kind])
+  @@index([level, areaId])
+}
+
+/// Reciprocal district adjacency (both directions are written, so it's symmetric).
+model DistrictLink {
+  id     String @id @default(cuid())
+  fromId String
+  toId   String
+  from   District @relation("DistrictLinkFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to     District @relation("DistrictLinkTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId])
+  @@index([fromId])
+}
+
+/// Reciprocal neighborhood adjacency.
+model NeighborhoodLink {
+  id     String @id @default(cuid())
+  fromId String
+  toId   String
+  from   Neighborhood @relation("NeighborhoodLinkFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to     Neighborhood @relation("NeighborhoodLinkTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId])
+  @@index([fromId])
 }
 
 /// A customer following a land / block / neighborhood / district for updates (free service).

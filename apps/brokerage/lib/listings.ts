@@ -159,6 +159,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
     select: {
       id: true,
       adNumber: true,
+      neighborhoodId: true,
       title: true,
       description: true,
       price: true,
@@ -186,6 +187,20 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
       select: { path: true },
     })
   ).map((a) => a.path);
+
+  // Append the ALSWARY-stamped location + masterplan maps of the land's neighborhood
+  // and its district (after the land's own photos).
+  if (l.neighborhoodId) {
+    const nb = await prisma.neighborhood.findUnique({ where: { id: l.neighborhoodId }, select: { id: true, districtId: true } });
+    const areaIds = [nb?.id, nb?.districtId].filter((x): x is string => !!x);
+    if (areaIds.length) {
+      const maps = await prisma.areaMap.findMany({ where: { areaId: { in: areaIds } }, orderBy: { kind: 'asc' } });
+      for (const m of maps) {
+        const p = m.alswareyPath || m.cleanPath;
+        if (p && !gallery.includes(p)) gallery.push(p);
+      }
+    }
+  }
 
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const specs: { label: string; value: string }[] = [];
