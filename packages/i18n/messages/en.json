@@ -163,6 +163,8 @@
     "actualArea": "Actual area (m²)",
     "actualAreaHint": "Pick a standard area or enter a non-standard one.",
     "actualAutoHint": "Auto-calculated from the original area — you can edit it or pick a standard area.",
+    "standardReceived": "Standard area he will receive",
+    "standardHint": "The standard plot the Authority allocates — defaults to the nearest standard; you can change it.",
     "pickStandard": "Pick a standard area…",
     "customArea": "Other (enter)",
     "netArea": "Net area",

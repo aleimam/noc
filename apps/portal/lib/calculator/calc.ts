@@ -108,7 +108,7 @@ export type ReconcileResult =
   | {
       overMax: false;
       originalArea: number;
-      actualArea: number;
+      afterDeduction: number; // 0.85/0.80 × original — the calc baseline
       standard: number;
       /** standard − actual: >0 buy shortfall, <0 sell surplus, 0 exact. */
       areaDelta: number;
@@ -127,13 +127,18 @@ export type ReconcileResult =
       grandTotal: number; // everything the owner pays in total
     };
 
-export function reconcile(originalArea: number, actualArea: number, cfg: CalculatorConfig): ReconcileResult {
-  if (originalArea > cfg.maxArea || actualArea > cfg.maxArea) {
+export function reconcile(originalArea: number, standardArea: number | null, cfg: CalculatorConfig): ReconcileResult {
+  // Area after deduction (0.85/0.80 × original) — always computed and used in the math;
+  // the owner is "entitled" to this. It is never replaced by the standard.
+  const afterDeduction = netArea(originalArea, cfg);
+  // Standard plot the owner actually receives: the chosen standard, or — if none chosen —
+  // the nearest standard to the after-deduction area.
+  const standard = standardArea && standardArea > 0 ? standardArea : deriveStandard(afterDeduction, cfg);
+  if (originalArea > cfg.maxArea || standard > cfg.maxArea) {
     return { overMax: true, maxArea: cfg.maxArea };
   }
 
-  const standard = deriveStandard(actualArea, cfg);
-  const areaDelta = standard - actualArea;
+  const areaDelta = standard - afterDeduction;
 
   let mode: 'buy' | 'sell' | 'exact';
   let purchased = 0;
@@ -144,7 +149,7 @@ export function reconcile(originalArea: number, actualArea: number, cfg: Calcula
     mode = 'buy';
     purchased = areaDelta;
     areaDiffCost = purchased * cfg.buyPrice;
-    utilityBase = standard - purchased; // = actual area
+    utilityBase = standard - purchased; // = after-deduction area
   } else if (areaDelta < 0) {
     mode = 'sell';
     const surplus = -areaDelta;
@@ -182,7 +187,7 @@ export function reconcile(originalArea: number, actualArea: number, cfg: Calcula
   return {
     overMax: false,
     originalArea,
-    actualArea,
+    afterDeduction,
     standard,
     areaDelta,
     mode,

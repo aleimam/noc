@@ -77,32 +77,34 @@ function AreaCalc({ config }: { config: CalculatorConfig }) {
 function ReconcileCalc({ config, locale }: { config: CalculatorConfig; locale: 'ar' | 'en' }) {
   const t = useTranslations('calculator');
   const [original, setOriginal] = useState('');
-  const [actual, setActual] = useState('');
-  const [actualEdited, setActualEdited] = useState(false);
+  const [standard, setStandard] = useState('');
+  const [standardEdited, setStandardEdited] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // (A) Actual defaults to the Net computed from the Original (factor × original) and
-  // stays editable; the standard chips / manual entry override it.
+  const orig = parseFloat(original);
+  const net = isFinite(orig) && orig > 0 ? netArea(orig, config) : null;
+
+  // The standard the owner receives defaults to the nearest standard to the
+  // after-deduction area; the chips / manual entry override it.
   function onOriginal(v: string) {
     setOriginal(v);
-    if (!actualEdited) {
+    if (!standardEdited) {
       const o = parseFloat(v);
-      const net = isFinite(o) && o > 0 ? netArea(o, config) : NaN;
-      setActual(isFinite(net) ? String(Math.round(net * 100) / 100) : '');
+      const nt = isFinite(o) && o > 0 ? netArea(o, config) : NaN;
+      setStandard(isFinite(nt) ? String(deriveStandard(nt, config)) : '');
     }
   }
-  function setActualManual(v: string) {
-    setActualEdited(true);
-    setActual(v);
+  function setStandardManual(v: string) {
+    setStandardEdited(true);
+    setStandard(v);
   }
 
-  const orig = parseFloat(original);
-  const act = parseFloat(actual);
-  const ready = isFinite(orig) && orig > 0 && isFinite(act) && act > 0;
+  const std = parseFloat(standard);
+  const ready = isFinite(orig) && orig > 0 && isFinite(std) && std > 0;
 
   const result: ReconcileResult | null = useMemo(
-    () => (ready ? reconcile(orig, act, config) : null),
-    [ready, orig, act, config],
+    () => (ready ? reconcile(orig, std, config) : null),
+    [ready, orig, std, config],
   );
 
   async function download() {
@@ -131,16 +133,22 @@ function ReconcileCalc({ config, locale }: { config: CalculatorConfig; locale: '
           <p className="mt-1 text-sm text-ink-600">{t('reconcileHint')}</p>
         </div>
         <NumberField label={t('originalArea')} value={original} onChange={onOriginal} />
+        {net !== null && (
+          <div className="rounded-xl bg-navy-50 px-4 py-3">
+            <span className="text-sm text-ink-600">{t('discountedArea')}: </span>
+            <span className="font-num text-xl font-bold text-navy-800" dir="ltr">{fmtArea(net)} {t('meters')}</span>
+          </div>
+        )}
         <div>
-          <NumberField label={t('actualArea')} value={actual} onChange={setActualManual} hint={t('actualAutoHint')} />
+          <NumberField label={t('standardReceived')} value={standard} onChange={setStandardManual} hint={t('standardHint')} />
           <div className="mt-2 flex flex-wrap gap-1.5">
             {config.standardAreas.map((s) => (
               <button
                 key={s}
                 type="button"
-                onClick={() => setActualManual(String(s))}
+                onClick={() => setStandardManual(String(s))}
                 className={`font-num rounded-lg border px-3 py-1 text-sm transition ${
-                  act === s ? 'border-gold bg-gold-50 text-gold-800' : 'border-ink-200 text-navy-700 hover:border-gold'
+                  std === s ? 'border-gold bg-gold-50 text-gold-800' : 'border-ink-200 text-navy-700 hover:border-gold'
                 }`}
               >
                 {s}
@@ -161,7 +169,8 @@ function ReconcileCalc({ config, locale }: { config: CalculatorConfig; locale: '
       {result && !result.overMax && (
         <div className="space-y-4">
           {/* summary */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <SummaryCard label={t('discountedArea')} value={`${fmtArea(result.afterDeduction)} ${t('meters')}`} />
             <SummaryCard label={t('standardArea')} value={`${fmtArea(result.standard)} ${t('meters')}`} />
             <SummaryCard
               label={t('areaDiff')}
@@ -310,7 +319,7 @@ async function renderStatement(
   const lines: Line[] = [
     { kind: 'section', text: t('imageInputs') },
     { kind: 'row', label: t('originalArea'), value: area(r.originalArea) },
-    { kind: 'row', label: t('actualArea'), value: area(r.actualArea) },
+    { kind: 'row', label: t('discountedArea'), value: area(r.afterDeduction) },
     { kind: 'row', label: t('standardArea'), value: area(r.standard) },
     {
       kind: 'row',
