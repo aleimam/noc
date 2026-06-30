@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `listing` ADD COLUMN `soldPrice` DECIMAL(14, 2) NULL;
+ALTER TABLE `Listing` ADD COLUMN `soldPrice` DECIMAL(14, 2) NULL;
 
 -- CreateTable
 CREATE TABLE `ContactRequest` (
