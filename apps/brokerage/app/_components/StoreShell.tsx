@@ -9,16 +9,18 @@ import { CompareBar } from './CompareBar';
 export async function StoreShell({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
-  const [content, footerPages] = await Promise.all([
+  const [content, footerPages, copyrightRow] = await Promise.all([
     getStorefront(),
     prisma.page.findMany({
       where: { brand: 'alsawarey', published: true },
       orderBy: { footerOrder: 'asc' },
       select: { slug: true, titleAr: true, titleEn: true },
     }),
+    prisma.setting.findUnique({ where: { key: 'copyright_alsawarey' } }),
   ]);
   const Lc = (t: { ar: string; en: string }) => (locale === 'ar' ? t.ar : t.en);
   const whatsapp = content.contact.whatsapp;
+  const copyright = copyrightRow?.value || `© ${new Date().getFullYear()} alsawarey.com`;
 
   return (
     <div className="min-h-screen bg-soft text-navy-800 dark:bg-navy-900 dark:text-soft">
@@ -72,7 +74,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
             </nav>
           )}
           <a href={`https://wa.me/${whatsapp.replace(/[^\d]/g, '')}`} className="text-gold" dir="ltr">{whatsapp}</a>
-          <p className="text-white/50">© {new Date().getFullYear()} alsawarey.com</p>
+          <p className="text-white/50">{copyright}</p>
         </div>
       </footer>
     </div>

@@ -36,6 +36,23 @@ export function SourceSheetViewer({ src, fileName, watermark }: { src: string; f
   const t = useTranslations('rationing');
   const [open, setOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [hint, setHint] = useState(false);
+
+  async function savePhoto() {
+    try {
+      const res = await fetch(src);
+      const blob = await res.blob();
+      const file = new File([blob], fileName || 'sheet.jpg', { type: blob.type || 'image/jpeg' });
+      const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
+      if (nav.share && nav.canShare && nav.canShare({ files: [file] })) {
+        await nav.share({ files: [file] });
+        return;
+      }
+    } catch {
+      /* fall through to the long-press hint */
+    }
+    setHint(true);
+  }
 
   return (
     <>
@@ -43,34 +60,38 @@ export function SourceSheetViewer({ src, fileName, watermark }: { src: string; f
         onClick={() => {
           setOpen(true);
           setZoom(1);
+          setHint(false);
         }}
-        className="inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2.5 text-sm font-bold text-soft"
+        className="inline-flex items-center gap-2 rounded-xl bg-navy px-5 py-3 text-base font-bold text-soft"
       >
         🖼 {t('viewSource')}
       </button>
 
       {open && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col bg-black/85"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setOpen(false)}
-        >
-          <div className="flex items-center justify-between gap-3 p-3 text-white" onClick={(e) => e.stopPropagation()}>
-            <span className="font-mono text-xs opacity-80" dir="ltr">{fileName}</span>
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/90" role="dialog" aria-modal="true">
+          <div className="flex items-center justify-between gap-2 p-3 text-white">
             <div className="flex items-center gap-2">
-              <button onClick={() => setZoom((z) => Math.max(1, +(z - 0.5).toFixed(1)))} className="rounded bg-white/15 px-3 py-1.5 text-sm">−</button>
-              <span className="w-12 text-center text-sm">{Math.round(zoom * 100)}%</span>
-              <button onClick={() => setZoom((z) => Math.min(5, +(z + 0.5).toFixed(1)))} className="rounded bg-white/15 px-3 py-1.5 text-sm">+</button>
-              <a href={src} download className="rounded bg-white/15 px-3 py-1.5 text-sm">{t('download')}</a>
-              <button onClick={() => setOpen(false)} className="rounded bg-white/15 px-3 py-1.5 text-sm" aria-label={t('close')}>✕</button>
+              <button onClick={() => setZoom((z) => Math.max(1, +(z - 0.5).toFixed(1)))} className="rounded-lg bg-white/15 px-4 py-2 text-lg" aria-label="−">−</button>
+              <span className="w-14 text-center text-base">{Math.round(zoom * 100)}%</span>
+              <button onClick={() => setZoom((z) => Math.min(6, +(z + 0.5).toFixed(1)))} className="rounded-lg bg-white/15 px-4 py-2 text-lg" aria-label="+">+</button>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={savePhoto} className="rounded-lg bg-gold px-4 py-2 text-base font-bold text-navy-900">📷 {t('savePhoto')}</button>
+              <button onClick={() => setOpen(false)} className="rounded-lg bg-white/15 px-4 py-2 text-lg" aria-label={t('close')}>✕</button>
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto p-3" onClick={(e) => e.stopPropagation()}>
+          {hint && (
+            <div className="mx-3 mb-2 rounded-xl bg-white/95 px-4 py-3 text-center text-base font-medium text-navy-800">
+              {t('savePhotoHint')}
+            </div>
+          )}
+
+          {/* Scrollable / pinch-zoomable viewport */}
+          <div className="flex-1 overflow-auto p-3" style={{ touchAction: 'pinch-zoom', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
             <div className="relative mx-auto w-fit" style={{ width: `${zoom * 100}%`, maxWidth: zoom === 1 ? '900px' : 'none' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt={fileName} className="block w-full rounded bg-white" />
+              <img src={src} alt={fileName} className="block w-full rounded bg-white" draggable={false} />
               <Stamp wm={watermark} />
             </div>
           </div>

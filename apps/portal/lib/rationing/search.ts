@@ -161,11 +161,12 @@ export async function browseSheets(opts: { cityId?: string; take?: number; skip?
 export type PlotRow = { ref: string; plotNo: string; blockNo: string; cityName: string | null; owner: string | null; count: number };
 
 /** Plots tab: distinct plots (by plot full reference) with applicant counts. Filter/sort/paginate in JS. */
-export async function plotGroups(opts: { q?: string; sort?: 'plot' | 'count'; take?: number; skip?: number } = {}): Promise<{ rows: PlotRow[]; total: number }> {
+export async function plotGroups(opts: { q?: string; cityId?: string; sort?: 'plot' | 'count'; take?: number; skip?: number } = {}): Promise<{ rows: PlotRow[]; total: number }> {
+  const baseWhere: Prisma.RationingSheetWhereInput = { plotFullRef: { not: null }, ...(opts.cityId ? { cityId: opts.cityId } : {}) };
   const [counts, reps] = await Promise.all([
-    prisma.rationingSheet.groupBy({ by: ['plotFullRef'], where: { plotFullRef: { not: null } }, _count: { _all: true } }),
+    prisma.rationingSheet.groupBy({ by: ['plotFullRef'], where: baseWhere, _count: { _all: true } }),
     prisma.rationingSheet.findMany({
-      where: { plotFullRef: { not: null } },
+      where: baseWhere,
       distinct: ['plotFullRef'],
       select: { plotFullRef: true, plotNo: true, blockNo: true, originalOwner: true, city: { select: { name: true } } },
     }),
@@ -188,4 +189,39 @@ export async function plotGroups(opts: { q?: string; sort?: 'plot' | 'count'; ta
   const skip = opts.skip ?? 0;
   const take = opts.take ?? 10;
   return { rows: rows.slice(skip, skip + take), total };
+}
+
+/** Pre-search plots summary: total plots, plots-by-city (top 6), and the 5 most-recent plots. */
+export async function plotsSummary(): Promise<{ totalPlots: number; byCity: { label: string; value: number }[]; recent: PlotRow[] }> {
+  const reps = await prisma.rationingSheet.findMany({
+    where: { plotFullRef: { not: null } },
+    distinct: ['plotFullRef'],
+    orderBy: [{ listDate: 'desc' }],
+    select: { plotFullRef: true, plotNo: true, blockNo: true, originalOwner: true, city: { select: { name: true } } },
+  });
+  const totalPlots = reps.length;
+
+  const cityMap = new Map<string, number>();
+  for (const r of reps) {
+    const c = r.city?.name ?? '—';
+    cityMap.set(c, (cityMap.get(c) ?? 0) + 1);
+  }
+  const byCity = [...cityMap.entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 6);
+
+  const recentReps = reps.slice(0, 5);
+  const refs = recentReps.map((r) => r.plotFullRef as string);
+  const counts = refs.length
+    ? await prisma.rationingSheet.groupBy({ by: ['plotFullRef'], where: { plotFullRef: { in: refs } }, _count: { _all: true } })
+    : [];
+  const cmap = new Map(counts.map((c) => [c.plotFullRef as string, c._count._all]));
+  const recent: PlotRow[] = recentReps.map((r) => ({
+    ref: r.plotFullRef as string,
+    plotNo: r.plotNo,
+    blockNo: r.blockNo,
+    cityName: r.city?.name ?? null,
+    owner: r.originalOwner,
+    count: cmap.get(r.plotFullRef as string) ?? 0,
+  }));
+
+  return { totalPlots, byCity, recent };
 }

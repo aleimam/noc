@@ -2,10 +2,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
-import { PublicShell } from '@noc/ui';
+import { SiteShell } from '../../_components/SiteShell';
 import { getRationingConfig } from '../../../lib/rationing/settings';
 import { SourceSheetViewer } from './SourceSheetViewer';
 import { ShareButton } from './ShareButton';
+import { SaveResultButton } from './SaveResultButton';
+import { FbNotice } from '../Bits';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,9 +49,10 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
   const otherPeople = sheet.names.filter((n) => n.fullName !== sheet.applicantName);
 
   return (
-    <PublicShell active="rationing">
+    <SiteShell active="rationing">
       <div className="mx-auto max-w-3xl space-y-5 p-4 sm:p-6">
-        <Link href="/rationing" className="inline-block text-sm text-navy-600">‹ {t('backToSearch')}</Link>
+        <Link href="/rationing" className="inline-block text-base text-navy-600">‹ {t('backToSearch')}</Link>
+        <FbNotice />
 
         <div className="overflow-hidden rounded-2xl bg-white shadow-md">
           <div className="flex items-center gap-3.5 bg-navy-800 p-5">
@@ -92,6 +95,13 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
                 </span>
               ) : null}
               <ShareButton text={`${sheet.applicantName} · ${sheet.plotFullRef ?? ''}`} />
+              <SaveResultButton
+                title={sheet.applicantName}
+                subtitle={`${sheet.plotFullRef || `${sheet.plotNo} / ${sheet.blockNo}`}${sheet.city ? ` · ${sheet.city.name}` : ''}`}
+                rows={facts}
+                saveLabel={t('saveResult')}
+                preparingLabel={t('preparing')}
+              />
             </div>
           </div>
         </div>
@@ -99,11 +109,11 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
         <div className="rounded-2xl border-2 border-green bg-white p-5">
           <div className="text-lg font-extrabold text-success">{t('foundCardTitle')}</div>
           <p className="mt-1.5 text-ink-600">{t('foundCardBody')}</p>
-          <Link href={`/rationing/follow?kind=found&sheet=${sheet.id}`} className="mt-3.5 inline-block rounded-xl bg-navy px-5 py-2.5 font-bold text-soft">
+          <Link href={`/rationing/follow?kind=found&sheet=${sheet.id}`} className="mt-3.5 inline-block rounded-xl bg-navy px-5 py-3 text-lg font-bold text-soft">
             {t('thatsMe')}
           </Link>
         </div>
       </div>
-    </PublicShell>
+    </SiteShell>
   );
 }

@@ -1,28 +1,35 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 
-// Two always-visible engagement cards (req #12). Both route into the account-gated
-// follow flow (login is enforced there). The watch card prefills the name from the query.
+// Two big, full-width engagement cards (Golden Rule: large, obvious, one action each).
+// Both route into the account-gated follow flow. The watch card prefills the query name.
 export async function RegisterCards({ q }: { q?: string }) {
   const t = await getTranslations('rationing');
   const watchHref = `/rationing/follow?kind=watch${q ? `&q=${encodeURIComponent(q)}` : ''}`;
   return (
-    <div className="grid gap-3.5 pt-2 sm:grid-cols-2">
-      <div className="rounded-2xl border-2 border-green bg-white p-5">
-        <div className="flex items-center gap-2.5 text-lg font-extrabold text-success">
-          <span aria-hidden>🔔</span> {t('foundCardTitle')}
-        </div>
-        <p className="mt-2 text-ink-600">{t('foundCardBody')}</p>
-        <Link href="/rationing/follow?kind=found" className="mt-3.5 inline-block rounded-xl bg-navy px-5 py-2.5 font-bold text-soft">
+    <div className="grid gap-4 pt-2 sm:grid-cols-2">
+      {/* Found → congrats */}
+      <div className="flex flex-col rounded-3xl border-2 border-green bg-green/5 p-6 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green/15 text-4xl" aria-hidden>🎉</div>
+        <div className="mt-3 text-2xl font-black text-success">{t('foundCardTitle')}</div>
+        <p className="mt-2 flex-1 text-ink-600">{t('foundCardBody')}</p>
+        <Link
+          href="/rationing/follow?kind=found"
+          className="mt-4 block rounded-2xl bg-green px-5 py-4 text-xl font-bold text-white transition hover:brightness-105"
+        >
           {t('foundCardCta')}
         </Link>
       </div>
-      <div className="rounded-2xl border-2 border-gold bg-white p-5">
-        <div className="flex items-center gap-2.5 text-lg font-extrabold text-gold-800">
-          <span aria-hidden>🔎</span> {t('notFoundCardTitle')}
-        </div>
-        <p className="mt-2 text-ink-600">{t('notFoundCardBody')}</p>
-        <Link href={watchHref} className="mt-3.5 inline-block rounded-xl bg-gold px-5 py-2.5 font-bold text-navy-900">
+
+      {/* Not found yet → watch */}
+      <div className="flex flex-col rounded-3xl border-2 border-gold bg-gold-50 p-6 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gold/20 text-4xl" aria-hidden>🔔</div>
+        <div className="mt-3 text-2xl font-black text-gold-800">{t('notFoundCardTitle')}</div>
+        <p className="mt-2 flex-1 text-ink-600">{t('notFoundCardBody')}</p>
+        <Link
+          href={watchHref}
+          className="mt-4 block rounded-2xl bg-gold px-5 py-4 text-xl font-bold text-navy-900 transition hover:brightness-105"
+        >
           {t('notFoundCardCta')}
         </Link>
       </div>

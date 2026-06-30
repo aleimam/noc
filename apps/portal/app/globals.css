@@ -4,6 +4,18 @@
 /* Include the shared UI package when scanning for Tailwind classes. */
 @source '../../../packages/ui/src/**/*.{ts,tsx}';
 
+/* Golden Rule: raise the FLOOR of the type scale site-wide for low-vision/low-literacy
+   users. Only the small sizes grow (xs/sm/base); lg and up — section headers, applicant
+   names — keep their current size, so the hierarchy is preserved. */
+@theme {
+  --text-xs: 0.85rem;
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.98rem;
+  --text-sm--line-height: 1.55;
+  --text-base: 1.1rem;
+  --text-base--line-height: 1.7;
+}
+
 html,
 body {
   max-width: 100vw;

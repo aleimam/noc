@@ -24,11 +24,15 @@ export function PublicShell({
   active,
   hiddenKeys = [],
   footerPages = [],
+  copyright,
+  mobileMenuMode = 'full',
 }: {
   children: ReactNode;
   active?: string;
   hiddenKeys?: string[];
   footerPages?: { href: string; label: string }[];
+  copyright?: string;
+  mobileMenuMode?: 'full' | 'compact';
 }) {
   const t = useTranslations('nav');
   const nav = NAV.filter((n) => !hiddenKeys.includes(n.key));
@@ -69,23 +73,55 @@ export function PublicShell({
               type="button"
               onClick={() => setOpen((v) => !v)}
               aria-label="menu"
-              className="rounded-md p-2 text-soft/90 hover:bg-white/10 lg:hidden"
+              aria-expanded={open}
+              className="rounded-lg p-2.5 text-soft hover:bg-white/10 lg:hidden"
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
           </div>
         </div>
 
-        {open && (
+        {/* compact dropdown menu */}
+        {open && mobileMenuMode === 'compact' && (
           <nav className="border-t border-white/10 px-4 pb-3 lg:hidden">
             {nav.map((n) => (
-              <a key={n.href} href={n.href} className="block rounded-md px-3 py-2.5 text-sm font-semibold text-soft/90 hover:bg-white/10">
+              <a key={n.href} href={n.href} className="block rounded-md px-3 py-3 text-lg font-semibold text-soft/90 hover:bg-white/10">
                 {t(n.key)}
               </a>
             ))}
           </nav>
         )}
       </header>
+
+      {/* full-screen overlay menu (big tap targets) */}
+      {open && mobileMenuMode === 'full' && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-navy text-soft lg:hidden">
+          <div className="flex h-navbar flex-none items-center justify-between gap-4 border-b border-white/10 px-4">
+            <span className="text-lg font-extrabold text-gold">{t('brand')}</span>
+            <button type="button" onClick={() => setOpen(false)} aria-label="close" className="rounded-lg p-2.5 text-soft hover:bg-white/10">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
+          </div>
+          <nav className="flex flex-1 flex-col gap-2 overflow-y-auto p-4">
+            {nav.map((n) => (
+              <a
+                key={n.href}
+                href={n.href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  'rounded-xl px-5 py-4 text-2xl font-bold text-soft hover:bg-white/10',
+                  active === n.key && 'bg-white/10 text-gold',
+                )}
+              >
+                {t(n.key)}
+              </a>
+            ))}
+            <a href="/app" onClick={() => setOpen(false)} className="mt-2 rounded-xl bg-gold px-5 py-4 text-center text-2xl font-bold text-navy-900">
+              {t('login')}
+            </a>
+          </nav>
+        </div>
+      )}
 
       <main className="flex-1">{children}</main>
 
@@ -108,7 +144,7 @@ export function PublicShell({
             ))}
           </nav>
         </div>
-        <div className="border-t border-ink-100 py-4 text-center text-xs text-ink-400">{t('copyright')}</div>
+        <div className="border-t border-ink-100 py-4 text-center text-xs text-ink-400">{copyright || t('copyright')}</div>
       </footer>
     </div>
   );
