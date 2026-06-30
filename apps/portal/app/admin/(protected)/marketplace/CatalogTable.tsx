@@ -23,11 +23,13 @@ export function CatalogTable({
   upsert,
   remove,
   detailBase,
+  childAdd,
 }: {
   initial: CatalogRow[];
   upsert: (i: UpsertInput) => Promise<Result>;
   remove: (id: string) => Promise<Result>;
   detailBase?: string; // when set, the Arabic name links to `${detailBase}/${id}`
+  childAdd?: { hrefBase: string; label: string }; // per-row quick "add child" link (→ `${hrefBase}?district=${id}`)
 }) {
   const t = useTranslations('mp');
   const router = useRouter();
@@ -98,6 +100,7 @@ export function CatalogTable({
                   </td>
                   <td className="p-2">{row.isActive ? '✔' : '—'}</td>
                   <td className="whitespace-nowrap p-2 text-end">
+                    {childAdd && <a href={`${childAdd.hrefBase}?district=${row.id}`} className="px-2 py-1 text-green">{childAdd.label}</a>}
                     <button onClick={() => setDraft({ id: row.id, key: row.key, nameAr: row.nameAr, nameEn: row.nameEn, order: row.order, isActive: row.isActive })} className="px-2 py-1 text-accent">{t('edit')}</button>
                     <button disabled={pending} onClick={() => run(() => remove(row.id))} className="px-2 py-1 text-red-600">{t('delete')}</button>
                   </td>

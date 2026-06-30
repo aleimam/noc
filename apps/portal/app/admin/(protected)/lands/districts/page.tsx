@@ -29,7 +29,13 @@ export default async function DistrictsPage() {
         <h1 className="text-2xl font-bold text-primary">{t('districts')}</h1>
         <a href="/admin/lands" className="text-sm text-accent">← {t('title')}</a>
       </div>
-      <CatalogTable initial={rows} upsert={upsertDistrict} remove={deleteDistrict} detailBase="/admin/lands/districts" />
+      <CatalogTable
+        initial={rows}
+        upsert={upsertDistrict}
+        remove={deleteDistrict}
+        detailBase="/admin/lands/districts"
+        childAdd={{ hrefBase: '/admin/lands/neighborhoods/new', label: `+ ${t('addNeighborhood')}` }}
+      />
     </div>
   );
 }

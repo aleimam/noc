@@ -695,6 +695,9 @@
     "detailsEn": "التفاصيل (إنجليزي)",
     "updatesSection": "تحديثات الأحياء والمجاورات",
     "addUpdate": "إضافة تحديث",
-    "confirmNotifyGeneric": "إرسال هذا التحديث لكل المتابعين عبر رسالة SMS؟"
+    "confirmNotifyGeneric": "إرسال هذا التحديث لكل المتابعين عبر رسالة SMS؟",
+    "addNeighborhood": "إضافة مجاورة",
+    "addNeighborhoodHint": "أدخل الاسم فقط الآن؛ يمكنك إكمال باقي التفاصيل بعد الإنشاء.",
+    "actionFailed": "تعذّر إتمام العملية"
   }
 }

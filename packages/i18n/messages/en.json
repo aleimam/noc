@@ -695,6 +695,9 @@
     "detailsEn": "Details (English)",
     "updatesSection": "District & neighborhood updates",
     "addUpdate": "Add update",
-    "confirmNotifyGeneric": "Send this update to all followers by SMS?"
+    "confirmNotifyGeneric": "Send this update to all followers by SMS?",
+    "addNeighborhood": "Add neighborhood",
+    "addNeighborhoodHint": "Enter just the name now; you can fill the rest after it's created.",
+    "actionFailed": "Couldn't complete the action"
   }
 }

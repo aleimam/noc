@@ -40,7 +40,10 @@ export default async function DistrictDetail({ params }: { params: Promise<{ id:
       </div>
 
       <section className="space-y-2">
-        <h2 className="font-semibold text-primary">{t('neighborhoods')} ({neighborhoods.length})</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-semibold text-primary">{t('neighborhoods')} ({neighborhoods.length})</h2>
+          <a href={`/admin/lands/neighborhoods/new?district=${id}`} className="rounded-md bg-primary px-3 py-1.5 text-sm text-soft">+ {t('addNeighborhood')}</a>
+        </div>
         <div className="flex flex-wrap gap-2">
           {neighborhoods.length === 0 && <span className="text-sm opacity-60">{t('noNeighborhoods')}</span>}
           {neighborhoods.map((n) => (
