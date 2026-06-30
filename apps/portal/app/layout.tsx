@@ -3,7 +3,7 @@ import { Tajawal, Playfair_Display } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { dirForLocale, type Locale } from '@noc/i18n';
-import { ThemeScript, Analytics, ConsentBanner } from '@noc/ui';
+import { ThemeScript, Analytics, ConsentBanner, EnterToSubmit } from '@noc/ui';
 import { prisma } from '@noc/db';
 import './globals.css';
 
@@ -45,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
           <Analytics ga4Id={s.ga4_newobour} pixelId={s.pixel_newobour} />
           <ConsentBanner />
+          <EnterToSubmit />
         </NextIntlClientProvider>
       </body>
     </html>
