@@ -18,6 +18,7 @@ export default async function OwnersPage() {
           id: o.id,
           name: o.name,
           type: o.type,
+          ownerNo: o.ownerNo,
           phone1: o.phone1,
           phone1Whatsapp: o.phone1Whatsapp,
           phone2: o.phone2,

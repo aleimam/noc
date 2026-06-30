@@ -6,10 +6,10 @@ import { useTranslations } from 'next-intl';
 import { upsertOwner, deleteOwner } from '../actions';
 
 type OwnerType = 'OWNER' | 'COMPANY' | 'BROKER' | 'US';
-type Owner = { id: string; name: string; type: OwnerType; phone1: string | null; phone1Whatsapp: boolean; phone2: string | null; phone2Whatsapp: boolean; details: string | null };
-type Draft = { id?: string; name: string; type: OwnerType; phone1: string; phone1Whatsapp: boolean; phone2: string; phone2Whatsapp: boolean; details: string };
+type Owner = { id: string; name: string; type: OwnerType; ownerNo: number | null; phone1: string | null; phone1Whatsapp: boolean; phone2: string | null; phone2Whatsapp: boolean; details: string | null };
+type Draft = { id?: string; name: string; type: OwnerType; ownerNo: string; phone1: string; phone1Whatsapp: boolean; phone2: string; phone2Whatsapp: boolean; details: string };
 
-const EMPTY: Draft = { name: '', type: 'OWNER', phone1: '', phone1Whatsapp: false, phone2: '', phone2Whatsapp: false, details: '' };
+const EMPTY: Draft = { name: '', type: 'OWNER', ownerNo: '', phone1: '', phone1Whatsapp: false, phone2: '', phone2Whatsapp: false, details: '' };
 const TYPES: OwnerType[] = ['OWNER', 'COMPANY', 'BROKER', 'US'];
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
 
@@ -24,7 +24,8 @@ export function OwnersManager({ initial }: { initial: Owner[] }) {
     if (!draft || !draft.name.trim()) { setError('failed'); return; }
     setError('');
     start(async () => {
-      const r = await upsertOwner(draft);
+      const ownerNo = draft.ownerNo.trim() === '' ? null : parseInt(draft.ownerNo, 10);
+      const r = await upsertOwner({ ...draft, ownerNo });
       if (r.ok) { setDraft(null); router.refresh(); }
       else setError(r.error);
     });
@@ -49,6 +50,10 @@ export function OwnersManager({ initial }: { initial: Owner[] }) {
               <select value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value as OwnerType })} className={inp}>
                 {TYPES.map((x) => (<option key={x} value={x}>{t(`type${x}`)}</option>))}
               </select>
+            </label>
+            <label className="text-sm">{t('ownerNo')}
+              <input type="number" min={0} max={99} dir="ltr" value={draft.ownerNo} onChange={(e) => setDraft({ ...draft, ownerNo: e.target.value })} placeholder="00–99" className={inp} />
+              <span className="mt-1 block text-xs opacity-60">{t('ownerNoHint')}</span>
             </label>
             <div className="flex items-end gap-2">
               <label className="flex-1 text-sm">{t('phone1')}<input dir="ltr" value={draft.phone1} onChange={(e) => setDraft({ ...draft, phone1: e.target.value })} className={inp} /></label>
@@ -75,13 +80,14 @@ export function OwnersManager({ initial }: { initial: Owner[] }) {
             <div>
               <span className="font-semibold">{o.name}</span>{' '}
               <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{t(`type${o.type}`)}</span>
+              {o.ownerNo != null && <span className="ms-1 rounded bg-gold/20 px-2 py-0.5 text-xs font-num" dir="ltr">#{String(o.ownerNo).padStart(2, '0')}</span>}
               <div className="text-xs opacity-70" dir="ltr">
                 {[o.phone1 && `${o.phone1}${o.phone1Whatsapp ? ' (WA)' : ''}`, o.phone2 && `${o.phone2}${o.phone2Whatsapp ? ' (WA)' : ''}`].filter(Boolean).join('  ·  ')}
               </div>
               {o.details && <div className="text-xs opacity-60">{o.details}</div>}
             </div>
             <div className="flex gap-3 text-sm">
-              <button onClick={() => setDraft({ id: o.id, name: o.name, type: o.type, phone1: o.phone1 ?? '', phone1Whatsapp: o.phone1Whatsapp, phone2: o.phone2 ?? '', phone2Whatsapp: o.phone2Whatsapp, details: o.details ?? '' })} className="text-accent">{t('edit')}</button>
+              <button onClick={() => setDraft({ id: o.id, name: o.name, type: o.type, ownerNo: o.ownerNo != null ? String(o.ownerNo) : '', phone1: o.phone1 ?? '', phone1Whatsapp: o.phone1Whatsapp, phone2: o.phone2 ?? '', phone2Whatsapp: o.phone2Whatsapp, details: o.details ?? '' })} className="text-accent">{t('edit')}</button>
               <button disabled={pending} onClick={() => del(o.id)} className="text-red-600">{t('delete')}</button>
             </div>
           </div>

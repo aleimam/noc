@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
 import { requirePermission } from '@noc/auth';
+import { ensureAdNumber } from '../../../../lib/adNumber';
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -202,6 +203,8 @@ export async function approveListing(id: string): Promise<Result> {
       where: { id },
       data: { status: 'PUBLISHED', publishedAt: new Date(), rejectionReason: null },
     });
+    // Assign the public ad number on first publish (no-op if already set or owner lacks a number).
+    await ensureAdNumber(id);
     revalidatePath('/admin/marketplace/listings', 'page');
     return { ok: true };
   } catch (e) {
@@ -231,6 +234,7 @@ export async function upsertOwner(input: {
   id?: string;
   name: string;
   type: OwnerTypeKey;
+  ownerNo?: number | null;
   phone1?: string;
   phone1Whatsapp?: boolean;
   phone2?: string;
@@ -238,9 +242,12 @@ export async function upsertOwner(input: {
   details?: string;
 }): Promise<Result> {
   await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
+  const ownerNo = input.ownerNo == null || Number.isNaN(input.ownerNo) ? null : Math.trunc(input.ownerNo);
+  if (ownerNo != null && (ownerNo < 0 || ownerNo > 99)) return { ok: false, error: 'owner_no_range' };
   const data = {
     name: input.name.trim(),
     type: input.type,
+    ownerNo,
     phone1: input.phone1?.trim() || null,
     phone1Whatsapp: !!input.phone1Whatsapp,
     phone2: input.phone2?.trim() || null,

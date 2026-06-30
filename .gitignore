@@ -50,3 +50,6 @@ Thumbs.db
 
 # source data drops (PII — never commit)
 /input data/
+
+# unused storefront tag badges (re-add when wired into UI)
+apps/brokerage/public/market/tags/

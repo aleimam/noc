@@ -1,114 +1,103 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getLocale, getTranslations } from 'next-intl/server';
-import { prisma } from '@noc/db';
+import { getLocale } from 'next-intl/server';
 import { PhotoGallery } from '@noc/ui';
-import { localizeUnit, currency } from '@noc/i18n';
+import { auth } from '@noc/auth';
+import { StoreShell } from '../../_components/StoreShell';
+import { getLandDetail, wishlistIds } from '../../../lib/listings';
+import { BuyButton } from './BuyButton';
+import { WishlistButton } from '../../_components/WishlistButton';
 
 export const dynamic = 'force-dynamic';
+const fmt = (n: number) => n.toLocaleString('en');
 
-export default async function BrokerageListingDetail({ params }: { params: Promise<{ id: string }> }) {
+export default async function LandDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const listing = await prisma.listing.findUnique({
-    where: { id },
-    include: { values: { include: { option: true } }, typeOption: true, purposeOption: true, conditionOption: true },
-  });
-  // Brokerage only exposes our own inventory.
-  if (!listing || listing.status !== 'PUBLISHED' || !listing.showOnBrokerage) notFound();
-
   const locale = (await getLocale()) as 'ar' | 'en';
-  const t = await getTranslations('mp');
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
+  const land = await getLandDetail(id, locale);
+  if (!land) notFound();
+  const session = await auth();
+  const wished = await wishlistIds(session?.user?.id);
 
-  const photos = await prisma.attachment.findMany({
-    where: { ownerType: 'Listing', ownerId: id, attributeId: null },
-    orderBy: { createdAt: 'asc' },
-    select: { path: true },
-  });
-  const attrIds = [...new Set(listing.values.map((v) => v.attributeId))];
-  const attrs = attrIds.length
-    ? await prisma.attribute.findMany({ where: { id: { in: attrIds } }, include: { section: true } })
-    : [];
-  const attrById = new Map(attrs.map((a) => [a.id, a]));
-
-  // Aggregate values per attribute (MULTI_SELECT collapses into one row).
-  const perAttr = new Map<string, { attr: (typeof attrs)[number]; texts: string[] }>();
-  for (const v of listing.values) {
-    const a = attrById.get(v.attributeId);
-    if (!a) continue;
-    if (!perAttr.has(a.id)) perAttr.set(a.id, { attr: a, texts: [] });
-    const bucket = perAttr.get(a.id)!;
-    if (v.option) bucket.texts.push(L(v.option.labelAr, v.option.labelEn));
-    else if (v.number != null) { const u = localizeUnit(a.unit, locale); bucket.texts.push(`${String(v.number)}${u ? ` ${u}` : ''}`); }
-    else if (v.bool) bucket.texts.push('✔');
-    else if (v.text) bucket.texts.push(v.text);
-  }
-  // Group by section.
-  const bySection = new Map<string, { section: (typeof attrs)[number]['section']; items: { label: string; value: string }[] }>();
-  for (const { attr, texts } of perAttr.values()) {
-    if (!texts.length) continue;
-    const sId = attr.section.id;
-    if (!bySection.has(sId)) bySection.set(sId, { section: attr.section, items: [] });
-    bySection.get(sId)!.items.push({ label: L(attr.labelAr, attr.labelEn), value: texts.join(locale === 'ar' ? '، ' : ', ') });
-  }
-  const sections = [...bySection.values()].sort((a, b) => a.section.order - b.section.order);
-
-  // Our inventory contacts the central ALSWARY number.
-  const s = await prisma.setting.findMany({ where: { key: { in: ['alswarey_phone', 'alswarey_whatsapp'] } } });
-  const m = Object.fromEntries(s.map((x) => [x.key, x.value]));
-  const contactPhone = m.alswarey_phone || listing.contactPhone;
-  const contactWhatsapp = m.alswarey_phone ? !!m.alswarey_whatsapp : listing.contactWhatsapp;
-  const waNumber = contactPhone.replace(/\D/g, '');
+  const sold = land.status === 'SOLD';
+  const waText = L(
+    `مرحباً، أريد شراء الأرض: ${land.title}`,
+    `Hello, I'm interested in buying: ${land.title}`,
+  );
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6 pb-24">
-      <div className="flex items-center justify-between gap-3">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <a href="/" aria-label="ALSWARY"><img src="/logo.png" alt="الصواري" className="h-9 w-auto" /></a>
-        <a href="/listings" className="text-sm text-accent">← {L('عروضنا العقارية', 'Our listings')}</a>
-      </div>
-      <PhotoGallery photos={photos.map((p) => p.path)} />
+    <StoreShell>
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        <Link href="/listings" className="text-sm text-navy-600">‹ {L('كل الأراضي', 'All lands')}</Link>
 
-      <div>
-        <div className="flex flex-wrap gap-1">
-          {[listing.typeOption, listing.purposeOption, listing.conditionOption].map((o, i) => o && (
-            <span key={i} className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{L(o.nameAr, o.nameEn)}</span>
-          ))}
-        </div>
-        <h1 className="mt-2 text-2xl font-bold text-primary">{listing.title}</h1>
-        {listing.price != null && (
-          <div className="mt-1 text-xl font-bold text-primary">
-            {String(listing.price)} <span className="text-sm font-normal">{currency(locale)}</span>
-            {listing.priceNote ? <span className="text-sm font-normal opacity-60"> · {listing.priceNote}</span> : null}
+        <div className="mt-3 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+          <div>
+            {land.gallery.length > 0 ? (
+              <PhotoGallery photos={land.gallery} />
+            ) : (
+              <div className="flex aspect-[16/10] items-center justify-center rounded-2xl bg-navy-100 text-4xl text-navy-300" aria-hidden>🏞</div>
+            )}
           </div>
-        )}
-      </div>
 
-      {listing.description && <p className="whitespace-pre-wrap opacity-90">{listing.description}</p>}
-
-      {sections.map((sec) => (
-        <div key={sec.section.id} className="space-y-2">
-          <h2 className="font-semibold text-primary">{L(sec.section.nameAr, sec.section.nameEn)}</h2>
-          <div className="grid gap-x-6 sm:grid-cols-2">
-            {sec.items.map((it, i) => (
-              <div key={i} className="flex justify-between gap-3 border-b border-graphite/10 py-1.5 text-sm">
-                <span className="opacity-70">{it.label}</span>
-                <span className="text-end font-medium">{it.value}</span>
+          <aside className="space-y-4">
+            <div className="rounded-2xl bg-white p-5 shadow-md">
+              {sold && <span className="mb-2 inline-block rounded-lg bg-danger px-3 py-1 text-xs font-bold text-white">{L('تم البيع', 'Sold')}</span>}
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  {land.adNumber && <div className="font-num text-sm text-ink-400" dir="ltr">#{land.adNumber}</div>}
+                  <h1 className="text-2xl font-black text-navy-800">{land.title}</h1>
+                </div>
+                <WishlistButton listingId={land.id} initialSaved={wished.has(land.id)} size="lg" />
               </div>
-            ))}
-          </div>
-        </div>
-      ))}
+              {land.typeAr && <p className="mt-1 text-ink-500">{land.typeAr}</p>}
 
-      <div className="fixed inset-x-0 bottom-0 mx-auto flex max-w-3xl gap-3 border-t border-graphite/15 bg-bg p-3">
-        {contactWhatsapp && (
-          <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer" className="flex-1 rounded-md bg-green px-4 py-3 text-center font-semibold text-white">
-            {t('whatsapp')}
-          </a>
+              <div className="mt-4 border-t border-ink-100 pt-4">
+                {sold ? (
+                  land.soldPrice != null ? (
+                    <div className="font-num text-2xl font-black text-danger">{fmt(land.soldPrice)} <span className="text-base">{L('ج.م', 'EGP')}</span></div>
+                  ) : (
+                    <div className="text-lg font-bold text-ink-500">{L('تم البيع', 'Sold')}</div>
+                  )
+                ) : land.price != null ? (
+                  <div className="font-num text-3xl font-black text-navy-800">{fmt(land.price)} <span className="text-lg text-ink-500">{L('ج.م', 'EGP')}</span></div>
+                ) : (
+                  <div className="text-lg font-bold text-gold-700">{L('السعر عند الطلب', 'Price on request')}</div>
+                )}
+                {land.priceNote && <p className="mt-1 text-sm text-ink-500">{land.priceNote}</p>}
+              </div>
+
+              {!sold && (
+                <div className="mt-4">
+                  <BuyButton listingId={land.id} waText={waText} label={L('أريد شراءها', 'I want to buy it')} sentLabel={L('تم الإرسال ✓', 'Sent ✓')} />
+                  <p className="mt-2 text-center text-xs text-ink-500">{L('سيتم تحويلك إلى واتساب لإتمام الطلب', 'You will be taken to WhatsApp to continue')}</p>
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
+
+        {land.specs.length > 0 && (
+          <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
+            <h2 className="mb-3 text-lg font-bold text-navy-800">{L('بيانات الأرض', 'Land details')}</h2>
+            <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+              {land.specs.map((s) => (
+                <div key={s.label} className="flex justify-between gap-3 border-b border-ink-100 pb-2">
+                  <dt className="text-sm text-ink-500">{s.label}</dt>
+                  <dd className="text-sm font-medium text-navy-800">{s.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
         )}
-        <a href={`tel:${contactPhone}`} className="flex-1 rounded-md bg-primary px-4 py-3 text-center font-semibold text-soft">
-          {t('callNow')}
-        </a>
+
+        {land.description && (
+          <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
+            <h2 className="mb-2 text-lg font-bold text-navy-800">{L('الوصف', 'Description')}</h2>
+            <p className="whitespace-pre-line leading-relaxed text-ink-700">{land.description}</p>
+          </section>
+        )}
       </div>
-    </main>
+    </StoreShell>
   );
 }

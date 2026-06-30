@@ -76,6 +76,9 @@ model User {
   geoUpdates      GeoUpdate[]        @relation("GeoUpdateAuthor")
   landFollows     LandFollow[]
   rationingFollows RationingFollow[]
+  contactRequests ContactRequest[]
+  wishlist        Wishlist[]
+  landOffers      LandOffer[]
 
   @@index([type])
 }
@@ -391,6 +394,8 @@ model Listing {
   title           String
   description     String?       @db.Text
   price           Decimal?      @db.Decimal(14, 2)
+  soldPrice       Decimal?      @db.Decimal(14, 2) // set by staff when marked SOLD; optionally shown publicly
+  adNumber        String?       @unique // public ad reference YYMM+owner(2)+seq, frozen at publish
   priceNote       String?
   contactPhone    String
   contactWhatsapp Boolean       @default(true)
@@ -405,8 +410,10 @@ model Listing {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  seller       User           @relation("ListingSeller", fields: [sellerId], references: [id], onDelete: Cascade)
-  createdBy    User?          @relation("ListingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  seller          User              @relation("ListingSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  createdBy       User?             @relation("ListingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  contactRequests ContactRequest[]
+  wishlistedBy    Wishlist[]
   propertyType    PropertyType?     @relation(fields: [propertyTypeId], references: [id], onDelete: SetNull)
   typeOption      ClassifierOption? @relation("ListingType", fields: [typeOptionId], references: [id], onDelete: SetNull)
   purposeOption   ClassifierOption? @relation("ListingPurpose", fields: [purposeOptionId], references: [id], onDelete: SetNull)
@@ -454,6 +461,7 @@ enum OwnerType {
 model Owner {
   id             String    @id @default(cuid())
   name           String
+  ownerNo        Int? // admin-allocated 2-digit code for ad numbers (our lands 00-09); unique
   type           OwnerType @default(OWNER)
   phone1         String?
   phone1Whatsapp Boolean   @default(false)
@@ -466,7 +474,96 @@ model Owner {
   listings Listing[]
   lands    Land[]
 
+  @@unique([ownerNo])
   @@index([type])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  NEGOTIATING
+  SOLD
+  LOST
+}
+
+/// A buyer lead from the storefront ("أريد شراءها" / contact). Saved for staff follow-up
+/// in the New Obour backend; also opens WhatsApp to the central number.
+model ContactRequest {
+  id        String     @id @default(cuid())
+  listingId String?
+  userId    String? // set when a logged-in customer
+  name      String?
+  phone     String?
+  message   String?    @db.Text
+  status    LeadStatus @default(NEW)
+  note      String?    @db.Text // internal staff note
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  listing Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([listingId])
+  @@index([createdAt])
+}
+
+enum LandOfferMode {
+  SHEET // كشف — rationing-sheet land (identified by owner name in the ledger)
+  ALLOCATED // تخصيص — already-specified land (plot/block in the geo hierarchy)
+}
+
+enum LandOfferStatus {
+  NEW
+  REVIEWING
+  ACCEPTED
+  REJECTED
+}
+
+/// A "sell your land" submission from the alsawarey storefront. Staff review it in the
+/// New Obour backend (never auto-published). Photos (papers/maps) attach as internal
+/// Attachments (ownerType = 'LandOffer'); never shown publicly.
+model LandOffer {
+  id             String          @id @default(cuid())
+  mode           LandOfferMode
+  ownerName      String
+  phone1         String
+  phone2         String?
+  area           Decimal?        @db.Decimal(10, 2)
+  originalArea   Decimal?        @db.Decimal(10, 2) // ALLOCATED
+  cityId         String? // SHEET → RationingCity
+  districtId     String? // ALLOCATED → geo District (الحي)
+  neighborhoodId String? // ALLOCATED → geo Neighborhood (المجاورة)
+  blockNo        String?
+  plotNo         String?
+  requiredPrice  Decimal?        @db.Decimal(14, 2)
+  details        String?         @db.Text
+  status         LandOfferStatus @default(NEW)
+  note           String?         @db.Text // internal staff note
+  userId         String? // set when submitted by a logged-in customer
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  city         RationingCity? @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  district     District?      @relation(fields: [districtId], references: [id], onDelete: SetNull)
+  neighborhood Neighborhood?  @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)
+  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+}
+
+/// A customer's saved/favorite land on the storefront.
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId])
 }
 
 /// Simple key/value app settings (e.g. the central ALSWARY contact number).
@@ -502,6 +599,7 @@ model RationingCity {
 
   sheets  RationingSheet[]
   follows RationingFollow[]
+  offers  LandOffer[]
 
   @@index([isActive, order])
 }
@@ -724,6 +822,7 @@ model District {
   advantages    Advantage[]
   updates       GeoUpdate[]
   follows       LandFollow[]
+  landOffers    LandOffer[]
 
   @@index([isActive, order])
 }
@@ -751,6 +850,7 @@ model Neighborhood {
   updates    GeoUpdate[]
   follows    LandFollow[]
   listings   Listing[]
+  landOffers LandOffer[]
 
   @@index([districtId, order])
   @@index([isActive])

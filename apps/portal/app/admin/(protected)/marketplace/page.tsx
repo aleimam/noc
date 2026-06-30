@@ -6,12 +6,13 @@ import { ContactSettings } from './ContactSettings';
 export default async function MarketplaceHub() {
   await requirePermission('marketplace', 'VIEW');
   const t = await getTranslations('mp');
-  const [classifiers, sections, attributes, owners, pending, settings] = await Promise.all([
+  const [classifiers, sections, attributes, owners, pending, offers, settings] = await Promise.all([
     prisma.classifier.count(),
     prisma.attributeSection.count(),
     prisma.attribute.count(),
     prisma.owner.count(),
     prisma.listing.count({ where: { status: 'PENDING' } }),
+    prisma.landOffer.count({ where: { status: { in: ['NEW', 'REVIEWING'] } } }),
     prisma.setting.findMany({ where: { key: { in: ['alswarey_phone', 'alswarey_whatsapp'] } } }),
   ]);
   const sett = Object.fromEntries(settings.map((s) => [s.key, s.value]));
@@ -21,6 +22,8 @@ export default async function MarketplaceHub() {
     { href: '/admin/marketplace/attributes', label: t('attributes'), count: attributes },
     { href: '/admin/marketplace/owners', label: t('owners'), count: owners },
     { href: '/admin/marketplace/listings', label: t('moderation'), count: pending },
+    { href: '/admin/marketplace/offers', label: t('offers'), count: offers },
+    { href: '/admin/marketplace/sell-content', label: t('sellContent'), count: null },
   ];
 
   return (

@@ -298,7 +298,11 @@
     "alswareyContact": "ALSWARY central contact",
     "showOnBrokerage": "Show on ALSWARY site",
     "pickOwner": "Pick owner from list",
-    "addLand": "Add property (internal)"
+    "addLand": "Add property (internal)",
+    "ownerNo": "Owner number (for ads)",
+    "ownerNoHint": "A number 00–99 used in the ad number. Our lands use 00–09.",
+    "offers": "Sell offers",
+    "sellContent": "Sell page content"
   },
   "rationing": {
     "title": "Rationing Sheets",
