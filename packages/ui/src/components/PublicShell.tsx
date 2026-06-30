@@ -11,6 +11,7 @@ const NAV = [
   { href: '/market', key: 'market' },
   { href: '/explore', key: 'explore' },
   { href: '/rationing', key: 'rationing' },
+  { href: '/calculator', key: 'calculator' },
   { href: '/news', key: 'news' },
   { href: '/guide', key: 'guide' },
   { href: '/price-index', key: 'priceIndex' },

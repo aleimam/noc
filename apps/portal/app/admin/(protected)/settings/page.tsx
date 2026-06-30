@@ -15,6 +15,7 @@ export default async function SettingsHub() {
     { href: '/admin/settings/branding', label: 'الشعارات والهوية', desc: 'شعار وأيقونة كل موقع' },
     { href: '/admin/settings/watermark', label: 'العلامة المائية', desc: 'ختم صور الأراضي (الصواري)' },
     { href: '/admin/settings/modules', label: 'الخدمات الظاهرة', desc: 'تفعيل/إخفاء خدمات العبور الجديد' },
+    { href: '/admin/settings/calculator', label: 'حاسبة التصالح', desc: 'أرقام ونسب حاسبة المساحة والتصالح' },
     { href: '/admin/settings/analytics', label: 'التحليلات والتتبّع', desc: 'GA4 و Meta Pixel و Search Console' },
   ];
   return (

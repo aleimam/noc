@@ -3,13 +3,14 @@
 import { prisma } from '@noc/db';
 
 // Keys must match the public-nav keys in PublicShell's NAV.
-export const MODULE_KEYS = ['market', 'explore', 'rationing', 'news', 'guide', 'priceIndex'] as const;
+export const MODULE_KEYS = ['market', 'explore', 'rationing', 'calculator', 'news', 'guide', 'priceIndex'] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 export const MODULE_LABELS: Record<ModuleKey, string> = {
   market: 'السوق',
   explore: 'استكشاف الأحياء',
   rationing: 'كشوف التقنين',
+  calculator: 'الحاسبات',
   news: 'الأخبار',
   guide: 'دليل البناء',
   priceIndex: 'مؤشر الأسعار',
