@@ -45,6 +45,27 @@ export async function deleteScan(id: string): Promise<Result> {
   }
 }
 
+export type ScanRecord = { id: string; applicantName: string; plotFullRef: string | null; plotNo: string; blockNo: string; cityName: string | null; originalOwner: string | null };
+
+/** All applicant records tied to a scan (sheet.sourceFile == fileName). */
+export async function recordsForScan(fileName: string): Promise<ScanRecord[]> {
+  await requirePermission('sheets', 'VIEW');
+  const rows = await prisma.rationingSheet.findMany({
+    where: { sourceFile: fileName },
+    orderBy: [{ plotNo: 'asc' }],
+    include: { city: { select: { name: true } } },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    applicantName: r.applicantName,
+    plotFullRef: r.plotFullRef,
+    plotNo: r.plotNo,
+    blockNo: r.blockNo,
+    cityName: r.city?.name ?? null,
+    originalOwner: r.originalOwner,
+  }));
+}
+
 /** Build the matched / orphan / missing report from current scans + sheet sourceFiles. */
 export async function buildScanReport(): Promise<ScanReport> {
   const [scans, sourceGroups] = await Promise.all([

@@ -4,18 +4,25 @@ import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { compressImage } from '@noc/ui';
-import { registerScans, deleteScan } from './actions';
+import { registerScans, deleteScan, recordsForScan, type ScanRecord } from './actions';
 import type { ScanReport } from '../types';
 
 export function ScansManager({ report }: { report: ScanReport }) {
   const t = useTranslations('rationing');
-  const tc = useTranslations('common');
   const router = useRouter();
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
+  const [open, setOpen] = useState<{ fileName: string; path: string } | null>(null);
+  const [records, setRecords] = useState<ScanRecord[] | null>(null);
+
+  function openScan(fileName: string, path: string) {
+    setOpen({ fileName, path });
+    setRecords(null);
+    start(async () => setRecords(await recordsForScan(fileName)));
+  }
 
   async function upload() {
     const files = Array.from(ref.current?.files ?? []);
@@ -98,10 +105,14 @@ export function ScansManager({ report }: { report: ScanReport }) {
               {report.scans.map((s) => (
                 <tr key={s.id} className="border-t border-graphite/10">
                   <td className="p-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={s.path} alt="" className="h-10 w-14 rounded border border-graphite/15 object-cover" />
+                    <button type="button" onClick={() => openScan(s.fileName, s.path)} title={t('showRecords')}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={s.path} alt="" className="h-10 w-14 cursor-pointer rounded border border-graphite/15 object-cover hover:ring-2 hover:ring-accent" />
+                    </button>
                   </td>
-                  <td className="p-2 font-mono text-xs" dir="ltr">{s.fileName}</td>
+                  <td className="p-2 font-mono text-xs" dir="ltr">
+                    <button type="button" onClick={() => openScan(s.fileName, s.path)} className="text-accent hover:underline">{s.fileName}</button>
+                  </td>
                   <td className="p-2">
                     {s.matchedRows > 0 ? (
                       <span className="rounded bg-green/10 px-2 py-0.5 text-green">{t('matchedNRows', { n: s.matchedRows })}</span>
@@ -116,6 +127,40 @@ export function ScansManager({ report }: { report: ScanReport }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" onClick={() => setOpen(null)}>
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-xl bg-paper p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="font-mono text-sm" dir="ltr">{open.fileName}</h3>
+              <button onClick={() => setOpen(null)} className="rounded-lg bg-graphite/10 px-3 py-1 text-lg" aria-label={t('close')}>✕</button>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={open.path} alt="" className="w-full rounded-lg border border-graphite/15 object-contain" />
+              <div>
+                <div className="mb-2 text-sm font-semibold text-primary">{t('recordsOnPhoto')} {records ? `(${records.length})` : ''}</div>
+                {records === null ? (
+                  <p className="text-sm opacity-60">{t('analyzing')}</p>
+                ) : records.length === 0 ? (
+                  <p className="text-sm opacity-60">{t('orphanNoRows')}</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {records.map((r) => (
+                      <li key={r.id} className="rounded border border-graphite/15 p-2 text-sm">
+                        <a href={`/rationing/${r.id}`} target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">{r.applicantName}</a>
+                        <div className="text-xs opacity-70">
+                          {(r.plotFullRef || `${r.plotNo}${r.blockNo ? ' / ' + r.blockNo : ''}`)}{r.cityName ? ` · ${r.cityName}` : ''}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -279,6 +279,21 @@ export async function deleteBatch(id: string): Promise<{ ok: true } | { ok: fals
   }
 }
 
+/** Delete a single applicant record (used from the duplicates cleanup screen). */
+export async function deleteSheet(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requirePermission('sheets', 'DELETE');
+  try {
+    await prisma.rationingSheet.delete({ where: { id } }); // RationingName rows cascade
+    revalidatePath('/admin/rationing/duplicates');
+    revalidatePath('/admin/rationing/sheets');
+    revalidatePath('/admin/rationing');
+    return { ok: true };
+  } catch (e) {
+    console.error('deleteSheet failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
 export async function setInquiryStatus(id: string, status: 'OPEN' | 'MATCHED' | 'CLOSED'): Promise<{ ok: true } | { ok: false; error: string }> {
   await requirePermission('sheets', 'UPDATE');
   try {
