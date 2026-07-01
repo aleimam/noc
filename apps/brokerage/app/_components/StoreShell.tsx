@@ -5,6 +5,7 @@ import { LanguageSwitcher, ThemeToggle } from '@noc/ui';
 import { getStorefront } from '../../lib/storefront';
 import { SearchBox } from './SearchBox';
 import { CompareBar } from './CompareBar';
+import { StoreMobileMenu } from './StoreMobileMenu';
 
 export async function StoreShell({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as 'ar' | 'en';
@@ -25,7 +26,16 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-soft text-navy-800 dark:bg-navy-900 dark:text-soft">
       <header className="sticky top-0 z-40 bg-navy-800 text-white shadow-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
+          <StoreMobileMenu
+            brand={L('الصواري', 'ALSWARY')}
+            allLands={{ label: Lc(content.nav.allLands.label), href: content.nav.allLands.href }}
+            featured={{ label: Lc(content.nav.featured.label), href: content.nav.featured.href }}
+            sell={{ label: Lc(content.nav.sell.label), href: content.nav.sell.href }}
+            groups={content.nav.groups.map((g) => ({ title: Lc(g.title), links: g.links.map((l) => ({ label: Lc(l.label), href: l.href })) }))}
+            account={{ label: L('حسابي', 'Account'), href: '/account' }}
+            wishlist={{ label: L('المفضلة', 'Wishlist'), href: '/wishlist' }}
+          />
           <Link href="/" aria-label="ALSWARY" className="flex-none">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/logo" alt="الصواري للاستثمار العقاري" className="h-10 w-auto" />
@@ -49,10 +59,12 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
 
           <div className="ms-auto flex items-center gap-2">
             <SearchBox placeholder={L('ابحث عن أرض…', 'Search lands…')} />
-            <Link href="/wishlist" aria-label={L('المفضلة', 'Wishlist')} className="rounded-lg px-2 py-1.5 text-lg hover:bg-white/10">♥</Link>
-            <Link href="/account" className="rounded-lg border border-white/20 px-3 py-1.5 text-sm hover:bg-white/10">{L('حسابي', 'Account')}</Link>
-            <LanguageSwitcher />
-            <ThemeToggle />
+            <div className="hidden items-center gap-2 md:flex">
+              <Link href="/wishlist" aria-label={L('المفضلة', 'Wishlist')} className="rounded-lg px-2 py-1.5 text-lg hover:bg-white/10">♥</Link>
+              <Link href="/account" className="rounded-lg border border-white/20 px-3 py-1.5 text-sm hover:bg-white/10">{L('حسابي', 'Account')}</Link>
+              <LanguageSwitcher />
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </header>
