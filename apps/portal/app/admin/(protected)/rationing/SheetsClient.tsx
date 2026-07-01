@@ -23,7 +23,9 @@ export function ImportSheets() {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [preview, setPreview] = useState<Extract<PreviewResult, { ok: true }> | null>(null);
-  const [conflict, setConflict] = useState<Conflict>('skip');
+  // Independent defaults: keep both copies of in-file repeats; ignore rows already on the server.
+  const [fileConflict, setFileConflict] = useState<Conflict>('keepBoth');
+  const [serverConflict, setServerConflict] = useState<Conflict>('skip');
   const ref = useRef<HTMLInputElement>(null);
 
   const errText = (e: string) => t(ERR_KEY[e as keyof typeof ERR_KEY] ?? 'err_failed');
@@ -49,7 +51,8 @@ export function ImportSheets() {
     if (!file) return;
     const fd = new FormData();
     fd.append('file', file);
-    fd.append('conflict', conflict);
+    fd.append('fileConflict', fileConflict);
+    fd.append('serverConflict', serverConflict);
     start(async () => {
       const r = await commitImport(fd);
       if (r.ok) {
@@ -81,10 +84,11 @@ export function ImportSheets() {
             <span className="text-xs opacity-60">{preview.fileName}</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
             <Stat label={t('total')} value={preview.summary.total} />
             <Stat label={t('willAdd')} value={preview.summary.newCount} tone="green" />
-            <Stat label={t('duplicates')} value={preview.summary.duplicateCount} tone="amber" />
+            <Stat label={t('dupInFile')} value={preview.summary.dupFileCount} tone="amber" />
+            <Stat label={t('dupOnServer')} value={preview.summary.dupServerCount} tone="amber" />
             <Stat label={t('flaggedRows')} value={preview.summary.flaggedCount} tone="amber" />
           </div>
 
@@ -97,13 +101,27 @@ export function ImportSheets() {
             </p>
           )}
 
-          {preview.summary.duplicateCount > 0 && (
+          {preview.summary.dupFileCount > 0 && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">{t('conflictPrompt')}</p>
+              <p className="text-sm font-medium">{t('conflictFilePrompt')}</p>
+              <div className="flex flex-wrap gap-4 text-sm">
+                {(['keepBoth', 'skip'] as Conflict[]).map((c) => (
+                  <label key={c} className="flex items-center gap-2">
+                    <input type="radio" name="fileConflict" checked={fileConflict === c} onChange={() => setFileConflict(c)} />
+                    {t(`conflict_${c}`)}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {preview.summary.dupServerCount > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{t('conflictServerPrompt')}</p>
               <div className="flex flex-wrap gap-4 text-sm">
                 {(['skip', 'update', 'keepBoth'] as Conflict[]).map((c) => (
                   <label key={c} className="flex items-center gap-2">
-                    <input type="radio" name="conflict" checked={conflict === c} onChange={() => setConflict(c)} />
+                    <input type="radio" name="serverConflict" checked={serverConflict === c} onChange={() => setServerConflict(c)} />
                     {t(`conflict_${c}`)}
                   </label>
                 ))}
@@ -139,8 +157,10 @@ export function ImportSheets() {
                     <td className="p-2">
                       {r.status === 'new' ? (
                         <span className="text-green">{t('new')}</span>
+                      ) : r.status === 'dupFile' ? (
+                        <span className="text-amber-700">{t('dupInFile')}</span>
                       ) : (
-                        <span className="text-amber-700">{t('duplicate')}</span>
+                        <span className="text-amber-700">{t('dupOnServer')}</span>
                       )}
                     </td>
                   </tr>

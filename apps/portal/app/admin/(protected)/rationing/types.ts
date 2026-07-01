@@ -9,7 +9,8 @@ export type PreviewRow = {
   blockNo: string;
   city: string | null;
   originalOwner: string | null;
-  status: 'new' | 'duplicate'; // duplicate = already in DB or earlier in this file
+  // dupServer = already on the server; dupFile = repeated earlier in THIS file (server wins if both)
+  status: 'new' | 'dupFile' | 'dupServer';
   flagged: boolean; // has an internal remark (OCR verification)
 };
 
@@ -35,7 +36,8 @@ export type PreviewResult =
       summary: {
         total: number;
         newCount: number;
-        duplicateCount: number;
+        dupFileCount: number; // repeated within the uploaded file
+        dupServerCount: number; // already present on the server
         flaggedCount: number;
         newCities: string[];
       };

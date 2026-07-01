@@ -34,6 +34,11 @@ export default async function SheetsPage() {
         <a href="/admin/rationing" className="text-sm text-accent">← {t('title')}</a>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <a href="/admin/rationing/sheets/export" className="rounded-md border border-graphite/25 px-3 py-1.5 text-sm hover:bg-graphite/10">⬇ {t('exportRecords')}</a>
+        <a href="/admin/rationing/sheets/export-plots" className="rounded-md border border-graphite/25 px-3 py-1.5 text-sm hover:bg-graphite/10">⬇ {t('exportPlots')}</a>
+      </div>
+
       <ImportSheets />
 
       {batches.length > 0 && (

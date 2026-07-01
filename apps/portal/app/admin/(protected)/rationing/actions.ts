@@ -41,7 +41,8 @@ export async function previewImport(formData: FormData): Promise<PreviewResult> 
 
   const seen = new Set<string>();
   let newCount = 0;
-  let duplicateCount = 0;
+  let dupFileCount = 0;
+  let dupServerCount = 0;
   let flaggedCount = 0;
   const out: PreviewRow[] = [];
 
@@ -49,8 +50,10 @@ export async function previewImport(formData: FormData): Promise<PreviewResult> 
     const dupInDb = inDb.has(r.dedupeKey);
     const dupInFile = seen.has(r.dedupeKey);
     seen.add(r.dedupeKey);
-    const isDup = dupInDb || dupInFile;
-    if (isDup) duplicateCount++;
+    // Server duplicate takes precedence when a row is both already-on-server and repeated in-file.
+    const status: PreviewRow['status'] = dupInDb ? 'dupServer' : dupInFile ? 'dupFile' : 'new';
+    if (status === 'dupServer') dupServerCount++;
+    else if (status === 'dupFile') dupFileCount++;
     else newCount++;
     const flagged = !!r.remarks;
     if (flagged) flaggedCount++;
@@ -63,7 +66,7 @@ export async function previewImport(formData: FormData): Promise<PreviewResult> 
         blockNo: r.blockNo,
         city: r.city,
         originalOwner: r.originalOwner,
-        status: isDup ? 'duplicate' : 'new',
+        status,
         flagged,
       });
     }
@@ -72,7 +75,7 @@ export async function previewImport(formData: FormData): Promise<PreviewResult> 
   return {
     ok: true,
     fileName: file.name || 'upload.xlsx',
-    summary: { total: rows.length, newCount, duplicateCount, flaggedCount, newCities },
+    summary: { total: rows.length, newCount, dupFileCount, dupServerCount, flaggedCount, newCities },
     rows: out,
   };
 }
@@ -134,7 +137,10 @@ export async function commitImport(formData: FormData): Promise<CommitResult> {
   const session = await auth();
   const uploadedById = session?.user?.id ?? null;
 
-  const conflict = (String(formData.get('conflict') || 'skip') as Conflict) ?? 'skip';
+  // Two independent policies: within-file repeats default to keepBoth; server-side
+  // duplicates default to skip (mirrors how staff usually work).
+  const fileConflict = (String(formData.get('fileConflict') || 'keepBoth') as Conflict);
+  const serverConflict = (String(formData.get('serverConflict') || 'skip') as Conflict);
   const file = formData.get('file');
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: 'no_file' };
 
@@ -168,13 +174,14 @@ export async function commitImport(formData: FormData): Promise<CommitResult> {
       const dupInFile = seen.has(r.dedupeKey);
       seen.add(r.dedupeKey);
       const existingId = existingByKey.get(r.dedupeKey);
-      const isDup = !!existingId || dupInFile;
+      // Server duplicate wins over in-file when both apply; pick that row's policy.
+      const conflict: Conflict | null = existingId ? serverConflict : dupInFile ? fileConflict : null;
 
-      if (isDup && conflict === 'skip') {
+      if (conflict === 'skip') {
         duplicates++;
         continue;
       }
-      if (isDup && conflict === 'update' && existingId) {
+      if (conflict === 'update' && existingId) {
         await prisma.rationingSheet.update({
           where: { id: existingId },
           data: rowData(r, cityId, batch.id, uploadedById),
@@ -187,12 +194,12 @@ export async function commitImport(formData: FormData): Promise<CommitResult> {
         if (r.remarks) flagged++;
         continue;
       }
-      // new row, OR keepBoth, OR update of a within-file duplicate → insert
+      // new row, OR keepBoth (server/file), OR 'update' of a within-file dup (no existing) → insert
       const sheet = await prisma.rationingSheet.create({ data: rowData(r, cityId, batch.id, uploadedById) });
       await prisma.rationingName.createMany({
         data: nameRows(r).map((n) => ({ ...n, sheetId: sheet.id })),
       });
-      if (isDup) duplicates++; // keepBoth still counts the collision
+      if (conflict) duplicates++; // keepBoth still counts the collision
       created++;
       if (r.remarks) flagged++;
     }
