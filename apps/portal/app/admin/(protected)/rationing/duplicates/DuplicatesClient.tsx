@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { toast } from '@noc/ui';
+import { toast, Lightbox } from '@noc/ui';
 import { deleteSheet, markDupReviewed } from '../actions';
 
 type Row = {
@@ -16,16 +16,18 @@ type Row = {
   originalOwner: string | null;
   sourceFile: string | null;
   batchFile: string | null;
+  scanPath: string | null;
   createdAt: string;
 };
 type Group = { key: string; rows: Row[] };
 
-export function DuplicatesClient({ groups, totalDupRows, capped }: { groups: Group[]; totalDupRows: number; capped: boolean }) {
+export function DuplicatesClient({ groups }: { groups: Group[] }) {
   const t = useTranslations('rationing');
   const router = useRouter();
   const [pending, start] = useTransition();
   const [gone, setGone] = useState<Set<string>>(new Set());
   const [reviewedKeys, setReviewedKeys] = useState<Set<string>>(new Set());
+  const [zoom, setZoom] = useState<string | null>(null);
 
   function markReviewed(key: string) {
     start(async () => {
@@ -58,11 +60,6 @@ export function DuplicatesClient({ groups, totalDupRows, capped }: { groups: Gro
 
   return (
     <div className="space-y-4">
-      <p className="text-sm">
-        <span className="rounded bg-amber-100 px-2 py-0.5 font-medium text-amber-800">{t('duplicateRecordsCount', { n: totalDupRows })}</span>
-        {capped && <span className="ms-2 text-xs opacity-60">{t('duplicatesCapped')}</span>}
-      </p>
-
       {groups.map((g) => {
         if (reviewedKeys.has(g.key)) return null; // just moved to the Reviewed page
         const rows = g.rows.filter((r) => !gone.has(r.id));
@@ -96,7 +93,15 @@ export function DuplicatesClient({ groups, totalDupRows, capped }: { groups: Gro
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t border-graphite/10">
                       <td className="p-2 font-medium">{r.applicantName}</td>
-                      <td className="p-2">{r.plotFullRef || `${r.plotNo}${r.blockNo ? ' / ' + r.blockNo : ''}`}</td>
+                      <td className="p-2">
+                        {r.scanPath ? (
+                          <button type="button" onClick={() => setZoom(r.scanPath)} className="inline-flex items-center gap-1 text-accent hover:underline" title={t('viewPhoto')}>
+                            🖼 {r.plotFullRef || `${r.plotNo}${r.blockNo ? ' / ' + r.blockNo : ''}`}
+                          </button>
+                        ) : (
+                          r.plotFullRef || `${r.plotNo}${r.blockNo ? ' / ' + r.blockNo : ''}`
+                        )}
+                      </td>
                       <td className="p-2">{r.cityName ?? '—'}</td>
                       <td className="p-2">{r.originalOwner ?? '—'}</td>
                       <td className="p-2 text-xs opacity-70">{r.batchFile ?? r.sourceFile ?? '—'}</td>
@@ -112,6 +117,7 @@ export function DuplicatesClient({ groups, totalDupRows, capped }: { groups: Gro
           </div>
         );
       })}
+      {zoom && <Lightbox src={zoom} onClose={() => setZoom(null)} />}
     </div>
   );
 }
