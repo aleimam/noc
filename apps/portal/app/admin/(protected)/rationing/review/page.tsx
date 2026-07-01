@@ -16,6 +16,13 @@ export default async function ReviewPage() {
     include: { city: { select: { name: true } } },
   });
 
+  // Attach the scanned page (if one was uploaded) so admins can compare against the OCR data.
+  const sourceFiles = [...new Set(rows.map((r) => r.sourceFile).filter((f): f is string => !!f))];
+  const scans = sourceFiles.length
+    ? await prisma.rationingScan.findMany({ where: { fileName: { in: sourceFiles } }, select: { fileName: true, path: true } })
+    : [];
+  const scanByFile = new Map(scans.map((s) => [s.fileName, s.path]));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
@@ -26,7 +33,7 @@ export default async function ReviewPage() {
       </div>
       <p className="text-sm opacity-70">{t('reviewHint')}</p>
       <ReviewClient
-        rows={rows.map((r) => ({ id: r.id, applicantName: r.applicantName, plotFullRef: r.plotFullRef, cityName: r.city?.name ?? null, remarks: r.remarks }))}
+        rows={rows.map((r) => ({ id: r.id, applicantName: r.applicantName, plotFullRef: r.plotFullRef, cityName: r.city?.name ?? null, remarks: r.remarks, scanPath: (r.sourceFile && scanByFile.get(r.sourceFile)) || null }))}
       />
     </div>
   );
