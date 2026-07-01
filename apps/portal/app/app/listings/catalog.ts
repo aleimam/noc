@@ -16,7 +16,7 @@ export async function loadCatalog() {
   const [classifiers, sections, attrs] = await Promise.all([
     prisma.classifier.findMany({
       orderBy: { order: 'asc' },
-      include: { options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true } } },
+      include: { options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true, parentOptionId: true, allowedOnAlsawarey: true } } },
     }),
     prisma.attributeSection.findMany({
       where: { isActive: true },

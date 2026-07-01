@@ -7,12 +7,12 @@
 /* Golden Rule: raise the type-scale floor for low-vision/low-literacy users on phones.
    Only the small sizes grow (xs/sm/base); lg and up (headings, prices) keep their size. */
 @theme {
-  --text-xs: 0.85rem;
-  --text-xs--line-height: 1.45;
-  --text-sm: 0.98rem;
-  --text-sm--line-height: 1.55;
-  --text-base: 1.1rem;
-  --text-base--line-height: 1.7;
+  --text-xs: 0.92rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 1.05rem;
+  --text-sm--line-height: 1.6;
+  --text-base: 1.2rem;
+  --text-base--line-height: 1.75;
 }
 
 html,

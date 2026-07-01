@@ -40,7 +40,7 @@ export default async function NewListing() {
           contactWhatsapp: true,
           ownerId: '',
           ownerName: '',
-          ownerType: 'OWNER',
+          ownerType: 'PERSONAL',
           showOnBrokerage: false,
           vals: {},
           photos: [],

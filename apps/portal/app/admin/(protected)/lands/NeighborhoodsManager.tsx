@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { AREA_PRESETS, BUILDING_TYPES, MAIN_ROADS } from '@noc/config';
+import { toast } from '@noc/ui';
 import { upsertNeighborhood, deleteNeighborhood } from './actions';
 
 type N = {
@@ -85,6 +86,7 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
     start(async () => {
       const r = await deleteNeighborhood(id);
       if (!r.ok) setError(r.error);
+      else toast(t('deleted'));
       router.refresh();
     });
   }

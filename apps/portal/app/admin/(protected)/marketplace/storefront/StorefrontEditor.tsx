@@ -123,6 +123,17 @@ export function StorefrontEditor({ initial }: { initial: StorefrontContent }) {
         />
       </Card>
 
+      {/* PRICE CHIPS */}
+      <Card title="أزرار الأسعار (Chips)">
+        <LinkList
+          items={c.priceChips}
+          onChange={(i, v) => up((n) => { n.priceChips[i] = v; })}
+          onRemove={(i) => up((n) => { n.priceChips.splice(i, 1); })}
+          onAdd={() => up((n) => { n.priceChips.push({ label: { ar: '', en: '' }, href: '/listings?priceMax=' }); })}
+        />
+        <p className="text-xs opacity-50">مثال: ‎/listings?priceMax=1000000‎ أو ‎/listings?priceMin=1000000&priceMax=2000000‎ أو ‎/listings?sort=price_asc‎</p>
+      </Card>
+
       {/* NAV */}
       <Card title="القائمة العلوية">
         <div className="grid gap-3 sm:grid-cols-3">
@@ -155,6 +166,24 @@ export function StorefrontEditor({ initial }: { initial: StorefrontContent }) {
           رقم واتساب التواصل
           <input dir="ltr" value={c.contact.whatsapp} onChange={(e) => up((n) => { n.contact.whatsapp = e.target.value; })} className={inp} placeholder="+201040810000" />
         </label>
+
+        <div>
+          <div className="mb-1 text-sm font-medium">أيقونات التواصل الاجتماعي (تظهر في التذييل)</div>
+          <div className="space-y-2">
+            {c.contact.socials.map((s, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <select value={s.platform} onChange={(e) => up((n) => { n.contact.socials[i]!.platform = e.target.value; })} className="rounded-md border border-graphite/20 bg-transparent px-2 py-2 text-sm">
+                  {['facebook', 'instagram', 'whatsapp', 'youtube', 'tiktok', 'telegram', 'twitter', 'phone', 'email'].map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <input dir="ltr" value={s.url} onChange={(e) => up((n) => { n.contact.socials[i]!.url = e.target.value; })} className={inp} placeholder="https://…" />
+                <button type="button" onClick={() => up((n) => { n.contact.socials.splice(i, 1); })} className="rounded border border-graphite/20 px-2 py-1 text-xs text-red-600">حذف</button>
+              </div>
+            ))}
+            <button type="button" onClick={() => up((n) => { n.contact.socials.push({ platform: 'facebook', url: '' }); })} className="rounded-md border border-dashed border-graphite/30 px-3 py-1.5 text-xs text-accent">+ إضافة رابط</button>
+          </div>
+          <p className="mt-1 text-xs opacity-50">اترك الرابط فارغاً لإخفاء الأيقونة. الروابط الفارغة لا تظهر.</p>
+        </div>
+
         <Loc2 label="سطر التذييل" val={c.footer.brandLine} onChange={(v) => up((n) => { n.footer.brandLine = v; })} />
       </Card>
 

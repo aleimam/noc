@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auth, hasPermission } from '@noc/auth';
-import { AdminShell, type AdminNavGroup } from '@noc/ui';
+import { AdminShell, Toaster, type AdminNavGroup } from '@noc/ui';
 import { SignOutButton } from '../../_components/SignOutButton';
 
 export default async function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
@@ -76,6 +76,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
       signOut={<SignOutButton />}
     >
       {children}
+      <Toaster />
     </AdminShell>
   );
 }

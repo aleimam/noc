@@ -17,6 +17,7 @@ export function SellContentEditor({ initial }: { initial: SellContent }) {
 
   const [announceTitle, setT] = useState(initial.announceTitle);
   const [announceBody, setB] = useState(initial.announceBody);
+  const [policyPageSlug, setSlug] = useState(initial.policyPageSlug ?? '');
   const [services, setServices] = useState(toLines(initial.services));
   const [policy, setPolicy] = useState(toLines(initial.policy));
   const [pricing, setPricing] = useState(initial.pricing.map((p) => `${p.level} | ${p.saleTime}`).join('\n'));
@@ -32,6 +33,7 @@ export function SellContentEditor({ initial }: { initial: SellContent }) {
     const content: SellContent = {
       announceTitle: announceTitle.trim(),
       announceBody: announceBody.trim(),
+      policyPageSlug: policyPageSlug.trim(),
       services: fromLines(services),
       policy: fromLines(policy),
       pricing: fromLines(pricing).map((line) => {
@@ -60,6 +62,7 @@ export function SellContentEditor({ initial }: { initial: SellContent }) {
         <h2 className="font-semibold text-primary">الإعلان الرئيسي</h2>
         <label className="block text-sm">العنوان<input value={announceTitle} onChange={(e) => setT(e.target.value)} className={inp} /></label>
         <label className="block text-sm">النص<textarea value={announceBody} onChange={(e) => setB(e.target.value)} rows={2} className={ta} /></label>
+        <label className="block text-sm">رابط صفحة السياسات (slug من قسم الصفحات)<input dir="ltr" value={policyPageSlug} onChange={(e) => setSlug(e.target.value)} className={inp} placeholder="sell-policy" /><span className="mt-1 block text-xs opacity-50">اتركه فارغاً لعرض السياسات والتسعير داخل صفحة البيع. عند تعبئته يظهر رابط «سياسة البيع والتسعير» ويُشار إليه بجوار حقل السعر.</span></label>
       </section>
 
       <section className="grid gap-4 rounded-lg border border-graphite/15 p-4 sm:grid-cols-2">

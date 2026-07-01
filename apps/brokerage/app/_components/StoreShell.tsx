@@ -7,6 +7,19 @@ import { SearchBox } from './SearchBox';
 import { CompareBar } from './CompareBar';
 import { StoreMobileMenu } from './StoreMobileMenu';
 
+const SOCIAL_ICON: Record<string, string> = {
+  facebook: '📘',
+  instagram: '📷',
+  whatsapp: '💬',
+  youtube: '▶️',
+  tiktok: '🎵',
+  telegram: '✈️',
+  twitter: '𝕏',
+  x: '𝕏',
+  phone: '📞',
+  email: '✉️',
+};
+
 export async function StoreShell({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
@@ -21,6 +34,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
   ]);
   const Lc = (t: { ar: string; en: string }) => (locale === 'ar' ? t.ar : t.en);
   const whatsapp = content.contact.whatsapp;
+  const socials = (content.contact.socials ?? []).filter((s) => s.url.trim());
   const copyright = copyrightRow?.value || `© ${new Date().getFullYear()} alsawarey.com`;
 
   return (
@@ -73,11 +87,9 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
 
       <CompareBar labels={{ compare: L('قارن', 'Compare'), clear: L('مسح', 'Clear'), items: L('عناصر للمقارنة', 'to compare') }} />
 
-      <footer className="mt-12 bg-navy-900 text-white/80">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-8 text-center text-sm">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo" alt="" className="h-10 w-auto" />
-          <p>{Lc(content.footer.brandLine)}</p>
+      <footer className="mt-10 bg-navy-900 text-white/80">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2.5 px-4 py-5 text-center text-sm">
+          <p className="font-bold text-white">{Lc(content.footer.brandLine)}</p>
           {footerPages.length > 0 && (
             <nav className="flex flex-wrap justify-center gap-x-4 gap-y-1">
               {footerPages.map((p) => (
@@ -85,8 +97,18 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
               ))}
             </nav>
           )}
+          {socials.length > 0 && (
+            <div className="flex items-center gap-2.5">
+              {socials.map((s) => (
+                <a key={s.platform + s.url} href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.platform}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg hover:bg-gold hover:text-navy-900">
+                  {SOCIAL_ICON[s.platform] ?? '🔗'}
+                </a>
+              ))}
+            </div>
+          )}
           <a href={`https://wa.me/${whatsapp.replace(/[^\d]/g, '')}`} className="text-gold" dir="ltr">{whatsapp}</a>
-          <p className="text-white/50">{copyright}</p>
+          <p className="text-xs text-white/50">{copyright}</p>
         </div>
       </footer>
     </div>

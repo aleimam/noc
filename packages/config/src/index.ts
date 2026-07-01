@@ -81,6 +81,7 @@ export type Env = z.infer<typeof envSchema>;
 export type SellContent = {
   announceTitle: string;
   announceBody: string;
+  policyPageSlug: string; // optional Pages slug for the full sell/pricing policy (empty = show inline)
   services: string[];
   policy: string[];
   pricing: { level: string; saleTime: string }[];
@@ -90,6 +91,7 @@ export type SellContent = {
 
 export const DEFAULT_SELL_CONTENT: SellContent = {
   announceTitle: 'اعرض أرضك للبيع من خلال الصواري',
+  policyPageSlug: '',
   announceBody: 'سجّل بيانات أرضك وفريقنا يتولّى تقييمها وتسويقها وبيعها عبر شبكتنا — بأسرع وقت وأفضل سعر.',
   services: [
     'التقدير العادل لسعر الأرض',
@@ -154,8 +156,9 @@ export type StorefrontContent = {
   sellBand: { title: Loc; body: Loc; cta: StoreLink };
   featurePills: StoreLink[];
   areaChips: StoreLink[];
+  priceChips: StoreLink[]; // price-tier quick filters (Cheapest / under 1M / …)
   nav: { allLands: StoreLink; featured: StoreLink; sell: StoreLink; groups: StoreMenuGroup[] };
-  contact: { whatsapp: string };
+  contact: { whatsapp: string; socials: { platform: string; url: string }[] };
   footer: { brandLine: Loc };
 };
 
@@ -215,6 +218,13 @@ export const DEFAULT_STOREFRONT: StorefrontContent = {
     { label: loc('751–1000 م²', '751–1000 m²'), href: '/listings?areaMin=751&areaMax=1000' },
     { label: loc('+1000 م²', '1000+ m²'), href: '/listings?areaMin=1000' },
   ],
+  priceChips: [
+    { label: loc('الأرخص', 'Cheapest'), href: '/listings?sort=price_asc' },
+    { label: loc('أقل من ٥٠٠ ألف', 'Under 500k'), href: '/listings?priceMax=500000' },
+    { label: loc('أقل من مليون', 'Under 1M'), href: '/listings?priceMax=1000000' },
+    { label: loc('١ – ٢ مليون', '1–2M'), href: '/listings?priceMin=1000000&priceMax=2000000' },
+    { label: loc('أكثر من مليون', 'Over 1M'), href: '/listings?priceMin=1000000' },
+  ],
   nav: {
     allLands: { label: loc('كل الأراضي', 'All lands'), href: '/listings' },
     featured: { label: loc('مميز', 'Featured'), href: '/listings?featured=1' },
@@ -245,7 +255,13 @@ export const DEFAULT_STOREFRONT: StorefrontContent = {
       },
     ],
   },
-  contact: { whatsapp: '+201040810000' },
+  contact: {
+    whatsapp: '+201040810000',
+    socials: [
+      { platform: 'facebook', url: '' },
+      { platform: 'whatsapp', url: 'https://wa.me/201040810000' },
+    ],
+  },
   footer: { brandLine: loc('الصواري للاستثمار العقاري', 'ALSWARY Real-estate Investment') },
 };
 

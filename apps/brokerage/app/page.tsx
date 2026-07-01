@@ -31,20 +31,36 @@ export default async function Home() {
       case 'quickFilters':
         return (
           <section key="qf" className="border-b border-ink-200 bg-white dark:border-white/10 dark:bg-navy-800/40">
-            <div className="mx-auto max-w-6xl space-y-3 px-4 py-5">
-              <div className="flex flex-wrap gap-2">
-                {c.featurePills.map((f) => (
-                  <Link key={f.href + L(f.label)} href={f.href} className="rounded-full bg-gold-50 px-4 py-1.5 text-sm font-medium text-gold-800 transition hover:bg-gold-100 dark:bg-gold/15 dark:text-gold">
-                    {L(f.label)}
-                  </Link>
-                ))}
+            <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+              <div>
+                <div className="mb-2 text-sm font-bold text-ink-500">{locale === 'ar' ? 'حسب السعر' : 'By price'}</div>
+                <div className="flex flex-wrap gap-2.5">
+                  {c.priceChips.map((ch) => (
+                    <Link key={ch.href + L(ch.label)} href={ch.href} className="rounded-full bg-gold px-5 py-2.5 text-base font-bold text-navy-900 shadow-sm transition hover:brightness-105">
+                      {L(ch.label)}
+                    </Link>
+                  ))}
+                </div>
               </div>
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {c.areaChips.map((ch) => (
-                  <Link key={ch.href + L(ch.label)} href={ch.href} className="flex-none rounded-full border border-ink-200 bg-white px-4 py-1.5 text-sm font-medium text-navy-700 transition hover:border-gold hover:text-gold-700 dark:border-white/15 dark:bg-navy-800 dark:text-soft">
-                    {L(ch.label)}
-                  </Link>
-                ))}
+              <div>
+                <div className="mb-2 text-sm font-bold text-ink-500">{locale === 'ar' ? 'حسب الميزة' : 'By feature'}</div>
+                <div className="flex flex-wrap gap-2.5">
+                  {c.featurePills.map((f) => (
+                    <Link key={f.href + L(f.label)} href={f.href} className="rounded-full bg-gold-50 px-5 py-2.5 text-base font-bold text-gold-800 transition hover:bg-gold-100 dark:bg-gold/15 dark:text-gold">
+                      {L(f.label)}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="mb-2 text-sm font-bold text-ink-500">{locale === 'ar' ? 'حسب المساحة' : 'By area'}</div>
+                <div className="flex gap-2.5 overflow-x-auto pb-1">
+                  {c.areaChips.map((ch) => (
+                    <Link key={ch.href + L(ch.label)} href={ch.href} className="flex-none rounded-full border-2 border-ink-200 bg-white px-5 py-2.5 text-base font-bold text-navy-700 transition hover:border-gold hover:text-gold-700 dark:border-white/15 dark:bg-navy-800 dark:text-soft">
+                      {L(ch.label)}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
@@ -145,6 +161,20 @@ export default async function Home() {
       </section>
 
       {c.sections.filter((s) => s.enabled).map((s) => <Fragment key={s.key}>{sectionNode(s.key)}</Fragment>)}
+
+      {/* Bottom browse band — big, obvious quick filters near the end of the page */}
+      <section className="border-t border-ink-200 bg-navy-50 dark:border-white/10 dark:bg-navy-800/40">
+        <div className="mx-auto max-w-6xl px-4 py-8">
+          <h2 className="mb-4 text-center text-xl font-bold text-navy-800 dark:text-soft">{locale === 'ar' ? 'تصفّح الأراضي بسرعة' : 'Browse lands quickly'}</h2>
+          <div className="flex flex-wrap justify-center gap-2.5">
+            {[...c.priceChips, ...c.featurePills].map((ch) => (
+              <Link key={'b' + ch.href + L(ch.label)} href={ch.href} className="rounded-full border-2 border-gold/50 bg-white px-5 py-2.5 text-base font-bold text-navy-800 transition hover:bg-gold-50 dark:bg-navy-800 dark:text-soft">
+                {L(ch.label)}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
     </StoreShell>
   );
 }

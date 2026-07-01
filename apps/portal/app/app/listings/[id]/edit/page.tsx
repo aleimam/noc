@@ -44,7 +44,7 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
           contactWhatsapp: listing.contactWhatsapp,
           ownerId: listing.ownerId ?? '',
           ownerName: listing.ownerName ?? '',
-          ownerType: listing.ownerType ?? 'OWNER',
+          ownerType: listing.ownerType ?? 'PERSONAL',
           showOnBrokerage: listing.showOnBrokerage,
           vals,
           photos,

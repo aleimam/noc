@@ -93,8 +93,8 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
 
   // Contact rule: an individual owner is reached directly; anything owned by us, a company
   // or a broker routes to our central ALSWARY number (we broker those).
-  const effOwnerType = listing.owner?.type ?? listing.ownerType ?? 'OWNER';
-  const weAreContact = effOwnerType !== 'OWNER';
+  const effOwnerType = listing.owner?.type ?? listing.ownerType ?? 'PERSONAL';
+  const weAreContact = effOwnerType !== 'PERSONAL';
   let contactPhone = listing.contactPhone;
   let contactWhatsapp = listing.contactWhatsapp;
   const ownerName = listing.owner?.name ?? listing.ownerName ?? '';

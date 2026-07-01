@@ -47,7 +47,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
           contactWhatsapp: listing.contactWhatsapp,
           ownerId: listing.ownerId ?? '',
           ownerName: listing.ownerName ?? '',
-          ownerType: listing.ownerType ?? 'OWNER',
+          ownerType: listing.ownerType ?? 'PERSONAL',
           showOnBrokerage: listing.showOnBrokerage,
           vals,
           photos,

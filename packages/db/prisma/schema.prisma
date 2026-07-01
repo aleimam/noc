@@ -262,10 +262,18 @@ model ClassifierOption {
   nameEn       String
   order        Int      @default(0)
   isActive     Boolean  @default(true)
+  // Hard nesting Type → Purpose → Status(condition): a Purpose option's parent is a Type
+  // option; a Condition option's parent is a Purpose option. null = unscoped (applies to all).
+  parentOptionId String?
+  // Al-Sawarey allow-list (used on Type + Purpose options): only allowed Types/Purposes may
+  // be published to the alsawarey storefront. Default true so nothing disappears pre-config.
+  allowedOnAlsawarey Boolean @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   classifier        Classifier            @relation(fields: [classifierId], references: [id], onDelete: Cascade)
+  parent            ClassifierOption?     @relation("OptionNest", fields: [parentOptionId], references: [id], onDelete: SetNull)
+  children          ClassifierOption[]    @relation("OptionNest")
   attrLinks         AttributeClassifier[]
   typeListings      Listing[]             @relation("ListingType")
   purposeListings   Listing[]             @relation("ListingPurpose")
@@ -273,6 +281,7 @@ model ClassifierOption {
 
   @@unique([classifierId, key])
   @@index([classifierId, order])
+  @@index([parentOptionId])
 }
 
 /// Attribute applicability: which classifier OPTIONS an attribute applies to. For each
@@ -454,18 +463,17 @@ model ListingValue {
 }
 
 enum OwnerType {
-  OWNER
+  PERSONAL // فرد — no allocated code; ads number from the shared 800–999 monthly pool
   COMPANY
   BROKER
-  US
+  US // our own lands — codes 00–09
 }
 
 /// Reusable commercial owners/contacts list (staff-managed) — used for our inventory.
 model Owner {
   id             String    @id @default(cuid())
   name           String
-  ownerNo        Int? // admin-allocated 2-digit code for ad numbers (our lands 00-09); unique
-  type           OwnerType @default(OWNER)
+  type           OwnerType @default(PERSONAL)
   phone1         String?
   phone1Whatsapp Boolean   @default(false)
   phone2         String?
@@ -476,9 +484,22 @@ model Owner {
 
   listings Listing[]
   lands    Land[]
+  codes    OwnerCode[] // allocated 2-digit ad-number codes (US 00–09, Company/Broker 10–79)
 
-  @@unique([ownerNo])
   @@index([type])
+}
+
+/// A 2-digit ad-number code allocated to a coded owner (Company/Broker 10–79, Us 00–09).
+/// An owner may hold several (consecutive) codes; each code carries ~9 ads/month. Personal
+/// owners hold none. Codes are globally unique (a code belongs to exactly one owner).
+model OwnerCode {
+  id      String @id @default(cuid())
+  ownerId String
+  code    Int    @unique // 0–79
+
+  owner Owner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
 }
 
 enum LeadStatus {

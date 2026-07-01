@@ -40,7 +40,7 @@ export default async function StaffNewListing() {
           contactWhatsapp: !!sett.alswarey_whatsapp,
           ownerId: '',
           ownerName: '',
-          ownerType: 'OWNER',
+          ownerType: 'PERSONAL',
           showOnBrokerage: true,
           vals: {},
           photos: [],

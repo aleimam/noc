@@ -33,6 +33,8 @@ export default async function Catalogue({
   const area = num(sp.area);
   const areaMin = num(sp.areaMin);
   const areaMax = num(sp.areaMax);
+  const priceMin = num(sp.priceMin);
+  const priceMax = num(sp.priceMax);
   const corner = str(sp.corner) === '1';
   const main = str(sp.main) === '1';
   const services = str(sp.services) === '1';
@@ -46,6 +48,9 @@ export default async function Catalogue({
   if (area != null) and.push(attr(ATTR.area, { number: area }));
   else if (areaMin != null || areaMax != null) {
     and.push(attr(ATTR.area, { number: { ...(areaMin != null ? { gte: areaMin } : {}), ...(areaMax != null ? { lte: areaMax } : {}) } }));
+  }
+  if (priceMin != null || priceMax != null) {
+    and.push({ price: { ...(priceMin != null ? { gte: priceMin } : {}), ...(priceMax != null ? { lte: priceMax } : {}) } });
   }
   if (corner) and.push(attr(ATTR.corner, { bool: true }));
   if (main) and.push(attr(ATTR.mainStreet, { bool: true }));
@@ -73,7 +78,7 @@ export default async function Catalogue({
 
   const chip = 'rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm hover:border-gold';
   const chipOn = 'rounded-lg border-2 border-gold bg-gold-50 px-3 py-1.5 text-sm font-bold text-gold-800';
-  const noFilters = !corner && !main && !services && !featured && area == null && areaMin == null && areaMax == null && !statusSold;
+  const noFilters = !corner && !main && !services && !featured && area == null && areaMin == null && areaMax == null && priceMin == null && priceMax == null && !statusSold;
 
   return (
     <StoreShell>

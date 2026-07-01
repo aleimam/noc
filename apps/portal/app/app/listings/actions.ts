@@ -26,7 +26,7 @@ export type ListingInput = {
   contactWhatsapp: boolean;
   ownerId?: string | null;
   ownerName?: string;
-  ownerType?: 'OWNER' | 'COMPANY' | 'BROKER' | 'US';
+  ownerType?: 'PERSONAL' | 'COMPANY' | 'BROKER' | 'US';
   showOnBrokerage?: boolean;
   values: ValueInput[];
   photoIds: string[];
@@ -67,6 +67,17 @@ export async function saveListing(input: ListingInput): Promise<Result> {
   }
   const isStaff = user.type === 'STAFF';
 
+  // Al-Sawarey channel is staff-only and limited to allowed Types/Purposes (backstop; the
+  // form already hides disallowed options).
+  const publishAlsawarey = isStaff && !!input.showOnBrokerage;
+  if (publishAlsawarey) {
+    const opts = await prisma.classifierOption.findMany({
+      where: { id: { in: [input.typeOptionId, input.purposeOptionId] } },
+      select: { allowedOnAlsawarey: true },
+    });
+    if (opts.length < 2 || opts.some((o) => !o.allowedOnAlsawarey)) return { ok: false, error: 'alsawarey_not_allowed' };
+  }
+
   try {
     const id = await prisma.$transaction(async (tx) => {
       const base = {
@@ -82,7 +93,7 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         status: input.status,
         // Channel + owner: staff manage our inventory (link to Owner, brokerage toggle);
         // sellers define the owner inline and never publish to the brokerage.
-        showOnBrokerage: isStaff ? !!input.showOnBrokerage : false,
+        showOnBrokerage: publishAlsawarey,
         ownerId: isStaff ? input.ownerId || null : null,
         ownerName: !isStaff ? input.ownerName?.trim() || null : null,
         ownerType: !isStaff ? input.ownerType ?? null : null,

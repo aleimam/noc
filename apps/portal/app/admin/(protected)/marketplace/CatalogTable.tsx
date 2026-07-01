@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { toast } from '@noc/ui';
 
 export type CatalogRow = {
   id: string;
@@ -25,12 +26,14 @@ export function CatalogTable({
   remove,
   detailBase,
   childAdd,
+  defaultSort = 'order',
 }: {
   initial: CatalogRow[];
   upsert: (i: UpsertInput) => Promise<Result>;
   remove: (id: string) => Promise<Result>;
   detailBase?: string; // when set, the Arabic name links to `${detailBase}/${id}`
   childAdd?: { hrefBase: string; label: string }; // per-row quick "add child" link (→ `${hrefBase}?district=${id}`)
+  defaultSort?: SortKey; // initial sort column (name-centric lists pass 'nameAr')
 }) {
   const t = useTranslations('mp');
   const router = useRouter();
@@ -38,7 +41,7 @@ export function CatalogTable({
   const [draft, setDraft] = useState<UpsertInput | null>(null); // edit OR add (add has no id)
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('order');
+  const [sortKey, setSortKey] = useState<SortKey>(defaultSort);
   const [dir, setDir] = useState<'asc' | 'desc'>('asc');
 
   function run(fn: () => Promise<Result>, done?: () => void) {
@@ -119,7 +122,7 @@ export function CatalogTable({
                   <td className="p-1 font-mono text-xs opacity-60">{row.key}</td>
                   <td className="p-1"><input type="checkbox" checked={draft.isActive} onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })} /></td>
                   <td className="whitespace-nowrap p-1 text-end">
-                    <button disabled={pending} onClick={() => run(() => upsert(draft), () => setDraft(null))} className="rounded bg-primary px-2 py-1 text-soft">{t('save')}</button>
+                    <button disabled={pending} onClick={() => run(() => upsert(draft), () => { setDraft(null); toast(t('savedOk')); })} className="rounded bg-primary px-2 py-1 text-soft">{t('save')}</button>
                     <button onClick={() => setDraft(null)} className="px-2 py-1 opacity-70">{t('cancel')}</button>
                   </td>
                 </tr>
@@ -142,7 +145,7 @@ export function CatalogTable({
                   <td className="whitespace-nowrap p-2 text-end">
                     {childAdd && <a href={`${childAdd.hrefBase}?district=${row.id}`} className="px-2 py-1 text-green">{childAdd.label}</a>}
                     <button onClick={() => setDraft({ id: row.id, key: row.key, nameAr: row.nameAr, nameEn: row.nameEn, order: row.order, isActive: row.isActive })} className="px-2 py-1 text-accent">{t('edit')}</button>
-                    <button disabled={pending} onClick={() => run(() => remove(row.id))} className="px-2 py-1 text-red-600">{t('delete')}</button>
+                    <button disabled={pending} onClick={() => run(() => remove(row.id), () => toast(t('deleted')))} className="px-2 py-1 text-red-600">{t('delete')}</button>
                   </td>
                 </tr>
               ),
@@ -156,7 +159,7 @@ export function CatalogTable({
           <label className="text-sm">{t('key')}<input dir="ltr" value={draft.key} onChange={(e) => setDraft({ ...draft, key: e.target.value })} className={input} /></label>
           <label className="text-sm">{t('nameAr')}<input value={draft.nameAr} onChange={(e) => setDraft({ ...draft, nameAr: e.target.value })} className={input} /></label>
           <label className="text-sm">{t('nameEn')}<input dir="ltr" value={draft.nameEn} onChange={(e) => setDraft({ ...draft, nameEn: e.target.value })} className={input} /></label>
-          <button disabled={pending || !draft.key.trim()} onClick={() => run(() => upsert(draft), () => setDraft(null))} className="rounded bg-primary px-3 py-2 text-soft disabled:opacity-50">{t('save')}</button>
+          <button disabled={pending || !draft.key.trim()} onClick={() => run(() => upsert(draft), () => { setDraft(null); toast(t('savedOk')); })} className="rounded bg-primary px-3 py-2 text-soft disabled:opacity-50">{t('save')}</button>
           <button onClick={() => setDraft(null)} className="px-3 py-2 opacity-70">{t('cancel')}</button>
         </div>
       ) : (

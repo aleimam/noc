@@ -111,9 +111,15 @@ function toCard(l: Prisma.ListingGetPayload<{ select: typeof cardSelect }>, cove
 }
 
 // Listings visible on the storefront: published (available) or sold — both shown publicly.
+// Also limited to Types/Purposes still allowed on Al Sawarey (null = legacy/unset → allowed),
+// so disallowing a Type/Purpose in the admin instantly hides its listings here.
 const STOREFRONT_STATUS: Prisma.ListingWhereInput = {
   showOnBrokerage: true,
   status: { in: ['PUBLISHED', 'SOLD'] },
+  AND: [
+    { OR: [{ typeOptionId: null }, { typeOption: { allowedOnAlsawarey: true } }] },
+    { OR: [{ purposeOptionId: null }, { purposeOption: { allowedOnAlsawarey: true } }] },
+  ],
 };
 
 export async function latestLands(take = 6): Promise<LandCard[]> {
@@ -130,7 +136,7 @@ export async function latestLands(take = 6): Promise<LandCard[]> {
 /** Promoted lands for the home "featured" row (available only). */
 export async function featuredLands(take = 8): Promise<LandCard[]> {
   const rows = await prisma.listing.findMany({
-    where: { showOnBrokerage: true, status: 'PUBLISHED', featured: true },
+    where: { ...STOREFRONT_STATUS, status: 'PUBLISHED', featured: true },
     orderBy: { publishedAt: 'desc' },
     take,
     select: cardSelect,
@@ -271,7 +277,7 @@ export async function listLands(
 /** Recently sold lands (social proof on the home page). */
 export async function recentlySold(take = 6): Promise<LandCard[]> {
   const rows = await prisma.listing.findMany({
-    where: { showOnBrokerage: true, status: 'SOLD' },
+    where: { ...STOREFRONT_STATUS, status: 'SOLD' },
     orderBy: { updatedAt: 'desc' },
     take,
     select: cardSelect,
@@ -297,7 +303,7 @@ export async function similarLands(listingId: string, take = 4): Promise<LandCar
   if (area != null) and.push({ values: { some: { attribute: { key: ATTR.area }, number: { gte: area * 0.7, lte: area * 1.3 } } } });
 
   const rows = await prisma.listing.findMany({
-    where: { AND: [{ showOnBrokerage: true, status: 'PUBLISHED' }, ...and] },
+    where: { AND: [{ ...STOREFRONT_STATUS, status: 'PUBLISHED' }, ...and] },
     orderBy: [{ featured: 'desc' }, { publishedAt: 'desc' }],
     take,
     select: cardSelect,

@@ -6,6 +6,7 @@ export { LanguageSwitcher } from './components/LanguageSwitcher';
 export { ThemeToggle } from './components/ThemeToggle';
 export { ThemeScript } from './components/ThemeScript';
 export { EnterToSubmit } from './components/EnterToSubmit';
+export { toast, Toaster } from './components/Toast';
 export { AdminShell, type AdminNavItem, type AdminNavGroup } from './components/AdminShell';
 export { ImageAttachment, type UploadedAttachment } from './components/ImageAttachment';
 export { Lightbox } from './components/Lightbox';

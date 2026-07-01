@@ -27,7 +27,7 @@ function fail(e: unknown): Result {
 /** Options are scoped to a classifier — bind classifierId on the server page. */
 export async function upsertClassifierOption(
   classifierId: string,
-  input: { id?: string; key: string; nameAr: string; nameEn: string; order?: number; isActive?: boolean },
+  input: { id?: string; key: string; nameAr: string; nameEn: string; order?: number; isActive?: boolean; parentOptionId?: string | null; allowedOnAlsawarey?: boolean },
 ): Promise<Result> {
   await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
   const data = {
@@ -35,6 +35,8 @@ export async function upsertClassifierOption(
     nameEn: input.nameEn.trim(),
     order: input.order ?? 0,
     isActive: input.isActive ?? true,
+    parentOptionId: input.parentOptionId || null,
+    allowedOnAlsawarey: input.allowedOnAlsawarey ?? true,
   };
   try {
     if (input.id) await prisma.classifierOption.update({ where: { id: input.id }, data });
@@ -239,13 +241,13 @@ export async function rejectListing(id: string, reason: string): Promise<Result>
 
 // ────────────────────────── Owners + Settings ──────────────────────────
 
-type OwnerTypeKey = 'OWNER' | 'COMPANY' | 'BROKER' | 'US';
+type OwnerTypeKey = 'PERSONAL' | 'COMPANY' | 'BROKER' | 'US';
 
 export async function upsertOwner(input: {
   id?: string;
   name: string;
   type: OwnerTypeKey;
-  ownerNo?: number | null;
+  codes?: number[]; // allocated ad codes (Us 0–9, Company/Broker 10–79). Personal owners hold none.
   phone1?: string;
   phone1Whatsapp?: boolean;
   phone2?: string;
@@ -253,12 +255,20 @@ export async function upsertOwner(input: {
   details?: string;
 }): Promise<Result> {
   await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
-  const ownerNo = input.ownerNo == null || Number.isNaN(input.ownerNo) ? null : Math.trunc(input.ownerNo);
-  if (ownerNo != null && (ownerNo < 0 || ownerNo > 99)) return { ok: false, error: 'owner_no_range' };
+  const name = input.name.trim();
+  if (!name) return { ok: false, error: 'failed' };
+
+  // Personal owners hold no code; coded owners are range-checked by type.
+  let codes: number[] = [];
+  if (input.type !== 'PERSONAL') {
+    codes = Array.from(new Set((input.codes ?? []).map((c) => Math.trunc(c)).filter((c) => Number.isFinite(c))));
+    const [lo, hi] = input.type === 'US' ? [0, 9] : [10, 79];
+    if (codes.some((c) => c < lo || c > hi)) return { ok: false, error: 'owner_code_range' };
+  }
+
   const data = {
-    name: input.name.trim(),
+    name,
     type: input.type,
-    ownerNo,
     phone1: input.phone1?.trim() || null,
     phone1Whatsapp: !!input.phone1Whatsapp,
     phone2: input.phone2?.trim() || null,
@@ -266,11 +276,21 @@ export async function upsertOwner(input: {
     details: input.details?.trim() || null,
   };
   try {
-    if (input.id) await prisma.owner.update({ where: { id: input.id }, data });
-    else await prisma.owner.create({ data });
+    await prisma.$transaction(async (tx) => {
+      const owner = input.id
+        ? await tx.owner.update({ where: { id: input.id }, data })
+        : await tx.owner.create({ data });
+      const existing = (await tx.ownerCode.findMany({ where: { ownerId: owner.id }, select: { code: true } })).map((e) => e.code);
+      const want = new Set(codes);
+      const toDelete = existing.filter((c) => !want.has(c));
+      const toAdd = codes.filter((c) => !existing.includes(c));
+      if (toDelete.length) await tx.ownerCode.deleteMany({ where: { ownerId: owner.id, code: { in: toDelete } } });
+      for (const code of toAdd) await tx.ownerCode.create({ data: { ownerId: owner.id, code } });
+    });
     revalidatePath('/admin/marketplace/owners', 'page');
     return { ok: true };
   } catch (e) {
+    if ((e as { code?: string })?.code === 'P2002') return { ok: false, error: 'owner_code_taken' };
     return fail(e);
   }
 }

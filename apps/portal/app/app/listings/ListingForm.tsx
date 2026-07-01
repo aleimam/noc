@@ -11,7 +11,8 @@ type AttrType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_S
 type Opt = { id: string; labelAr: string; labelEn: string };
 type Attr = { id: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; order: number; options: Opt[]; optionIds: string[] };
 type Section = { id: string; nameAr: string; nameEn: string; order: number };
-type Classifier = { id: string; key: string; nameAr: string; nameEn: string; options: { id: string; nameAr: string; nameEn: string }[] };
+type ClsOpt = { id: string; nameAr: string; nameEn: string; parentOptionId: string | null; allowedOnAlsawarey: boolean };
+type Classifier = { id: string; key: string; nameAr: string; nameEn: string; options: ClsOpt[] };
 type OwnerOpt = { id: string; name: string; type: string };
 
 export type ListingFormInitial = {
@@ -73,8 +74,10 @@ export function ListingForm({
     }
     return init;
   });
+  const clsById = useMemo(() => new Map(classifiers.map((c) => [c.id, c])), [classifiers]);
+  const clsByKey = useMemo(() => new Map(classifiers.map((c) => [c.key, c])), [classifiers]);
   const selOf = (key: string) => {
-    const c = classifiers.find((x) => x.key === key);
+    const c = clsByKey.get(key);
     return c ? selected[c.id] ?? '' : '';
   };
   const [title, setTitle] = useState(initial.title);
@@ -85,7 +88,7 @@ export function ListingForm({
   const [contactWhatsapp, setContactWhatsapp] = useState(initial.contactWhatsapp);
   const [ownerId, setOwnerId] = useState(initial.ownerId);
   const [ownerName, setOwnerName] = useState(initial.ownerName);
-  const [ownerType, setOwnerType] = useState(initial.ownerType || 'OWNER');
+  const [ownerType, setOwnerType] = useState(initial.ownerType || 'PERSONAL');
   const [showOnBrokerage, setShowOnBrokerage] = useState(initial.showOnBrokerage);
   const [vals, setVals] = useState<Record<string, string | boolean | string[]>>(initial.vals);
   const [photos, setPhotos] = useState<UploadedAttachment[]>(initial.photos);
@@ -93,7 +96,44 @@ export function ListingForm({
 
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const setVal = (id: string, v: string | boolean | string[]) => setVals((p) => ({ ...p, [id]: v }));
-  const setSel = (cid: string, oid: string) => setSelected((p) => ({ ...p, [cid]: oid }));
+
+  // Al-Sawarey channel is only chosen in staff mode; gating applies while it's on.
+  const alsawarey = staffMode && showOnBrokerage;
+
+  // Choosing a parent classifier clears its descendants (hard nesting Type→Purpose→Status).
+  function setSel(cid: string, oid: string) {
+    setSelected((prev) => {
+      const next = { ...prev, [cid]: oid };
+      const key = clsById.get(cid)?.key;
+      if (key === 'type') { const p = clsByKey.get('purpose'); const cd = clsByKey.get('condition'); if (p) next[p.id] = ''; if (cd) next[cd.id] = ''; }
+      if (key === 'purpose') { const cd = clsByKey.get('condition'); if (cd) next[cd.id] = ''; }
+      return next;
+    });
+  }
+
+  // Options visible for a classifier given nesting (parent selection) + Al-Sawarey allow-list.
+  function visibleOptions(c: Classifier): ClsOpt[] {
+    let opts = c.options;
+    if (c.key === 'purpose') {
+      const typeSel = selOf('type');
+      if (typeSel) opts = opts.filter((o) => !o.parentOptionId || o.parentOptionId === typeSel);
+    } else if (c.key === 'condition') {
+      const purpSel = selOf('purpose');
+      if (purpSel) opts = opts.filter((o) => !o.parentOptionId || o.parentOptionId === purpSel);
+    }
+    if (alsawarey && (c.key === 'type' || c.key === 'purpose')) opts = opts.filter((o) => o.allowedOnAlsawarey);
+    return opts;
+  }
+
+  // Toggling the channel resets classifier choices so only valid options can be picked.
+  function toggleBrokerage(on: boolean) {
+    setShowOnBrokerage(on);
+    setSelected((prev) => {
+      const next = { ...prev };
+      for (const c of classifiers) if (c.key === 'type' || c.key === 'purpose' || c.key === 'condition') next[c.id] = '';
+      return next;
+    });
+  }
 
   const allChosen = classifiers.length > 0 && classifiers.every((c) => selected[c.id]);
 
@@ -176,7 +216,7 @@ export function ListingForm({
       contactWhatsapp,
       ownerId: ownerId || null,
       ownerName,
-      ownerType: ownerType as 'OWNER' | 'COMPANY' | 'BROKER' | 'US',
+      ownerType: ownerType as 'PERSONAL' | 'COMPANY' | 'BROKER' | 'US',
       showOnBrokerage,
       values: buildValues(),
       photoIds: photos.map((p) => p.id),
@@ -265,17 +305,32 @@ export function ListingForm({
     <div className="max-w-3xl space-y-5">
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {/* Type / Purpose / Condition classifiers */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        {classifiers.map((c) => (
-          <label key={c.id} className="block text-sm">
-            {L(c.nameAr, c.nameEn)}
-            <select value={selected[c.id] ?? ''} onChange={(e) => setSel(c.id, e.target.value)} className={inp}>
-              <option value="">—</option>
-              {c.options.map((o) => (<option key={o.id} value={o.id}>{L(o.nameAr, o.nameEn)}</option>))}
-            </select>
+      {/* Publish channel (staff): Al Sawarey offerings also show on New Obour and are limited
+          to the allowed Types/Purposes; New-Obour-only offerings have no such limit. */}
+      {staffMode && (
+        <div className="rounded-lg border-2 border-primary/25 bg-primary/5 p-4">
+          <label className="flex items-center gap-2 text-sm font-semibold text-primary">
+            <input type="checkbox" className="h-4 w-4" checked={showOnBrokerage} onChange={(e) => toggleBrokerage(e.target.checked)} /> {t('publishOnAlsawarey')}
           </label>
-        ))}
+          <p className="mt-1 text-xs opacity-60">{alsawarey ? t('alsawareyLimited') : t('newObourOnly')}</p>
+        </div>
+      )}
+
+      {/* Type → Purpose → Status classifiers (hard nesting) */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        {classifiers.map((c) => {
+          const opts = visibleOptions(c);
+          const parentPicked = c.key === 'purpose' ? !!selOf('type') : c.key === 'condition' ? !!selOf('purpose') : true;
+          return (
+            <label key={c.id} className="block text-sm">
+              {L(c.nameAr, c.nameEn)}
+              <select value={selected[c.id] ?? ''} onChange={(e) => setSel(c.id, e.target.value)} disabled={!parentPicked} className={inp}>
+                <option value="">{parentPicked ? '—' : t('pickParentFirst')}</option>
+                {opts.map((o) => (<option key={o.id} value={o.id}>{L(o.nameAr, o.nameEn)}</option>))}
+              </select>
+            </label>
+          );
+        })}
       </div>
 
       <label className="block text-sm">{t('listingTitle')}<input value={title} onChange={(e) => setTitle(e.target.value)} className={inp} /></label>
@@ -295,7 +350,6 @@ export function ListingForm({
               {owners.map((o) => (<option key={o.id} value={o.id}>{o.name} ({t(`type${o.type}`)})</option>))}
             </select>
           </label>
-          <label className="flex items-end gap-2 text-sm"><input type="checkbox" checked={showOnBrokerage} onChange={(e) => setShowOnBrokerage(e.target.checked)} /> {t('showOnBrokerage')}</label>
         </div>
       ) : (
         <div className="grid gap-4 rounded-lg border border-graphite/15 p-4 sm:grid-cols-2">
@@ -303,7 +357,7 @@ export function ListingForm({
           <label className="text-sm">
             {t('ownerType')}
             <select value={ownerType} onChange={(e) => setOwnerType(e.target.value)} className={inp}>
-              <option value="OWNER">{t('typeOWNER')}</option>
+              <option value="PERSONAL">{t('typePERSONAL')}</option>
               <option value="COMPANY">{t('typeCOMPANY')}</option>
               <option value="BROKER">{t('typeBROKER')}</option>
             </select>

@@ -26,7 +26,7 @@ export default async function OwnerProfile({ params }: { params: Promise<{ id: s
   const cover = new Map<string, string>();
   for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
 
-  const typeLabel: Record<string, string> = { OWNER: t('typeOWNER'), COMPANY: t('typeCOMPANY'), BROKER: t('typeBROKER') };
+  const typeLabel: Record<string, string> = { PERSONAL: t('typePERSONAL'), COMPANY: t('typeCOMPANY'), BROKER: t('typeBROKER') };
 
   return (
     <PublicShell active="market">
