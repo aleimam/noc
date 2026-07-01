@@ -12,14 +12,18 @@ export async function createContactRequest(input: {
   message?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await auth();
+  const cap = (v: string | undefined, n: number) => {
+    const s = (v ?? '').trim();
+    return s ? s.slice(0, n) : null;
+  };
   try {
     await prisma.contactRequest.create({
       data: {
         listingId: input.listingId || null,
         userId: session?.user?.id ?? null,
-        name: input.name?.trim() || null,
-        phone: input.phone?.trim() || null,
-        message: input.message?.trim() || null,
+        name: cap(input.name, 120),
+        phone: cap(input.phone, 30),
+        message: cap(input.message, 2000),
       },
     });
     return { ok: true };

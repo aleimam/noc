@@ -59,7 +59,8 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
 
   return (
     <StoreShell>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {/* Escape "<" so seller-authored fields (name/description) can't break out of the script tag. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <div className="mx-auto max-w-5xl px-4 py-6">
         <Link href="/listings" className="text-sm text-navy-600">‹ {L('كل الأراضي', 'All lands')}</Link>
 

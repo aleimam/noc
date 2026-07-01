@@ -27,10 +27,16 @@ const dec = (v?: string) => {
   return isNaN(n) ? null : new Prisma.Decimal(n);
 };
 
+// Cap public free-text so a hostile submitter can't bloat storage / rows.
+const cap = (v: string | undefined, n: number) => {
+  const s = (v ?? '').trim();
+  return s ? s.slice(0, n) : null;
+};
+
 export async function createLandOffer(input: OfferInput): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await auth();
-  const ownerName = input.ownerName?.trim();
-  const phone1 = input.phone1?.trim();
+  const ownerName = cap(input.ownerName, 120);
+  const phone1 = cap(input.phone1, 30);
   if (!ownerName || !phone1) return { ok: false, error: 'required' };
 
   try {
@@ -39,22 +45,22 @@ export async function createLandOffer(input: OfferInput): Promise<{ ok: true } |
         mode: input.mode,
         ownerName,
         phone1,
-        phone2: input.phone2?.trim() || null,
+        phone2: cap(input.phone2, 30),
         area: dec(input.area),
         originalArea: input.mode === 'ALLOCATED' ? dec(input.originalArea) : null,
         cityId: input.mode === 'SHEET' ? input.cityId || null : null,
         districtId: input.mode === 'ALLOCATED' ? input.districtId || null : null,
         neighborhoodId: input.mode === 'ALLOCATED' ? input.neighborhoodId || null : null,
-        blockNo: input.mode === 'ALLOCATED' ? input.blockNo?.trim() || null : null,
-        plotNo: input.mode === 'ALLOCATED' ? input.plotNo?.trim() || null : null,
+        blockNo: input.mode === 'ALLOCATED' ? cap(input.blockNo, 40) : null,
+        plotNo: input.mode === 'ALLOCATED' ? cap(input.plotNo, 40) : null,
         requiredPrice: dec(input.requiredPrice),
-        details: input.details?.trim() || null,
+        details: cap(input.details, 4000),
         userId: session?.user?.id ?? null,
       },
     });
 
     // Link the uploaded (draft) photos to this offer — internal, never public.
-    const ids = (input.attachmentIds ?? []).filter(Boolean);
+    const ids = (input.attachmentIds ?? []).filter(Boolean).slice(0, 30);
     if (ids.length) {
       await prisma.attachment.updateMany({
         where: { id: { in: ids }, ownerType: null },
