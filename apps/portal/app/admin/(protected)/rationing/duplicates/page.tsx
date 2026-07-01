@@ -13,14 +13,19 @@ export default async function DuplicatesPage() {
   const locale = (await getLocale()) as 'ar' | 'en';
 
   // Groups of records sharing a dedupeKey (normalized name | plot | block) — count > 1.
-  const groups = await prisma.rationingSheet.groupBy({
-    by: ['dedupeKey'],
-    _count: { _all: true },
-    having: { dedupeKey: { _count: { gt: 1 } } },
-    orderBy: { _count: { dedupeKey: 'desc' } },
-    take: MAX_GROUPS,
-  });
-  const keys = groups.map((g) => g.dedupeKey);
+  const [groups, reviewedRows] = await Promise.all([
+    prisma.rationingSheet.groupBy({
+      by: ['dedupeKey'],
+      _count: { _all: true },
+      having: { dedupeKey: { _count: { gt: 1 } } },
+      orderBy: { _count: { dedupeKey: 'desc' } },
+      take: MAX_GROUPS,
+    }),
+    prisma.dedupeReview.findMany({ select: { dedupeKey: true } }),
+  ]);
+  // Groups already reviewed & confirmed "not a duplicate" live on the Reviewed page.
+  const reviewed = new Set(reviewedRows.map((r) => r.dedupeKey));
+  const keys = groups.map((g) => g.dedupeKey).filter((k) => !reviewed.has(k));
 
   const rows = keys.length
     ? await prisma.rationingSheet.findMany({
@@ -58,7 +63,10 @@ export default async function DuplicatesPage() {
         <h1 className="text-2xl font-bold text-primary">
           {t('duplicatesTitle')} <span className="text-base font-normal opacity-60">({data.length})</span>
         </h1>
-        <a href="/admin/rationing" className="text-sm text-accent">← {t('title')}</a>
+        <div className="flex items-center gap-3">
+          <a href="/admin/rationing/duplicates/reviewed" className="text-sm text-accent">{t('reviewedDuplicates')} →</a>
+          <a href="/admin/rationing" className="text-sm text-accent">← {t('title')}</a>
+        </div>
       </div>
       <p className="text-sm opacity-70">{t('duplicatesHint')}</p>
       <DuplicatesClient groups={data} totalDupRows={totalDupRows} capped={groups.length >= MAX_GROUPS} />

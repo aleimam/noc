@@ -294,6 +294,41 @@ export async function deleteSheet(id: string): Promise<{ ok: true } | { ok: fals
   }
 }
 
+/** Mark a duplicate group (by dedupeKey) as reviewed & confirmed NOT a duplicate. */
+export async function markDupReviewed(dedupeKey: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requirePermission('sheets', 'UPDATE');
+  const session = await auth();
+  try {
+    await prisma.dedupeReview.upsert({
+      where: { dedupeKey },
+      update: {},
+      create: { dedupeKey, reviewedById: session?.user?.id ?? null },
+    });
+    revalidatePath('/admin/rationing/duplicates');
+    revalidatePath('/admin/rationing/duplicates/reviewed');
+    revalidatePath('/admin/rationing');
+    return { ok: true };
+  } catch (e) {
+    console.error('markDupReviewed failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
+/** Move a reviewed group back to the active duplicates list. */
+export async function unmarkDupReviewed(dedupeKey: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requirePermission('sheets', 'UPDATE');
+  try {
+    await prisma.dedupeReview.deleteMany({ where: { dedupeKey } });
+    revalidatePath('/admin/rationing/duplicates');
+    revalidatePath('/admin/rationing/duplicates/reviewed');
+    revalidatePath('/admin/rationing');
+    return { ok: true };
+  } catch (e) {
+    console.error('unmarkDupReviewed failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
 export async function setInquiryStatus(id: string, status: 'OPEN' | 'MATCHED' | 'CLOSED'): Promise<{ ok: true } | { ok: false; error: string }> {
   await requirePermission('sheets', 'UPDATE');
   try {

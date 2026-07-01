@@ -804,6 +804,18 @@ model SheetImportBatch {
   @@index([createdAt])
 }
 
+/// A duplicate group (identified by dedupeKey) that staff reviewed and confirmed is NOT a
+/// real duplicate. Hides that group from the duplicates cleanup screen and lists it under
+/// "Reviewed duplicates" (reversible). reviewedById is an audit stamp (no FK).
+model DedupeReview {
+  id           String   @id @default(cuid())
+  dedupeKey    String   @unique
+  reviewedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 /// A customer's request to follow a found land OR be notified when their land appears.
 model InquiryRequest {
   id               String        @id @default(cuid())

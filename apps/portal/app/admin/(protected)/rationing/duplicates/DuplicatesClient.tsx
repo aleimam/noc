@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
-import { deleteSheet } from '../actions';
+import { deleteSheet, markDupReviewed } from '../actions';
 
 type Row = {
   id: string;
@@ -25,6 +25,20 @@ export function DuplicatesClient({ groups, totalDupRows, capped }: { groups: Gro
   const router = useRouter();
   const [pending, start] = useTransition();
   const [gone, setGone] = useState<Set<string>>(new Set());
+  const [reviewedKeys, setReviewedKeys] = useState<Set<string>>(new Set());
+
+  function markReviewed(key: string) {
+    start(async () => {
+      const r = await markDupReviewed(key);
+      if (r.ok) {
+        setReviewedKeys((s) => new Set(s).add(key));
+        toast(t('markedReviewed'));
+        router.refresh();
+      } else {
+        toast(t('err_failed'), 'error');
+      }
+    });
+  }
 
   function del(id: string) {
     if (!confirm(t('confirmDeleteRecord'))) return;
@@ -50,14 +64,20 @@ export function DuplicatesClient({ groups, totalDupRows, capped }: { groups: Gro
       </p>
 
       {groups.map((g) => {
+        if (reviewedKeys.has(g.key)) return null; // just moved to the Reviewed page
         const rows = g.rows.filter((r) => !gone.has(r.id));
         if (rows.length < 2) return null; // resolved once only one (or none) remains
         const head = rows[0]!;
         return (
           <div key={g.key} className="rounded-lg border border-amber-300/60 bg-amber-50/40 p-3">
-            <div className="mb-2 text-sm font-semibold text-primary">
-              {head.applicantName} · {head.plotFullRef || `${head.plotNo}${head.blockNo ? ' / ' + head.blockNo : ''}`}
-              <span className="ms-2 rounded bg-amber-200/70 px-2 py-0.5 text-xs text-amber-900">{t('copiesN', { n: rows.length })}</span>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm font-semibold text-primary">
+                {head.applicantName} · {head.plotFullRef || `${head.plotNo}${head.blockNo ? ' / ' + head.blockNo : ''}`}
+                <span className="ms-2 rounded bg-amber-200/70 px-2 py-0.5 text-xs text-amber-900">{t('copiesN', { n: rows.length })}</span>
+              </div>
+              <button disabled={pending} onClick={() => markReviewed(g.key)} className="rounded-md border border-green/40 px-3 py-1 text-xs font-medium text-green hover:bg-green/10 disabled:opacity-50">
+                ✓ {t('markNotDuplicate')}
+              </button>
             </div>
             <div className="overflow-x-auto rounded border border-graphite/15 bg-paper">
               <table className="w-full text-sm">
