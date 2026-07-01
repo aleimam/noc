@@ -10,8 +10,8 @@ export default async function StampPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-primary">ختم الصور بالشعار والتذييل</h1>
-        <a href="/admin/marketplace" className="text-sm text-accent">← الصواري</a>
+        <h1 className="text-2xl font-bold text-primary">ختم الصور (على مستوى النظام)</h1>
+        <a href="/admin" className="text-sm text-accent">← لوحة التحكم</a>
       </div>
       <WatermarkClient initial={initial} />
     </div>

@@ -1,40 +1,24 @@
-// Per-category photo stamping: a configurable logo watermark (position / opacity / size)
-// plus an optional contact footer bar, baked into the image via sharp. Each photo
-// category (listing photos, maps) has its own format. Admin-editable; defensive — any
-// failure returns the original bytes so uploads never break.
+// System-wide, fully-reversible photo stamping. Every category (module) has its own
+// on/off + format; a global master switch overrides all. Stamps are always derived from
+// the pure original, so turning off / changing format / re-stamping never loses data.
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { prisma } from '@noc/db';
 import { uploadRoot } from './uploads';
+import {
+  STAMP_CATEGORIES,
+  BAKED_CATEGORIES,
+  DEFAULT_CONFIG,
+  DEFAULT_SETTINGS,
+  type StampPosition,
+  type StampConfig,
+  type StampCategory,
+  type StampSettings,
+} from './stampTypes';
 
-export type StampPosition = 'top-left' | 'top-right' | 'center' | 'bottom-left' | 'bottom-right';
-
-export type StampConfig = {
-  logoEnabled: boolean;
-  logoPath: string | null; // optional override stamp; falls back to the category's brand logo
-  position: StampPosition;
-  opacity: number; // 0..1
-  scale: number; // logo width as % of the photo width
-  footerEnabled: boolean;
-  footerLine1: string; // e.g. "01040810000 · WhatsApp"
-  footerLine2: string; // e.g. "alsawarey.com"
-};
-
-export type StampCategory = 'listing' | 'map';
-export const STAMP_CATEGORIES: StampCategory[] = ['listing', 'map'];
-export type StampSettings = Record<StampCategory, StampConfig>;
-
-export const DEFAULT_CONFIG: StampConfig = {
-  logoEnabled: false,
-  logoPath: null,
-  position: 'bottom-right',
-  opacity: 0.55,
-  scale: 18,
-  footerEnabled: false,
-  footerLine1: '',
-  footerLine2: '',
-};
-export const DEFAULT_SETTINGS: StampSettings = { listing: { ...DEFAULT_CONFIG }, map: { ...DEFAULT_CONFIG } };
+// Re-export the client-safe types/constants so existing importers of '@/lib/stamp' keep working.
+export { STAMP_CATEGORIES, BAKED_CATEGORIES, DEFAULT_SETTINGS };
+export type { StampPosition, StampConfig, StampCategory, StampSettings };
 
 const KEY = 'stamp.config';
 
@@ -42,11 +26,11 @@ export async function getStampSettings(): Promise<StampSettings> {
   try {
     const row = await prisma.setting.findUnique({ where: { key: KEY } });
     if (!row?.value) return DEFAULT_SETTINGS;
-    const p = JSON.parse(row.value) as Partial<Record<StampCategory, Partial<StampConfig>>>;
-    return {
-      listing: { ...DEFAULT_CONFIG, ...(p.listing ?? {}) },
-      map: { ...DEFAULT_CONFIG, ...(p.map ?? {}) },
-    };
+    const p = JSON.parse(row.value) as Partial<StampSettings>;
+    const categories = Object.fromEntries(
+      STAMP_CATEGORIES.map((c) => [c, { ...DEFAULT_CONFIG, ...(p.categories?.[c] ?? {}) }]),
+    ) as Record<StampCategory, StampConfig>;
+    return { global: !!p.global, categories };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -54,6 +38,12 @@ export async function getStampSettings(): Promise<StampSettings> {
 
 export async function saveStampSettings(s: StampSettings): Promise<void> {
   await prisma.setting.upsert({ where: { key: KEY }, update: { value: JSON.stringify(s) }, create: { key: KEY, value: JSON.stringify(s) } });
+}
+
+/** Is this category actually stamping right now (master on + category on + something to draw)? */
+export function categoryActive(s: StampSettings, cat: StampCategory): boolean {
+  const c = s.categories[cat];
+  return s.global && !!c?.enabled && (c.logoEnabled || c.footerEnabled);
 }
 
 const GRAVITY: Record<StampPosition, string> = {
@@ -95,7 +85,6 @@ export async function stampImage(buffer: Buffer, cfg: StampConfig, logoPath: str
         .toBuffer();
       composites.push({ input: faded, gravity: GRAVITY[cfg.position] });
     }
-
     if (wantsFooter) {
       const fh = Math.max(46, Math.round(W * 0.08));
       const l1 = esc(cfg.footerLine1 || '');
@@ -111,7 +100,6 @@ export async function stampImage(buffer: Buffer, cfg: StampConfig, logoPath: str
         `</svg>`;
       composites.push({ input: Buffer.from(svg), top: Math.max(0, H - fh), left: 0 });
     }
-
     if (!composites.length) return buffer;
     return await base.composite(composites as never).toBuffer();
   } catch (e) {
@@ -121,16 +109,34 @@ export async function stampImage(buffer: Buffer, cfg: StampConfig, logoPath: str
 }
 
 /** Resolve the logo for a category: explicit override, else the relevant brand logo. */
-export async function logoForCategory(category: StampCategory, cfg: StampConfig): Promise<string | null> {
+export async function logoForCategory(cat: StampCategory, cfg: StampConfig): Promise<string | null> {
   if (cfg.logoPath) return cfg.logoPath;
-  const brandKey = category === 'listing' ? 'brand_alsawarey_logo' : 'brand_newobour_logo';
+  const brandKey = cat === 'listing' || cat === 'map' ? 'brand_alsawarey_logo' : 'brand_newobour_logo';
   const row = await prisma.setting.findUnique({ where: { key: brandKey } });
   return row?.value ?? null;
 }
 
-/** Stamp a buffer using a category's config (resolving its logo). */
-export async function stampForCategory(buffer: Buffer, category: StampCategory): Promise<Buffer> {
-  const cfg = (await getStampSettings())[category];
-  const logo = await logoForCategory(category, cfg);
+/**
+ * Bridge the unified 'rationing-scan' category to the live scan-viewer overlay. The scan
+ * viewer stamps on display (never bakes), so it just needs {enabled, logoPath, position,
+ * opacity, scale}. Returns null when this category isn't actively stamping — the caller
+ * then falls back to the legacy rationing watermark config.
+ */
+export async function rationingScanOverlay(): Promise<{ enabled: boolean; logoPath: string; position: StampPosition; opacity: number; scale: number } | null> {
+  const s = await getStampSettings();
+  if (!categoryActive(s, 'rationing-scan')) return null;
+  const cfg = s.categories['rationing-scan'];
+  if (!cfg.logoEnabled) return null;
+  const logoPath = await logoForCategory('rationing-scan', cfg);
+  if (!logoPath) return null;
+  return { enabled: true, logoPath, position: cfg.position, opacity: cfg.opacity, scale: cfg.scale };
+}
+
+/** Stamp a pure buffer for a category if that category is active; else return it unchanged. */
+export async function stampForCategory(buffer: Buffer, cat: StampCategory): Promise<Buffer> {
+  const s = await getStampSettings();
+  if (!categoryActive(s, cat)) return buffer;
+  const cfg = s.categories[cat];
+  const logo = await logoForCategory(cat, cfg);
   return stampImage(buffer, cfg, logo);
 }

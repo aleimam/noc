@@ -1,15 +1,40 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { uploadRoot } from '../../../../../lib/uploads';
-import { getStampSettings, saveStampSettings, stampImage, logoForCategory, type StampSettings } from '../../../../../lib/stamp';
+import {
+  getStampSettings,
+  saveStampSettings,
+  stampImage,
+  logoForCategory,
+  categoryActive,
+  BAKED_CATEGORIES,
+  type StampSettings,
+  type StampCategory,
+} from '../../../../../lib/stamp';
 import { stampMapCopy } from '../../../../../lib/mapStamp';
 
 type Result = { ok: true } | { ok: false; error: string };
+type CountResult = { ok: true; count: number } | { ok: false; error: string };
+
+function abs(publicPath: string): string {
+  return path.join(uploadRoot(), publicPath.replace(/^\/uploads\//, ''));
+}
+
+/** Persist a buffer under /uploads/<yyyy>/<mm>/<uuid><ext> and return its public path. */
+async function saveBuffer(buf: Buffer, ext: string): Promise<string> {
+  const now = new Date();
+  const rel = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const name = `${randomUUID()}.${ext}`;
+  await mkdir(path.join(uploadRoot(), rel), { recursive: true });
+  await writeFile(path.join(uploadRoot(), rel, name), buf);
+  return `/uploads/${rel}/${name}`;
+}
 
 export async function saveStamp(s: StampSettings): Promise<Result> {
   await requirePermission('marketplace', 'UPDATE');
@@ -23,41 +48,84 @@ export async function saveStamp(s: StampSettings): Promise<Result> {
   }
 }
 
-/** Re-stamp ALSWARY listing photos in place. Note: stamps bake into the file, so run
- *  once after configuring — repeated runs stack the stamp. */
-export async function restampListingPhotos(): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+/**
+ * Re-stamp every photo of a baked category FROM ITS PURE ORIGINAL (never from the current
+ * rendition — so this is idempotent and never stacks). If the category isn't actively
+ * stamping, each photo's current rendition is reset back to its pure original.
+ */
+export async function restampCategory(cat: StampCategory): Promise<CountResult> {
   await requirePermission('marketplace', 'UPDATE');
-  const cfg = (await getStampSettings()).listing;
-  const logo = await logoForCategory('listing', cfg);
-  if ((!cfg.logoEnabled || !logo) && !cfg.footerEnabled) return { ok: false, error: 'disabled' };
+  if (cat === 'map') return restampMaps();
+  if (!BAKED_CATEGORIES.includes(cat)) return { ok: false, error: 'not_bakeable' };
   try {
-    const listingIds = (await prisma.listing.findMany({ where: { showOnBrokerage: true }, select: { id: true } })).map((l) => l.id);
-    if (!listingIds.length) return { ok: true, count: 0 };
-    const photos = await prisma.attachment.findMany({ where: { ownerType: 'Listing', ownerId: { in: listingIds } }, select: { id: true, path: true } });
+    const s = await getStampSettings();
+    const active = categoryActive(s, cat);
+    const cfg = s.categories[cat];
+    const logo = active ? await logoForCategory(cat, cfg) : null;
+    const rows = await prisma.attachment.findMany({
+      where: { stampCategory: cat, originalPath: { not: null } },
+      select: { id: true, originalPath: true },
+    });
     let count = 0;
-    for (const p of photos) {
+    for (const r of rows) {
+      if (!r.originalPath) continue;
       try {
-        const file = path.join(uploadRoot(), p.path.replace(/^\/uploads\//, ''));
-        const buf = await readFile(file);
-        const out = await stampImage(buf, cfg, logo);
-        if (!out.equals(buf)) {
-          await writeFile(file, out);
-          await prisma.attachment.update({ where: { id: p.id }, data: { size: out.length } });
-          count++;
+        const origBuf = await readFile(abs(r.originalPath));
+        if (active) {
+          const out = await stampImage(origBuf, cfg, logo);
+          if (!out.equals(origBuf)) {
+            const ext = r.originalPath.split('.').pop() || 'jpg';
+            const newPath = await saveBuffer(out, ext);
+            await prisma.attachment.update({ where: { id: r.id }, data: { path: newPath, size: out.length } });
+          } else {
+            await prisma.attachment.update({ where: { id: r.id }, data: { path: r.originalPath, size: origBuf.length } });
+          }
+        } else {
+          // Stamping off for this category → show the pure original.
+          await prisma.attachment.update({ where: { id: r.id }, data: { path: r.originalPath, size: origBuf.length } });
         }
+        count++;
       } catch {
         /* skip a bad file */
       }
     }
     return { ok: true, count };
   } catch (e) {
-    console.error('restampListingPhotos failed', e);
+    console.error('restampCategory failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
+/** Revert a category's photos to their pure originals (no stamp), leaving config untouched. */
+export async function revertCategory(cat: StampCategory): Promise<CountResult> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    if (cat === 'map') {
+      const maps = await prisma.areaMap.findMany();
+      for (const m of maps) {
+        await prisma.areaMap.update({ where: { id: m.id }, data: { alswareyPath: m.cleanPath, newobourPath: m.cleanPath } });
+      }
+      return { ok: true, count: maps.length };
+    }
+    const rows = await prisma.attachment.findMany({
+      where: { stampCategory: cat, originalPath: { not: null } },
+      select: { id: true, originalPath: true },
+    });
+    let count = 0;
+    for (const r of rows) {
+      if (!r.originalPath) continue;
+      await prisma.attachment.update({ where: { id: r.id }, data: { path: r.originalPath } });
+      count++;
+    }
+    return { ok: true, count };
+  } catch (e) {
+    console.error('revertCategory failed', e);
     return { ok: false, error: 'failed' };
   }
 }
 
 /** Re-generate every area map's brand copies from the CLEAN originals (safe to re-run). */
-export async function restampMaps(): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+export async function restampMaps(): Promise<CountResult> {
   await requirePermission('marketplace', 'UPDATE');
   try {
     const logos = await prisma.setting.findMany({ where: { key: { in: ['brand_alsawarey_logo', 'brand_newobour_logo'] } } });

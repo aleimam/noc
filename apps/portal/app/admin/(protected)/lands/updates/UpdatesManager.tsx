@@ -81,7 +81,7 @@ export function UpdatesManager({ options, rows, locale }: { options: Option[]; r
               <button type="button" onClick={() => setPhotos(photos.filter((x) => x.id !== p.id))} className="absolute -end-1 -top-1 rounded-full bg-red-600 px-1 text-xs text-white">✕</button>
             </span>
           ))}
-          <div className="w-28"><ImageAttachment value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} /></div>
+          <div className="w-28"><ImageAttachment stampCategory="area-update" value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} /></div>
           <button disabled={pending || !plain(body)} onClick={create} className="rounded bg-primary px-3 py-1.5 text-sm text-soft disabled:opacity-50">+ {t('add')}</button>
         </div>
       </div>

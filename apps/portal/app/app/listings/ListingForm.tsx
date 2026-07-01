@@ -237,7 +237,7 @@ export function ListingForm({
               ))}
             </div>
           )}
-          <div className="w-44"><ImageAttachment value={null} onChange={(att) => att && setAttachs((s) => ({ ...s, [a.id]: [...(s[a.id] ?? []), att] }))} /></div>
+          <div className="w-44"><ImageAttachment stampCategory="listing" value={null} onChange={(att) => att && setAttachs((s) => ({ ...s, [a.id]: [...(s[a.id] ?? []), att] }))} /></div>
         </div>
       );
     }
@@ -340,7 +340,7 @@ export function ListingForm({
             </div>
           ))}
           <div className="w-48">
-            <ImageAttachment uploadUrl="/api/upload?watermark=1" value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} />
+            <ImageAttachment stampCategory="listing" value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} />
           </div>
         </div>
       </div>

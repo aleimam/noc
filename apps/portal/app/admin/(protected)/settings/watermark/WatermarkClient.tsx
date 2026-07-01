@@ -2,18 +2,41 @@
 
 import { useState, useTransition } from 'react';
 import { ImageAttachment, type UploadedAttachment } from '@noc/ui';
-import { saveStamp, restampListingPhotos, restampMaps } from './actions';
-import type { StampCategory, StampConfig, StampPosition, StampSettings } from '../../../../../lib/stamp';
+import { saveStamp, restampCategory, revertCategory } from './actions';
+import { STAMP_CATEGORIES, BAKED_CATEGORIES, type StampCategory, type StampConfig, type StampPosition, type StampSettings } from '../../../../../lib/stampTypes';
 
 const POSITIONS: StampPosition[] = ['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'];
-const CAT_LABEL: Record<StampCategory, string> = { listing: 'صور الأراضي (الصواري)', map: 'الخرائط (الموقع والمخطط)' };
+const POS_LABEL: Record<StampPosition, string> = {
+  'top-left': 'أعلى اليسار',
+  'top-right': 'أعلى اليمين',
+  center: 'الوسط',
+  'bottom-left': 'أسفل اليسار',
+  'bottom-right': 'أسفل اليمين',
+};
+const CAT_LABEL: Record<StampCategory, string> = {
+  listing: 'صور الأراضي (الصواري)',
+  map: 'الخرائط (الموقع والمخطط)',
+  amenity: 'مرافق المنطقة (المرافق العامة)',
+  'area-update': 'تحديثات المناطق (الأخبار)',
+  'rationing-scan': 'كشوف التقنين (عرض مباشر)',
+  other: 'صور أخرى (غير مصنّفة)',
+};
+const CAT_BRAND: Record<StampCategory, string> = {
+  listing: 'الصواري',
+  map: 'الصواري',
+  amenity: 'العبور الجديد',
+  'area-update': 'العبور الجديد',
+  'rationing-scan': 'العبور الجديد',
+  other: 'العبور الجديد',
+};
 
 export function WatermarkClient({ initial }: { initial: StampSettings }) {
   const [s, setS] = useState<StampSettings>(initial);
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState('');
 
-  const patch = (cat: StampCategory, p: Partial<StampConfig>) => setS((prev) => ({ ...prev, [cat]: { ...prev[cat], ...p } }));
+  const patch = (cat: StampCategory, p: Partial<StampConfig>) =>
+    setS((prev) => ({ ...prev, categories: { ...prev.categories, [cat]: { ...prev.categories[cat], ...p } } }));
 
   function save() {
     setMsg('');
@@ -22,40 +45,63 @@ export function WatermarkClient({ initial }: { initial: StampSettings }) {
       setMsg(r.ok ? 'تم الحفظ ✓' : 'فشل الحفظ');
     });
   }
-  function restamp(kind: 'listing' | 'map') {
-    if (!confirm('سيتم إعادة ختم الصور الحالية بالإعدادات الجديدة. متابعة؟')) return;
+  function restamp(cat: StampCategory) {
+    if (!confirm('سيتم إعادة توليد صور هذه الفئة من النسخ الأصلية النقية بالإعدادات المحفوظة حالياً. متابعة؟')) return;
     setMsg('');
     start(async () => {
-      const r = kind === 'listing' ? await restampListingPhotos() : await restampMaps();
-      setMsg(r.ok ? `تم ختم ${r.count} عنصر ✓` : r.error === 'disabled' ? 'فعّل الختم واحفظ أولاً' : 'فشلت العملية');
+      const r = await restampCategory(cat);
+      setMsg(r.ok ? `تمت معالجة ${r.count} صورة ✓` : r.error === 'not_bakeable' ? 'هذه الفئة تُختم عند العرض مباشرة' : 'فشلت العملية');
+    });
+  }
+  function revert(cat: StampCategory) {
+    if (!confirm('سيتم إرجاع صور هذه الفئة إلى نسخها الأصلية بدون ختم. متابعة؟')) return;
+    setMsg('');
+    start(async () => {
+      const r = await revertCategory(cat);
+      setMsg(r.ok ? `تمت إعادة ${r.count} صورة للأصل ✓` : 'فشلت العملية');
     });
   }
 
   return (
     <div className="max-w-3xl space-y-5">
       <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-        لكل فئة صور تنسيق ختم مستقل: شعار (الموضع والشفافية والحجم) وتذييل ببيانات التواصل. الصور الجديدة تُختم تلقائياً؛ ولختم الصور القديمة استخدم زر «ختم الصور الحالية». ملاحظة: ختم صور الأراضي يُطبَّق على الملف مباشرة (لا تُعِد الضغط أكثر من مرة)؛ الخرائط تُعاد من النسخة النظيفة بأمان.
+        كل صورة تُحفظ نسخة أصلية نقية لا تُمَس؛ والختم يُشتق منها دائماً — لذا يمكنك التبديل أو تغيير التنسيق أو إعادة الختم أو الإرجاع للأصل دون أي فقدان للبيانات. المفتاح الرئيسي بالأسفل يتحكم في كل الفئات، ولكل فئة تحكّم مستقل في تشغيل الختم وتنسيقه.
       </div>
 
-      {(['listing', 'map'] as StampCategory[]).map((cat) => {
-        const c = s[cat];
-        return (
-          <section key={cat} className="space-y-3 rounded-lg border border-graphite/15 p-4">
-            <h2 className="font-semibold text-primary">{CAT_LABEL[cat]}</h2>
+      {/* Global master switch */}
+      <section className="space-y-2 rounded-lg border-2 border-primary/30 bg-primary/5 p-4">
+        <label className="flex items-center gap-3 text-base font-bold text-primary">
+          <input type="checkbox" className="h-5 w-5" checked={s.global} onChange={(e) => setS((prev) => ({ ...prev, global: e.target.checked }))} />
+          تشغيل الختم على مستوى النظام (المفتاح الرئيسي)
+        </label>
+        <p className="text-xs opacity-60">عند إيقافه لا تُختم أي صورة في أي قسم، مهما كانت إعدادات الفئات. عند تشغيله تعمل كل فئة مُفعَّلة حسب تنسيقها.</p>
+      </section>
 
-            <label className="flex items-center gap-2 text-sm font-medium">
+      {STAMP_CATEGORIES.map((cat) => {
+        const c = s.categories[cat];
+        const bakeable = BAKED_CATEGORIES.includes(cat) || cat === 'map';
+        return (
+          <section key={cat} className={`space-y-3 rounded-lg border border-graphite/15 p-4 ${!s.global ? 'opacity-60' : ''}`}>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-semibold text-primary">{CAT_LABEL[cat]}</h2>
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input type="checkbox" checked={c.enabled} onChange={(e) => patch(cat, { enabled: e.target.checked })} /> تفعيل الختم لهذه الفئة
+              </label>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={c.logoEnabled} onChange={(e) => patch(cat, { logoEnabled: e.target.checked })} /> ختم الشعار (علامة مائية)
             </label>
 
             <div>
-              <div className="mb-1 text-sm opacity-70">شعار مخصّص (اختياري — الافتراضي شعار {cat === 'listing' ? 'الصواري' : 'العبور الجديد'})</div>
+              <div className="mb-1 text-sm opacity-70">شعار مخصّص (اختياري — الافتراضي شعار {CAT_BRAND[cat]})</div>
               <ImageAttachment value={c.logoPath ? { id: '', path: c.logoPath, originalName: '' } : null} onChange={(a: UploadedAttachment | null) => patch(cat, { logoPath: a?.path ?? null })} />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
               <label className="text-sm">الموضع
                 <select value={c.position} onChange={(e) => patch(cat, { position: e.target.value as StampPosition })} className="mt-1 w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm">
-                  {POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+                  {POSITIONS.map((p) => <option key={p} value={p}>{POS_LABEL[p]}</option>)}
                 </select>
               </label>
               <label className="text-sm">الشفافية: {Math.round(c.opacity * 100)}%
@@ -66,7 +112,7 @@ export function WatermarkClient({ initial }: { initial: StampSettings }) {
               </label>
             </div>
 
-            <label className="flex items-center gap-2 text-sm font-medium">
+            <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={c.footerEnabled} onChange={(e) => patch(cat, { footerEnabled: e.target.checked })} /> شريط تذييل ببيانات التواصل
             </label>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -75,13 +121,20 @@ export function WatermarkClient({ initial }: { initial: StampSettings }) {
             </div>
             <p className="text-xs opacity-50">يُفضَّل أرقام وروابط لاتينية في التذييل لضمان وضوحها.</p>
 
-            <button disabled={pending} onClick={() => restamp(cat)} className="rounded-md border border-graphite/25 px-4 py-1.5 text-sm disabled:opacity-50">ختم الصور الحالية لهذه الفئة</button>
+            {cat === 'rationing-scan' ? (
+              <p className="text-xs text-primary/70">تُختم كشوف التقنين عند العرض مباشرةً حسب هذه الإعدادات — لا حاجة لإعادة ختم الصور المخزّنة.</p>
+            ) : bakeable ? (
+              <div className="flex flex-wrap gap-2">
+                <button disabled={pending} onClick={() => restamp(cat)} className="rounded-md border border-graphite/25 px-4 py-1.5 text-sm disabled:opacity-50">إعادة ختم الصور الحالية</button>
+                <button disabled={pending} onClick={() => revert(cat)} className="rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 disabled:opacity-50">إرجاع للأصل (بدون ختم)</button>
+              </div>
+            ) : null}
           </section>
         );
       })}
 
       <div className="sticky bottom-0 flex items-center gap-3 border-t border-graphite/15 bg-soft py-3">
-        <button disabled={pending} onClick={save} className="rounded-md bg-primary px-6 py-2 text-sm text-soft disabled:opacity-50">{pending ? 'جارٍ الحفظ…' : 'حفظ'}</button>
+        <button disabled={pending} onClick={save} className="rounded-md bg-primary px-6 py-2 text-sm text-soft disabled:opacity-50">{pending ? 'جارٍ الحفظ…' : 'حفظ الإعدادات'}</button>
         {msg && <span className="text-sm text-green">{msg}</span>}
       </div>
     </div>

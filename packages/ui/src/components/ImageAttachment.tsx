@@ -24,10 +24,12 @@ export function ImageAttachment({
   value,
   onChange,
   uploadUrl = '/api/upload',
+  stampCategory,
 }: {
   value?: UploadedAttachment | null;
   onChange?: (a: UploadedAttachment | null) => void;
   uploadUrl?: string;
+  stampCategory?: string; // tags the upload's stamping category/module (e.g. 'listing', 'none')
 }) {
   const t = useTranslations('attachment');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -49,7 +51,8 @@ export function ImageAttachment({
       }
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch(uploadUrl, { method: 'POST', body: fd });
+      const url = stampCategory ? `${uploadUrl}${uploadUrl.includes('?') ? '&' : '?'}stamp=${encodeURIComponent(stampCategory)}` : uploadUrl;
+      const res = await fetch(url, { method: 'POST', body: fd });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
         return setError(json?.error === 'too_large' ? t('tooLarge') : t('invalidType'));

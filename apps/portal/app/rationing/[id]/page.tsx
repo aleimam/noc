@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { SiteShell } from '../../_components/SiteShell';
 import { getRationingConfig } from '../../../lib/rationing/settings';
+import { rationingScanOverlay } from '../../../lib/stamp';
 import { SourceSheetViewer } from './SourceSheetViewer';
 import { ShareButton } from './ShareButton';
 import { SaveResultButton } from './SaveResultButton';
@@ -21,6 +22,8 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
   const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('rationing');
   const config = await getRationingConfig();
+  // The system-wide 'rationing-scan' stamp category takes over when active; else legacy config.
+  const scanWatermark = (await rationingScanOverlay()) ?? config.watermark;
 
   const sheet = await prisma.rationingSheet.findUnique({
     where: { id },
@@ -88,7 +91,7 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
 
             <div className="mt-5 flex flex-wrap gap-2.5">
               {scan ? (
-                <SourceSheetViewer src={scan.path} fileName={scan.fileName} watermark={config.watermark} />
+                <SourceSheetViewer src={scan.path} fileName={scan.fileName} watermark={scanWatermark} />
               ) : config.showSourceSheets && sheet.sourceFile ? (
                 <span className="inline-flex items-center gap-2 rounded-xl border border-ink-200 px-4 py-2.5 text-ink-400">
                   🖼 {t('viewSourceSoon')}

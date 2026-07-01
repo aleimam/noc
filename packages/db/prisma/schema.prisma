@@ -197,7 +197,9 @@ model Attachment {
   id           String   @id @default(cuid())
   filename     String // stored uuid filename
   originalName String
-  path         String // public URL, e.g. /uploads/2026/06/uuid.webp
+  path         String // public URL of the CURRENT rendition (pure, or stamped derivative)
+  originalPath String? @db.Text // pure, unstamped original — written once, never modified
+  stampCategory String? // stamping category/module this photo belongs to (null = uncategorized)
   mime         String
   size         Int // bytes (<= 32MB enforced in app)
   width        Int?

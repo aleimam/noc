@@ -5,7 +5,7 @@ import path from 'node:path';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { uploadRoot } from '@/lib/uploads';
-import { stampForCategory } from '@/lib/stamp';
+import { stampForCategory, BAKED_CATEGORIES, type StampCategory } from '@/lib/stamp';
 
 const MAX_BYTES = 32 * 1024 * 1024;
 
@@ -76,26 +76,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'invalid_type' }, { status: 415 });
   }
 
-  // Optional baked stamp (listing/land photos pass ?watermark=1). No-op while disabled.
-  let outBuf: Buffer = buf;
-  if (!isDoc && req.nextUrl.searchParams.get('watermark') === '1') {
-    outBuf = Buffer.from(await stampForCategory(buf, 'listing'));
-  }
-
   const now = new Date();
   const sub = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const filename = `${randomUUID()}.${ext}`;
   const dir = path.join(uploadRoot(), sub);
   await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, filename), outBuf);
+
+  // Always store the PURE original untouched (immutable — enables reversible stamping).
+  const pureName = `${randomUUID()}.${ext}`;
+  await writeFile(path.join(dir, pureName), buf);
+  const purePath = `/uploads/${sub}/${pureName}`;
+
+  // Category (module) this upload belongs to; baked categories get a stamped rendition.
+  const category = !isDoc ? req.nextUrl.searchParams.get('stamp') : null;
+  let displayPath = purePath;
+  let displaySize = buf.length;
+  if (category && (BAKED_CATEGORIES as string[]).includes(category)) {
+    const stamped = Buffer.from(await stampForCategory(buf, category as StampCategory));
+    if (!stamped.equals(buf)) {
+      const stName = `${randomUUID()}.${ext}`;
+      await writeFile(path.join(dir, stName), stamped);
+      displayPath = `/uploads/${sub}/${stName}`;
+      displaySize = stamped.length;
+    }
+  }
 
   const attachment = await prisma.attachment.create({
     data: {
-      filename,
-      originalName: file.name || filename,
-      path: `/uploads/${sub}/${filename}`,
+      filename: pureName,
+      originalName: file.name || pureName,
+      path: displayPath,
+      originalPath: purePath,
+      stampCategory: category,
       mime,
-      size: outBuf.length,
+      size: displaySize,
       uploaderId: session.user.id,
     },
   });
