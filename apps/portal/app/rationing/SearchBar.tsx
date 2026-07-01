@@ -45,8 +45,7 @@ export function SearchBar({
         <select
           value={field}
           onChange={(e) => setField(e.target.value as Field)}
-          className="rounded-xl border border-ink-200 bg-soft px-4 text-lg text-navy-800 sm:w-48"
-          style={{ height: 64 }}
+          className="h-12 rounded-xl border border-ink-200 bg-soft px-4 text-base text-navy-800 sm:h-16 sm:w-48 sm:text-lg"
           aria-label={t('searchField')}
         >
           <option value="all">{t('fieldAll')}</option>
@@ -56,22 +55,21 @@ export function SearchBar({
           <option value="block">{t('colBlock')}</option>
         </select>
 
-        <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-ink-200 px-4" style={{ height: 64 }}>
-          <span className="text-2xl text-ink-400" aria-hidden>⌕</span>
+        <div className="flex h-[78px] flex-1 items-center gap-2.5 rounded-2xl border-2 border-gold/70 bg-white px-4 shadow-sm sm:h-16">
+          <span className="text-3xl text-gold sm:text-2xl" aria-hidden>⌕</span>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && submit()}
             placeholder={t('searchPlaceholder')}
-            className="flex-1 bg-transparent text-2xl text-navy-800 outline-none"
+            className="flex-1 bg-transparent text-3xl text-navy-800 outline-none placeholder:text-ink-400 sm:text-2xl"
             aria-label={t('search')}
           />
         </div>
 
         <button
           onClick={submit}
-          className="rounded-xl bg-gold px-8 text-xl font-bold text-navy-900 transition hover:brightness-105"
-          style={{ height: 64 }}
+          className="h-16 rounded-xl bg-gold px-8 text-2xl font-bold text-navy-900 transition hover:brightness-105 sm:text-xl"
         >
           {t('search')}
         </button>
