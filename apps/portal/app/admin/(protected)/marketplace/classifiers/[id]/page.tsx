@@ -3,7 +3,8 @@ import { getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { ClassifierOptionsEditor } from './ClassifierOptionsEditor';
-import { upsertClassifierOption, deleteClassifierOption } from '../../actions';
+import { OrderableList } from '../../OrderableList';
+import { upsertClassifierOption, deleteClassifierOption, reorderClassifierOptions } from '../../actions';
 
 // Hard nesting: a Purpose option's parent is a Type option; a Condition option's parent is a Purpose option.
 const PARENT_KEY: Record<string, string | undefined> = { purpose: 'type', condition: 'purpose' };
@@ -49,6 +50,7 @@ export default async function ClassifierOptionsPage({ params }: { params: Promis
         upsert={upsertClassifierOption.bind(null, classifier.id)}
         remove={deleteClassifierOption}
       />
+      <OrderableList items={classifier.options.map((o) => ({ id: o.id, label: `${o.nameAr} / ${o.nameEn}` }))} action={reorderClassifierOptions} />
     </div>
   );
 }

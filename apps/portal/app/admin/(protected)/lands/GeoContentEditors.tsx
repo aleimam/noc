@@ -115,7 +115,8 @@ export function AreaMapEditor({ level, targetId, kind, map }: { level: Level; ta
           })
         }
       />
-      {map && (
+      {/* Annotation is offered on the location map only (not the masterplan). */}
+      {map && kind === 'location' && (
         <button type="button" onClick={() => setAnnotating(true)} className="rounded-lg border border-graphite/25 px-3 py-1.5 text-sm hover:bg-graphite/10">
           ✎ {t('annotateMap')}
         </button>

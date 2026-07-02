@@ -78,6 +78,28 @@ export async function saveStandardAreas(list: number[]): Promise<Result> {
   }
 }
 
+// Persist a new display order (order = position in the given id list).
+async function reorderRows(ids: string[], update: (id: string, order: number) => Promise<unknown>): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    await prisma.$transaction(ids.map((id, i) => update(id, i) as Prisma.PrismaPromise<unknown>));
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function reorderClassifierOptions(ids: string[]): Promise<Result> {
+  return reorderRows(ids, (id, order) => prisma.classifierOption.update({ where: { id }, data: { order } }));
+}
+export async function reorderAttributes(ids: string[]): Promise<Result> {
+  return reorderRows(ids, (id, order) => prisma.attribute.update({ where: { id }, data: { order } }));
+}
+export async function reorderSections(ids: string[]): Promise<Result> {
+  return reorderRows(ids, (id, order) => prisma.attributeSection.update({ where: { id }, data: { order } }));
+}
+
 export async function deleteClassifierOption(id: string): Promise<Result> {
   await requirePermission('marketplace', 'DELETE');
   try {

@@ -392,7 +392,9 @@
     "allowMultiple": "يسمح بأكثر من ملف",
     "standardAreas": "المساحات القياسية",
     "standardAreasHint": "قائمة المساحات (م²) لتقريب المساحة المخصصة — افصل بينها بفاصلة",
-    "saveStandardAreas": "حفظ المساحات"
+    "saveStandardAreas": "حفظ المساحات",
+    "reorder": "ترتيب العرض",
+    "saveOrder": "حفظ الترتيب"
   },
   "rationing": {
     "title": "كشوف التقنين",

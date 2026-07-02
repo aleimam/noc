@@ -3,6 +3,8 @@ import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { getStandardAreas } from '../../../../../lib/marketplace';
 import { StandardAreasEditor } from './StandardAreasEditor';
+import { OrderableList } from '../OrderableList';
+import { reorderAttributes } from '../actions';
 
 export default async function AttributesPage() {
   await requirePermission('marketplace', 'VIEW');
@@ -61,6 +63,7 @@ export default async function AttributesPage() {
               </tbody>
             </table>
           </div>
+          <OrderableList items={s.attributes.map((a) => ({ id: a.id, label: `${a.labelAr} / ${a.labelEn}` }))} action={reorderAttributes} />
         </div>
       ))}
     </div>

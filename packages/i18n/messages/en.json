@@ -392,7 +392,9 @@
     "allowMultiple": "Allow multiple files",
     "standardAreas": "Standard areas",
     "standardAreasHint": "List of areas (m²) used to round Allocated Area — comma-separated",
-    "saveStandardAreas": "Save areas"
+    "saveStandardAreas": "Save areas",
+    "reorder": "Display order",
+    "saveOrder": "Save order"
   },
   "rationing": {
     "title": "Rationing Sheets",

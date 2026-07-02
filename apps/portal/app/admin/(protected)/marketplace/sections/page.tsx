@@ -2,7 +2,8 @@ import { getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { CatalogTable } from '../CatalogTable';
-import { upsertSection, deleteSection } from '../actions';
+import { OrderableList } from '../OrderableList';
+import { upsertSection, deleteSection, reorderSections } from '../actions';
 
 export default async function SectionsPage() {
   await requirePermission('marketplace', 'VIEW');
@@ -27,6 +28,7 @@ export default async function SectionsPage() {
         <a href="/admin/marketplace" className="text-sm text-accent">← {t('title')}</a>
       </div>
       <CatalogTable initial={data} upsert={upsertSection} remove={deleteSection} />
+      <OrderableList items={rows.map((x) => ({ id: x.id, label: `${x.nameAr} / ${x.nameEn}` }))} action={reorderSections} />
     </div>
   );
 }
