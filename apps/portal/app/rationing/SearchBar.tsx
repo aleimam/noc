@@ -56,16 +56,17 @@ export function SearchBar({
         </select>
 
         {/* Mobile: tall, dominant box. `flex-1` is desktop-only — on a mobile flex-col it
-            has basis:0 and collapses the height, which is why earlier height bumps never
-            showed. `min-h` can't be collapsed by flex. */}
-        <div className="flex min-h-[150px] items-center gap-2.5 rounded-2xl border-2 border-gold/70 bg-white px-4 shadow-sm sm:h-16 sm:min-h-0 sm:flex-1">
+            has basis:0 and collapses the height, so we use `min-h` (flex can't collapse it).
+            A textarea lets the longer placeholder wrap to two lines; Enter still submits. */}
+        <div className="flex min-h-[120px] items-center gap-2.5 rounded-2xl border-2 border-gold/70 bg-white px-4 shadow-sm sm:h-16 sm:min-h-0 sm:flex-1">
           <span className="text-3xl text-gold sm:text-2xl" aria-hidden>⌕</span>
-          <input
+          <textarea
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && submit()}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }}
             placeholder={t('searchPlaceholder')}
-            className="flex-1 bg-transparent text-3xl text-navy-800 outline-none placeholder:text-ink-400 sm:text-2xl"
+            rows={2}
+            className="flex-1 resize-none bg-transparent text-2xl leading-snug text-navy-800 outline-none placeholder:text-ink-400"
             aria-label={t('search')}
           />
         </div>

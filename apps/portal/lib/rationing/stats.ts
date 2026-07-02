@@ -20,20 +20,22 @@ function fmtMonth(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-export type RationingTotals = { owners: number; plots: number; cities: number; latestListDate: string | null };
+export type RationingTotals = { owners: number; plots: number; cities: number; scans: number; latestListDate: string | null };
 
 /** Lightweight totals for the pre-search summary card. */
 export async function getRationingTotals(): Promise<RationingTotals> {
-  const [owners, plotGroups, cities, latest] = await Promise.all([
+  const [owners, plotGroups, cities, scans, latest] = await Promise.all([
     prisma.rationingSheet.count(),
     prisma.rationingSheet.groupBy({ by: ['plotFullRef'], where: { plotFullRef: { not: null } }, _count: { _all: true } }),
     prisma.rationingCity.count(),
+    prisma.rationingScan.count(),
     prisma.rationingSheet.aggregate({ _max: { listDate: true } }),
   ]);
   return {
     owners,
     plots: plotGroups.length,
     cities,
+    scans,
     latestListDate: latest._max.listDate ? latest._max.listDate.toISOString().slice(0, 10) : null,
   };
 }

@@ -179,11 +179,11 @@ export default async function RationingSearch({
   );
 }
 
-function TotalsCard({ t, totals }: { t: (k: string) => string; totals: { owners: number; plots: number; cities: number; latestListDate: string | null } }) {
+function TotalsCard({ t, totals }: { t: (k: string) => string; totals: { owners: number; plots: number; scans: number; latestListDate: string | null } }) {
   const items = [
     { value: totals.owners, label: t('statApplicants') },
     { value: totals.plots, label: t('statPlots') },
-    { value: totals.cities, label: t('statCities') },
+    { value: totals.scans, label: t('statSheets') },
   ];
   return (
     <div className="rounded-3xl bg-navy-800 p-6 text-white">

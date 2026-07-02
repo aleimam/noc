@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { PublicShell, ListingCard } from '@noc/ui';
 import { currency } from '@noc/i18n';
+import { getModuleVisibility } from '../lib/modules';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,14 +27,17 @@ export default async function Home() {
   const cover = new Map<string, string>();
   for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
 
-  const services = [
-    { href: '/rationing', title: tr('title'), desc: L('ابحث عن اسمك في كشوف التقنين', 'Find your name in the legalization ledgers'), icon: 'M3 5h13M3 12h13M3 19h7M21 8l-4 4 4 4' },
-    { href: '/market', title: t('title'), desc: L('تصفّح الأراضي والوحدات المعروضة', 'Browse land plots and units for sale'), icon: 'M3 21h18M5 21V7l8-4v18M19 21V11l-6-3' },
-    { href: '/explore', title: tl('title'), desc: L('الأحياء والمجاورات ومميزاتها', 'Districts, neighborhoods and their features'), icon: 'M12 21s-7-5.2-7-11a7 7 0 0114 0c0 5.8-7 11-7 11z' },
-    { href: '/news', title: tn('news'), desc: L('أخبار المرافق والطرق والتسليمات', 'Utilities, roads and handover news'), icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h5' },
-    { href: '/guide', title: tn('guide'), desc: L('خطوات الترخيص والبناء والاستلام', 'Licensing, building and handover steps'), icon: 'M6 2h9l5 5v15H6zM14 2v5h5' },
-    { href: '/price-index', title: tn('priceIndex'), desc: L('متوسط أسعار المتر حسب الحي', 'Average price per m² by district'), icon: 'M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-9' },
-  ];
+  const vis = await getModuleVisibility();
+  const allServices = [
+    { key: 'rationing', href: '/rationing', title: tr('title'), desc: L('ابحث عن اسمك في كشوف التقنين', 'Find your name in the legalization ledgers'), icon: 'M3 5h13M3 12h13M3 19h7M21 8l-4 4 4 4' },
+    { key: 'market', href: '/market', title: t('title'), desc: L('تصفّح الأراضي والوحدات المعروضة', 'Browse land plots and units for sale'), icon: 'M3 21h18M5 21V7l8-4v18M19 21V11l-6-3' },
+    { key: 'explore', href: '/explore', title: tl('title'), desc: L('الأحياء والمجاورات ومميزاتها', 'Districts, neighborhoods and their features'), icon: 'M12 21s-7-5.2-7-11a7 7 0 0114 0c0 5.8-7 11-7 11z' },
+    { key: 'news', href: '/news', title: tn('news'), desc: L('أخبار المرافق والطرق والتسليمات', 'Utilities, roads and handover news'), icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h5' },
+    { key: 'guide', href: '/guide', title: tn('guide'), desc: L('خطوات الترخيص والبناء والاستلام', 'Licensing, building and handover steps'), icon: 'M6 2h9l5 5v15H6zM14 2v5h5' },
+    { key: 'priceIndex', href: '/price-index', title: tn('priceIndex'), desc: L('متوسط أسعار المتر حسب الحي', 'Average price per m² by district'), icon: 'M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-9' },
+  ] as const;
+  // Hide services whose module is turned off in the backend.
+  const services = allServices.filter((s) => vis[s.key] !== false);
 
   return (
     <PublicShell active="home">
@@ -47,13 +51,21 @@ export default async function Home() {
           <p className="mx-auto mt-4 max-w-xl text-lg text-soft/80">
             {L('بوابتك الرسمية لخدمات وعقارات مدينة العبور الجديدة', 'Your official portal for New Obour City services & real estate')}
           </p>
-          <a href="/rationing" className="group mx-auto mt-9 flex max-w-xl items-center justify-between gap-3 rounded-xl bg-white p-2 shadow-xl">
-            <span className="flex items-center gap-3 ps-3 text-ink-500">
+          {/* Real search: submitting navigates to /rationing?q=… and shows results there.
+              `required` means it won't leave the homepage until the user types a query. */}
+          <form action="/rationing" method="get" className="mx-auto mt-9 flex max-w-xl items-center gap-2 rounded-xl bg-white p-2 shadow-xl">
+            <span className="ps-2 text-ink-400" aria-hidden>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
-              <span className="text-sm sm:text-base">{L('ابحث باسمك في كشوف التقنين…', 'Search the ledgers by your name…')}</span>
             </span>
-            <span className="flex-none rounded-md bg-navy px-5 py-3 text-sm font-bold text-soft transition group-hover:brightness-110">{L('بحث', 'Search')}</span>
-          </a>
+            <input
+              name="q"
+              required
+              placeholder={L('ابحث عن اسمك في كشوف التقنين', 'Search the ledgers by your name…')}
+              aria-label={L('ابحث عن اسمك في كشوف التقنين', 'Search the ledgers by your name')}
+              className="min-w-0 flex-1 bg-transparent px-1 text-navy-800 outline-none placeholder:text-ink-400"
+            />
+            <button type="submit" className="flex-none rounded-md bg-navy px-5 py-3 text-sm font-bold text-soft transition hover:brightness-110">{L('بحث', 'Search')}</button>
+          </form>
         </div>
       </section>
 
