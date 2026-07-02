@@ -27,8 +27,8 @@ export default async function SellPage() {
   const [content, cityRows, districtRows, hoodRows] = await Promise.all([
     getSellContent(),
     prisma.rationingCity.findMany({ where: { isActive: true }, orderBy: [{ order: 'asc' }, { name: 'asc' }], select: { id: true, name: true } }),
-    prisma.district.findMany({ where: { isActive: true }, orderBy: { nameAr: 'asc' }, select: { id: true, nameAr: true } }),
-    prisma.neighborhood.findMany({ where: { isActive: true }, orderBy: { nameAr: 'asc' }, select: { id: true, nameAr: true, districtId: true } }),
+    prisma.district.findMany({ where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true } }),
+    prisma.neighborhood.findMany({ where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, districtId: true } }),
   ]);
 
   // Offers are limited to New Obour City for now — restrict the city list to it (fallback: all).

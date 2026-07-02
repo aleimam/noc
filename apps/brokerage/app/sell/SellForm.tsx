@@ -9,6 +9,7 @@ type Hood = { id: string; name: string; districtId: string };
 type Att = { id: string; path: string; name: string; isDoc: boolean };
 
 const inp = 'w-full rounded-xl border border-ink-200 bg-white px-3.5 py-2.5 text-base';
+const inpHi = 'w-full rounded-xl border-2 border-gold bg-gold-50 px-3.5 py-3 text-lg font-bold text-navy-900 shadow-sm outline-none';
 const lbl = 'block text-sm font-medium text-navy-700';
 
 export function SellForm({
@@ -110,7 +111,7 @@ export function SellForm({
       {mode === 'SHEET' ? (
         // City + Actual area — one row
         <div className="grid gap-3.5 sm:grid-cols-2">
-          <label className={lbl}>المدينة
+          <label className={lbl}>المنطقة
             <select value={f.cityId ?? ''} onChange={set('cityId')} className={inp} disabled={cities.length <= 1}>
               {cities.length !== 1 && <option value="">اختر…</option>}
               {cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -142,7 +143,7 @@ export function SellForm({
           </div>
           {/* Block (optional) + Plot — one row */}
           <div className="grid gap-3.5 sm:grid-cols-2">
-            <label className={lbl}>رقم البلوك (اختياري)<input value={f.blockNo ?? ''} onChange={set('blockNo')} className={inp} /></label>
+            <label className={lbl}>رقم البلوك<input value={f.blockNo ?? ''} onChange={set('blockNo')} className={inp} /></label>
             <label className={lbl}>رقم القطعة<input value={f.plotNo ?? ''} onChange={set('plotNo')} className={inp} /></label>
           </div>
         </>
@@ -150,7 +151,7 @@ export function SellForm({
 
       {/* Price — single row + fair-price note */}
       <div>
-        <label className={lbl}>السعر المطلوب (ج.م)<input value={f.requiredPrice ?? ''} onChange={set('requiredPrice')} dir="ltr" className={inp} /></label>
+        <label className="block text-base font-bold text-navy-800">السعر المطلوب (ج.م)<input value={f.requiredPrice ?? ''} onChange={set('requiredPrice')} dir="ltr" className={`mt-1 ${inpHi}`} placeholder="0" /></label>
         <p className="mt-1.5 text-xs text-ink-500">
           سنبيع بالسعر الذي تحدده، لكن السعر العادل يساعد على بيع أرضك بشكل أسرع.{' '}
           {policyHref
@@ -172,9 +173,11 @@ export function SellForm({
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
-          className={`mt-1 flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed p-5 text-center text-sm ${dragOver ? 'border-gold bg-gold-50' : 'border-ink-200 text-ink-500'}`}
+          className={`mt-1 flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-8 text-center text-base font-medium transition-colors ${dragOver ? 'border-gold bg-gold-100 text-gold-800' : 'border-navy-300 bg-navy-50 text-navy-700 hover:bg-navy-100'}`}
         >
-          {uploading ? 'جارٍ الرفع…' : 'اضغط لاختيار الملفات أو اسحبها هنا أو الصقها (صور و PDF و Word و Excel)'}
+          <span className="text-3xl" aria-hidden>📎</span>
+          {uploading ? 'جارٍ الرفع…' : 'اضغط لاختيار الملفات أو اسحبها هنا أو الصقها'}
+          <span className="text-xs font-normal opacity-70">صور و PDF و Word و Excel</span>
         </div>
         <input ref={fileRef} type="file" accept="image/*,.pdf,.docx,.xlsx" multiple hidden onChange={(e) => { void addFiles(e.target.files); e.target.value = ''; }} />
         {att.length > 0 && (

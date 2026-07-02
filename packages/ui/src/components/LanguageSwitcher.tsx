@@ -24,7 +24,7 @@ export function LanguageSwitcher() {
   }
 
   return (
-    <div className="inline-flex items-center gap-1 rounded-md border border-graphite/20 p-0.5 text-sm">
+    <div className="inline-flex items-center gap-0.5 rounded-lg border border-current/20 p-0.5 text-sm">
       {(['ar', 'en'] as const).map((code) => (
         <button
           key={code}
@@ -33,8 +33,8 @@ export function LanguageSwitcher() {
           aria-pressed={locale === code}
           className={
             locale === code
-              ? 'rounded bg-primary px-2 py-1 text-soft'
-              : 'rounded px-2 py-1 hover:bg-graphite/10'
+              ? 'rounded-md bg-gold px-2.5 py-1 font-bold text-navy-900'
+              : 'rounded-md px-2.5 py-1 opacity-70 hover:opacity-100'
           }
         >
           {LABELS[code]}

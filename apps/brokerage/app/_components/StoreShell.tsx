@@ -88,28 +88,20 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
       <CompareBar labels={{ compare: L('قارن', 'Compare'), clear: L('مسح', 'Clear'), items: L('عناصر للمقارنة', 'to compare') }} />
 
       <footer className="mt-10 bg-navy-900 text-white/80">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2.5 px-4 py-5 text-center text-sm">
-          <p className="font-bold text-white">{Lc(content.footer.brandLine)}</p>
-          {footerPages.length > 0 && (
-            <nav className="flex flex-wrap justify-center gap-x-4 gap-y-1">
-              {footerPages.map((p) => (
-                <Link key={p.slug} href={`/p/${p.slug}`} className="text-white/70 hover:text-gold">{locale === 'en' ? p.titleEn || p.titleAr : p.titleAr}</Link>
-              ))}
-            </nav>
-          )}
-          {socials.length > 0 && (
-            <div className="flex items-center gap-2.5">
-              {socials.map((s) => (
-                <a key={s.platform + s.url} href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.platform}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg hover:bg-gold hover:text-navy-900">
-                  {SOCIAL_ICON[s.platform] ?? '🔗'}
-                </a>
-              ))}
-            </div>
-          )}
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 py-4 text-center text-sm">
+          <span className="font-bold text-white">{Lc(content.footer.brandLine)}</span>
+          {footerPages.map((p) => (
+            <Link key={p.slug} href={`/p/${p.slug}`} className="text-white/70 hover:text-gold">{locale === 'en' ? p.titleEn || p.titleAr : p.titleAr}</Link>
+          ))}
           <a href={`https://wa.me/${whatsapp.replace(/[^\d]/g, '')}`} className="text-gold" dir="ltr">{whatsapp}</a>
-          <p className="text-xs text-white/50">{copyright}</p>
+          {socials.map((s) => (
+            <a key={s.platform + s.url} href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.platform}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-gold hover:text-navy-900">
+              {SOCIAL_ICON[s.platform] ?? '🔗'}
+            </a>
+          ))}
         </div>
+        <div className="border-t border-white/10 py-2 text-center text-xs text-white/50">{copyright}</div>
       </footer>
     </div>
   );

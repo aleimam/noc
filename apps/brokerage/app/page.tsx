@@ -134,14 +134,14 @@ export default async function Home() {
           <p className="mx-auto mt-3 max-w-2xl text-base text-white/85 sm:text-lg">{L(c.hero.subtitle)}</p>
 
           {c.hero.showSearch && (
-            <form action="/listings" method="get" className="mx-auto mt-7 flex max-w-xl items-center gap-1 rounded-full bg-white p-1.5 shadow-lg">
+            <form action="/listings" method="get" className="mx-auto mt-7 flex max-w-2xl items-center gap-2 rounded-full bg-white p-2 shadow-xl">
               <input
                 name="q"
                 placeholder={L(c.hero.searchPlaceholder)}
                 aria-label={locale === 'ar' ? 'ابحث' : 'Search'}
-                className="min-w-0 flex-1 bg-transparent px-4 text-navy-800 outline-none placeholder:text-ink-400"
+                className="min-w-0 flex-1 bg-transparent px-5 py-3 text-lg text-navy-800 outline-none placeholder:text-ink-400 sm:text-xl"
               />
-              <button type="submit" className="flex-none rounded-full bg-gold px-6 py-2.5 font-bold text-navy-900 hover:brightness-105">{locale === 'ar' ? 'بحث' : 'Search'}</button>
+              <button type="submit" className="flex-none rounded-full bg-gold px-8 py-3 text-lg font-bold text-navy-900 hover:brightness-105">{locale === 'ar' ? 'بحث' : 'Search'}</button>
             </form>
           )}
 
