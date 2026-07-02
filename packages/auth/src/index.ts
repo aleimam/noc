@@ -64,3 +64,4 @@ export async function requirePermission(section: string, action: string) {
 export * from './password';
 export * from './rbac';
 export * from './otp';
+export * from './adminToken';

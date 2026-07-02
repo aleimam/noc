@@ -5,7 +5,7 @@ import { CompareToggle } from './CompareToggle';
 
 const fmt = (n: number) => n.toLocaleString('en');
 
-export function StoreLandCard({ land, locale, wishlisted = false }: { land: LandCard; locale: 'ar' | 'en'; wishlisted?: boolean }) {
+export function StoreLandCard({ land, locale, wishlisted = false, owner }: { land: LandCard; locale: 'ar' | 'en'; wishlisted?: boolean; owner?: { name: string; phone: string | null } }) {
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const sold = land.status === 'SOLD';
   const meta = [
@@ -42,6 +42,11 @@ export function StoreLandCard({ land, locale, wishlisted = false }: { land: Land
           {land.adNumber && <div className="font-num text-xs text-ink-400" dir="ltr">#{land.adNumber}</div>}
           <div className="font-bold text-navy-800 line-clamp-1 dark:text-soft">{land.title}</div>
           {meta && <div className="text-xs text-ink-500 dark:text-white/55">{meta}</div>}
+          {owner && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800" dir="auto">
+              🔒 {owner.name}{owner.phone ? ` · ` : ''}{owner.phone && <span className="font-num" dir="ltr">{owner.phone}</span>}
+            </div>
+          )}
           <div className="mt-auto pt-1">
             {sold ? (
               land.soldPrice != null ? (

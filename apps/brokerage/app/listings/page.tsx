@@ -4,6 +4,7 @@ import { Prisma } from '@noc/db';
 import { StoreShell } from '../_components/StoreShell';
 import { StoreLandCard } from '../_components/StoreLandCard';
 import { listLands, ATTR } from '../../lib/listings';
+import { getAdminViewer, ownerBadges } from '../../lib/adminView';
 import { wishlistListingIds } from '../../lib/wishlist';
 
 export const dynamic = 'force-dynamic';
@@ -66,6 +67,8 @@ export default async function Catalogue({
     wishlistListingIds(),
   ]);
   const totalPages = Math.ceil(total / PAGE);
+  // Staff admin view: owner badge on each card.
+  const owners = (await getAdminViewer()) ? await ownerBadges(cards.map((c) => c.id)) : null;
 
   // preserve current filters across sort/pagination links
   const baseParams = new URLSearchParams();
@@ -110,7 +113,7 @@ export default async function Catalogue({
           <p className="py-16 text-center text-ink-500">{L('لا توجد نتائج مطابقة', 'No matching lands')}</p>
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {cards.map((land) => <StoreLandCard key={land.id} land={land} locale={locale} wishlisted={wished.has(land.id)} />)}
+            {cards.map((land) => <StoreLandCard key={land.id} land={land} locale={locale} wishlisted={wished.has(land.id)} owner={owners?.get(land.id)} />)}
           </div>
         )}
 

@@ -3,6 +3,7 @@ import { getLocale } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { LanguageSwitcher, ThemeToggle } from '@noc/ui';
 import { getStorefront } from '../../lib/storefront';
+import { getAdminViewer } from '../../lib/adminView';
 import { SearchBox } from './SearchBox';
 import { CompareBar } from './CompareBar';
 import { StoreMobileMenu } from './StoreMobileMenu';
@@ -36,9 +37,16 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
   const whatsapp = content.contact.whatsapp;
   const socials = (content.contact.socials ?? []).filter((s) => s.url.trim());
   const copyright = copyrightRow?.value || `© ${new Date().getFullYear()} alsawarey.com`;
+  const adminView = await getAdminViewer();
 
   return (
     <div className="min-h-screen bg-soft text-navy-800 dark:bg-navy-900 dark:text-soft">
+      {adminView && (
+        <div className="flex items-center justify-center gap-3 bg-amber-400 px-4 py-1.5 text-center text-sm font-bold text-navy-900">
+          <span>🔒 {L('وضع المشرف — تظهر بيانات الملاك', 'Staff admin view — owner details visible')}</span>
+          <a href="/admin-leave" className="rounded-md bg-navy-900/85 px-3 py-1 text-xs font-bold text-white hover:bg-navy-900">{L('مغادرة', 'Leave')}</a>
+        </div>
+      )}
       <header className="sticky top-0 z-40 bg-navy-800 text-white shadow-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
           <StoreMobileMenu

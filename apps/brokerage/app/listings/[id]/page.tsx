@@ -5,6 +5,7 @@ import { PhotoGallery } from '@noc/ui';
 import { StoreShell } from '../../_components/StoreShell';
 import { StoreLandCard } from '../../_components/StoreLandCard';
 import { getLandDetail, similarLands } from '../../../lib/listings';
+import { getAdminViewer, ownerDetailFor } from '../../../lib/adminView';
 import { wishlistListingIds } from '../../../lib/wishlist';
 import { getStorefront } from '../../../lib/storefront';
 import { BuyButton } from './BuyButton';
@@ -34,6 +35,8 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   const land = await getLandDetail(id, locale);
   if (!land) notFound();
   const [wished, similar, store] = await Promise.all([wishlistListingIds(), similarLands(id, 4), getStorefront()]);
+  const owner = (await getAdminViewer()) ? await ownerDetailFor(id) : null;
+  const ownerTypeLabel: Record<string, string> = { PERSONAL: L('فرد', 'Personal'), COMPANY: L('شركة', 'Company'), BROKER: L('سمسار', 'Broker'), US: L('نحن', 'Us') };
 
   const sold = land.status === 'SOLD';
   const waText = L(
@@ -107,6 +110,21 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
                 </div>
               )}
             </div>
+
+            {owner && (
+              <div className="rounded-2xl border-2 border-amber-400 bg-amber-50 p-5 text-navy-800">
+                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-800">🔒 {L('بيانات المالك (للمشرفين فقط)', 'Owner details (staff only)')}</div>
+                <dl className="space-y-1.5 text-sm">
+                  <div className="flex justify-between gap-3"><dt className="text-ink-500">{L('المالك', 'Owner')}</dt><dd className="font-medium">{owner.ownerName ?? '—'}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-ink-500">{L('النوع', 'Type')}</dt><dd className="font-medium">{owner.ownerType ? ownerTypeLabel[owner.ownerType] ?? owner.ownerType : '—'}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-ink-500">{L('هاتف ١', 'Phone 1')}</dt><dd className="font-num font-medium" dir="ltr">{owner.phone1 ? `${owner.phone1}${owner.phone1Whatsapp ? ' (WA)' : ''}` : '—'}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-ink-500">{L('هاتف ٢', 'Phone 2')}</dt><dd className="font-num font-medium" dir="ltr">{owner.phone2 ? `${owner.phone2}${owner.phone2Whatsapp ? ' (WA)' : ''}` : '—'}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-ink-500">{L('البائع', 'Seller')}</dt><dd className="font-medium">{owner.sellerName ?? '—'}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-ink-500">{L('أضافه', 'Added by')}</dt><dd className="font-medium">{owner.createdByName ?? '—'}</dd></div>
+                </dl>
+                {owner.details && <p className="mt-2 border-t border-amber-200 pt-2 text-sm text-navy-700">{owner.details}</p>}
+              </div>
+            )}
           </aside>
         </div>
 

@@ -71,7 +71,8 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
       backToSiteLabel={tc('backToSite')}
       storeLinks={[
         { label: 'العبور الجديد', href: process.env.PORTAL_URL || '/' },
-        { label: 'الصواري', href: process.env.BROKERAGE_URL || 'https://alsawarey.com' },
+        // Opens alsawarey.com in staff "admin view" (owner details) via a signed token.
+        { label: 'الصواري (كمشرف)', href: '/admin/store-admin' },
       ]}
       signOut={<SignOutButton />}
     >
