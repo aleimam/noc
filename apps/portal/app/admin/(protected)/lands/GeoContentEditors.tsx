@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { ImageAttachment, Lightbox, type UploadedAttachment } from '@noc/ui';
@@ -85,11 +86,22 @@ export function AdvantagesEditor({
 
 type MapTriplet = { clean: string; alswarey: string | null; newobour: string | null };
 
+// react-konva touches the DOM/canvas at import — load the annotator client-only.
+const MapAnnotator = dynamic(() => import('./MapAnnotator').then((m) => m.MapAnnotator), { ssr: false });
+
 /** Upload one clean map; the system stores it + a stamped copy per brand. */
 export function AreaMapEditor({ level, targetId, kind, map }: { level: Level; targetId: string; kind: 'location' | 'masterplan'; map: MapTriplet | null }) {
   const t = useTranslations('lands');
   const router = useRouter();
   const [, start] = useTransition();
+  const [annotating, setAnnotating] = useState(false);
+
+  const attach = (attachmentId: string) =>
+    start(async () => {
+      await setAreaMap({ level, targetId, kind, attachmentId });
+      router.refresh();
+    });
+
   return (
     <div className="space-y-2">
       <p className="text-xs opacity-60">{t('mapHint')}</p>
@@ -103,11 +115,26 @@ export function AreaMapEditor({ level, targetId, kind, map }: { level: Level; ta
           })
         }
       />
+      {map && (
+        <button type="button" onClick={() => setAnnotating(true)} className="rounded-lg border border-graphite/25 px-3 py-1.5 text-sm hover:bg-graphite/10">
+          ✎ {t('annotateMap')}
+        </button>
+      )}
       {map && (map.alswarey || map.newobour) && (
         <div className="flex flex-wrap gap-3">
           {map.alswarey && <MapThumb label={t('copyAlswarey')} src={map.alswarey} />}
           {map.newobour && <MapThumb label={t('copyNewobour')} src={map.newobour} />}
         </div>
+      )}
+      {annotating && map && (
+        <MapAnnotator
+          src={map.clean}
+          onClose={() => setAnnotating(false)}
+          onSaved={async (attachmentId) => {
+            setAnnotating(false);
+            attach(attachmentId);
+          }}
+        />
       )}
     </div>
   );

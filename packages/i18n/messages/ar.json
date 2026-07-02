@@ -776,7 +776,17 @@
     "otpLabel": "اكتب الكود",
     "otpVerify": "تأكيد الكود",
     "otpResend": "تغيير الرقم",
-    "otpInvalid": "الكود غير صحيح، حاول مرة أخرى"
+    "otpInvalid": "الكود غير صحيح، حاول مرة أخرى",
+    "annotateMap": "تحديد على الخريطة",
+    "annotRect": "مربع/مستطيل",
+    "annotCircle": "دائرة",
+    "annotDelete": "حذف المحدد",
+    "annotSave": "حفظ",
+    "annotSaving": "جارٍ الحفظ…",
+    "annotCancel": "إلغاء",
+    "annotHint": "أضف شكلًا ثم اسحبه أو غيّر حجمه من الأركان، واختر اللون. الأشكال تُحفظ فوق الخريطة.",
+    "annotLoadErr": "تعذّر تحميل الصورة",
+    "annotSaveErr": "تعذّر الحفظ، حاول مرة أخرى"
   },
   "account": {
     "backToAccount": "حسابي",

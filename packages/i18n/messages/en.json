@@ -776,7 +776,17 @@
     "otpLabel": "Enter the code",
     "otpVerify": "Confirm code",
     "otpResend": "Change number",
-    "otpInvalid": "Wrong code, please try again"
+    "otpInvalid": "Wrong code, please try again",
+    "annotateMap": "Mark on map",
+    "annotRect": "Square/rectangle",
+    "annotCircle": "Circle",
+    "annotDelete": "Delete selected",
+    "annotSave": "Save",
+    "annotSaving": "Saving…",
+    "annotCancel": "Cancel",
+    "annotHint": "Add a shape, then drag it or resize from the corners, and pick a color. Shapes are saved onto the map.",
+    "annotLoadErr": "Could not load the image",
+    "annotSaveErr": "Could not save, please try again"
   },
   "account": {
     "backToAccount": "My account",

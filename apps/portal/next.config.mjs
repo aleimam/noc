@@ -22,6 +22,12 @@ const nextConfig = {
   transpilePackages: ['@noc/ui', '@noc/i18n', '@noc/auth', '@noc/db', '@noc/sms', '@noc/config'],
   // Lint is run separately (`npm run lint`); keep production builds focused on compile + types.
   eslint: { ignoreDuringBuilds: true },
+  // Konva (via react-konva) references the optional Node-only `canvas` package; we only
+  // use its browser build, so stub it out of the bundle.
+  webpack: (config) => {
+    config.resolve.alias = { ...config.resolve.alias, canvas: false };
+    return config;
+  },
 };
 
 export default withNextIntl(nextConfig);
