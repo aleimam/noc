@@ -42,18 +42,22 @@ export function SearchBar({
   return (
     <div className="rounded-2xl bg-white p-3.5 shadow-md">
       <div className="flex flex-col gap-2 sm:flex-row">
-        <select
-          value={field}
-          onChange={(e) => setField(e.target.value as Field)}
-          className="h-12 rounded-xl border border-ink-200 bg-soft px-4 text-base text-navy-800 sm:h-16 sm:w-48 sm:text-lg"
-          aria-label={t('searchField')}
-        >
-          <option value="all">{t('fieldAll')}</option>
-          <option value="name">{t('colApplicant')}</option>
-          <option value="owner">{t('colOwner')}</option>
-          <option value="plot">{t('colPlot')}</option>
-          <option value="block">{t('colBlock')}</option>
-        </select>
+        {/* The field selector is an advanced option — hidden by default so low-tech users
+            see only the big box + button; the "advanced search" toggle reveals it. */}
+        {advanced && (
+          <select
+            value={field}
+            onChange={(e) => setField(e.target.value as Field)}
+            className="h-12 rounded-xl border border-ink-200 bg-soft px-4 text-base text-navy-800 sm:h-16 sm:w-48 sm:text-lg"
+            aria-label={t('searchField')}
+          >
+            <option value="all">{t('fieldAll')}</option>
+            <option value="name">{t('colApplicant')}</option>
+            <option value="owner">{t('colOwner')}</option>
+            <option value="plot">{t('colPlot')}</option>
+            <option value="block">{t('colBlock')}</option>
+          </select>
+        )}
 
         {/* Mobile: tall, dominant box. `flex-1` is desktop-only — on a mobile flex-col it
             has basis:0 and collapses the height, so we use `min-h` (flex can't collapse it).
@@ -79,8 +83,19 @@ export function SearchBar({
       </div>
 
       <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-2 px-1 text-sm">
-        <button onClick={() => setAdvanced((a) => !a)} className="flex items-center gap-1.5 text-navy-600">
-          <span>⚙</span> {t('advancedSearch')}
+        <button
+          onClick={() =>
+            setAdvanced((a) => {
+              // Collapsing advanced clears the field filter so no hidden filter lingers.
+              if (a) setField('all');
+              return !a;
+            })
+          }
+          aria-expanded={advanced}
+          className="flex items-center gap-1.5 font-medium text-navy-600"
+        >
+          <span aria-hidden>⚙</span> {t('advancedSearch')}
+          <span aria-hidden className="text-ink-400">{advanced ? '▴' : '▾'}</span>
         </button>
         {cities.length > 0 && (
           <label className="flex items-center gap-2 text-ink-600">
