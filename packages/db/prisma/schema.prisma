@@ -79,6 +79,7 @@ model User {
   contactRequests ContactRequest[]
   wishlists       WishlistList[]
   landOffers      LandOffer[]
+  userLands       UserLand[]
 
   @@index([type])
 }
@@ -1180,4 +1181,30 @@ model GuideEntry {
   updatedAt DateTime     @updatedAt
 
   @@index([section, order])
+}
+
+/// A land a customer declares in his own account. Self-managed (add/edit/delete). Two
+/// opt-in actions: getUpdates → an area LandFollow is created; forSale → a LandOffer is
+/// created for staff review (never auto-published). District/neighborhood are stored as
+/// ids (resolved for display); photos attach via Attachment(ownerType='UserLand').
+model UserLand {
+  id             String   @id @default(cuid())
+  userId         String
+  title          String? // optional friendly label
+  districtId     String?
+  neighborhoodId String?
+  blockNo        String?
+  plotNo         String?
+  area           Decimal? @db.Decimal(10, 2)
+  notes          String?  @db.Text
+  getUpdates     Boolean  @default(false)
+  forSale        Boolean  @default(false)
+  landFollowId   String? // the LandFollow created while getUpdates is on
+  landOfferId    String? // the LandOffer created while forSale is on
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
