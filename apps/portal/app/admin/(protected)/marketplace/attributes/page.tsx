@@ -1,10 +1,13 @@
 import { getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { getStandardAreas } from '../../../../../lib/marketplace';
+import { StandardAreasEditor } from './StandardAreasEditor';
 
 export default async function AttributesPage() {
   await requirePermission('marketplace', 'VIEW');
   const t = await getTranslations('mp');
+  const standardAreas = await getStandardAreas();
   const sections = await prisma.attributeSection.findMany({
     orderBy: { order: 'asc' },
     include: {
@@ -24,6 +27,8 @@ export default async function AttributesPage() {
           <a href="/admin/marketplace" className="text-sm text-accent">← {t('title')}</a>
         </div>
       </div>
+
+      <StandardAreasEditor areas={standardAreas} />
 
       {sections.map((s) => (
         <div key={s.id} className="space-y-2">

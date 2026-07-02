@@ -3,6 +3,8 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { PhotoGallery } from '@noc/ui';
 import { localizeUnit, currency } from '@noc/i18n';
+import { formatDetailValue, type DetailConfig } from '@noc/config';
+import { getStandardAreas } from '../../../lib/marketplace';
 
 /** "YYYY-MM" → localized "Month Year". */
 function formatMonthYear(s: string, locale: string): string {
@@ -57,6 +59,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     ? await prisma.attribute.findMany({ where: { id: { in: attrIds } }, include: { section: true } })
     : [];
   const attrById = new Map(attrs.map((a) => [a.id, a]));
+  const standardAreas = await getStandardAreas();
 
   // Aggregate scalar values per attribute. DOCUMENTS are internal (never shown); PHOTOS render as a grid below.
   const perAttr = new Map<string, { attr: (typeof attrs)[number]; texts: string[] }>();
@@ -65,13 +68,26 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     if (!a || a.type === 'DOCUMENTS' || a.type === 'PHOTOS') continue;
     if (!perAttr.has(a.id)) perAttr.set(a.id, { attr: a, texts: [] });
     const bucket = perAttr.get(a.id)!;
-    if (v.option) bucket.texts.push(L(v.option.labelAr, v.option.labelEn));
-    else if (v.number != null) {
+    if (v.option) {
+      bucket.texts.push(L(v.option.labelAr, v.option.labelEn));
+    } else if (a.type === 'DATE' && v.text) {
+      bucket.texts.push(formatMonthYear(v.text, locale));
+    } else if (a.type === 'NUMBER' && v.number != null) {
       const u = localizeUnit(a.unit, locale);
       bucket.texts.push(`${String(v.number)}${u ? ` ${u}` : ''}`);
-    } else if (v.bool) bucket.texts.push('✔');
-    else if (a.type === 'DATE' && v.text) bucket.texts.push(formatMonthYear(v.text, locale));
-    else if (v.text) bucket.texts.push(v.text);
+    } else {
+      const s = formatDetailValue({
+        type: a.type,
+        unit: a.unit,
+        number: v.number != null ? Number(v.number) : null,
+        bool: v.bool,
+        text: v.text,
+        config: a.config as DetailConfig | null,
+        locale,
+        standardAreas,
+      });
+      if (s) bucket.texts.push(s);
+    }
   }
 
   // Group items by section (text items + per-property photo grids).

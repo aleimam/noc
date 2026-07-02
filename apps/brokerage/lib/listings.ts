@@ -1,6 +1,24 @@
 // Storefront land queries. Owner identity is NEVER selected here — visitors see every
 // land as "ours" (alsawarey decision #17). Management lives in the New Obour backend.
 import { prisma, Prisma } from '@noc/db';
+import { AREA_PRESETS, formatDetailValue, type DetailConfig } from '@noc/config';
+
+/** Admin-editable standard plot areas (m²) used to round Allocated-Area details. */
+async function getStandardAreas(): Promise<number[]> {
+  const row = await prisma.setting.findFirst({ where: { key: 'marketplace.standardAreas' } });
+  if (row?.value) {
+    try {
+      const arr = JSON.parse(row.value);
+      if (Array.isArray(arr)) {
+        const nums = arr.map(Number).filter((n) => Number.isFinite(n) && n > 0);
+        if (nums.length) return nums;
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  return [...AREA_PRESETS];
+}
 
 export type LandCard = {
   id: string;
@@ -179,7 +197,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
           number: true,
           bool: true,
           text: true,
-          attribute: { select: { key: true, labelAr: true, labelEn: true, unit: true, order: true, isActive: true } },
+          attribute: { select: { key: true, labelAr: true, labelEn: true, unit: true, type: true, config: true, order: true, isActive: true } },
           option: { select: { labelAr: true, labelEn: true } },
         },
       },
@@ -210,15 +228,23 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
   }
 
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
+  const standardAreas = await getStandardAreas();
   const specs: { label: string; value: string }[] = [];
   for (const v of l.values) {
     if (!v.attribute.isActive) continue;
     const label = L(v.attribute.labelAr, v.attribute.labelEn);
-    let value: string | null = null;
-    if (v.option) value = L(v.option.labelAr, v.option.labelEn);
-    else if (v.number != null) value = `${Number(v.number).toLocaleString('en')}${v.attribute.unit ? ' ' + v.attribute.unit : ''}`;
-    else if (v.bool != null) value = v.bool ? L('نعم', 'Yes') : L('لا', 'No');
-    else if (v.text) value = v.text;
+    const value = v.option
+      ? L(v.option.labelAr, v.option.labelEn)
+      : formatDetailValue({
+          type: v.attribute.type,
+          unit: v.attribute.unit,
+          number: v.number != null ? Number(v.number) : null,
+          bool: v.bool,
+          text: v.text,
+          config: v.attribute.config as DetailConfig | null,
+          locale,
+          standardAreas,
+        });
     if (value) specs.push({ label, value });
   }
 

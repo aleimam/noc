@@ -1,11 +1,16 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { prisma } from '@noc/db';
+import { prisma, Prisma } from '@noc/db';
 import { requirePermission } from '@noc/auth';
 import { ensureAdNumber } from '../../../../lib/adNumber';
+import { STANDARD_AREAS_KEY } from '../../../../lib/marketplace';
 
 type Result = { ok: true } | { ok: false; error: string };
+
+export type AttrTypeKey =
+  | 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS'
+  | 'URL' | 'PHONE' | 'DATE_FULL' | 'MONEY' | 'MONEY_THOUSANDS' | 'AREA_ORIGINAL' | 'AREA_ALLOCATED' | 'YESNO';
 
 function revalidate() {
   revalidatePath('/admin/marketplace', 'layout');
@@ -50,6 +55,22 @@ export async function upsertClassifierOption(
         skipDuplicates: true,
       });
     }
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function saveStandardAreas(list: number[]): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  const clean = [...new Set(list.map(Number).filter((n) => Number.isFinite(n) && n > 0))].sort((a, b) => a - b);
+  try {
+    await prisma.setting.upsert({
+      where: { key: STANDARD_AREAS_KEY },
+      update: { value: JSON.stringify(clean) },
+      create: { key: STANDARD_AREAS_KEY, value: JSON.stringify(clean) },
+    });
     revalidate();
     return { ok: true };
   } catch (e) {
@@ -125,10 +146,11 @@ export async function upsertAttribute(input: {
   sectionId: string;
   labelAr: string;
   labelEn: string;
-  type: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS';
+  type: AttrTypeKey;
   unit?: string | null;
   helpAr?: string | null;
   helpEn?: string | null;
+  config?: Record<string, string | boolean> | null;
   filterable?: boolean;
   order?: number;
   isActive?: boolean;
@@ -136,6 +158,7 @@ export async function upsertAttribute(input: {
   optionIds?: string[]; // ClassifierOption ids the attribute applies to (Type/Purpose/Condition)
 }): Promise<Result> {
   await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
+  const cfg = input.config && Object.keys(input.config).length ? input.config : null;
   const core = {
     sectionId: input.sectionId,
     labelAr: input.labelAr.trim(),
@@ -144,6 +167,7 @@ export async function upsertAttribute(input: {
     unit: input.unit?.trim() || null,
     helpAr: input.helpAr?.trim() || null,
     helpEn: input.helpEn?.trim() || null,
+    config: cfg ?? Prisma.JsonNull,
     filterable: input.filterable ?? false,
     order: input.order ?? 0,
     isActive: input.isActive ?? true,

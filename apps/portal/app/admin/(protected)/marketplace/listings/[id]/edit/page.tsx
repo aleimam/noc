@@ -13,7 +13,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
 
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
-  const { classifiers, sections, attributes } = await loadCatalog();
+  const { classifiers, sections, attributes, standardAreas } = await loadCatalog();
   const [owners, attachData] = await Promise.all([
     prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } }),
     loadListingAttachments(id),
@@ -34,6 +34,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
         sections={sections}
         attributes={attributes}
         locale={locale}
+        standardAreas={standardAreas}
         initial={{
           id: listing.id,
           typeOptionId: listing.typeOptionId ?? '',

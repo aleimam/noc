@@ -384,7 +384,15 @@
     "offers": "Sell offers",
     "sellContent": "Sell page content",
     "parentMultiHint": "you can pick more than one parent",
-    "parentNoneHint": "none selected = shows under all types"
+    "parentNoneHint": "none selected = shows under all types",
+    "descAr": "Description (Arabic)",
+    "descEn": "Description (English)",
+    "yesLabel": "Yes label",
+    "noLabel": "No label",
+    "allowMultiple": "Allow multiple files",
+    "standardAreas": "Standard areas",
+    "standardAreasHint": "List of areas (m²) used to round Allocated Area — comma-separated",
+    "saveStandardAreas": "Save areas"
   },
   "rationing": {
     "title": "Rationing Sheets",

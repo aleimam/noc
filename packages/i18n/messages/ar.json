@@ -384,7 +384,15 @@
     "offers": "عروض البيع",
     "sellContent": "محتوى صفحة البيع",
     "parentMultiHint": "يمكن اختيار أكثر من أصل",
-    "parentNoneHint": "بدون تحديد = يظهر مع كل الأنواع"
+    "parentNoneHint": "بدون تحديد = يظهر مع كل الأنواع",
+    "descAr": "وصف (عربي)",
+    "descEn": "وصف (إنجليزي)",
+    "yesLabel": "نص نعم",
+    "noLabel": "نص لا",
+    "allowMultiple": "يسمح بأكثر من ملف",
+    "standardAreas": "المساحات القياسية",
+    "standardAreasHint": "قائمة المساحات (م²) لتقريب المساحة المخصصة — افصل بينها بفاصلة",
+    "saveStandardAreas": "حفظ المساحات"
   },
   "rationing": {
     "title": "كشوف التقنين",

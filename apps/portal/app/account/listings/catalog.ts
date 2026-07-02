@@ -1,4 +1,5 @@
 import { prisma } from '@noc/db';
+import { getStandardAreas } from '../../../lib/marketplace';
 
 export type CatalogAttrType =
   | 'TEXT'
@@ -9,11 +10,27 @@ export type CatalogAttrType =
   | 'MULTI_SELECT'
   | 'DATE'
   | 'PHOTOS'
-  | 'DOCUMENTS';
+  | 'DOCUMENTS'
+  | 'URL'
+  | 'PHONE'
+  | 'DATE_FULL'
+  | 'MONEY'
+  | 'MONEY_THOUSANDS'
+  | 'AREA_ORIGINAL'
+  | 'AREA_ALLOCATED'
+  | 'YESNO';
+
+export type AttrConfig = {
+  yesLabelAr?: string;
+  yesLabelEn?: string;
+  noLabelAr?: string;
+  noLabelEn?: string;
+  multiple?: boolean;
+};
 
 /** Loads the active catalog shaped for the listing form (types grouped by category, sections, attributes). */
 export async function loadCatalog() {
-  const [classifiers, sections, attrs] = await Promise.all([
+  const [classifiers, sections, attrs, standardAreas] = await Promise.all([
     prisma.classifier.findMany({
       orderBy: { order: 'asc' },
       include: { options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true, allowedOnAlsawarey: true, parentLinks: { select: { parentId: true } } } } },
@@ -35,6 +52,7 @@ export async function loadCatalog() {
         classifierLinks: { select: { optionId: true } },
       },
     }),
+    getStandardAreas(),
   ]);
 
   const attributes = attrs.map((a) => ({
@@ -44,6 +62,7 @@ export async function loadCatalog() {
     labelEn: a.labelEn,
     type: a.type as CatalogAttrType,
     unit: a.unit,
+    config: (a.config as AttrConfig | null) ?? {},
     order: a.order,
     options: a.options,
     optionIds: a.classifierLinks.map((l) => l.optionId),
@@ -65,6 +84,7 @@ export async function loadCatalog() {
     })),
     sections,
     attributes,
+    standardAreas,
   };
 }
 
@@ -106,12 +126,12 @@ export function buildVals(values: RawValue[], attrType: Map<string, string>) {
       if (v.optionId) vals[v.attributeId] = [...cur, v.optionId];
     } else if (tp === 'SELECT') {
       if (v.optionId) vals[v.attributeId] = v.optionId;
-    } else if (tp === 'BOOLEAN') {
+    } else if (tp === 'BOOLEAN' || tp === 'YESNO') {
       vals[v.attributeId] = v.bool ?? false;
-    } else if (tp === 'NUMBER') {
+    } else if (tp === 'NUMBER' || tp === 'MONEY' || tp === 'MONEY_THOUSANDS' || tp === 'AREA_ORIGINAL' || tp === 'AREA_ALLOCATED') {
       vals[v.attributeId] = v.number != null ? String(v.number) : '';
     } else {
-      // TEXT / TEXTAREA / DATE (stored as "YYYY-MM")
+      // TEXT / TEXTAREA / URL / PHONE / DATE (YYYY-MM) / DATE_FULL (YYYY-MM-DD)
       vals[v.attributeId] = v.text ?? '';
     }
   }

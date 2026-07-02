@@ -4,10 +4,13 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-type AttrType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS';
+type AttrType =
+  | 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS'
+  | 'URL' | 'PHONE' | 'DATE_FULL' | 'MONEY' | 'MONEY_THOUSANDS' | 'AREA_ORIGINAL' | 'AREA_ALLOCATED' | 'YESNO';
 type Opt = { id?: string; key: string; labelAr: string; labelEn: string };
 type Result = { ok: true } | { ok: false; error: string };
 type ClassifierData = { id: string; nameAr: string; nameEn: string; options: { id: string; nameAr: string; nameEn: string }[] };
+type AttrConfig = { yesLabelAr?: string; yesLabelEn?: string; noLabelAr?: string; noLabelEn?: string; multiple?: boolean };
 
 export type AttrData = {
   id?: string;
@@ -17,6 +20,9 @@ export type AttrData = {
   labelEn: string;
   type: AttrType;
   unit: string;
+  helpAr: string;
+  helpEn: string;
+  config: AttrConfig;
   filterable: boolean;
   order: number;
   isActive: boolean;
@@ -26,7 +32,20 @@ export type AttrData = {
 
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
 const cell = 'flex-1 rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm';
-const ATTR_TYPES: AttrType[] = ['TEXT', 'TEXTAREA', 'NUMBER', 'BOOLEAN', 'SELECT', 'MULTI_SELECT', 'DATE', 'PHOTOS', 'DOCUMENTS'];
+
+// Friendly Arabic labels for the value-type picker (raw enum shown in parens for reference).
+const TYPE_LABELS: Record<AttrType, string> = {
+  TEXT: 'نص قصير', TEXTAREA: 'نص طويل', NUMBER: 'رقم', BOOLEAN: 'مربع اختيار',
+  SELECT: 'اختيار من قائمة', MULTI_SELECT: 'اختيار متعدد', DATE: 'تاريخ (شهر/سنة)',
+  DATE_FULL: 'تاريخ (يوم/شهر/سنة)', PHOTOS: 'صور (عامة)', DOCUMENTS: 'مستندات (داخلية)',
+  URL: 'رابط', PHONE: 'رقم هاتف', MONEY: 'مبلغ بالجنيه', MONEY_THOUSANDS: 'مبلغ بالآلاف',
+  AREA_ORIGINAL: 'مساحة أصلية (م²)', AREA_ALLOCATED: 'مساحة مخصصة (م²)', YESNO: 'مفتاح نعم/لا',
+};
+const ATTR_TYPES: AttrType[] = [
+  'TEXT', 'TEXTAREA', 'NUMBER', 'SELECT', 'MULTI_SELECT', 'BOOLEAN', 'YESNO',
+  'URL', 'PHONE', 'DATE', 'DATE_FULL', 'MONEY', 'MONEY_THOUSANDS', 'AREA_ORIGINAL', 'AREA_ALLOCATED',
+  'PHOTOS', 'DOCUMENTS',
+];
 
 export function AttributeForm({
   initial,
@@ -45,7 +64,9 @@ export function AttributeForm({
   const [f, setF] = useState<AttrData>(initial);
   const [error, setError] = useState('');
   const set = (patch: Partial<AttrData>) => setF((x) => ({ ...x, ...patch }));
+  const setCfg = (patch: Partial<AttrConfig>) => setF((x) => ({ ...x, config: { ...x.config, ...patch } }));
   const hasOptions = f.type === 'SELECT' || f.type === 'MULTI_SELECT';
+  const isAttachment = f.type === 'PHOTOS' || f.type === 'DOCUMENTS';
 
   const toggle = (id: string) =>
     set({ optionIds: f.optionIds.includes(id) ? f.optionIds.filter((x) => x !== id) : [...f.optionIds, id] });
@@ -84,11 +105,35 @@ export function AttributeForm({
         <label className="text-sm">
           {t('fieldType')}
           <select value={f.type} onChange={(e) => set({ type: e.target.value as AttrType })} className={inp}>
-            {ATTR_TYPES.map((x) => (<option key={x} value={x}>{x}</option>))}
+            {ATTR_TYPES.map((x) => (<option key={x} value={x}>{TYPE_LABELS[x]} ({x})</option>))}
           </select>
         </label>
         <label className="text-sm">{t('unit')}<input value={f.unit} onChange={(e) => set({ unit: e.target.value })} className={inp} /></label>
       </div>
+
+      {/* Optional bilingual description shown as help under the field. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="text-sm">{t('descAr')}<input value={f.helpAr} onChange={(e) => set({ helpAr: e.target.value })} className={inp} /></label>
+        <label className="text-sm">{t('descEn')}<input dir="ltr" value={f.helpEn} onChange={(e) => set({ helpEn: e.target.value })} className={inp} /></label>
+      </div>
+
+      {/* Yes/No switch — labels for each state. */}
+      {f.type === 'YESNO' && (
+        <div className="grid gap-4 rounded-lg border border-graphite/15 p-3 sm:grid-cols-2">
+          <label className="text-sm">{t('yesLabel')} ({t('labelAr')})<input value={f.config.yesLabelAr ?? ''} onChange={(e) => setCfg({ yesLabelAr: e.target.value })} placeholder="نعم" className={inp} /></label>
+          <label className="text-sm">{t('yesLabel')} ({t('labelEn')})<input dir="ltr" value={f.config.yesLabelEn ?? ''} onChange={(e) => setCfg({ yesLabelEn: e.target.value })} placeholder="Yes" className={inp} /></label>
+          <label className="text-sm">{t('noLabel')} ({t('labelAr')})<input value={f.config.noLabelAr ?? ''} onChange={(e) => setCfg({ noLabelAr: e.target.value })} placeholder="لا" className={inp} /></label>
+          <label className="text-sm">{t('noLabel')} ({t('labelEn')})<input dir="ltr" value={f.config.noLabelEn ?? ''} onChange={(e) => setCfg({ noLabelEn: e.target.value })} placeholder="No" className={inp} /></label>
+        </div>
+      )}
+
+      {/* Attachment cardinality for PHOTOS / DOCUMENTS. */}
+      {isAttachment && (
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={f.config.multiple ?? true} onChange={(e) => setCfg({ multiple: e.target.checked })} />
+          {t('allowMultiple')}
+        </label>
+      )}
 
       <div className="flex flex-wrap gap-5 text-sm">
         <label className="flex items-center gap-2"><input type="checkbox" checked={f.filterable} onChange={(e) => set({ filterable: e.target.checked })} /> {t('filterable')}</label>

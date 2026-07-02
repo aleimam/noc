@@ -16,7 +16,7 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
 
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
-  const { classifiers, sections, attributes } = await loadCatalog();
+  const { classifiers, sections, attributes, standardAreas } = await loadCatalog();
   const { photos, attachs } = await loadListingAttachments(id);
   const vals = buildVals(listing.values, new Map(attributes.map((a) => [a.id, a.type])));
 
@@ -31,6 +31,7 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
         sections={sections}
         attributes={attributes}
         locale={locale}
+        standardAreas={standardAreas}
         initial={{
           id: listing.id,
           typeOptionId: listing.typeOptionId ?? '',

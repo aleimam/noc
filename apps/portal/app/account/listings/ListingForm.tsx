@@ -5,11 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ImageAttachment, Lightbox, type UploadedAttachment } from '@noc/ui';
 import { localizeUnit } from '@noc/i18n';
+import { roundToStandardArea, formatMoneyThousands } from '@noc/config';
 import { saveListing, type ListingInput, type ValueInput } from './actions';
 
-type AttrType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS';
+type AttrType =
+  | 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS'
+  | 'URL' | 'PHONE' | 'DATE_FULL' | 'MONEY' | 'MONEY_THOUSANDS' | 'AREA_ORIGINAL' | 'AREA_ALLOCATED' | 'YESNO';
+type AttrCfg = { yesLabelAr?: string; yesLabelEn?: string; noLabelAr?: string; noLabelEn?: string; multiple?: boolean };
 type Opt = { id: string; labelAr: string; labelEn: string };
-type Attr = { id: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; order: number; options: Opt[]; optionIds: string[] };
+type Attr = { id: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; config?: AttrCfg; order: number; options: Opt[]; optionIds: string[] };
+
+const NUMERIC_TYPES = new Set(['NUMBER', 'MONEY', 'MONEY_THOUSANDS', 'AREA_ORIGINAL', 'AREA_ALLOCATED']);
 type Section = { id: string; nameAr: string; nameEn: string; order: number };
 type ClsOpt = { id: string; nameAr: string; nameEn: string; parentIds: string[]; allowedOnAlsawarey: boolean };
 type Classifier = { id: string; key: string; nameAr: string; nameEn: string; options: ClsOpt[] };
@@ -45,6 +51,7 @@ export function ListingForm({
   locale,
   staffMode = false,
   owners = [],
+  standardAreas = [],
 }: {
   classifiers: Classifier[];
   sections: Section[];
@@ -53,6 +60,7 @@ export function ListingForm({
   locale: 'ar' | 'en';
   staffMode?: boolean;
   owners?: OwnerOpt[];
+  standardAreas?: number[];
 }) {
   const t = useTranslations('mp');
   const router = useRouter();
@@ -180,10 +188,10 @@ export function ListingForm({
     for (const a of attributes) {
       if (!applies(a)) continue;
       const v = vals[a.id];
-      if (a.type === 'BOOLEAN') {
-        if (v === true) out.push({ attributeId: a.id, bool: true });
-      } else if (a.type === 'NUMBER') {
-        if (typeof v === 'string' && v.trim() !== '') out.push({ attributeId: a.id, number: Number(v) });
+      if (a.type === 'BOOLEAN' || a.type === 'YESNO') {
+        if (typeof v === 'boolean') out.push({ attributeId: a.id, bool: v });
+      } else if (NUMERIC_TYPES.has(a.type)) {
+        if (typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v))) out.push({ attributeId: a.id, number: Number(v) });
       } else if (a.type === 'SELECT') {
         if (typeof v === 'string' && v) out.push({ attributeId: a.id, optionIds: [v] });
       } else if (a.type === 'MULTI_SELECT') {
@@ -240,6 +248,46 @@ export function ListingForm({
         </div>
       );
     if (a.type === 'BOOLEAN') return <input type="checkbox" checked={v === true} onChange={(e) => setVal(a.id, e.target.checked)} />;
+    if (a.type === 'URL')
+      return <input type="url" dir="ltr" inputMode="url" placeholder="https://" value={(v as string) ?? ''} onChange={(e) => setVal(a.id, e.target.value)} className={inp} />;
+    if (a.type === 'PHONE')
+      return <input type="tel" dir="ltr" inputMode="tel" placeholder="01xxxxxxxxx" value={(v as string) ?? ''} onChange={(e) => setVal(a.id, e.target.value)} className={inp} />;
+    if (a.type === 'DATE_FULL')
+      return <input type="date" dir="ltr" value={(v as string) ?? ''} onChange={(e) => setVal(a.id, e.target.value)} className={inp} />;
+    if (a.type === 'MONEY' || a.type === 'MONEY_THOUSANDS' || a.type === 'AREA_ORIGINAL' || a.type === 'AREA_ALLOCATED') {
+      const num = typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v)) ? Number(v) : null;
+      const suffix =
+        a.type === 'AREA_ORIGINAL' || a.type === 'AREA_ALLOCATED' ? (locale === 'ar' ? 'م²' : 'm²') : locale === 'ar' ? 'جنيه' : 'EGP';
+      let preview = '';
+      if (num != null) {
+        if (a.type === 'MONEY_THOUSANDS') preview = `≈ ${formatMoneyThousands(num, locale)}`;
+        else if (a.type === 'AREA_ALLOCATED') preview = `≈ ${roundToStandardArea(num, standardAreas)} ${suffix}`;
+      }
+      return (
+        <div>
+          <div className="flex items-center gap-2">
+            <input type="number" inputMode="numeric" value={(v as string) ?? ''} onChange={(e) => setVal(a.id, e.target.value)} className={inp} />
+            <span className="text-xs opacity-60">{suffix}</span>
+          </div>
+          {preview && <p className="mt-1 text-xs text-accent">{preview}</p>}
+        </div>
+      );
+    }
+    if (a.type === 'YESNO') {
+      const cfg = a.config ?? {};
+      const yes = L(cfg.yesLabelAr || 'نعم', cfg.yesLabelEn || 'Yes');
+      const no = L(cfg.noLabelAr || 'لا', cfg.noLabelEn || 'No');
+      const btn = (on: boolean, label: string) => (
+        <button
+          type="button"
+          onClick={() => setVal(a.id, on)}
+          className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${v === on ? 'bg-primary text-soft' : 'border border-graphite/25'}`}
+        >
+          {label}
+        </button>
+      );
+      return <div className="flex gap-2">{btn(true, yes)}{btn(false, no)}</div>;
+    }
     if (a.type === 'SELECT')
       return (
         <select value={(v as string) ?? ''} onChange={(e) => setVal(a.id, e.target.value)} className={inp}>

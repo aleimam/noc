@@ -8,7 +8,7 @@ export default async function StaffNewListing() {
   await requirePermission('marketplace', 'CREATE');
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
-  const { classifiers, sections, attributes } = await loadCatalog();
+  const { classifiers, sections, attributes, standardAreas } = await loadCatalog();
   const [owners, settings] = await Promise.all([
     prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } }),
     prisma.setting.findMany({ where: { key: { in: ['alswarey_phone', 'alswarey_whatsapp'] } } }),
@@ -28,6 +28,7 @@ export default async function StaffNewListing() {
         sections={sections}
         attributes={attributes}
         locale={locale}
+        standardAreas={standardAreas}
         initial={{
           typeOptionId: '',
           purposeOptionId: '',

@@ -234,9 +234,17 @@ enum AttrType {
   BOOLEAN
   SELECT
   MULTI_SELECT
-  DATE // month + year
+  DATE // month + year (MM/YYYY)
   PHOTOS // image attachments (shown publicly)
   DOCUMENTS // file attachments (kept internal / admin-only)
+  URL
+  PHONE
+  DATE_FULL // day + month + year (DD/MM/YYYY)
+  MONEY // whole EGP, shown "1,250,000 جنيه"
+  MONEY_THOUSANDS // whole EGP entered, shown rounded to nearest 1000 as "69 ألف جنيه"
+  AREA_ORIGINAL // m² as entered
+  AREA_ALLOCATED // m² stored raw, shown rounded to nearest standard area (unless > 900)
+  YESNO // boolean with admin-set labels for each state
 }
 
 /// Classifier dimension — Type, Purpose, Condition. Fixed set; options are admin-editable.
@@ -365,6 +373,9 @@ model Attribute {
   unit       String?
   helpAr     String?
   helpEn     String?
+  // Per-type settings, e.g. { yesLabelAr, yesLabelEn, noLabelAr, noLabelEn } for YESNO,
+  // or { multiple: true } for PHOTOS/DOCUMENTS. Shape depends on `type`.
+  config     Json?
   filterable Boolean  @default(false)
   order      Int      @default(0)
   isActive   Boolean  @default(true)

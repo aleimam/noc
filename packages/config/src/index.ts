@@ -30,8 +30,79 @@ export type PermActionKey = (typeof PERM_ACTIONS)[number];
 
 // ── Module 2: land / neighborhood option lists (bilingual where shown to users) ──
 
-/** Common plot-area presets (m²) in New Obour. */
+/** Common plot-area presets (m²) in New Obour. Default "standard areas" for rounding. */
 export const AREA_PRESETS = [209, 276, 350, 400, 450, 500, 624, 682, 777] as const;
+
+/** Round an allocated area to the nearest standard area; values over 900 m² pass through. */
+export function roundToStandardArea(value: number, standardAreas: readonly number[] = AREA_PRESETS): number {
+  if (!Number.isFinite(value) || value <= 0) return value;
+  if (value > 900) return value;
+  const list = standardAreas.length ? standardAreas : AREA_PRESETS;
+  return list.reduce((best, a) => (Math.abs(a - value) < Math.abs(best - value) ? a : best), list[0]!);
+}
+
+/** Whole-EGP money, e.g. 1250000 → "1,250,000 جنيه" / "1,250,000 EGP". */
+export function formatMoneyEgp(n: number, locale: 'ar' | 'en' = 'ar'): string {
+  const v = Math.round(n).toLocaleString('en-US');
+  return locale === 'en' ? `${v} EGP` : `${v} جنيه`;
+}
+
+/** Money rounded to nearest 1000, shown in thousands, e.g. 68741 → "69 ألف جنيه" / "69K EGP". */
+export function formatMoneyThousands(n: number, locale: 'ar' | 'en' = 'ar'): string {
+  const v = Math.round(n / 1000).toLocaleString('en-US');
+  return locale === 'en' ? `${v}K EGP` : `${v} ألف جنيه`;
+}
+
+/** Area in m², e.g. 209 → "209 م²" / "209 m²". */
+export function formatArea(n: number, locale: 'ar' | 'en' = 'ar'): string {
+  const v = (Math.round(n * 100) / 100).toLocaleString('en-US');
+  return locale === 'en' ? `${v} m²` : `${v} م²`;
+}
+
+export type DetailConfig = {
+  yesLabelAr?: string;
+  yesLabelEn?: string;
+  noLabelAr?: string;
+  noLabelEn?: string;
+  multiple?: boolean;
+};
+
+/** Format a stored listing-detail value for public display, by its value type.
+ *  SELECT/MULTI_SELECT are resolved by the caller (option labels); this covers the rest. */
+export function formatDetailValue(opts: {
+  type: string;
+  unit?: string | null;
+  number?: number | null;
+  bool?: boolean | null;
+  text?: string | null;
+  config?: DetailConfig | null;
+  locale?: 'ar' | 'en';
+  standardAreas?: readonly number[];
+}): string | null {
+  const { type, unit, number, bool, text, config, standardAreas } = opts;
+  const locale = opts.locale ?? 'ar';
+  const L = (ar: string, en: string) => (locale === 'en' ? en : ar);
+  switch (type) {
+    case 'MONEY':
+      return number != null ? formatMoneyEgp(number, locale) : null;
+    case 'MONEY_THOUSANDS':
+      return number != null ? formatMoneyThousands(number, locale) : null;
+    case 'AREA_ORIGINAL':
+      return number != null ? formatArea(number, locale) : null;
+    case 'AREA_ALLOCATED':
+      return number != null ? formatArea(roundToStandardArea(number, standardAreas ?? AREA_PRESETS), locale) : null;
+    case 'NUMBER':
+      return number != null ? `${number.toLocaleString('en-US')}${unit ? ` ${unit}` : ''}` : null;
+    case 'YESNO':
+      if (bool == null) return null;
+      return bool ? L(config?.yesLabelAr || 'نعم', config?.yesLabelEn || 'Yes') : L(config?.noLabelAr || 'لا', config?.noLabelEn || 'No');
+    case 'BOOLEAN':
+      return bool == null ? null : bool ? L('نعم', 'Yes') : L('لا', 'No');
+    default:
+      // TEXT / TEXTAREA / URL / PHONE / DATE / DATE_FULL
+      return text && text.trim() ? text : null;
+  }
+}
 
 /** What a neighborhood permits building. */
 export const BUILDING_TYPES = [
