@@ -43,6 +43,8 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     `مرحباً، أريد شراء الأرض: ${land.title}`,
     `Hello, I'm interested in buying: ${land.title}`,
   );
+  const priceShort =
+    land.price != null ? `${fmt(land.price)} ${L('ج.م', 'EGP')}` : L('السعر عند الطلب', 'Price on request');
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -64,7 +66,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     <StoreShell>
       {/* Escape "<" so seller-authored fields (name/description) can't break out of the script tag. */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
-      <div className="mx-auto max-w-5xl px-4 py-6">
+      <div className="mx-auto max-w-5xl px-4 pt-6 pb-24 lg:pb-6">
         <Link href="/listings" className="text-sm text-navy-600">‹ {L('كل الأراضي', 'All lands')}</Link>
 
         <div className="mt-3 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -174,6 +176,17 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
           </section>
         )}
       </div>
+
+      {/* Mobile sticky action bar — keeps the price + buy CTA reachable without scrolling
+          back to the top. Hidden on lg where the sidebar CTA is always in view. */}
+      {!sold && (
+        <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-ink-200 bg-white p-3 shadow-lg lg:hidden">
+          <div className="min-w-0 flex-1 truncate font-num text-lg font-black text-navy-800">{priceShort}</div>
+          <div className="w-40 flex-none">
+            <BuyButton listingId={land.id} waText={waText} whatsapp={store.contact.whatsapp} label={L('أريد شراءها', 'I want to buy it')} sentLabel={L('تم الإرسال ✓', 'Sent ✓')} />
+          </div>
+        </div>
+      )}
     </StoreShell>
   );
 }

@@ -104,27 +104,26 @@ export default async function PlotsTab({ searchParams }: { searchParams: Promise
             {rows.length === 0 ? (
               <p className="py-12 text-center text-ink-500">{t('noMatches')}</p>
             ) : (
-              <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-                <table className="w-full text-base">
-                  <thead className="bg-navy-50 text-navy-700">
-                    <tr>
-                      <th className="p-3 text-start">{t('colPlot')}</th>
-                      <th className="p-3 text-start">{t('colCity')}</th>
-                      <th className="p-3 text-start">{t('colOwner')}</th>
-                      <th className="p-3 text-start">{t('colApplicantsCount')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((r) => (
-                      <tr key={r.ref} className="border-t border-ink-100 hover:bg-navy-50/40">
-                        <td className="p-3"><Link href={`/rationing/plot?ref=${encodeURIComponent(r.ref)}`} className="font-bold text-navy-700 hover:text-gold-700">{r.ref}</Link></td>
-                        <td className="p-3">{r.cityName ?? '—'}</td>
-                        <td className="p-3">{r.owner ?? '—'}</td>
-                        <td className="p-3 font-num font-bold">{r.count}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              // Card list (not a table) — same shape as the applicants results and the
+              // "recent plots" list, so it stays readable on a phone.
+              <div className="flex flex-col gap-2.5">
+                {rows.map((r) => (
+                  <Link
+                    key={r.ref}
+                    href={`/rationing/plot?ref=${encodeURIComponent(r.ref)}`}
+                    className="flex items-center gap-3.5 rounded-xl border border-ink-200 bg-white p-4 transition hover:border-gold hover:shadow-md"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-num text-xl font-bold text-navy-800 dark:text-soft">{r.ref}</div>
+                      <div className="mt-0.5 truncate text-sm text-ink-600">
+                        {r.cityName ?? '—'}
+                        {r.owner ? ` · ${t('colOwner')} ${r.owner}` : ''}
+                        {' · '}{t('colApplicantsCount')}: <span className="font-num font-bold">{r.count}</span>
+                      </div>
+                    </div>
+                    <span className="flex-none text-2xl text-gold" aria-hidden>‹</span>
+                  </Link>
+                ))}
               </div>
             )}
 
