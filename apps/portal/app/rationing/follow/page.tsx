@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { PublicShell } from '@noc/ui';
 import { FollowForm } from './FollowForm';
+import { SiteShell } from '../../_components/SiteShell';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +49,7 @@ export default async function FollowPage({
   }
 
   return (
-    <PublicShell active="rationing">
+    <SiteShell active="rationing">
       <div className="mx-auto max-w-2xl space-y-5 p-4 sm:p-6">
         <Link href="/rationing" className="inline-block text-sm text-navy-600">‹ {t('backToSearch')}</Link>
         <div>
@@ -60,6 +60,6 @@ export default async function FollowPage({
           <FollowForm kind={kind} cities={cities} defaults={defaults} sheetId={sheetId} />
         </div>
       </div>
-    </PublicShell>
+    </SiteShell>
   );
 }

@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
-import { PublicShell, PhotoGallery, Badge } from '@noc/ui';
+import { PhotoGallery, Badge } from '@noc/ui';
+import { SiteShell } from '../../_components/SiteShell';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,7 @@ export default async function NewsDetail({ params }: { params: Promise<{ id: str
   const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }).format(d);
 
   return (
-    <PublicShell active="news">
+    <SiteShell active="news">
       <article className="mx-auto max-w-[820px] space-y-5 px-6 py-10">
         <a href="/news" className="text-sm text-accent">← {t('title')}</a>
         <div className="flex items-center gap-2">
@@ -28,6 +29,6 @@ export default async function NewsDetail({ params }: { params: Promise<{ id: str
         {photos.length > 0 && <PhotoGallery photos={photos.map((p) => p.path)} />}
         <div className="whitespace-pre-wrap leading-relaxed text-ink-700">{L(n.bodyAr, n.bodyEn)}</div>
       </article>
-    </PublicShell>
+    </SiteShell>
   );
 }

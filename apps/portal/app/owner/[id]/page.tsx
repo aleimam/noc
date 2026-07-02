@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
-import { PublicShell, ListingCard, Badge } from '@noc/ui';
+import { ListingCard, Badge } from '@noc/ui';
+import { SiteShell } from '../../_components/SiteShell';
 import { currency } from '@noc/i18n';
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ export default async function OwnerProfile({ params }: { params: Promise<{ id: s
   const typeLabel: Record<string, string> = { PERSONAL: t('typePERSONAL'), COMPANY: t('typeCOMPANY'), BROKER: t('typeBROKER') };
 
   return (
-    <PublicShell active="market">
+    <SiteShell active="market">
       <div className="mx-auto max-w-[1120px] space-y-8 px-6 py-10">
         <div className="flex items-center gap-4 rounded-lg border border-ink-200 bg-white p-6 shadow-sm">
           <div className="flex h-16 w-16 flex-none items-center justify-center rounded-full bg-navy text-2xl font-black text-gold">{owner.name.slice(0, 1)}</div>
@@ -60,6 +61,6 @@ export default async function OwnerProfile({ params }: { params: Promise<{ id: s
           </div>
         )}
       </div>
-    </PublicShell>
+    </SiteShell>
   );
 }

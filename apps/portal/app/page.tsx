@@ -1,8 +1,9 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
-import { PublicShell, ListingCard } from '@noc/ui';
+import { ListingCard } from '@noc/ui';
 import { currency } from '@noc/i18n';
 import { getModuleVisibility } from '../lib/modules';
+import { SiteShell } from './_components/SiteShell';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +41,7 @@ export default async function Home() {
   const services = allServices.filter((s) => vis[s.key] !== false);
 
   return (
-    <PublicShell active="home">
+    <SiteShell active="home">
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 text-soft">
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
@@ -108,6 +109,6 @@ export default async function Home() {
           </div>
         </section>
       )}
-    </PublicShell>
+    </SiteShell>
   );
 }
