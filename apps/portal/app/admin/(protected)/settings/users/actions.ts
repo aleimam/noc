@@ -73,6 +73,21 @@ export async function upsertCustomer(input: { id?: string; phone: string; name?:
   }
 }
 
+// Confirm (or un-confirm) a customer created by the no-login follow flow.
+export async function setCustomerVerified(id: string, verified: boolean): Promise<Result> {
+  await requirePermission('customers', 'UPDATE');
+  try {
+    await prisma.user.update({
+      where: { id },
+      data: { phoneVerifiedAt: verified ? new Date() : null, isActive: true },
+    });
+    revalidatePath('/admin/settings/customers');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function upsertPartner(input: {
   id?: string;
   name: string;

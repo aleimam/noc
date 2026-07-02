@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
@@ -24,12 +23,10 @@ export default async function FollowPage({
 
   const t = await getTranslations('rationing');
 
-  // Account required (#11). Send unauthenticated visitors to OTP login, returning here.
+  // No login required (#4): a logged-in customer skips the phone step; visitors give a
+  // phone number and are verified with an OTP only if that phone already has an account.
   const session = await auth();
-  if (!session?.user) {
-    const self = `/rationing/follow?kind=${kind === 'FOUND' ? 'found' : 'watch'}${sheetId ? `&sheet=${sheetId}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}`;
-    redirect(`/account/login?next=${encodeURIComponent(self)}`);
-  }
+  const loggedIn = session?.user?.type === 'CUSTOMER';
 
   const cities = await prisma.rationingCity.findMany({
     where: { isActive: true },
@@ -57,7 +54,7 @@ export default async function FollowPage({
           <p className="mt-2 text-lg text-ink-600">{kind === 'FOUND' ? t('followFoundSub') : t('followWatchSub')}</p>
         </div>
         <div className="rounded-2xl bg-white p-5 shadow-md">
-          <FollowForm kind={kind} cities={cities} defaults={defaults} sheetId={sheetId} />
+          <FollowForm kind={kind} cities={cities} defaults={defaults} sheetId={sheetId} loggedIn={loggedIn} />
         </div>
       </div>
     </SiteShell>

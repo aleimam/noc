@@ -10,11 +10,26 @@ export default async function CustomersPage() {
   const t = await getTranslations('admin');
   const customers = await prisma.user.findMany({
     where: { type: 'CUSTOMER' },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ phoneVerifiedAt: 'asc' }, { createdAt: 'desc' }],
     take: 500,
-    select: { id: true, phone: true, name: true, isActive: true, phoneVerifiedAt: true },
+    select: {
+      id: true,
+      phone: true,
+      name: true,
+      isActive: true,
+      phoneVerifiedAt: true,
+      _count: { select: { rationingFollows: true, landFollows: true, userLands: true } },
+    },
   });
-  const rows = customers.map((u) => ({ id: u.id, phone: u.phone ?? '', name: u.name ?? '', isActive: u.isActive, verified: !!u.phoneVerifiedAt }));
+  const rows = customers.map((u) => ({
+    id: u.id,
+    phone: u.phone ?? '',
+    name: u.name ?? '',
+    isActive: u.isActive,
+    verified: !!u.phoneVerifiedAt,
+    follows: u._count.rationingFollows + u._count.landFollows,
+    lands: u._count.userLands,
+  }));
 
   return (
     <div className="space-y-4">

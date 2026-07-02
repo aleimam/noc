@@ -3,9 +3,9 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { upsertCustomer, deleteUser } from '../users/actions';
+import { upsertCustomer, deleteUser, setCustomerVerified } from '../users/actions';
 
-type C = { id: string; phone: string; name: string; isActive: boolean; verified: boolean };
+type C = { id: string; phone: string; name: string; isActive: boolean; verified: boolean; follows: number; lands: number };
 type Draft = { id?: string; phone: string; name: string; isActive: boolean };
 const inp = 'w-full rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm';
 
@@ -16,6 +16,10 @@ export function CustomersManager({ customers }: { customers: C[] }) {
   const [pending, start] = useTransition();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState('');
+  const [unverifiedOnly, setUnverifiedOnly] = useState(false);
+
+  const pendingCount = customers.filter((c) => !c.verified).length;
+  const shown = unverifiedOnly ? customers.filter((c) => !c.verified) : customers;
 
   function save() {
     if (!draft) return;
@@ -37,32 +41,58 @@ export function CustomersManager({ customers }: { customers: C[] }) {
       router.refresh();
     });
   }
+  function verify(id: string, v: boolean) {
+    setError('');
+    start(async () => {
+      const r = await setCustomerVerified(id, v);
+      if (!r.ok) setError(r.error);
+      router.refresh();
+    });
+  }
 
   return (
     <div className="space-y-4">
       {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        {pendingCount > 0 && (
+          <span className="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-800">
+            {t('pendingVerify')}: {pendingCount}
+          </span>
+        )}
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={unverifiedOnly} onChange={(e) => setUnverifiedOnly(e.target.checked)} />
+          {t('showUnverifiedOnly')}
+        </label>
+      </div>
       <div className="overflow-x-auto rounded-lg border border-graphite/15">
         <table className="w-full text-sm">
           <thead className="opacity-60">
             <tr>
               <th className="p-2 text-start">{t('name')}</th>
               <th className="p-2 text-start">{t('phone')}</th>
+              <th className="p-2 text-start">{t('activity')}</th>
               <th className="p-2 text-start">{t('verified')}</th>
               <th className="p-2 text-start">{t('active')}</th>
               <th className="p-2"></th>
             </tr>
           </thead>
           <tbody>
-            {customers.length === 0 && (
-              <tr><td colSpan={5} className="p-4 text-center opacity-60">{t('noUsers')}</td></tr>
+            {shown.length === 0 && (
+              <tr><td colSpan={6} className="p-4 text-center opacity-60">{t('noUsers')}</td></tr>
             )}
-            {customers.map((u) => (
-              <tr key={u.id} className="border-t border-graphite/10">
+            {shown.map((u) => (
+              <tr key={u.id} className={`border-t border-graphite/10 ${!u.verified ? 'bg-amber-50/60' : ''}`}>
                 <td className="p-2 font-medium">{u.name || '—'}</td>
                 <td className="p-2" dir="ltr">{u.phone}</td>
-                <td className="p-2">{u.verified ? '✔' : '—'}</td>
+                <td className="whitespace-nowrap p-2 opacity-75">
+                  {t('followsShort')}: {u.follows} · {t('landsShort')}: {u.lands}
+                </td>
+                <td className="p-2">{u.verified ? '✔' : <span className="text-amber-700">{t('pending')}</span>}</td>
                 <td className="p-2">{u.isActive ? '✔' : '—'}</td>
                 <td className="whitespace-nowrap p-2 text-end">
+                  {!u.verified && (
+                    <button disabled={pending} onClick={() => verify(u.id, true)} className="px-2 py-1 font-medium text-green">{t('verify')}</button>
+                  )}
                   <button onClick={() => setDraft({ id: u.id, phone: u.phone, name: u.name, isActive: u.isActive })} className="px-2 py-1 text-accent">{t('edit')}</button>
                   <button disabled={pending} onClick={() => del(u.id)} className="px-2 py-1 text-red-600">{t('delete')}</button>
                 </td>
