@@ -60,7 +60,7 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
 
         <div className="overflow-hidden rounded-2xl bg-white shadow-md">
           <div className="flex items-center gap-3.5 bg-navy-800 p-5">
-            <div className="flex h-13 w-13 flex-none items-center justify-center rounded-xl bg-gold text-2xl text-navy-900" style={{ width: 52, height: 52 }} aria-hidden>
+            <div className="flex h-[52px] w-[52px] flex-none items-center justify-center rounded-xl bg-gold text-2xl text-navy-900" aria-hidden>
               ✓
             </div>
             <div className="min-w-0">
