@@ -18,7 +18,7 @@ export default async function NewListing() {
   });
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">{t('newOffer')}</h1>
         <a href="/account/listings" className="text-sm text-accent">← {t('myOffers')}</a>
@@ -47,6 +47,6 @@ export default async function NewListing() {
           attachs: {},
         }}
       />
-    </main>
+    </div>
   );
 }

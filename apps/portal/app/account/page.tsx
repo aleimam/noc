@@ -1,56 +1,62 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { SignOutButton } from '../_components/SignOutButton';
+
+export const dynamic = 'force-dynamic';
 
 export default async function CustomerHome() {
   const session = await auth();
-  if (!session?.user) redirect('/account/login');
+  if (session?.user?.type !== 'CUSTOMER') redirect('/account/login');
 
   const dbUser = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { phone: true, createdAt: true },
+    select: { phone: true, name: true, phoneVerifiedAt: true },
   });
 
-  const ta = await getTranslations('auth');
-  const tc = await getTranslations('common');
-  const tm = await getTranslations('mp');
   const t = await getTranslations('account');
+  const tm = await getTranslations('mp');
+  const tp = await getTranslations('profile');
+  const verified = !!dbUser?.phoneVerifiedAt;
+
+  const cards = [
+    { href: '/account/follows', title: t('myFollows'), desc: t('goFollows') },
+    { href: '/account/lands', title: t('myLands'), desc: t('goLands') },
+    { href: '/account/listings', title: tm('myOffers'), desc: t('goListings') },
+    { href: '/account/profile', title: tp('title'), desc: t('goProfile') },
+  ];
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-8">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-primary">{tc('portalName')}</h1>
-        <SignOutButton />
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-ink-200 p-5">
+        <h1 className="text-2xl font-black text-primary">
+          {t('welcome')}{dbUser?.name ? `، ${dbUser.name}` : ''}
+        </h1>
+        <p className="mt-1 text-sm text-ink-600">
+          {t('accountPhone')}: <strong dir="ltr">{dbUser?.phone ?? '—'}</strong>
+        </p>
+        <span
+          className={`mt-3 inline-block rounded-full px-3 py-1 text-xs font-bold ${
+            verified ? 'bg-green/15 text-green' : 'bg-gold/20 text-primary'
+          }`}
+        >
+          {verified ? t('verifiedBadge') : t('unverifiedBadge')}
+        </span>
       </div>
-      <p className="text-sm opacity-80">
-        {ta('loggedInAs')}:{' '}
-        <strong dir="ltr">{dbUser?.phone ?? session.user.id}</strong>
-      </p>
-      <div className="flex flex-wrap gap-3">
-        <a href="/account/follows" className="rounded-md bg-primary px-4 py-2 text-sm text-soft">
-          {t('myFollows')}
-        </a>
-        <a href="/account/lands" className="rounded-md bg-primary px-4 py-2 text-sm text-soft">
-          {t('myLands')}
-        </a>
-        <a href="/account/listings/new" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
-          {tm('newOffer')}
-        </a>
-        <a href="/account/listings" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
-          {tm('myOffers')}
-        </a>
-        <a href="/account/profile" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
-          {ta('myProfile')}
-        </a>
-        <a href="/market" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
-          {tm('title')}
-        </a>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {cards.map((c) => (
+          <Link
+            key={c.href}
+            href={c.href}
+            className="rounded-2xl border border-ink-200 p-5 transition-shadow hover:shadow-md"
+          >
+            <div className="text-lg font-bold text-primary">{c.title}</div>
+            <p className="mt-1 text-sm text-ink-600">{c.desc}</p>
+          </Link>
+        ))}
       </div>
-      <a href="/" className="inline-block text-sm text-accent underline">
-        {tc('backToSite')}
-      </a>
-    </main>
+    </div>
   );
 }

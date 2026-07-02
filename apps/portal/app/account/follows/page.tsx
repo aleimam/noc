@@ -29,10 +29,9 @@ export default async function MyFollowsPage() {
   ]);
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6 sm:p-8">
+    <div className="space-y-6">
       <div>
-        <a href="/account" className="text-sm text-accent">‹ {t('backToAccount')}</a>
-        <h1 className="mt-2 text-2xl font-bold text-primary">{t('myFollows')}</h1>
+        <h1 className="text-2xl font-bold text-primary">{t('myFollows')}</h1>
         <p className="text-sm opacity-75">{t('myFollowsIntro')}</p>
       </div>
 
@@ -81,6 +80,6 @@ export default async function MyFollowsPage() {
           </ul>
         )}
       </section>
-    </main>
+    </div>
   );
 }

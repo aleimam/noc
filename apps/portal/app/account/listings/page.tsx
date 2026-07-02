@@ -38,13 +38,10 @@ export default async function MyListings() {
   for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">{t('myOffers')}</h1>
-        <div className="flex items-center gap-3">
-          <a href="/account/listings/new" className="rounded-md bg-primary px-3 py-1.5 text-sm text-soft">+ {t('newOffer')}</a>
-          <a href="/account" className="text-sm text-accent">← {t('cancel')}</a>
-        </div>
+        <a href="/account/listings/new" className="rounded-md bg-primary px-3 py-1.5 text-sm text-soft">+ {t('newOffer')}</a>
       </div>
 
       {listings.length === 0 && <p className="py-10 text-center opacity-60">{t('noOffers')}</p>}
@@ -75,6 +72,6 @@ export default async function MyListings() {
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

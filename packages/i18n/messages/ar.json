@@ -816,6 +816,15 @@
     "statusMatched": "ظهر في كشف",
     "statusClosed": "مغلق",
     "confirmUnfollow": "إلغاء المتابعة؟",
-    "unfollow": "إلغاء المتابعة"
+    "unfollow": "إلغاء المتابعة",
+    "overview": "الرئيسية",
+    "welcome": "أهلاً بك",
+    "accountPhone": "رقمك",
+    "verifiedBadge": "مؤكَّد",
+    "unverifiedBadge": "غير مؤكَّد — لتأكيد رقمك سجّل الدخول برمز",
+    "goFollows": "الأسماء والمناطق اللي بتتابعها",
+    "goLands": "سجّل أرضك للتحديثات أو للعرض للبيع",
+    "goListings": "أضف أو تابع عروضك على الصواري",
+    "goProfile": "اسمك ورقم موبايلك"
   }
 }

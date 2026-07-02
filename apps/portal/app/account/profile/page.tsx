@@ -18,13 +18,8 @@ export default async function ProfilePage() {
   const t = await getTranslations('profile');
 
   return (
-    <main className="mx-auto max-w-md space-y-6 p-8">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-primary">{t('title')}</h1>
-        <a href="/account" className="text-sm text-accent underline">
-          {t('back')}
-        </a>
-      </div>
+    <div className="max-w-md space-y-6">
+      <h1 className="text-2xl font-bold text-primary">{t('title')}</h1>
       <ProfileForm
         initialName={user?.name ?? ''}
         phone={user?.phone ?? ''}
@@ -38,6 +33,6 @@ export default async function ProfilePage() {
           error: t('error'),
         }}
       />
-    </main>
+    </div>
   );
 }

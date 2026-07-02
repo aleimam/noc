@@ -33,10 +33,9 @@ export default async function MyLandsPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6 sm:p-8">
+    <div className="space-y-6">
       <div>
-        <a href="/account" className="text-sm text-accent">‹ {t('backToAccount')}</a>
-        <h1 className="mt-2 text-2xl font-bold text-primary">{t('myLands')}</h1>
+        <h1 className="text-2xl font-bold text-primary">{t('myLands')}</h1>
         <p className="text-sm opacity-75">{t('myLandsIntro')}</p>
       </div>
       <MyLandsClient
@@ -44,6 +43,6 @@ export default async function MyLandsPage() {
         districts={districts.map((d) => ({ id: d.id, name: locale === 'en' ? d.nameEn : d.nameAr }))}
         neighborhoods={neighborhoods.map((n) => ({ id: n.id, districtId: n.districtId, name: locale === 'en' ? n.nameEn : n.nameAr }))}
       />
-    </main>
+    </div>
   );
 }

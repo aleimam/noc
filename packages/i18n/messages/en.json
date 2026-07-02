@@ -816,6 +816,15 @@
     "statusMatched": "Appeared in a sheet",
     "statusClosed": "Closed",
     "confirmUnfollow": "Stop following?",
-    "unfollow": "Unfollow"
+    "unfollow": "Unfollow",
+    "overview": "Home",
+    "welcome": "Welcome",
+    "accountPhone": "Your number",
+    "verifiedBadge": "Verified",
+    "unverifiedBadge": "Unverified — sign in with a code to confirm your number",
+    "goFollows": "The names and areas you follow",
+    "goLands": "Register your land for updates or to list it for sale",
+    "goListings": "Add or track your ALSWARY listings",
+    "goProfile": "Your name and mobile number"
   }
 }
