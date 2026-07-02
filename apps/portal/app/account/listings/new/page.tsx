@@ -36,6 +36,8 @@ export default async function NewListing() {
           title: '',
           description: '',
           price: '',
+          priceUnit: 'TOTAL',
+          priceNegotiable: false,
           priceNote: '',
           contactPhone: dbUser?.phone ?? '',
           contactWhatsapp: true,

@@ -394,7 +394,19 @@
     "standardAreasHint": "List of areas (m²) used to round Allocated Area — comma-separated",
     "saveStandardAreas": "Save areas",
     "reorder": "Display order",
-    "saveOrder": "Save order"
+    "saveOrder": "Save order",
+    "basicDetails": "Basic details",
+    "extraDetails": "Extra details",
+    "autoTitle": "Auto-generate",
+    "pricePer": "Price per",
+    "priceTotal": "Total",
+    "pricePerUnit": "Per unit",
+    "pricePerSqm": "Per m²",
+    "negotiable": "Negotiable?",
+    "otherDetails": "Other details",
+    "otherPhotos": "Other photos",
+    "yes": "Yes",
+    "no": "No"
   },
   "rationing": {
     "title": "Rationing Sheets",

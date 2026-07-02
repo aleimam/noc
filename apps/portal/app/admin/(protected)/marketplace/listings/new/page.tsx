@@ -14,6 +14,8 @@ export default async function StaffNewListing() {
     prisma.setting.findMany({ where: { key: { in: ['alswarey_phone', 'alswarey_whatsapp'] } } }),
   ]);
   const sett = Object.fromEntries(settings.map((s) => [s.key, s.value]));
+  // Default the owner to our own "US" owner (Al Sawarey) when one exists.
+  const defaultOwnerId = owners.find((o) => o.type === 'US')?.id ?? '';
 
   return (
     <div className="space-y-4">
@@ -36,10 +38,12 @@ export default async function StaffNewListing() {
           title: '',
           description: '',
           price: '',
+          priceUnit: 'TOTAL',
+          priceNegotiable: false,
           priceNote: '',
           contactPhone: sett.alswarey_phone ?? '',
           contactWhatsapp: !!sett.alswarey_whatsapp,
-          ownerId: '',
+          ownerId: defaultOwnerId,
           ownerName: '',
           ownerType: 'PERSONAL',
           showOnBrokerage: true,

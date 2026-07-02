@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ImageAttachment, Lightbox, type UploadedAttachment } from '@noc/ui';
 import { localizeUnit } from '@noc/i18n';
-import { roundToStandardArea, formatMoneyThousands } from '@noc/config';
+import { roundToStandardArea, formatMoneyThousands, formatMoneyEgp, formatArea } from '@noc/config';
+import { RichEditor } from '../../admin/(protected)/pages/RichEditor';
 import { saveListing, type ListingInput, type ValueInput } from './actions';
 
 type AttrType =
@@ -29,6 +30,8 @@ export type ListingFormInitial = {
   title: string;
   description: string;
   price: string;
+  priceUnit: 'TOTAL' | 'UNIT' | 'SQM';
+  priceNegotiable: boolean;
   priceNote: string;
   contactPhone: string;
   contactWhatsapp: boolean;
@@ -91,6 +94,8 @@ export function ListingForm({
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description);
   const [price, setPrice] = useState(initial.price);
+  const [priceUnit, setPriceUnit] = useState(initial.priceUnit);
+  const [priceNegotiable, setPriceNegotiable] = useState(initial.priceNegotiable);
   const [priceNote, setPriceNote] = useState(initial.priceNote);
   const [contactPhone, setContactPhone] = useState(initial.contactPhone);
   const [contactWhatsapp, setContactWhatsapp] = useState(initial.contactWhatsapp);
@@ -219,6 +224,8 @@ export function ListingForm({
       title,
       description,
       price: price.trim() ? Number(price) : null,
+      priceUnit,
+      priceNegotiable,
       priceNote,
       contactPhone,
       contactWhatsapp,
@@ -235,6 +242,27 @@ export function ListingForm({
       if (r.ok) router.push(staffMode ? '/admin/marketplace/listings' : '/account/listings');
       else setError(r.error);
     });
+  }
+
+  // Compose a title from the chosen categories + first Area detail with a value + price.
+  function autoTitle() {
+    const parts: string[] = [];
+    for (const key of ['type', 'purpose', 'condition']) {
+      const c = clsByKey.get(key);
+      const o = c?.options.find((x) => x.id === (c ? selected[c.id] : ''));
+      if (o) parts.push(L(o.nameAr, o.nameEn));
+    }
+    const areaAttr = attributes.find(
+      (a) => (a.type === 'AREA_ALLOCATED' || a.type === 'AREA_ORIGINAL') && applies(a) && typeof vals[a.id] === 'string' && (vals[a.id] as string).trim() !== '',
+    );
+    if (areaAttr) {
+      const n = Number(vals[areaAttr.id]);
+      if (!Number.isNaN(n)) parts.push(areaAttr.type === 'AREA_ALLOCATED' ? formatArea(roundToStandardArea(n, standardAreas), locale) : formatArea(n, locale));
+    }
+    const p = price.trim() ? Number(price) : null;
+    if (p != null && !Number.isNaN(p)) parts.push(`${L('بسعر', 'for')} ${formatMoneyEgp(p, locale)}`);
+    const composed = parts.join(' ').trim();
+    if (composed) setTitle(composed);
   }
 
   function control(a: Attr) {
@@ -364,88 +392,124 @@ export function ListingForm({
         </div>
       )}
 
-      {/* Type → Purpose → Status classifiers (hard nesting) */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        {classifiers.map((c) => {
-          const opts = visibleOptions(c);
-          const parentPicked = c.key === 'purpose' ? !!selOf('type') : c.key === 'condition' ? !!selOf('purpose') : true;
-          return (
-            <label key={c.id} className="block text-sm">
-              {L(c.nameAr, c.nameEn)}
-              <select value={selected[c.id] ?? ''} onChange={(e) => setSel(c.id, e.target.value)} disabled={!parentPicked} className={inp}>
-                <option value="">{parentPicked ? '—' : t('pickParentFirst')}</option>
-                {opts.map((o) => (<option key={o.id} value={o.id}>{L(o.nameAr, o.nameEn)}</option>))}
-              </select>
-            </label>
-          );
-        })}
-      </div>
+      {/* ── Basic details (shown for every listing) ── */}
+      <section className="space-y-4 rounded-lg border border-graphite/15 p-4">
+        <h3 className="font-bold text-primary">{t('basicDetails')}</h3>
 
-      <label className="block text-sm">{t('listingTitle')}<input value={title} onChange={(e) => setTitle(e.target.value)} className={inp} /></label>
-      <label className="block text-sm">{t('description')}<textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inp} /></label>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm">{t('price')}<input type="number" dir="ltr" value={price} onChange={(e) => setPrice(e.target.value)} className={inp} /></label>
-        <label className="text-sm">{t('priceNote')}<input value={priceNote} onChange={(e) => setPriceNote(e.target.value)} className={inp} /></label>
-      </div>
+        {/* Type → Purpose → Status classifiers (hard nesting) */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          {classifiers.map((c) => {
+            const opts = visibleOptions(c);
+            const parentPicked = c.key === 'purpose' ? !!selOf('type') : c.key === 'condition' ? !!selOf('purpose') : true;
+            return (
+              <label key={c.id} className="block text-sm">
+                {L(c.nameAr, c.nameEn)}
+                <select value={selected[c.id] ?? ''} onChange={(e) => setSel(c.id, e.target.value)} disabled={!parentPicked} className={inp}>
+                  <option value="">{parentPicked ? '—' : t('pickParentFirst')}</option>
+                  {opts.map((o) => (<option key={o.id} value={o.id}>{L(o.nameAr, o.nameEn)}</option>))}
+                </select>
+              </label>
+            );
+          })}
+        </div>
 
-      {/* Owner + channel */}
-      {staffMode ? (
-        <div className="grid gap-4 rounded-lg border border-graphite/15 p-4 sm:grid-cols-2">
-          <label className="text-sm">
+        {/* Title (+ auto-generate) */}
+        <div>
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <span className="text-sm">{t('listingTitle')}</span>
+            <button type="button" onClick={autoTitle} className="rounded border border-graphite/25 px-2 py-0.5 text-xs hover:bg-graphite/10">✨ {t('autoTitle')}</button>
+          </div>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} className={inp} />
+        </div>
+
+        {/* Price + price-per + negotiable */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <label className="text-sm">{t('price')}<input type="number" dir="ltr" value={price} onChange={(e) => setPrice(e.target.value)} className={inp} /></label>
+          <label className="text-sm">{t('pricePer')}
+            <select value={priceUnit} onChange={(e) => setPriceUnit(e.target.value as 'TOTAL' | 'UNIT' | 'SQM')} className={inp}>
+              <option value="TOTAL">{t('priceTotal')}</option>
+              <option value="UNIT">{t('pricePerUnit')}</option>
+              <option value="SQM">{t('pricePerSqm')}</option>
+            </select>
+          </label>
+          <div className="text-sm">
+            <span className="mb-1 block">{t('negotiable')}</span>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setPriceNegotiable(true)} className={`flex-1 rounded-lg px-3 py-2 font-semibold ${priceNegotiable ? 'bg-primary text-soft' : 'border border-graphite/25'}`}>{t('yes')}</button>
+              <button type="button" onClick={() => setPriceNegotiable(false)} className={`flex-1 rounded-lg px-3 py-2 font-semibold ${!priceNegotiable ? 'bg-primary text-soft' : 'border border-graphite/25'}`}>{t('no')}</button>
+            </div>
+          </div>
+        </div>
+        <label className="block text-sm">{t('priceNote')}<input value={priceNote} onChange={(e) => setPriceNote(e.target.value)} className={inp} /></label>
+
+        {/* Owner */}
+        {staffMode ? (
+          <label className="block text-sm">
             {t('owner')}
             <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)} className={inp}>
               <option value="">{t('none')}</option>
               {owners.map((o) => (<option key={o.id} value={o.id}>{o.name} ({t(`type${o.type}`)})</option>))}
             </select>
           </label>
-        </div>
-      ) : (
-        <div className="grid gap-4 rounded-lg border border-graphite/15 p-4 sm:grid-cols-2">
-          <label className="text-sm">{t('owner')} — {t('ownerName')}<input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} className={inp} /></label>
-          <label className="text-sm">
-            {t('ownerType')}
-            <select value={ownerType} onChange={(e) => setOwnerType(e.target.value)} className={inp}>
-              <option value="PERSONAL">{t('typePERSONAL')}</option>
-              <option value="COMPANY">{t('typeCOMPANY')}</option>
-              <option value="BROKER">{t('typeBROKER')}</option>
-            </select>
-          </label>
-        </div>
-      )}
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="text-sm">{t('owner')} — {t('ownerName')}<input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} className={inp} /></label>
+            <label className="text-sm">
+              {t('ownerType')}
+              <select value={ownerType} onChange={(e) => setOwnerType(e.target.value)} className={inp}>
+                <option value="PERSONAL">{t('typePERSONAL')}</option>
+                <option value="COMPANY">{t('typeCOMPANY')}</option>
+                <option value="BROKER">{t('typeBROKER')}</option>
+              </select>
+            </label>
+          </div>
+        )}
 
-      {allChosen ? (
-        grouped.map((g) => (
-          <div key={g.section.id} className="space-y-3 rounded-lg border border-graphite/15 p-4">
-            <h3 className="font-semibold text-primary">{L(g.section.nameAr, g.section.nameEn)}</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {g.attrs.map((a) => (
-                <label key={a.id} className="text-sm">
-                  <span className="mb-1 block opacity-80">{L(a.labelAr, a.labelEn)}</span>
-                  {control(a)}
-                </label>
-              ))}
+        {/* Other details (rich text) */}
+        <div>
+          <span className="mb-1 block text-sm">{t('otherDetails')}</span>
+          <RichEditor value={description} onChange={setDescription} />
+        </div>
+
+        {/* Other photos */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold">{t('otherPhotos')}</h4>
+          <div className="flex flex-wrap gap-3">
+            {photos.map((p) => (
+              <div key={p.id} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.path} alt="" onClick={() => setZoom(p.path)} className="h-20 w-20 cursor-pointer rounded-md object-cover ring-1 ring-graphite/20" />
+                <button type="button" onClick={() => setPhotos(photos.filter((x) => x.id !== p.id))} className="absolute -end-1 -top-1 rounded-full bg-red-600 px-1.5 text-xs text-white">✕</button>
+              </div>
+            ))}
+            <div className="w-48">
+              <ImageAttachment stampCategory="listing" value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} />
             </div>
           </div>
-        ))
-      ) : (
-        <p className="rounded-lg border border-dashed border-graphite/25 p-4 text-sm opacity-60">{t('pickClassifiers')}</p>
-      )}
-
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold">{t('photos')}</h3>
-        <div className="flex flex-wrap gap-3">
-          {photos.map((p) => (
-            <div key={p.id} className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.path} alt="" onClick={() => setZoom(p.path)} className="h-20 w-20 cursor-pointer rounded-md object-cover ring-1 ring-graphite/20" />
-              <button type="button" onClick={() => setPhotos(photos.filter((x) => x.id !== p.id))} className="absolute -end-1 -top-1 rounded-full bg-red-600 px-1.5 text-xs text-white">✕</button>
-            </div>
-          ))}
-          <div className="w-48">
-            <ImageAttachment stampCategory="listing" value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} />
-          </div>
         </div>
-      </div>
+      </section>
+
+      {/* ── Extra details (category-gated attribute pool) ── */}
+      <section className="space-y-4">
+        <h3 className="font-bold text-primary">{t('extraDetails')}</h3>
+        {allChosen ? (
+          grouped.map((g) => (
+            <div key={g.section.id} className="space-y-3 rounded-lg border border-graphite/15 p-4">
+              <h4 className="font-semibold text-primary">{L(g.section.nameAr, g.section.nameEn)}</h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {g.attrs.map((a) => (
+                  <label key={a.id} className="text-sm">
+                    <span className="mb-1 block opacity-80">{L(a.labelAr, a.labelEn)}</span>
+                    {control(a)}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="rounded-lg border border-dashed border-graphite/25 p-4 text-sm opacity-60">{t('pickClassifiers')}</p>
+        )}
+      </section>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm">{t('contactPhone')}<input type="tel" dir="ltr" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inp} /></label>

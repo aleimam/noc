@@ -126,6 +126,8 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     contactWhatsapp = listing.owner.phone1Whatsapp;
   }
   const waNumber = contactPhone.replace(/\D/g, '');
+  const perLabel =
+    listing.priceUnit === 'UNIT' ? (locale === 'ar' ? 'للوحدة' : 'per unit') : listing.priceUnit === 'SQM' ? (locale === 'ar' ? 'للمتر' : 'per m²') : '';
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6 pb-24">
@@ -141,7 +143,10 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         <h1 className="mt-2 text-2xl font-bold text-primary">{listing.title}</h1>
         {listing.price != null && (
           <div className="mt-1 text-xl font-bold text-primary">
-            {String(listing.price)} <span className="text-sm font-normal">{currency(locale)}</span>
+            {String(listing.price)} <span className="text-sm font-normal">{currency(locale)}{perLabel ? ` / ${perLabel}` : ''}</span>
+            {listing.priceNegotiable && (
+              <span className="ms-2 rounded bg-gold/20 px-2 py-0.5 text-xs font-normal text-primary">{locale === 'ar' ? 'قابل للتفاوض' : 'Negotiable'}</span>
+            )}
             {listing.priceNote ? <span className="text-sm font-normal opacity-60"> · {listing.priceNote}</span> : null}
           </div>
         )}
@@ -152,7 +157,12 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         <span className="font-medium">{weAreContact ? t('listedByUs') : ownerName || '—'}</span>
       </div>
 
-      {listing.description && <p className="whitespace-pre-wrap opacity-90">{listing.description}</p>}
+      {listing.description &&
+        (/<\w/.test(listing.description) ? (
+          <div className="page-content opacity-90" dangerouslySetInnerHTML={{ __html: listing.description }} />
+        ) : (
+          <p className="whitespace-pre-wrap opacity-90">{listing.description}</p>
+        ))}
 
       {sections.map((s) => (
         <div key={s.section.id} className="space-y-2">

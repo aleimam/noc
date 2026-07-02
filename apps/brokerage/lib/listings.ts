@@ -169,6 +169,8 @@ export type LandDetail = {
   title: string;
   description: string | null;
   price: number | null;
+  priceUnit: string;
+  priceNegotiable: boolean;
   soldPrice: number | null;
   priceNote: string | null;
   status: string;
@@ -188,6 +190,8 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
       title: true,
       description: true,
       price: true,
+      priceUnit: true,
+      priceNegotiable: true,
       soldPrice: true,
       priceNote: true,
       status: true,
@@ -277,6 +281,8 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
     title: l.title,
     description: l.description,
     price: l.price != null ? Number(l.price) : null,
+    priceUnit: l.priceUnit,
+    priceNegotiable: l.priceNegotiable,
     soldPrice: l.soldPrice != null ? Number(l.soldPrice) : null,
     priceNote: l.priceNote,
     status: l.status,

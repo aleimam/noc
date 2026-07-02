@@ -43,8 +43,10 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     `مرحباً، أريد شراء الأرض: ${land.title}`,
     `Hello, I'm interested in buying: ${land.title}`,
   );
+  const perLabel =
+    land.priceUnit === 'UNIT' ? L('للوحدة', 'per unit') : land.priceUnit === 'SQM' ? L('للمتر', 'per m²') : '';
   const priceShort =
-    land.price != null ? `${fmt(land.price)} ${L('ج.م', 'EGP')}` : L('السعر عند الطلب', 'Price on request');
+    land.price != null ? `${fmt(land.price)} ${L('ج.م', 'EGP')}${perLabel ? ` / ${perLabel}` : ''}` : L('السعر عند الطلب', 'Price on request');
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -98,9 +100,12 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
                     <div className="text-lg font-bold text-ink-500">{L('تم البيع', 'Sold')}</div>
                   )
                 ) : land.price != null ? (
-                  <div className="font-num text-3xl font-black text-navy-800">{fmt(land.price)} <span className="text-lg text-ink-500">{L('ج.م', 'EGP')}</span></div>
+                  <div className="font-num text-3xl font-black text-navy-800">{fmt(land.price)} <span className="text-lg text-ink-500">{L('ج.م', 'EGP')}{perLabel ? ` / ${perLabel}` : ''}</span></div>
                 ) : (
                   <div className="text-lg font-bold text-gold-700">{L('السعر عند الطلب', 'Price on request')}</div>
+                )}
+                {!sold && land.priceNegotiable && (
+                  <span className="mt-1 inline-block rounded bg-gold-100 px-2 py-0.5 text-xs font-bold text-gold-800">{L('قابل للتفاوض', 'Negotiable')}</span>
                 )}
                 {land.priceNote && <p className="mt-1 text-sm text-ink-500">{land.priceNote}</p>}
               </div>
@@ -147,7 +152,11 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
         {land.description && (
           <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
             <h2 className="mb-2 text-lg font-bold text-navy-800">{L('الوصف', 'Description')}</h2>
-            <p className="whitespace-pre-line leading-relaxed text-ink-700">{land.description}</p>
+            {/<\w/.test(land.description) ? (
+              <div className="page-content leading-relaxed text-ink-700" dangerouslySetInnerHTML={{ __html: land.description }} />
+            ) : (
+              <p className="whitespace-pre-line leading-relaxed text-ink-700">{land.description}</p>
+            )}
           </section>
         )}
 

@@ -436,6 +436,8 @@ model Listing {
   title           String
   description     String?       @db.Text
   price           Decimal?      @db.Decimal(14, 2)
+  priceUnit       PriceUnit     @default(TOTAL) // price is per: total plot / unit / m²
+  priceNegotiable Boolean       @default(false)
   soldPrice       Decimal?      @db.Decimal(14, 2) // set by staff when marked SOLD; optionally shown publicly
   adNumber        String?       @unique // public ad reference YYMM+owner(2)+seq, frozen at publish
   featured        Boolean       @default(false) // promoted on the storefront (manual)
@@ -498,6 +500,12 @@ enum OwnerType {
   COMPANY
   BROKER
   US // our own lands — codes 00–09
+}
+
+enum PriceUnit {
+  TOTAL // whole plot / property
+  UNIT // per unit
+  SQM // per square metre
 }
 
 /// Reusable commercial owners/contacts list (staff-managed) — used for our inventory.

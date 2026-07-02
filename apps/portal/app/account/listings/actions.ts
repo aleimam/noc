@@ -21,6 +21,8 @@ export type ListingInput = {
   title: string;
   description?: string;
   price?: number | null;
+  priceUnit?: 'TOTAL' | 'UNIT' | 'SQM';
+  priceNegotiable?: boolean;
   priceNote?: string;
   contactPhone: string;
   contactWhatsapp: boolean;
@@ -87,6 +89,8 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         title: input.title.trim(),
         description: input.description?.trim() || null,
         price: input.price ?? null,
+        priceUnit: input.priceUnit ?? 'TOTAL',
+        priceNegotiable: input.priceNegotiable ?? false,
         priceNote: input.priceNote?.trim() || null,
         contactPhone: input.contactPhone.trim(),
         contactWhatsapp: input.contactWhatsapp,

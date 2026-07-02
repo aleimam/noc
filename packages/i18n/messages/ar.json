@@ -394,7 +394,19 @@
     "standardAreasHint": "قائمة المساحات (م²) لتقريب المساحة المخصصة — افصل بينها بفاصلة",
     "saveStandardAreas": "حفظ المساحات",
     "reorder": "ترتيب العرض",
-    "saveOrder": "حفظ الترتيب"
+    "saveOrder": "حفظ الترتيب",
+    "basicDetails": "البيانات الأساسية",
+    "extraDetails": "تفاصيل إضافية",
+    "autoTitle": "توليد تلقائي",
+    "pricePer": "السعر لـ",
+    "priceTotal": "إجمالي",
+    "pricePerUnit": "للوحدة",
+    "pricePerSqm": "للمتر",
+    "negotiable": "قابل للتفاوض؟",
+    "otherDetails": "تفاصيل أخرى",
+    "otherPhotos": "صور أخرى",
+    "yes": "نعم",
+    "no": "لا"
   },
   "rationing": {
     "title": "كشوف التقنين",
