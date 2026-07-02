@@ -7,7 +7,7 @@ import { loadCatalog, buildVals, loadListingAttachments } from '../../catalog';
 
 export default async function EditListing({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user) redirect('/app/login');
+  if (!session?.user) redirect('/account/login');
   const { id } = await params;
 
   const listing = await prisma.listing.findUnique({ where: { id }, include: { values: true } });
@@ -24,7 +24,7 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
     <main className="mx-auto max-w-3xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">{t('edit')}: {listing.title}</h1>
-        <a href="/app/listings" className="text-sm text-accent">← {t('myOffers')}</a>
+        <a href="/account/listings" className="text-sm text-accent">← {t('myOffers')}</a>
       </div>
       <ListingForm
         classifiers={classifiers}

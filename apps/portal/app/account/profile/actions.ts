@@ -19,7 +19,7 @@ export async function updateProfile(formData: FormData): Promise<{ ok: boolean }
     data: { name: name || null },
   });
 
-  revalidatePath('/app/profile');
-  revalidatePath('/app');
+  revalidatePath('/account/profile');
+  revalidatePath('/account');
   return { ok: true };
 }

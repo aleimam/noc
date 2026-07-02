@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import { PublicShell } from '@noc/ui';
+import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { getModuleVisibility, MODULE_KEYS, type ModuleKey } from '../../lib/modules';
 import { getSiteConfig } from '../../lib/site';
@@ -10,7 +11,7 @@ import { getSiteConfig } from '../../lib/site';
 // off in the backend, the page 404s; disabled modules are hidden from the nav.
 export async function SiteShell({ active, children }: { active?: string; children: ReactNode }) {
   const locale = (await getLocale()) as 'ar' | 'en';
-  const [vis, pages, site] = await Promise.all([
+  const [vis, pages, site, session] = await Promise.all([
     getModuleVisibility(),
     prisma.page.findMany({
       where: { brand: 'newobour', published: true },
@@ -18,12 +19,14 @@ export async function SiteShell({ active, children }: { active?: string; childre
       select: { slug: true, titleAr: true, titleEn: true },
     }),
     getSiteConfig(),
+    auth(),
   ]);
   if (active && (MODULE_KEYS as readonly string[]).includes(active) && vis[active as ModuleKey] === false) notFound();
   const hidden = MODULE_KEYS.filter((k) => vis[k] === false);
   const footerPages = pages.map((p) => ({ href: `/p/${p.slug}`, label: locale === 'en' ? p.titleEn || p.titleAr : p.titleAr }));
+  const loggedIn = session?.user?.type === 'CUSTOMER';
   return (
-    <PublicShell active={active} hiddenKeys={hidden} footerPages={footerPages} copyright={site.copyright} tagline={site.slogan} mobileMenuMode={site.mobileMenuMode}>
+    <PublicShell active={active} hiddenKeys={hidden} footerPages={footerPages} copyright={site.copyright} tagline={site.slogan} mobileMenuMode={site.mobileMenuMode} loggedIn={loggedIn} accountLabel={locale === 'en' ? 'My account' : 'حسابي'}>
       {children}
     </PublicShell>
   );

@@ -14,8 +14,8 @@ export default auth((req) => {
   if (pathname.startsWith('/admin') && pathname !== '/admin/login' && user?.type !== 'STAFF') {
     return NextResponse.redirect(new URL('/admin/login', origin));
   }
-  if (pathname.startsWith('/app') && pathname !== '/app/login' && !user) {
-    return NextResponse.redirect(new URL('/app/login', origin));
+  if (pathname.startsWith('/account') && pathname !== '/account/login' && !user) {
+    return NextResponse.redirect(new URL('/account/login', origin));
   }
 
   const requestHeaders = new Headers(req.headers);
@@ -24,5 +24,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ['/admin/:path*', '/app/:path*'],
+  matcher: ['/admin/:path*', '/account/:path*'],
 };

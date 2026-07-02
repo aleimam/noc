@@ -1,8 +1,8 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { ListingForm } from '@/app/app/listings/ListingForm';
-import { loadCatalog } from '@/app/app/listings/catalog';
+import { ListingForm } from '@/app/account/listings/ListingForm';
+import { loadCatalog } from '@/app/account/listings/catalog';
 
 export default async function StaffNewListing() {
   await requirePermission('marketplace', 'CREATE');

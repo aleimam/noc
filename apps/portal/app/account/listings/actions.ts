@@ -159,7 +159,7 @@ export async function saveListing(input: ListingInput): Promise<Result> {
       return listingId;
     });
 
-    revalidatePath('/app/listings');
+    revalidatePath('/account/listings');
     revalidatePath('/admin/marketplace/listings', 'page');
     return { ok: true, id };
   } catch (e) {
@@ -180,6 +180,6 @@ export async function setMyListingStatus(
     return { ok: false, error: 'forbidden' };
   }
   await prisma.listing.update({ where: { id }, data: { status } });
-  revalidatePath('/app/listings');
+  revalidatePath('/account/listings');
   return { ok: true, id };
 }

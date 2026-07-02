@@ -27,6 +27,8 @@ export function PublicShell({
   copyright,
   tagline,
   mobileMenuMode = 'full',
+  loggedIn = false,
+  accountLabel = 'حسابي',
 }: {
   children: ReactNode;
   active?: string;
@@ -35,8 +37,22 @@ export function PublicShell({
   copyright?: string;
   tagline?: string; // brand slogan under the footer name (falls back to the i18n default)
   mobileMenuMode?: 'full' | 'compact';
+  loggedIn?: boolean; // show an account button instead of "login"
+  accountLabel?: string;
 }) {
   const t = useTranslations('nav');
+  // Logged-in customers get an account icon + label; visitors get the login button.
+  const AccountLink = ({ big = false }: { big?: boolean }) =>
+    loggedIn ? (
+      <a href="/account" className={big ? 'mt-2 flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-4 text-center text-2xl font-bold text-navy-900' : 'flex items-center gap-1.5 rounded-md bg-gold px-3.5 py-2 text-sm font-bold text-navy-900 shadow-gold transition hover:brightness-95'}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
+        {accountLabel}
+      </a>
+    ) : (
+      <a href="/account/login" className={big ? 'mt-2 rounded-xl bg-gold px-5 py-4 text-center text-2xl font-bold text-navy-900' : 'rounded-md bg-gold px-3.5 py-2 text-sm font-bold text-navy-900 shadow-gold transition hover:brightness-95'}>
+        {t('login')}
+      </a>
+    );
   const nav = NAV.filter((n) => !hiddenKeys.includes(n.key));
   const [open, setOpen] = useState(false);
 
@@ -68,9 +84,7 @@ export function PublicShell({
           <div className="flex items-center gap-2">
             <div className="hidden sm:block"><LanguageSwitcher /></div>
             <ThemeToggle />
-            <a href="/app" className="rounded-md bg-gold px-3.5 py-2 text-sm font-bold text-navy-900 shadow-gold transition hover:brightness-95">
-              {t('login')}
-            </a>
+            <AccountLink />
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
@@ -118,9 +132,7 @@ export function PublicShell({
                 {t(n.key)}
               </a>
             ))}
-            <a href="/app" onClick={() => setOpen(false)} className="mt-2 rounded-xl bg-gold px-5 py-4 text-center text-2xl font-bold text-navy-900">
-              {t('login')}
-            </a>
+            <div onClick={() => setOpen(false)}><AccountLink big /></div>
           </nav>
         </div>
       )}

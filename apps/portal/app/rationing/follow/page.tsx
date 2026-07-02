@@ -28,7 +28,7 @@ export default async function FollowPage({
   const session = await auth();
   if (!session?.user) {
     const self = `/rationing/follow?kind=${kind === 'FOUND' ? 'found' : 'watch'}${sheetId ? `&sheet=${sheetId}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}`;
-    redirect(`/app/login?next=${encodeURIComponent(self)}`);
+    redirect(`/account/login?next=${encodeURIComponent(self)}`);
   }
 
   const cities = await prisma.rationingCity.findMany({

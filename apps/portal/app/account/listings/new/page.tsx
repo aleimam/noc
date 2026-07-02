@@ -7,7 +7,7 @@ import { loadCatalog } from '../catalog';
 
 export default async function NewListing() {
   const session = await auth();
-  if (!session?.user) redirect('/app/login');
+  if (!session?.user) redirect('/account/login');
 
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
@@ -21,7 +21,7 @@ export default async function NewListing() {
     <main className="mx-auto max-w-3xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">{t('newOffer')}</h1>
-        <a href="/app/listings" className="text-sm text-accent">← {t('myOffers')}</a>
+        <a href="/account/listings" className="text-sm text-accent">← {t('myOffers')}</a>
       </div>
       <ListingForm
         classifiers={classifiers}

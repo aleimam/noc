@@ -6,7 +6,7 @@ import { SignOutButton } from '../_components/SignOutButton';
 
 export default async function CustomerHome() {
   const session = await auth();
-  if (!session?.user) redirect('/app/login');
+  if (!session?.user) redirect('/account/login');
 
   const dbUser = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -28,13 +28,13 @@ export default async function CustomerHome() {
         <strong dir="ltr">{dbUser?.phone ?? session.user.id}</strong>
       </p>
       <div className="flex flex-wrap gap-3">
-        <a href="/app/listings/new" className="rounded-md bg-primary px-4 py-2 text-sm text-soft">
+        <a href="/account/listings/new" className="rounded-md bg-primary px-4 py-2 text-sm text-soft">
           {tm('newOffer')}
         </a>
-        <a href="/app/listings" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
+        <a href="/account/listings" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
           {tm('myOffers')}
         </a>
-        <a href="/app/profile" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
+        <a href="/account/profile" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">
           {ta('myProfile')}
         </a>
         <a href="/market" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">

@@ -8,7 +8,7 @@ import { useTranslations, useLocale } from 'next-intl';
 // Only allow same-site relative paths as a post-login destination (no open redirects).
 function safeNext(raw: string | null): string {
   if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw;
-  return '/app';
+  return '/account';
 }
 
 export default function CustomerLoginPage() {

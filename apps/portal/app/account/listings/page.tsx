@@ -16,7 +16,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default async function MyListings() {
   const session = await auth();
-  if (!session?.user) redirect('/app/login');
+  if (!session?.user) redirect('/account/login');
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
@@ -42,8 +42,8 @@ export default async function MyListings() {
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">{t('myOffers')}</h1>
         <div className="flex items-center gap-3">
-          <a href="/app/listings/new" className="rounded-md bg-primary px-3 py-1.5 text-sm text-soft">+ {t('newOffer')}</a>
-          <a href="/app" className="text-sm text-accent">← {t('cancel')}</a>
+          <a href="/account/listings/new" className="rounded-md bg-primary px-3 py-1.5 text-sm text-soft">+ {t('newOffer')}</a>
+          <a href="/account" className="text-sm text-accent">← {t('cancel')}</a>
         </div>
       </div>
 

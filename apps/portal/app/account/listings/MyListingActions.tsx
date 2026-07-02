@@ -17,7 +17,7 @@ export function MyListingActions({ id, status }: { id: string; status: string })
 
   return (
     <div className="flex flex-col items-end gap-1 text-sm">
-      <a href={`/app/listings/${id}/edit`} className="text-accent">{t('edit')}</a>
+      <a href={`/account/listings/${id}/edit`} className="text-accent">{t('edit')}</a>
       {status !== 'SOLD' && (
         <button disabled={pending} onClick={() => act('SOLD')} className="text-green">{t('markSold')}</button>
       )}

@@ -8,7 +8,7 @@ import './types';
 export const authConfig = {
   trustHost: true,
   session: { strategy: 'jwt' },
-  pages: { signIn: '/app/login' },
+  pages: { signIn: '/account/login' },
   providers: [],
   callbacks: {
     // Runs in the middleware (edge). Decides access from the token alone.
@@ -20,8 +20,8 @@ export const authConfig = {
         if (user?.type === 'STAFF') return true;
         return Response.redirect(new URL('/admin/login', origin));
       }
-      if (pathname.startsWith('/app')) {
-        if (pathname === '/app/login') return true;
+      if (pathname.startsWith('/account')) {
+        if (pathname === '/account/login') return true;
         return Boolean(user);
       }
       return true;

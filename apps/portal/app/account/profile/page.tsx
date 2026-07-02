@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage() {
   const session = await auth();
-  if (session?.user?.type !== 'CUSTOMER') redirect('/app/login');
+  if (session?.user?.type !== 'CUSTOMER') redirect('/account/login');
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -21,7 +21,7 @@ export default async function ProfilePage() {
     <main className="mx-auto max-w-md space-y-6 p-8">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-primary">{t('title')}</h1>
-        <a href="/app" className="text-sm text-accent underline">
+        <a href="/account" className="text-sm text-accent underline">
           {t('back')}
         </a>
       </div>
