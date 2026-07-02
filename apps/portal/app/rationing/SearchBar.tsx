@@ -55,7 +55,10 @@ export function SearchBar({
           <option value="block">{t('colBlock')}</option>
         </select>
 
-        <div className="flex h-[220px] flex-1 items-center gap-2.5 rounded-2xl border-2 border-gold/70 bg-white px-4 shadow-sm sm:h-16">
+        {/* Mobile: tall, dominant box. `flex-1` is desktop-only — on a mobile flex-col it
+            has basis:0 and collapses the height, which is why earlier height bumps never
+            showed. `min-h` can't be collapsed by flex. */}
+        <div className="flex min-h-[150px] items-center gap-2.5 rounded-2xl border-2 border-gold/70 bg-white px-4 shadow-sm sm:h-16 sm:min-h-0 sm:flex-1">
           <span className="text-3xl text-gold sm:text-2xl" aria-hidden>⌕</span>
           <input
             value={q}
