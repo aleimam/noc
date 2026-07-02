@@ -406,7 +406,14 @@
     "otherDetails": "Other details",
     "otherPhotos": "Other photos",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "ownerSearch": "Search by name, phone or code",
+    "personalOwners": "Personal owners",
+    "ownerListings": "Listings",
+    "ownerLands": "Lands",
+    "ownerNothing": "None",
+    "backToOwners": "Owners",
+    "ownerInfo": "Owner details"
   },
   "rationing": {
     "title": "Rationing Sheets",

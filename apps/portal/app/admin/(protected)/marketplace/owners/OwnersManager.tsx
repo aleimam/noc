@@ -28,8 +28,15 @@ export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; taken
   const [pending, start] = useTransition();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState('');
+  const [q, setQ] = useState('');
 
   const taken = new Set(takenCodes);
+  const needle = q.trim().toLowerCase();
+  const shown = needle
+    ? initial.filter((o) =>
+        `${o.name} ${o.phone1 ?? ''} ${o.phone2 ?? ''} ${o.codes.map(pad).join(' ')}`.toLowerCase().includes(needle),
+      )
+    : initial;
 
   function toggleCode(code: number) {
     setDraft((d) => {
@@ -119,11 +126,16 @@ export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; taken
         <button onClick={() => setDraft({ ...EMPTY })} className="rounded-md bg-primary px-3 py-1.5 text-sm text-soft">+ {t('add')}</button>
       )}
 
+      <div className="flex items-center justify-between gap-3">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('ownerSearch')} className="w-full max-w-xs rounded-md border border-graphite/20 bg-transparent px-3 py-1.5 text-sm" />
+        <span className="whitespace-nowrap text-xs opacity-60">{shown.length}/{initial.length}</span>
+      </div>
+
       <div className="space-y-2">
-        {initial.map((o) => (
+        {shown.map((o) => (
           <div key={o.id} className="flex items-center justify-between gap-3 rounded-lg border border-graphite/15 p-3">
             <div>
-              <span className="font-semibold">{o.name}</span>{' '}
+              <a href={`/admin/marketplace/owners/${o.id}`} className="font-semibold text-accent hover:underline">{o.name}</a>{' '}
               <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{t(`type${o.type}`)}</span>
               {o.codes.length > 0 && <span className="ms-1 rounded bg-gold/20 px-2 py-0.5 text-xs font-num" dir="ltr">{o.codes.map(pad).join(' ')}</span>}
               <div className="text-xs opacity-70" dir="ltr">
@@ -137,7 +149,7 @@ export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; taken
             </div>
           </div>
         ))}
-        {initial.length === 0 && <p className="text-sm opacity-50">{t('none')}</p>}
+        {shown.length === 0 && <p className="text-sm opacity-50">{t('none')}</p>}
       </div>
     </div>
   );

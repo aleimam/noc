@@ -16,7 +16,10 @@ export default async function OwnersPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">{t('owners')}</h1>
-        <a href="/admin/marketplace" className="text-sm text-accent">← {t('title')}</a>
+        <div className="flex items-center gap-3">
+          <a href="/admin/marketplace/owners/personal" className="text-sm text-accent">{t('personalOwners')}</a>
+          <a href="/admin/marketplace" className="text-sm text-accent">← {t('title')}</a>
+        </div>
       </div>
       <OwnersManager
         takenCodes={takenCodes}

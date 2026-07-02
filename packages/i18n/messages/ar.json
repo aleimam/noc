@@ -406,7 +406,14 @@
     "otherDetails": "تفاصيل أخرى",
     "otherPhotos": "صور أخرى",
     "yes": "نعم",
-    "no": "لا"
+    "no": "لا",
+    "ownerSearch": "ابحث بالاسم أو الهاتف أو الكود",
+    "personalOwners": "ملاك أفراد",
+    "ownerListings": "العروض",
+    "ownerLands": "الأراضي",
+    "ownerNothing": "لا يوجد",
+    "backToOwners": "الملاك",
+    "ownerInfo": "بيانات المالك"
   },
   "rationing": {
     "title": "كشوف التقنين",
