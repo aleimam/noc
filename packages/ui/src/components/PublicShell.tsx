@@ -25,6 +25,7 @@ export function PublicShell({
   hiddenKeys = [],
   footerPages = [],
   copyright,
+  tagline,
   mobileMenuMode = 'full',
 }: {
   children: ReactNode;
@@ -32,6 +33,7 @@ export function PublicShell({
   hiddenKeys?: string[];
   footerPages?: { href: string; label: string }[];
   copyright?: string;
+  tagline?: string; // brand slogan under the footer name (falls back to the i18n default)
   mobileMenuMode?: 'full' | 'compact';
 }) {
   const t = useTranslations('nav');
@@ -132,7 +134,7 @@ export function PublicShell({
             <img src="/brand/logo" alt="" className="h-9 w-auto" />
             <div>
               <div className="text-lg font-extrabold text-navy-800">{t('brand')}</div>
-              <div className="text-sm text-ink-500">{t('tagline')}</div>
+              <div className="text-sm text-ink-500">{tagline || t('tagline')}</div>
             </div>
           </div>
           <nav className="flex flex-wrap gap-x-5 gap-y-2 text-base font-medium text-ink-600">

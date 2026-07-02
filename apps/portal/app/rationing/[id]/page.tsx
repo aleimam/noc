@@ -9,6 +9,7 @@ import { SourceSheetViewer } from './SourceSheetViewer';
 import { ShareButton } from './ShareButton';
 import { SaveResultButton } from './SaveResultButton';
 import { FbNotice } from '../Bits';
+import { RegisterCards } from '../RegisterCards';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,13 +110,7 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
-        <div className="rounded-2xl border-2 border-green bg-white p-5">
-          <div className="text-lg font-extrabold text-success">{t('foundCardTitle')}</div>
-          <p className="mt-1.5 text-ink-600">{t('foundCardBody')}</p>
-          <Link href={`/rationing/follow?kind=found&sheet=${sheet.id}`} className="mt-3.5 inline-block rounded-xl bg-navy px-5 py-3 text-lg font-bold text-soft">
-            {t('thatsMe')}
-          </Link>
-        </div>
+        <RegisterCards q={sheet.applicantName} foundSheetId={sheet.id} />
       </div>
     </SiteShell>
   );

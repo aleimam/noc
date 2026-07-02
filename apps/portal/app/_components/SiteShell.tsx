@@ -23,7 +23,7 @@ export async function SiteShell({ active, children }: { active?: string; childre
   const hidden = MODULE_KEYS.filter((k) => vis[k] === false);
   const footerPages = pages.map((p) => ({ href: `/p/${p.slug}`, label: locale === 'en' ? p.titleEn || p.titleAr : p.titleAr }));
   return (
-    <PublicShell active={active} hiddenKeys={hidden} footerPages={footerPages} copyright={site.copyright} mobileMenuMode={site.mobileMenuMode}>
+    <PublicShell active={active} hiddenKeys={hidden} footerPages={footerPages} copyright={site.copyright} tagline={site.slogan} mobileMenuMode={site.mobileMenuMode}>
       {children}
     </PublicShell>
   );

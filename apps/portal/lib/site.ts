@@ -6,32 +6,36 @@ export type MobileMenuMode = 'full' | 'compact';
 
 export type SiteConfig = {
   mobileMenuMode: MobileMenuMode; // full-screen overlay vs compact dropdown
+  slogan: string; // New Obour brand slogan/tagline (footer)
   copyright: string; // New Obour footer copyright
   whatsappHelp: string; // help/contact WhatsApp number ('' = hide the button)
 };
 
 export const SITE_KEYS = {
   mobileMenu: 'site.mobileMenu',
+  slogan: 'site.slogan',
   copyrightNewobour: 'copyright_newobour',
   copyrightAlsawarey: 'copyright_alsawarey',
   whatsappHelp: 'site.whatsappHelp',
 } as const;
 
+export const DEFAULT_SLOGAN_NEWOBOUR = 'بوابة الخدمات المجانية';
 export const DEFAULT_COPYRIGHT_NEWOBOUR = '© بوابة خدمات مدينة العبور الجديدة';
 export const DEFAULT_COPYRIGHT_ALSAWAREY = '© الصواري للاستثمار العقاري';
 
 export async function getSiteConfig(): Promise<SiteConfig> {
   try {
     const rows = await prisma.setting.findMany({
-      where: { key: { in: [SITE_KEYS.mobileMenu, SITE_KEYS.copyrightNewobour, SITE_KEYS.whatsappHelp] } },
+      where: { key: { in: [SITE_KEYS.mobileMenu, SITE_KEYS.slogan, SITE_KEYS.copyrightNewobour, SITE_KEYS.whatsappHelp] } },
     });
     const m = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     return {
       mobileMenuMode: m[SITE_KEYS.mobileMenu] === 'compact' ? 'compact' : 'full',
+      slogan: m[SITE_KEYS.slogan] || DEFAULT_SLOGAN_NEWOBOUR,
       copyright: m[SITE_KEYS.copyrightNewobour] || DEFAULT_COPYRIGHT_NEWOBOUR,
       whatsappHelp: m[SITE_KEYS.whatsappHelp] || '',
     };
   } catch {
-    return { mobileMenuMode: 'full', copyright: DEFAULT_COPYRIGHT_NEWOBOUR, whatsappHelp: '' };
+    return { mobileMenuMode: 'full', slogan: DEFAULT_SLOGAN_NEWOBOUR, copyright: DEFAULT_COPYRIGHT_NEWOBOUR, whatsappHelp: '' };
   }
 }

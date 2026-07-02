@@ -1,11 +1,11 @@
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { DEFAULT_COPYRIGHT_NEWOBOUR, DEFAULT_COPYRIGHT_ALSAWAREY } from '../../../../../lib/site';
+import { DEFAULT_COPYRIGHT_NEWOBOUR, DEFAULT_COPYRIGHT_ALSAWAREY, DEFAULT_SLOGAN_NEWOBOUR } from '../../../../../lib/site';
 import { SiteSettingsClient } from './SiteSettingsClient';
 
 export const dynamic = 'force-dynamic';
 
-const KEYS = ['site.mobileMenu', 'copyright_newobour', 'copyright_alsawarey', 'site.whatsappHelp'];
+const KEYS = ['site.mobileMenu', 'site.slogan', 'copyright_newobour', 'copyright_alsawarey', 'site.whatsappHelp'];
 
 export default async function SiteSettingsPage() {
   await requirePermission('settings', 'VIEW');
@@ -14,6 +14,7 @@ export default async function SiteSettingsPage() {
 
   const initial = {
     mobileMenu: v['site.mobileMenu'] === 'compact' ? 'compact' : 'full',
+    sloganNewobour: v['site.slogan'] ?? DEFAULT_SLOGAN_NEWOBOUR,
     copyrightNewobour: v['copyright_newobour'] ?? DEFAULT_COPYRIGHT_NEWOBOUR,
     copyrightAlsawarey: v['copyright_alsawarey'] ?? DEFAULT_COPYRIGHT_ALSAWAREY,
     whatsappHelp: v['site.whatsappHelp'] ?? '',

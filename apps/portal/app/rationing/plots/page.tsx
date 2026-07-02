@@ -5,8 +5,11 @@ import { SiteShell } from '../../_components/SiteShell';
 import { RationingTabs } from '../RationingTabs';
 import { ListControls } from '../ListControls';
 import { FbNotice } from '../Bits';
+import { TotalsCard } from '../TotalsCard';
+import { RegisterCards } from '../RegisterCards';
 import { plotGroups, plotsSummary } from '../../../lib/rationing/search';
 import { getRationingConfig } from '../../../lib/rationing/settings';
+import { getRationingTotals } from '../../../lib/rationing/stats';
 
 export const dynamic = 'force-dynamic';
 const PER = [10, 25, 50];
@@ -28,6 +31,7 @@ export default async function PlotsTab({ searchParams }: { searchParams: Promise
 
   const { rows, total } = active ? await plotGroups({ q, cityId: cityId || undefined, sort, take: per, skip: (page - 1) * per }) : { rows: [], total: 0 };
   const summary = active ? null : await plotsSummary();
+  const totals = active ? null : await getRationingTotals();
 
   const totalPages = Math.ceil(total / per);
   const pageHref = (p: number) => {
@@ -65,29 +69,10 @@ export default async function PlotsTab({ searchParams }: { searchParams: Promise
           </div>
         )}
 
-        {!active && summary && (
+        {!active && summary && totals && (
           <>
-            {/* Totals + by-city card */}
-            <div className="rounded-3xl bg-navy-800 p-6 text-white">
-              <div className="text-center text-base text-navy-200">{t('totalsTitle')}</div>
-              <div className="mt-3 text-center">
-                <div className="font-num text-4xl font-black text-gold">{summary.totalPlots.toLocaleString('en')}</div>
-                <div className="mt-1 text-sm text-navy-200">{t('plotsTitle')}</div>
-              </div>
-              {summary.byCity.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  {summary.byCity.map((b) => (
-                    <div key={b.label} className="flex items-center gap-3">
-                      <div className="w-28 flex-none truncate text-sm text-navy-200">{b.label}</div>
-                      <div className="relative h-5 flex-1 rounded-md bg-white/10">
-                        <div className="h-5 rounded-md bg-gold" style={{ width: `${Math.max(4, (b.value / summary.byCity[0]!.value) * 100)}%` }} />
-                      </div>
-                      <div className="w-12 flex-none font-num text-sm font-bold">{b.value.toLocaleString('en')}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Same totals card as the main rationing page */}
+            <TotalsCard totals={totals} />
 
             {/* Recent plots */}
             {summary.recent.length > 0 && (
@@ -152,6 +137,8 @@ export default async function PlotsTab({ searchParams }: { searchParams: Promise
             )}
           </>
         )}
+
+        <RegisterCards q={q} />
       </div>
     </SiteShell>
   );

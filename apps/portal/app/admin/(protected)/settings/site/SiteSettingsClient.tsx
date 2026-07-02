@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveSiteSettings } from './actions';
 
-type Initial = { mobileMenu: string; copyrightNewobour: string; copyrightAlsawarey: string; whatsappHelp: string };
+type Initial = { mobileMenu: string; sloganNewobour: string; copyrightNewobour: string; copyrightAlsawarey: string; whatsappHelp: string };
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
 
 export function SiteSettingsClient({ initial }: { initial: Initial }) {
@@ -18,6 +18,7 @@ export function SiteSettingsClient({ initial }: { initial: Initial }) {
     start(async () => {
       const r = await saveSiteSettings({
         'site.mobileMenu': s.mobileMenu,
+        'site.slogan': s.sloganNewobour,
         copyright_newobour: s.copyrightNewobour,
         copyright_alsawarey: s.copyrightAlsawarey,
         'site.whatsappHelp': s.whatsappHelp,
@@ -45,6 +46,12 @@ export function SiteSettingsClient({ initial }: { initial: Initial }) {
             </button>
           ))}
         </div>
+      </section>
+
+      <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
+        <h2 className="font-semibold text-primary">شعار الموقع (السطر التعريفي)</h2>
+        <label className="block text-sm">العبور الجديد (newobour.com)<input value={s.sloganNewobour} onChange={(e) => setS((x) => ({ ...x, sloganNewobour: e.target.value }))} className={inp} /></label>
+        <p className="text-xs opacity-60">شعار الصواري (alsawarey.com) يُحرَّر من «واجهة موقع الصواري» ← سطر التذييل.</p>
       </section>
 
       <section className="space-y-3 rounded-lg border border-graphite/15 p-4">

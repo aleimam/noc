@@ -262,7 +262,7 @@ export const DEFAULT_STOREFRONT: StorefrontContent = {
       { platform: 'whatsapp', url: 'https://wa.me/201040810000' },
     ],
   },
-  footer: { brandLine: loc('الصواري للاستثمار العقاري', 'ALSWARY Real-estate Investment') },
+  footer: { brandLine: loc('للاستثمار العقاري', 'Real-estate investment') },
 };
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
