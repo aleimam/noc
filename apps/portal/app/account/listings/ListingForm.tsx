@@ -11,7 +11,7 @@ type AttrType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_S
 type Opt = { id: string; labelAr: string; labelEn: string };
 type Attr = { id: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; order: number; options: Opt[]; optionIds: string[] };
 type Section = { id: string; nameAr: string; nameEn: string; order: number };
-type ClsOpt = { id: string; nameAr: string; nameEn: string; parentOptionId: string | null; allowedOnAlsawarey: boolean };
+type ClsOpt = { id: string; nameAr: string; nameEn: string; parentIds: string[]; allowedOnAlsawarey: boolean };
 type Classifier = { id: string; key: string; nameAr: string; nameEn: string; options: ClsOpt[] };
 type OwnerOpt = { id: string; name: string; type: string };
 
@@ -116,10 +116,10 @@ export function ListingForm({
     let opts = c.options;
     if (c.key === 'purpose') {
       const typeSel = selOf('type');
-      if (typeSel) opts = opts.filter((o) => !o.parentOptionId || o.parentOptionId === typeSel);
+      if (typeSel) opts = opts.filter((o) => o.parentIds.length === 0 || o.parentIds.includes(typeSel));
     } else if (c.key === 'condition') {
       const purpSel = selOf('purpose');
-      if (purpSel) opts = opts.filter((o) => !o.parentOptionId || o.parentOptionId === purpSel);
+      if (purpSel) opts = opts.filter((o) => o.parentIds.length === 0 || o.parentIds.includes(purpSel));
     }
     if (alsawarey && (c.key === 'type' || c.key === 'purpose')) opts = opts.filter((o) => o.allowedOnAlsawarey);
     return opts;

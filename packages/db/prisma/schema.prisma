@@ -273,8 +273,12 @@ model ClassifierOption {
   updatedAt    DateTime @updatedAt
 
   classifier        Classifier            @relation(fields: [classifierId], references: [id], onDelete: Cascade)
+  // Legacy single parent (dormant) — superseded by the many-to-many parentLinks below,
+  // so a sub-option can belong to several parents (e.g. one Purpose under many Types).
   parent            ClassifierOption?     @relation("OptionNest", fields: [parentOptionId], references: [id], onDelete: SetNull)
   children          ClassifierOption[]    @relation("OptionNest")
+  parentLinks       ClassifierOptionParent[] @relation("COPChild")
+  childLinks        ClassifierOptionParent[] @relation("COPParent")
   attrLinks         AttributeClassifier[]
   typeListings      Listing[]             @relation("ListingType")
   purposeListings   Listing[]             @relation("ListingPurpose")
@@ -283,6 +287,21 @@ model ClassifierOption {
   @@unique([classifierId, key])
   @@index([classifierId, order])
   @@index([parentOptionId])
+}
+
+/// Many-to-many nesting: a sub-option (child) can sit under several parent options
+/// (e.g. a Purpose usable by multiple Types). Replaces the single ClassifierOption.parentOptionId.
+model ClassifierOptionParent {
+  id       String @id @default(cuid())
+  childId  String
+  parentId String
+
+  child  ClassifierOption @relation("COPChild", fields: [childId], references: [id], onDelete: Cascade)
+  parent ClassifierOption @relation("COPParent", fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, parentId])
+  @@index([parentId])
+  @@index([childId])
 }
 
 /// Attribute applicability: which classifier OPTIONS an attribute applies to. For each

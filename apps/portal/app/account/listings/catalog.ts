@@ -16,7 +16,7 @@ export async function loadCatalog() {
   const [classifiers, sections, attrs] = await Promise.all([
     prisma.classifier.findMany({
       orderBy: { order: 'asc' },
-      include: { options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true, parentOptionId: true, allowedOnAlsawarey: true } } },
+      include: { options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true, allowedOnAlsawarey: true, parentLinks: { select: { parentId: true } } } } },
     }),
     prisma.attributeSection.findMany({
       where: { isActive: true },
@@ -50,7 +50,19 @@ export async function loadCatalog() {
   }));
 
   return {
-    classifiers: classifiers.map((c) => ({ id: c.id, key: c.key, nameAr: c.nameAr, nameEn: c.nameEn, options: c.options })),
+    classifiers: classifiers.map((c) => ({
+      id: c.id,
+      key: c.key,
+      nameAr: c.nameAr,
+      nameEn: c.nameEn,
+      options: c.options.map((o) => ({
+        id: o.id,
+        nameAr: o.nameAr,
+        nameEn: o.nameEn,
+        allowedOnAlsawarey: o.allowedOnAlsawarey,
+        parentIds: o.parentLinks.map((l) => l.parentId),
+      })),
+    })),
     sections,
     attributes,
   };

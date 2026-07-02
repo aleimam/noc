@@ -382,7 +382,9 @@
     "pickParentFirst": "Pick the previous one first",
     "savedOk": "Saved ✓",
     "offers": "Sell offers",
-    "sellContent": "Sell page content"
+    "sellContent": "Sell page content",
+    "parentMultiHint": "you can pick more than one parent",
+    "parentNoneHint": "none selected = shows under all types"
   },
   "rationing": {
     "title": "Rationing Sheets",

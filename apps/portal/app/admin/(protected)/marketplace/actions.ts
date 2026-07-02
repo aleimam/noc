@@ -27,7 +27,7 @@ function fail(e: unknown): Result {
 /** Options are scoped to a classifier — bind classifierId on the server page. */
 export async function upsertClassifierOption(
   classifierId: string,
-  input: { id?: string; key: string; nameAr: string; nameEn: string; order?: number; isActive?: boolean; parentOptionId?: string | null; allowedOnAlsawarey?: boolean },
+  input: { id?: string; key: string; nameAr: string; nameEn: string; order?: number; isActive?: boolean; parentIds?: string[]; allowedOnAlsawarey?: boolean },
 ): Promise<Result> {
   await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
   const data = {
@@ -35,12 +35,21 @@ export async function upsertClassifierOption(
     nameEn: input.nameEn.trim(),
     order: input.order ?? 0,
     isActive: input.isActive ?? true,
-    parentOptionId: input.parentOptionId || null,
     allowedOnAlsawarey: input.allowedOnAlsawarey ?? true,
   };
+  const parentIds = [...new Set((input.parentIds ?? []).filter(Boolean))];
   try {
-    if (input.id) await prisma.classifierOption.update({ where: { id: input.id }, data });
-    else await prisma.classifierOption.create({ data: { classifierId, key: input.key.trim(), ...data } });
+    const opt = input.id
+      ? await prisma.classifierOption.update({ where: { id: input.id }, data })
+      : await prisma.classifierOption.create({ data: { classifierId, key: input.key.trim(), ...data } });
+    // Reconcile the many-to-many parents (a sub-option can sit under several parents).
+    await prisma.classifierOptionParent.deleteMany({ where: { childId: opt.id } });
+    if (parentIds.length) {
+      await prisma.classifierOptionParent.createMany({
+        data: parentIds.map((parentId) => ({ childId: opt.id, parentId })),
+        skipDuplicates: true,
+      });
+    }
     revalidate();
     return { ok: true };
   } catch (e) {

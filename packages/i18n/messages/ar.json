@@ -382,7 +382,9 @@
     "pickParentFirst": "اختر ما قبله أولاً",
     "savedOk": "تم الحفظ ✓",
     "offers": "عروض البيع",
-    "sellContent": "محتوى صفحة البيع"
+    "sellContent": "محتوى صفحة البيع",
+    "parentMultiHint": "يمكن اختيار أكثر من أصل",
+    "parentNoneHint": "بدون تحديد = يظهر مع كل الأنواع"
   },
   "rationing": {
     "title": "كشوف التقنين",

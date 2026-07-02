@@ -14,7 +14,7 @@ export default async function ClassifierOptionsPage({ params }: { params: Promis
   const t = await getTranslations('mp');
   const classifier = await prisma.classifier.findUnique({
     where: { id },
-    include: { options: { orderBy: { order: 'asc' } } },
+    include: { options: { orderBy: { order: 'asc' }, include: { parentLinks: { select: { parentId: true } } } } },
   });
   if (!classifier) notFound();
 
@@ -31,7 +31,7 @@ export default async function ClassifierOptionsPage({ params }: { params: Promis
     nameEn: o.nameEn,
     order: o.order,
     isActive: o.isActive,
-    parentOptionId: o.parentOptionId,
+    parentIds: o.parentLinks.map((l) => l.parentId),
     allowedOnAlsawarey: o.allowedOnAlsawarey,
   }));
 

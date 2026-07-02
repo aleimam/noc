@@ -7,10 +7,10 @@ import { toast } from '@noc/ui';
 
 type Result = { ok: true } | { ok: false; error: string };
 type ParentOpt = { id: string; nameAr: string; nameEn: string };
-type Opt = { id: string; key: string; nameAr: string; nameEn: string; order: number; isActive: boolean; parentOptionId: string | null; allowedOnAlsawarey: boolean };
-type Draft = { id?: string; key: string; nameAr: string; nameEn: string; order: number; isActive: boolean; parentOptionId: string; allowedOnAlsawarey: boolean };
+type Opt = { id: string; key: string; nameAr: string; nameEn: string; order: number; isActive: boolean; parentIds: string[]; allowedOnAlsawarey: boolean };
+type Draft = { id?: string; key: string; nameAr: string; nameEn: string; order: number; isActive: boolean; parentIds: string[]; allowedOnAlsawarey: boolean };
 
-const EMPTY: Draft = { key: '', nameAr: '', nameEn: '', order: 0, isActive: true, parentOptionId: '', allowedOnAlsawarey: true };
+const EMPTY: Draft = { key: '', nameAr: '', nameEn: '', order: 0, isActive: true, parentIds: [], allowedOnAlsawarey: true };
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
 
 export function ClassifierOptionsEditor({
@@ -33,11 +33,13 @@ export function ClassifierOptionsEditor({
   const [pending, start] = useTransition();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState('');
-  const hasParent = parentOptions.length > 0 || initial.some((o) => o.parentOptionId);
-  const pName = (id: string | null) => {
-    const p = parentOptions.find((x) => x.id === id);
-    return p ? p.nameAr : '—';
+  const hasParent = parentOptions.length > 0 || initial.some((o) => o.parentIds.length);
+  const pNames = (ids: string[]) => {
+    const names = ids.map((id) => parentOptions.find((x) => x.id === id)?.nameAr).filter(Boolean);
+    return names.length ? names.join('، ') : '—';
   };
+  const toggleParent = (id: string) =>
+    setDraft((d) => (d ? { ...d, parentIds: d.parentIds.includes(id) ? d.parentIds.filter((x) => x !== id) : [...d.parentIds, id] } : d));
 
   function save() {
     if (!draft || !draft.nameAr.trim() || (!draft.id && !draft.key.trim())) { setError('failed'); return; }
@@ -67,12 +69,18 @@ export function ClassifierOptionsEditor({
           {!draft.id && <label className="text-sm">key<input dir="ltr" value={draft.key} onChange={(e) => setDraft({ ...draft, key: e.target.value })} className={inp} placeholder="slug" /></label>}
           <label className="text-sm">{t('order')}<input type="number" dir="ltr" value={draft.order} onChange={(e) => setDraft({ ...draft, order: parseInt(e.target.value, 10) || 0 })} className={inp} /></label>
           {parentOptions.length > 0 && (
-            <label className="text-sm">{parentLabel} (الأصل)
-              <select value={draft.parentOptionId} onChange={(e) => setDraft({ ...draft, parentOptionId: e.target.value })} className={inp}>
-                <option value="">— (كل الأنواع)</option>
-                {parentOptions.map((p) => <option key={p.id} value={p.id}>{p.nameAr}</option>)}
-              </select>
-            </label>
+            <div className="text-sm sm:col-span-2">
+              <div className="mb-1">{parentLabel} (الأصل) <span className="opacity-60">— {t('parentMultiHint')}</span></div>
+              <div className="grid grid-cols-2 gap-1 rounded-md border border-graphite/20 p-2 sm:grid-cols-3">
+                {parentOptions.map((p) => (
+                  <label key={p.id} className="flex items-center gap-2">
+                    <input type="checkbox" checked={draft.parentIds.includes(p.id)} onChange={() => toggleParent(p.id)} />
+                    {p.nameAr}
+                  </label>
+                ))}
+              </div>
+              {draft.parentIds.length === 0 && <p className="mt-1 text-xs opacity-60">{t('parentNoneHint')}</p>}
+            </div>
           )}
           <label className="flex items-center gap-2 pt-6 text-sm"><input type="checkbox" checked={draft.isActive} onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })} />{t('active')}</label>
           {showAlsawarey && (
@@ -93,11 +101,11 @@ export function ClassifierOptionsEditor({
             <div>
               <span className="font-semibold">{o.nameAr}</span> <span className="text-xs opacity-60" dir="ltr">{o.nameEn}</span>
               {!o.isActive && <span className="ms-1 rounded bg-graphite/10 px-2 py-0.5 text-xs">{t('inactive')}</span>}
-              {hasParent && <span className="ms-1 text-xs opacity-60">← {pName(o.parentOptionId)}</span>}
+              {hasParent && o.parentIds.length > 0 && <span className="ms-1 text-xs opacity-60">← {pNames(o.parentIds)}</span>}
               {showAlsawarey && o.allowedOnAlsawarey && <span className="ms-1 rounded bg-gold/20 px-2 py-0.5 text-xs text-gold-800">{t('onAlsawareyShort')}</span>}
             </div>
             <div className="flex gap-3 text-sm">
-              <button onClick={() => setDraft({ id: o.id, key: o.key, nameAr: o.nameAr, nameEn: o.nameEn, order: o.order, isActive: o.isActive, parentOptionId: o.parentOptionId ?? '', allowedOnAlsawarey: o.allowedOnAlsawarey })} className="text-accent">{t('edit')}</button>
+              <button onClick={() => setDraft({ id: o.id, key: o.key, nameAr: o.nameAr, nameEn: o.nameEn, order: o.order, isActive: o.isActive, parentIds: [...o.parentIds], allowedOnAlsawarey: o.allowedOnAlsawarey })} className="text-accent">{t('edit')}</button>
               <button disabled={pending} onClick={() => del(o.id)} className="text-red-600">{t('delete')}</button>
             </div>
           </div>
