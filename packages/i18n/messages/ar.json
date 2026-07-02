@@ -559,6 +559,8 @@
     "confirmDeleteRecord": "حذف هذا السجل نهائياً؟",
     "showRecords": "عرض السجلات المرتبطة بهذه الصورة",
     "recordsOnPhoto": "السجلات في هذه الصورة",
+    "save": "حفظ",
+    "savedOk": "تم الحفظ ✓",
     "markNotDuplicate": "تمّت المراجعة — ليست مكررة",
     "markedReviewed": "تم النقل إلى «تمت مراجعته»",
     "reviewedDuplicates": "تكرارات تمت مراجعتها",

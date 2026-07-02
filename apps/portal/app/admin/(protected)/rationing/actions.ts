@@ -5,7 +5,7 @@ import { auth, requirePermission, loadSmsConfig } from '@noc/auth';
 import { prisma, Prisma } from '@noc/db';
 import { sendSms } from '@noc/sms';
 import { parseWorkbook, distinctCities, type ParsedRow } from '../../../../lib/rationing/import';
-import { normalizeArabic } from '../../../../lib/rationing/text';
+import { normalizeArabic, buildPlotFullRef, dedupeKey, expandApplicantNames } from '../../../../lib/rationing/text';
 import type { PreviewRow, PreviewResult } from './types';
 
 type Conflict = 'skip' | 'update' | 'keepBoth';
@@ -275,6 +275,64 @@ export async function deleteBatch(id: string): Promise<{ ok: true } | { ok: fals
     return { ok: true };
   } catch (e) {
     console.error('deleteBatch failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
+/** Edit a single applicant record (from the duplicates screen). Recomputes the search
+ *  norms + dedupeKey and rebuilds the expanded names, so a correction naturally moves the
+ *  row out of its duplicate group. */
+export async function updateSheet(input: {
+  id: string;
+  applicantName: string;
+  plotNo: string;
+  blockNo: string;
+  originalOwner?: string;
+  city?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requirePermission('sheets', 'UPDATE');
+  const applicantName = input.applicantName.trim();
+  const plotNo = input.plotNo.trim();
+  const blockNo = input.blockNo.trim();
+  const originalOwner = input.originalOwner?.trim() || null;
+  const cityName = input.city?.trim() || null;
+  if (!applicantName || (!plotNo && !blockNo)) return { ok: false, error: 'required' };
+
+  try {
+    let cityId: string | null = null;
+    if (cityName) {
+      const norm = normalizeArabic(cityName);
+      const c = await prisma.rationingCity.upsert({ where: { normalized: norm }, update: {}, create: { name: cityName, normalized: norm }, select: { id: true } });
+      cityId = c.id;
+    }
+    const plotFullRef = buildPlotFullRef(plotNo, blockNo);
+    const key = dedupeKey(applicantName, plotNo || plotFullRef, blockNo);
+    await prisma.$transaction(async (tx) => {
+      await tx.rationingSheet.update({
+        where: { id: input.id },
+        data: {
+          applicantName,
+          plotNo,
+          blockNo,
+          plotFullRef,
+          originalOwner,
+          cityId,
+          ownerNorm: normalizeArabic(originalOwner),
+          plotNorm: normalizeArabic(plotNo),
+          blockNorm: normalizeArabic(blockNo),
+          dedupeKey: key,
+        },
+      });
+      await tx.rationingName.deleteMany({ where: { sheetId: input.id } });
+      const names = expandApplicantNames(applicantName);
+      await tx.rationingName.createMany({ data: names.map((fullName, i) => ({ sheetId: input.id, fullName, normalized: normalizeArabic(fullName), isPrimary: i === 0 })) });
+    });
+    revalidatePath('/admin/rationing/duplicates');
+    revalidatePath('/admin/rationing/sheets');
+    revalidatePath('/admin/rationing');
+    return { ok: true };
+  } catch (e) {
+    console.error('updateSheet failed', e);
     return { ok: false, error: 'failed' };
   }
 }

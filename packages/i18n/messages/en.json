@@ -559,6 +559,8 @@
     "confirmDeleteRecord": "Permanently delete this record?",
     "showRecords": "Show records linked to this photo",
     "recordsOnPhoto": "Records on this photo",
+    "save": "Save",
+    "savedOk": "Saved ✓",
     "markNotDuplicate": "Reviewed — not a duplicate",
     "markedReviewed": "Moved to Reviewed",
     "reviewedDuplicates": "Reviewed duplicates",
