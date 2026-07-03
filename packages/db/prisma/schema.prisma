@@ -245,6 +245,8 @@ enum AttrType {
   AREA_ORIGINAL // m² as entered
   AREA_ALLOCATED // m² stored raw, shown rounded to nearest standard area (unless > 900)
   YESNO // boolean with admin-set labels for each state
+  DISTRICT // select a District from the geo DB (stores the district id in `text`)
+  NEIGHBORHOOD // select a Neighborhood filtered by the chosen DISTRICT (stores the id in `text`)
 }
 
 /// Classifier dimension — Type, Purpose, Condition. Fixed set; options are admin-editable.

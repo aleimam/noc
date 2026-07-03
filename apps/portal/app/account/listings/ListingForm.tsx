@@ -11,9 +11,10 @@ import { saveListing, type ListingInput, type ValueInput } from './actions';
 
 type AttrType =
   | 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS'
-  | 'URL' | 'PHONE' | 'DATE_FULL' | 'MONEY' | 'MONEY_THOUSANDS' | 'AREA_ORIGINAL' | 'AREA_ALLOCATED' | 'YESNO';
+  | 'URL' | 'PHONE' | 'DATE_FULL' | 'MONEY' | 'MONEY_THOUSANDS' | 'AREA_ORIGINAL' | 'AREA_ALLOCATED' | 'YESNO'
+  | 'DISTRICT' | 'NEIGHBORHOOD';
 type AttrCfg = { yesLabelAr?: string; yesLabelEn?: string; noLabelAr?: string; noLabelEn?: string; multiple?: boolean };
-type Opt = { id: string; labelAr: string; labelEn: string };
+type Opt = { id: string; labelAr: string; labelEn: string; districtId?: string };
 type Attr = { id: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; config?: AttrCfg; order: number; options: Opt[]; optionIds: string[] };
 
 const NUMERIC_TYPES = new Set(['NUMBER', 'MONEY', 'MONEY_THOUSANDS', 'AREA_ORIGINAL', 'AREA_ALLOCATED']);
@@ -322,6 +323,43 @@ export function ListingForm({
         </button>
       );
       return <div className="flex gap-2">{btn(true, yes)}{btn(false, no)}</div>;
+    }
+    if (a.type === 'DISTRICT')
+      return (
+        <select
+          value={(v as string) ?? ''}
+          onChange={(e) => {
+            const districtId = e.target.value;
+            setVal(a.id, districtId);
+            // Clear any NEIGHBORHOOD choice that no longer belongs to the chosen district.
+            for (const nb of attributes) {
+              if (nb.type !== 'NEIGHBORHOOD') continue;
+              const cur = vals[nb.id];
+              if (typeof cur === 'string' && cur && !nb.options.some((o) => o.id === cur && o.districtId === districtId)) setVal(nb.id, '');
+            }
+          }}
+          className={inp}
+        >
+          <option value="">—</option>
+          {a.options.map((o) => (<option key={o.id} value={o.id}>{L(o.labelAr, o.labelEn)}</option>))}
+        </select>
+      );
+    if (a.type === 'NEIGHBORHOOD') {
+      // Nested under DISTRICT: filter by the district chosen in the same form (if any).
+      const districtAttr = attributes.find((x) => x.type === 'DISTRICT' && applies(x));
+      const chosenDistrict = districtAttr && typeof vals[districtAttr.id] === 'string' ? (vals[districtAttr.id] as string) : '';
+      const opts = chosenDistrict ? a.options.filter((o) => o.districtId === chosenDistrict) : a.options;
+      return (
+        <div>
+          <select value={(v as string) ?? ''} onChange={(e) => setVal(a.id, e.target.value)} className={inp}>
+            <option value="">—</option>
+            {opts.map((o) => (<option key={o.id} value={o.id}>{L(o.labelAr, o.labelEn)}</option>))}
+          </select>
+          {districtAttr && !chosenDistrict && (
+            <p className="mt-1 text-xs opacity-60">{L('اختر المنطقة أولاً لتصفية المجاورات', 'Choose the district first to filter neighborhoods')}</p>
+          )}
+        </div>
+      );
     }
     if (a.type === 'SELECT')
       return (

@@ -86,9 +86,29 @@ export async function saveListing(input: ListingInput): Promise<Result> {
     if (opts.length < 2 || opts.some((o) => !o.allowedOnAlsawarey)) return { ok: false, error: 'alsawarey_not_allowed' };
   }
 
+  // Keep the structural geo link in sync with the NEIGHBORHOOD detail (powers the
+  // district/neighborhood pages' listing sections + inherited maps/amenities).
+  let neighborhoodId: string | null = null;
+  {
+    const attrIds = input.values.map((v) => v.attributeId);
+    if (attrIds.length) {
+      const nbAttrs = await prisma.attribute.findMany({
+        where: { id: { in: attrIds }, type: 'NEIGHBORHOOD' },
+        select: { id: true },
+      });
+      const nbAttrIds = new Set(nbAttrs.map((a) => a.id));
+      const candidate = input.values.find((v) => nbAttrIds.has(v.attributeId) && typeof v.text === 'string' && v.text.trim());
+      if (candidate?.text) {
+        const nb = await prisma.neighborhood.findUnique({ where: { id: candidate.text.trim() }, select: { id: true } });
+        neighborhoodId = nb?.id ?? null;
+      }
+    }
+  }
+
   try {
     const id = await prisma.$transaction(async (tx) => {
       const base = {
+        neighborhoodId,
         typeOptionId: input.typeOptionId,
         purposeOptionId: input.purposeOptionId,
         conditionOptionId: input.conditionOptionId,

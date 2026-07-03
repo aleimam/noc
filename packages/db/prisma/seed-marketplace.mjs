@@ -80,6 +80,13 @@ const ATTRS = [
     { key: 'shorouk', ar: 'الشروق', en: 'El Shorouk' },
     { key: 'badr', ar: 'بدر', en: 'Badr' },
   ] },
+  // Geo-linked location (sourced live from the geographic DB — Districts → Neighborhoods).
+  // Values store the geo row id; the legacy `district` SELECT below remains for the
+  // storefront filter/cards (deactivate it from the admin pool if redundant).
+  { s: 'location', key: 'geo_district', ar: 'الحي', en: 'District', type: 'DISTRICT', to: 'ALL' },
+  { s: 'location', key: 'geo_neighborhood', ar: 'المجاورة', en: 'Neighborhood', type: 'NEIGHBORHOOD', to: 'ALL' },
+  { s: 'location', key: 'block_no', ar: 'رقم البلوك / المربع', en: 'Block No.', type: 'TEXT', to: 'ALL' },
+  { s: 'location', key: 'plot_no', ar: 'رقم القطعة', en: 'Plot No.', type: 'TEXT', to: 'ALL' },
   { s: 'location', key: 'district', ar: 'الحي / المنطقة', en: 'District', type: 'SELECT', filt: true, to: 'ALL', opts: [
     { key: 'first', ar: 'الأول', en: 'First' }, { key: 'second', ar: 'الثاني', en: 'Second' },
     { key: 'third', ar: 'الثالث', en: 'Third' }, { key: 'fourth', ar: 'الرابع', en: 'Fourth' },

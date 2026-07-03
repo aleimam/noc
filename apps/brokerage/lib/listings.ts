@@ -236,11 +236,28 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
 
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const standardAreas = await getStandardAreas();
+
+  // Resolve DISTRICT / NEIGHBORHOOD detail values (stored as geo ids) to localized names.
+  const geoIds = l.values
+    .filter((v) => (v.attribute.type === 'DISTRICT' || v.attribute.type === 'NEIGHBORHOOD') && v.text)
+    .map((v) => v.text as string);
+  const geoName = new Map<string, { ar: string; en: string }>();
+  if (geoIds.length) {
+    const [ds, ns] = await Promise.all([
+      prisma.district.findMany({ where: { id: { in: geoIds } }, select: { id: true, nameAr: true, nameEn: true } }),
+      prisma.neighborhood.findMany({ where: { id: { in: geoIds } }, select: { id: true, nameAr: true, nameEn: true } }),
+    ]);
+    for (const g of [...ds, ...ns]) geoName.set(g.id, { ar: g.nameAr, en: g.nameEn });
+  }
+
   const specs: LandDetail['specs'] = [];
   for (const v of l.values) {
     if (!v.attribute.isActive) continue;
     const label = L(v.attribute.labelAr, v.attribute.labelEn);
-    const value = v.listItem
+    const geo = (v.attribute.type === 'DISTRICT' || v.attribute.type === 'NEIGHBORHOOD') && v.text ? geoName.get(v.text) : null;
+    const value = geo
+      ? L(geo.ar, geo.en)
+      : v.listItem
       ? L(v.listItem.labelAr, v.listItem.labelEn)
       : v.option
       ? L(v.option.labelAr, v.option.labelEn)

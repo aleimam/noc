@@ -6,7 +6,8 @@ import { useTranslations } from 'next-intl';
 
 type AttrType =
   | 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS'
-  | 'URL' | 'PHONE' | 'DATE_FULL' | 'MONEY' | 'MONEY_THOUSANDS' | 'AREA_ORIGINAL' | 'AREA_ALLOCATED' | 'YESNO';
+  | 'URL' | 'PHONE' | 'DATE_FULL' | 'MONEY' | 'MONEY_THOUSANDS' | 'AREA_ORIGINAL' | 'AREA_ALLOCATED' | 'YESNO'
+  | 'DISTRICT' | 'NEIGHBORHOOD';
 type Opt = { id?: string; key: string; labelAr: string; labelEn: string };
 type Result = { ok: true } | { ok: false; error: string };
 type ClassifierData = { id: string; nameAr: string; nameEn: string; options: { id: string; nameAr: string; nameEn: string }[] };
@@ -41,10 +42,12 @@ const TYPE_LABELS: Record<AttrType, string> = {
   DATE_FULL: 'تاريخ (يوم/شهر/سنة)', PHOTOS: 'صور (عامة)', DOCUMENTS: 'مستندات (داخلية)',
   URL: 'رابط', PHONE: 'رقم هاتف', MONEY: 'مبلغ بالجنيه', MONEY_THOUSANDS: 'مبلغ بالآلاف',
   AREA_ORIGINAL: 'مساحة أصلية (م²)', AREA_ALLOCATED: 'مساحة مخصصة (م²)', YESNO: 'مفتاح نعم/لا',
+  DISTRICT: 'المنطقة (من قاعدة المناطق)', NEIGHBORHOOD: 'المجاورة (تتبع المنطقة)',
 };
 const ATTR_TYPES: AttrType[] = [
   'TEXT', 'TEXTAREA', 'NUMBER', 'SELECT', 'MULTI_SELECT', 'BOOLEAN', 'YESNO',
   'URL', 'PHONE', 'DATE', 'DATE_FULL', 'MONEY', 'MONEY_THOUSANDS', 'AREA_ORIGINAL', 'AREA_ALLOCATED',
+  'DISTRICT', 'NEIGHBORHOOD',
   'PHOTOS', 'DOCUMENTS',
 ];
 

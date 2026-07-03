@@ -10,7 +10,8 @@ type Result = { ok: true } | { ok: false; error: string };
 
 export type AttrTypeKey =
   | 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS'
-  | 'URL' | 'PHONE' | 'DATE_FULL' | 'MONEY' | 'MONEY_THOUSANDS' | 'AREA_ORIGINAL' | 'AREA_ALLOCATED' | 'YESNO';
+  | 'URL' | 'PHONE' | 'DATE_FULL' | 'MONEY' | 'MONEY_THOUSANDS' | 'AREA_ORIGINAL' | 'AREA_ALLOCATED' | 'YESNO'
+  | 'DISTRICT' | 'NEIGHBORHOOD';
 
 function revalidate() {
   revalidatePath('/admin/marketplace', 'layout');

@@ -1,16 +1,34 @@
 import { getLocale } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
-import { getSecurityLevel } from '../../../../../lib/security';
+import { getSecurityLevel, getQuotaOverrides, gatesFor, SECURITY_LEVELS } from '../../../../../lib/security';
 import { SecurityClient } from './SecurityClient';
+import { QuotasClient } from './QuotasClient';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SecurityPage() {
   await requirePermission('settings', 'VIEW');
-  const level = await getSecurityLevel();
+  const [level, overrides] = await Promise.all([getSecurityLevel(), getQuotaOverrides()]);
   const locale = await getLocale();
   const en = locale === 'en';
   const L = (ar: string, enText: string) => (en ? enText : ar);
+
+  const levelTitle: Record<string, string> = {
+    LIGHT: L('خفيف', 'Light'),
+    MEDIUM: L('متوسط', 'Medium'),
+    HIGH: L('عالٍ', 'High'),
+  };
+  const quotaRows = SECURITY_LEVELS.map((lv) => {
+    const base = gatesFor(lv);
+    const o = overrides[lv] ?? {};
+    return {
+      level: lv,
+      title: levelTitle[lv]!,
+      anonPerHour: o.anonPerHour ?? base.anonPerHour,
+      userPerHour: o.userPerHour ?? base.userPerHour,
+      ipCeilingPerHour: o.ipCeilingPerHour ?? base.ipCeilingPerHour,
+    };
+  });
 
   const options = [
     {
@@ -66,6 +84,31 @@ export default async function SecurityPage() {
         savingLabel={L('جارٍ الحفظ…', 'Saving…')}
         savedLabel={L('تم الحفظ', 'Saved')}
       />
+
+      <div className="space-y-2 border-t border-graphite/10 pt-6">
+        <h2 className="text-lg font-bold text-primary">{L('أرقام الحدود (لكل ساعة)', 'Quota numbers (per hour)')}</h2>
+        <p className="max-w-2xl text-sm opacity-70">
+          {L(
+            'عدّل عدد عمليات البحث/فتح السجلات المسموحة في الساعة لكل مستوى. تسري الأرقام فورًا على المستوى المختار أعلاه.',
+            'Edit how many searches/record-views are allowed per hour at each level. Numbers apply immediately to the level selected above.',
+          )}
+        </p>
+        <QuotasClient
+          rows={quotaRows}
+          labels={{
+            anon: L('زائر (بدون تسجيل)', 'Visitor (no login)'),
+            user: L('مسجَّل الدخول', 'Logged in'),
+            ceiling: L('سقف الشبكة (IP)', 'Network (IP) ceiling'),
+            save: L('حفظ الأرقام', 'Save numbers'),
+            saving: L('جارٍ الحفظ…', 'Saving…'),
+            saved: L('تم الحفظ', 'Saved'),
+            hint: L(
+              'سقف الشبكة هو صمام أمان لكل عنوان IP — اتركه مرتفعًا (أضعاف حد الزائر) حتى لا يتأثر مستخدمون حقيقيون يشتركون في نفس شبكة المحمول.',
+              'The network ceiling is a per-IP safety valve — keep it high (several × the visitor limit) so real users sharing one mobile-carrier IP are never blocked.',
+            ),
+          }}
+        />
+      </div>
     </div>
   );
 }

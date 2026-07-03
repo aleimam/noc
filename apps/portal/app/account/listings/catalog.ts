@@ -18,7 +18,9 @@ export type CatalogAttrType =
   | 'MONEY_THOUSANDS'
   | 'AREA_ORIGINAL'
   | 'AREA_ALLOCATED'
-  | 'YESNO';
+  | 'YESNO'
+  | 'DISTRICT'
+  | 'NEIGHBORHOOD';
 
 export type AttrConfig = {
   yesLabelAr?: string;
@@ -30,7 +32,7 @@ export type AttrConfig = {
 
 /** Loads the active catalog shaped for the listing form (types grouped by category, sections, attributes). */
 export async function loadCatalog() {
-  const [classifiers, sections, attrs, standardAreas, conditionRows] = await Promise.all([
+  const [classifiers, sections, attrs, standardAreas, conditionRows, districts, neighborhoods] = await Promise.all([
     prisma.classifier.findMany({
       orderBy: { order: 'asc' },
       include: { options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true, allowedOnAlsawarey: true, parentLinks: { select: { parentId: true } } } } },
@@ -57,7 +59,13 @@ export async function loadCatalog() {
     }),
     getStandardAreas(),
     prisma.buildingCondition.findMany({ where: { published: true }, orderBy: { order: 'asc' }, select: { id: true, unitLabelAr: true, unitLabelEn: true } }),
+    prisma.district.findMany({ where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true } }),
+    prisma.neighborhood.findMany({ where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, districtId: true, nameAr: true, nameEn: true } }),
   ]);
+
+  // Geo-linked types are populated from the geographic DB (value stored = the geo row id).
+  const districtOpts = districts.map((d) => ({ id: d.id, labelAr: d.nameAr, labelEn: d.nameEn }));
+  const neighborhoodOpts = neighborhoods.map((n) => ({ id: n.id, labelAr: n.nameAr, labelEn: n.nameEn, districtId: n.districtId }));
 
   const attributes = attrs.map((a) => ({
     id: a.id,
@@ -68,8 +76,16 @@ export async function loadCatalog() {
     unit: a.unit,
     config: (a.config as AttrConfig | null) ?? {},
     order: a.order,
-    // SELECT/MULTI_SELECT choices come from the linked shared list; fall back to legacy inline options.
-    options: a.optionListId && a.optionList ? a.optionList.items : a.options,
+    // SELECT/MULTI_SELECT choices come from the linked shared list; fall back to legacy inline
+    // options. DISTRICT/NEIGHBORHOOD choices come straight from the geo DB.
+    options:
+      a.type === 'DISTRICT'
+        ? districtOpts
+        : a.type === 'NEIGHBORHOOD'
+          ? neighborhoodOpts
+          : a.optionListId && a.optionList
+            ? a.optionList.items
+            : a.options,
     optionIds: a.classifierLinks.map((l) => l.optionId),
   }));
 

@@ -66,6 +66,19 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const attrById = new Map(attrs.map((a) => [a.id, a]));
   const standardAreas = await getStandardAreas();
 
+  // Resolve DISTRICT / NEIGHBORHOOD values (stored as geo ids) to localized names.
+  const geoIds = listing.values
+    .filter((v) => ['DISTRICT', 'NEIGHBORHOOD'].includes(attrById.get(v.attributeId)?.type ?? '') && v.text)
+    .map((v) => v.text as string);
+  const geoName = new Map<string, { ar: string; en: string }>();
+  if (geoIds.length) {
+    const [ds, ns] = await Promise.all([
+      prisma.district.findMany({ where: { id: { in: geoIds } }, select: { id: true, nameAr: true, nameEn: true } }),
+      prisma.neighborhood.findMany({ where: { id: { in: geoIds } }, select: { id: true, nameAr: true, nameEn: true } }),
+    ]);
+    for (const g of [...ds, ...ns]) geoName.set(g.id, { ar: g.nameAr, en: g.nameEn });
+  }
+
   // Aggregate scalar values per attribute. DOCUMENTS are internal (never shown); PHOTOS render as a grid below.
   const perAttr = new Map<string, { attr: (typeof attrs)[number]; texts: string[] }>();
   for (const v of listing.values) {
@@ -77,6 +90,9 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       bucket.texts.push(L(v.listItem.labelAr, v.listItem.labelEn));
     } else if (v.option) {
       bucket.texts.push(L(v.option.labelAr, v.option.labelEn));
+    } else if ((a.type === 'DISTRICT' || a.type === 'NEIGHBORHOOD') && v.text) {
+      const g = geoName.get(v.text);
+      if (g) bucket.texts.push(L(g.ar, g.en));
     } else if (a.type === 'DATE' && v.text) {
       bucket.texts.push(formatMonthYear(v.text, locale));
     } else if (a.type === 'NUMBER' && v.number != null) {
