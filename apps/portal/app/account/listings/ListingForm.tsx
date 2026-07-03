@@ -55,6 +55,7 @@ export function ListingForm({
   staffMode = false,
   owners = [],
   standardAreas = [],
+  returnTo,
 }: {
   classifiers: Classifier[];
   sections: Section[];
@@ -64,6 +65,7 @@ export function ListingForm({
   staffMode?: boolean;
   owners?: OwnerOpt[];
   standardAreas?: number[];
+  returnTo?: string;
 }) {
   const t = useTranslations('mp');
   const router = useRouter();
@@ -239,7 +241,7 @@ export function ListingForm({
     };
     start(async () => {
       const r = await saveListing(input);
-      if (r.ok) router.push(staffMode ? '/admin/marketplace/listings' : '/account/listings');
+      if (r.ok) router.push(returnTo ?? (staffMode ? '/admin/marketplace/listings' : '/account/listings'));
       else setError(r.error);
     });
   }
@@ -519,7 +521,7 @@ export function ListingForm({
       <div className="flex flex-wrap gap-3">
         <button disabled={pending} onClick={() => submit('PENDING')} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{t('submitOffer')}</button>
         <button disabled={pending} onClick={() => submit('DRAFT')} className="rounded-md border border-graphite/25 px-4 py-2 text-sm">{t('saveDraft')}</button>
-        <a href={staffMode ? '/admin/marketplace/listings' : '/account/listings'} className="px-4 py-2 text-sm opacity-70">{t('cancel')}</a>
+        <a href={returnTo ?? (staffMode ? '/admin/marketplace/listings' : '/account/listings')} className="px-4 py-2 text-sm opacity-70">{t('cancel')}</a>
       </div>
 
       {zoom && <Lightbox src={zoom} onClose={() => setZoom(null)} />}
