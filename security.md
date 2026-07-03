@@ -149,22 +149,22 @@ calculator, marketplace) are never metered.
 
 ## 5. Infrastructure standard (server / proxy / DB / OS)
 
-**Apache/Nginx (CWP)** — the authoritative edge layer (prod serves `/uploads/*` directly via
-`Alias`, bypassing Next; the app-level guard in `app/uploads/[...path]/route.ts` only mirrors
-this for dev/fallback).
-- `/uploads/*`: hotlink protection (serve only when Referer is our domains), per-IP rate
-  limit, `Options -Indexes`. Concrete Apache rule:
-  ```apache
-  <Directory "/…/uploads">
-    Options -Indexes
-    RewriteEngine On
-    RewriteCond %{HTTP_REFERER} !^$
-    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?newobour\.com/  [NC]
-    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?alsawarey\.com/ [NC]
-    RewriteRule \.(png|jpe?g|gif|webp|avif)$ - [F,NC]
-  </Directory>
+**Nginx (prod web server — Apache/httpd is down on this box)** — reverse proxy in
+`/etc/nginx/conf.d/noc.conf`. In prod, `/uploads/*` is served **by the portal's own Next
+route** (`app/uploads/[...path]/route.ts` — `/root` isn't readable by the web-server user;
+the brokerage proxies `/uploads` to :3001), so the app-level Referer hotlink guard in that
+route **is the active protection**, not a mirror.
+- If uploads ever move to being served directly by Nginx, apply the equivalent edge rule:
+  ```nginx
+  location /uploads/ {
+    valid_referers none blocked newobour.com *.newobour.com alsawarey.com *.alsawarey.com;
+    if ($invalid_referer) { return 403; }
+    autoindex off;
+  }
   ```
-- Force HTTPS + **HSTS**; TLS 1.2+ only; never expose the Next.js port directly.
+- Force HTTPS + **HSTS**; TLS 1.2+ only; never expose the Next.js ports (3001/3002) directly.
+- CWP gotcha: bind server blocks to the **specific IP** (`listen 77.42.66.76:443 ssl;`) —
+  CWP's wildcard `default_server` hijacks bare `listen 443 ssl` blocks.
 
 **Secrets / env**
 - `AUTH_SECRET` must be a strong random value (`openssl rand -base64 32`); it signs sessions,

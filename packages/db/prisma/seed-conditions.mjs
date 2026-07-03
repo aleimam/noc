@@ -1,7 +1,6 @@
 // Seed the "اشتراطات البناء" (building conditions) reference pages from the ALSWARY
 // sheets (209/276/350/400/450/500 m²). Idempotent — upserts by slug.
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { prisma } from './db-client.mjs';
 
 const UNITS = [
   { label: 'أرض 209 متر', setbacks: { front: '1.6', rear: '2.6', side: '3 متر من جانب واحد' }, rows: [ { label: 'أبعاد الأرض', front: '11', depth: '19', area: '209 متر', ratio: '-' }, { label: 'البدروم (اختياري)', front: '11', depth: '19', area: '118 أو 209 متر', ratio: '57% / 100%' }, { label: 'الدور الأرضي', front: '8', depth: '14.8', area: '118 متر', ratio: '0.57' }, { label: '3 أدوار متكرر', front: '8.6', depth: '15.8', area: '136 متر', ratio: '0.65' } ], aptTitle: 'صافي مساحة الشقة (شقة واحدة)', floorsHeader: ['الدور الأرضي', 'الدور الأول', 'الدور الثاني', 'الدور الثالث', 'غرف السطح'], floorsValues: ['103', '121', '121', '121', '-'] },

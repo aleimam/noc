@@ -1,10 +1,9 @@
 // Seed: RBAC permissions (section × action), a SUPER_ADMIN role holding every
 // permission, and a bootstrap staff user from env. Plain ESM so it runs under
 // `node` directly (no tsx/esbuild needed). Idempotent via upserts.
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './db-client.mjs';
 import bcrypt from 'bcryptjs';
 
-const prisma = new PrismaClient();
 
 const SECTIONS = [
   'homepage',

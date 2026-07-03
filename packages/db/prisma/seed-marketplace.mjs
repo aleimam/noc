@@ -1,9 +1,8 @@
 // Seed the marketplace catalog: property types, attribute sections, attributes
 // (+ options) and the type↔attribute mapping. Idempotent (upsert by key).
 // Admins can edit all of this in /admin/marketplace afterward.
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './db-client.mjs';
 
-const prisma = new PrismaClient();
 
 // ── property type keys + groups ──────────────────────────────────────────────
 const T = {

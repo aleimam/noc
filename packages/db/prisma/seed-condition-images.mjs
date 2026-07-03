@@ -2,11 +2,10 @@
 // The PNGs live in the repo (prisma/condition-images) so this is reproducible on prod too.
 // Copies each into the uploads root and sets the condition's `images` — only when empty, so
 // it never clobbers photos an admin later curated in the editor. Idempotent.
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './db-client.mjs';
 import { mkdir, copyFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const prisma = new PrismaClient();
 
 // Mirror apps/portal/lib/uploads.ts uploadRoot() (cwd here = packages/db, 2 levels below root).
 function uploadRoot() {

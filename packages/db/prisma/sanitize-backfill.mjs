@@ -6,10 +6,9 @@
 //
 // KEEP `OPTS` IN SYNC with apps/portal/lib/sanitize.ts (there is no shared import because
 // that file is app-local TypeScript and this is a plain node script).
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './db-client.mjs';
 import sanitizeHtml from 'sanitize-html';
 
-const prisma = new PrismaClient();
 
 const OPTS = {
   allowedTags: [
