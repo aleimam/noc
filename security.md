@@ -53,25 +53,38 @@ that way.
 ## 3. Data-access posture — `security.level` (admin-switchable)
 
 A single backend setting (`Setting` key **`security.level`** ∈ `LIGHT | MEDIUM | HIGH`,
-default **MEDIUM**) governs how much data is public and how hard we throttle. It is read via
-`getSecurityLevel()` and changed from **Admin → System → Security** with no redeploy. Raise
-it instantly during an incident.
+default **MEDIUM**) governs how hard we throttle the rationing register. It is read via
+`getSecurityLevel()` / `getSecurityGates()` and changed from **Admin → System → Security**
+with no redeploy. **New Obour only — Al Sawarey has no browsing/data quota.**
 
-| Capability | LIGHT | **MEDIUM** (default) | HIGH |
+Product decision: keep everything **open to everyone** (no login wall for browsing) and deter
+bulk-copying by **metering rationing usage per visitor per hour**. A "rationing event" = a new
+search (page 1) or opening a record; the two share the hourly budget. Anonymous visitors are
+metered per **browser** (a first-party `nob_v` cookie set in middleware) with a generous
+per-**IP** ceiling on top — the ceiling is high on purpose so many real users behind one
+mobile carrier IP (CGNAT, the norm in Egypt) never trip it, while a single scraper looping
+with cleared cookies still gets caught. Logged-in customers get a much larger budget.
+
+| Capability | LIGHT | **MEDIUM** (default) | HIGH (break-glass) |
 |---|---|---|---|
-| Rationing **search** (name → few matches) | public | public | public |
-| Full **sheet detail** page (name, plot, block, city) | public | public | login |
-| High-res **source scans** | public + watermark | **login + watermark** | login + watermark |
-| District / neighborhood **maps** | public + watermark | **login + watermark** | login + watermark |
-| Marketplace **listing** browse + detail | public | public | full detail needs login |
+| Rationing **search** + record **detail** | public | public | public |
+| High-res **source scans** | public + watermark | public + watermark | **login + watermark** |
+| District / neighborhood **maps** | public + watermark | public + watermark | **login + watermark** |
+| Marketplace (both sites) | unlimited | unlimited | unlimited |
+| Anon rationing events / hour (per browser) | 30 | **10** | 5 |
+| Logged-in rationing events / hour | 200 | 100 | 60 |
+| Per-IP hourly ceiling (CGNAT safety net) | 300 | 150 | 60 |
 | Max results per request | 50 | 50 | 25 |
-| Per-IP rate limit (data endpoints, req/min) | 120 | 60 | 30 |
-| Per-account daily view quota | — | — | enforced |
+
+Over budget → a friendly card (log in for more, or wait) instead of results/record. **HIGH** is
+a temporary break-glass for a live scraping incident: it additionally re-enables a login wall on
+scans + maps. Al Sawarey and all non-rationing New Obour surfaces (explore browse, guide,
+calculator, marketplace) are never metered.
 
 **Always on, every level:**
 - No public **bulk or export** endpoint — exports are staff-only and permission-gated.
 - Public media is **watermarked**; originals never public.
-- Rate limiting and pagination caps are active (thresholds tighten by level).
+- Anti-abuse limits on OTP + uploads run regardless of level (not "browsing" limits).
 - Raising the level takes effect immediately for new requests.
 
 ---
@@ -209,7 +222,7 @@ From the review; severities Critical / High / Medium / Low. Update **Status** as
 | F3 | Med | No security headers / CSP on either app | **fixed (3c)** — CSP + HSTS + nosniff + frame/referrer/permissions in both `next.config.mjs` |
 | F4 | Med | `/uploads` lacks hotlink protection / throttle | **fixed (3c)** — app-level Referer guard + concrete Apache edge rule (§5) |
 | F5 | Med | Heavy uncapped public queries (name pool 8000, browse 3000) | **fixed (3b)** — page size + per-IP rate scale with posture; lists bounded |
-| F6 | Med | Full sheet / scans / maps not gated at MEDIUM posture yet | **fixed (3b)** — scans + maps require login at MEDIUM/HIGH; detail public by design (see §3) |
+| F6 | Med | Full sheet / scans / maps not gated at MEDIUM posture yet | **fixed (3b, revised)** — data kept fully open; per-visitor hourly quota (cookie+IP, New Obour only) deters bulk copy; HIGH break-glass re-gates scans/maps (§3) |
 | F7 | Low | `AUTH_SECRET` dev fallback must be impossible in prod | **fixed (3c)** — `appSecret()` throws in prod if unset/weak |
 | F8 | Low | OTP throttled per-phone only, not per-IP | **fixed (3a)** — per-IP cap added on both apps |
 

@@ -10,27 +10,30 @@ const KEY = 'security.level';
 
 export type SecurityGates = {
   level: SecurityLevel;
-  /** High-res source scans require a logged-in customer. */
-  gateScans: boolean;
-  /** District / neighborhood / land maps require a logged-in customer. */
-  gateMaps: boolean;
-  /** The full rationing sheet detail page requires login. */
-  gateDetail: boolean;
-  /** Marketplace full listing detail requires login. */
-  gateListingDetail: boolean;
+  /** Break-glass: when true (HIGH only) source scans + maps require a logged-in customer.
+   *  At LIGHT/MEDIUM everything is open — we throttle by count instead of gating. */
+  loginWall: boolean;
+  /** Anonymous rationing events (search + record view) allowed per hour, per browser. */
+  anonPerHour: number;
+  /** Logged-in rationing events allowed per hour, per account (higher). */
+  userPerHour: number;
+  /** Generous per-IP ceiling per hour — a safety net that only trips for a scraper looping
+   *  with cleared cookies. Set high enough that many real users behind one carrier IP
+   *  (CGNAT) never hit it. */
+  ipCeilingPerHour: number;
   /** Hard cap on any public list/page size. */
   maxResults: number;
-  /** Per-IP rate cap for public data endpoints (req/min). */
-  ratePerMin: number;
 };
 
-// Per the agreed product decision: MEDIUM gates the expensive assets (scans + maps) but keeps
-// search and the basic detail page public so residents can still self-serve. HIGH locks the
-// detail page + listing detail too and tightens the caps. See security.md §3.
+// Product decision: keep the data OPEN to everyone; deter bulk-copying by metering how many
+// rationing searches / record-views an anonymous *browser* may do per hour (New Obour only).
+// LIGHT = generous, MEDIUM (default) = 10/hr anon, HIGH = break-glass (re-enables the login
+// wall on scans/maps + tightest quota) for use during a live scraping incident. Logged-in
+// users get a much higher budget. See security.md §3.
 const GATES: Record<SecurityLevel, Omit<SecurityGates, 'level'>> = {
-  LIGHT: { gateScans: false, gateMaps: false, gateDetail: false, gateListingDetail: false, maxResults: 50, ratePerMin: 120 },
-  MEDIUM: { gateScans: true, gateMaps: true, gateDetail: false, gateListingDetail: false, maxResults: 50, ratePerMin: 60 },
-  HIGH: { gateScans: true, gateMaps: true, gateDetail: true, gateListingDetail: true, maxResults: 25, ratePerMin: 30 },
+  LIGHT: { loginWall: false, anonPerHour: 30, userPerHour: 200, ipCeilingPerHour: 300, maxResults: 50 },
+  MEDIUM: { loginWall: false, anonPerHour: 10, userPerHour: 100, ipCeilingPerHour: 150, maxResults: 50 },
+  HIGH: { loginWall: true, anonPerHour: 5, userPerHour: 60, ipCeilingPerHour: 60, maxResults: 25 },
 };
 
 export function gatesFor(level: SecurityLevel): SecurityGates {

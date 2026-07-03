@@ -59,9 +59,9 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
   const locationMap = pickMap('location');
   const masterplanMap = pickMap('masterplan');
 
-  // Posture gate (F6): at MEDIUM/HIGH the maps require a logged-in customer.
+  // Maps stay open at LIGHT/MEDIUM; only the HIGH break-glass posture requires login.
   const [gates, session] = await Promise.all([getSecurityGates(), auth()]);
-  const showMaps = !gates.gateMaps || !!session?.user;
+  const showMaps = !gates.loginWall || !!session?.user;
 
   const updIds = updates.map((u) => u.id);
   const photos = updIds.length

@@ -20,9 +20,23 @@ export default auth((req) => {
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-pathname', pathname);
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
+
+  // Stable first-party visitor id for the per-browser rationing quota (New Obour anti-scrape,
+  // see lib/rationing/quota.ts). Not tied to identity — just a counter key that survives
+  // longer than an IP and doesn't false-block users sharing a carrier IP.
+  if (!req.cookies.get('nob_v')) {
+    res.cookies.set('nob_v', crypto.randomUUID(), {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 180, // 180 days
+    });
+  }
+  return res;
 });
 
 export const config = {
-  matcher: ['/admin/:path*', '/account/:path*'],
+  matcher: ['/admin/:path*', '/account/:path*', '/rationing/:path*'],
 };

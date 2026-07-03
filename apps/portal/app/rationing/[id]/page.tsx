@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { SiteShell } from '../../_components/SiteShell';
 import { LoginToView } from '../../_components/LoginToView';
+import { LimitCard } from '../LimitCard';
 import { getRationingConfig } from '../../../lib/rationing/settings';
-import { getSecurityGates } from '../../../lib/security';
+import { consumeRationingQuota } from '../../../lib/rationing/quota';
 import { rationingScanOverlay } from '../../../lib/stamp';
 import { SourceSheetViewer } from './SourceSheetViewer';
 import { ShareButton } from './ShareButton';
@@ -40,9 +40,21 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
       ? await prisma.rationingScan.findUnique({ where: { fileName: sheet.sourceFile }, select: { path: true, fileName: true } })
       : null;
 
-  // Posture gate (F6): at MEDIUM/HIGH the source scan requires a logged-in customer.
-  const [gates, session] = await Promise.all([getSecurityGates(), auth()]);
-  const showScan = !gates.gateScans || !!session?.user;
+  // Opening a record counts toward the New Obour anti-scrape quota (search + views share the
+  // hourly budget). Over budget → show the friendly limit card instead of the record. At HIGH
+  // the source scan additionally requires login (break-glass).
+  const quota = await consumeRationingQuota(true);
+  const showScan = !quota.loginWall || quota.loggedIn;
+  if (!quota.ok) {
+    return (
+      <SiteShell active="rationing">
+        <div className="mx-auto max-w-3xl space-y-5 p-4 sm:p-6">
+          <Link href="/rationing" className="inline-block text-base text-navy-600">‹ {t('backToSearch')}</Link>
+          <LimitCard locale={locale} loggedIn={quota.loggedIn} />
+        </div>
+      </SiteShell>
+    );
+  }
 
   // Public fields only — remarks + sourceFile are internal and never rendered here.
   const facts: { label: string; value: string }[] = [

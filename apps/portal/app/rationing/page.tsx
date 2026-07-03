@@ -1,11 +1,10 @@
 import Link from 'next/link';
-import { headers } from 'next/headers';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { rateLimit, clientIp } from '../../lib/rateLimit';
-import { getSecurityGates } from '../../lib/security';
+import { consumeRationingQuota } from '../../lib/rationing/quota';
 import { SiteShell } from '../_components/SiteShell';
+import { LimitCard } from './LimitCard';
 import { SearchBar } from './SearchBar';
 import { RegisterCards } from './RegisterCards';
 import { RationingTabs } from './RationingTabs';
@@ -42,9 +41,7 @@ export default async function RationingSearch({
 
   const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('rationing');
-  const [config, site, gates] = await Promise.all([getRationingConfig(), getSiteConfig(), getSecurityGates()]);
-  // Cap page size to the posture max (F5) — HIGH tightens 50 → 25.
-  const per = Math.min(perRaw, gates.maxResults);
+  const [config, site] = await Promise.all([getRationingConfig(), getSiteConfig()]);
 
   const cities = await prisma.rationingCity.findMany({
     where: { isActive: true },
@@ -53,10 +50,13 @@ export default async function RationingSearch({
   });
 
   const searched = q.length > 0;
-  // Per-IP throttle on the public search — a human does a handful of searches; a scraper
-  // enumerating the register does hundreds. The cap scales with posture (F5): 120/60/30 per
-  // minute for LIGHT/MEDIUM/HIGH — invisible to real users, ruinous for a scraper.
-  const throttled = searched && !rateLimit(`rationing:${clientIp(await headers())}`, gates.ratePerMin, 60_000);
+  // Meter a NEW search (page 1) against the anti-scrape quota (New Obour only) — paginating an
+  // existing search is free. A human does a handful/hour; a scraper enumerating the register
+  // does hundreds. Anonymous = per-browser (nob_v) + generous per-IP ceiling; logged-in gets a
+  // much higher budget. Over budget → friendly limit card instead of results. See quota.ts.
+  const quota = await consumeRationingQuota(searched && page <= 1);
+  const per = Math.min(perRaw, quota.maxResults);
+  const throttled = searched && !quota.ok;
   let results: SheetCard[] = [];
   let total = 0;
   let suggestions: { display: string; score: number }[] = [];
@@ -143,7 +143,7 @@ export default async function RationingSearch({
         )}
 
         {throttled ? (
-          <SlowDown locale={locale} whatsapp={site.whatsappHelp} />
+          <LimitCard locale={locale} loggedIn={quota.loggedIn} whatsapp={site.whatsappHelp} />
         ) : searched ? (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -188,33 +188,6 @@ export default async function RationingSearch({
         <RegisterCards q={q} />
       </div>
     </SiteShell>
-  );
-}
-
-function SlowDown({ locale, whatsapp }: { locale: 'ar' | 'en'; whatsapp?: string | null }) {
-  const ar = locale === 'ar';
-  return (
-    <div className="rounded-2xl border-2 border-gold/50 bg-gold-50 p-6 text-center">
-      <div className="text-4xl" aria-hidden>
-        ⏳
-      </div>
-      <p className="mt-3 text-2xl font-black text-navy-800">
-        {ar ? 'لقد أجريت عمليات بحث كثيرة بسرعة' : 'Too many searches, too fast'}
-      </p>
-      <p className="mt-2 text-lg text-ink-700">
-        {ar
-          ? 'من فضلك انتظر دقيقة واحدة ثم حاول البحث مرة أخرى.'
-          : 'Please wait one minute, then try your search again.'}
-      </p>
-      {whatsapp && (
-        <a
-          href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}`}
-          className="mt-4 inline-block rounded-xl bg-navy-700 px-5 py-3 text-lg font-bold text-white"
-        >
-          {ar ? 'تحتاج مساعدة؟ راسلنا' : 'Need help? Message us'}
-        </a>
-      )}
-    </div>
   );
 }
 

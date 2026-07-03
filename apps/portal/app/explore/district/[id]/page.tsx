@@ -49,9 +49,9 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
   const locationMap = pickMap('location');
   const masterplanMap = pickMap('masterplan');
 
-  // Posture gate (F6): at MEDIUM/HIGH the maps require a logged-in customer.
+  // Maps stay open at LIGHT/MEDIUM; only the HIGH break-glass posture requires login.
   const [gates, session] = await Promise.all([getSecurityGates(), auth()]);
-  const showMaps = !gates.gateMaps || !!session?.user;
+  const showMaps = !gates.loginWall || !!session?.user;
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">

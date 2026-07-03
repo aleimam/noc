@@ -16,31 +16,31 @@ export default async function SecurityPage() {
     {
       value: 'LIGHT',
       title: L('خفيف', 'Light'),
-      summary: L('كل شيء متاح للجميع — أقل حماية', 'Everything public — least protection'),
+      summary: L('كل شيء متاح — حدود واسعة', 'Everything open — generous limits'),
       points: [
-        L('البحث والتفاصيل والصور والخرائط متاحة بدون تسجيل', 'Search, details, scans and maps all public, no login'),
-        L('حتى ٥٠ نتيجة في الصفحة', 'Up to 50 results per page'),
-        L('الأضعف ضد نسخ البيانات', 'Weakest against bulk copying'),
+        L('كل شيء متاح للجميع بدون تسجيل (بحث، صور كشوف، خرائط)', 'Everything public, no login (search, scans, maps)'),
+        L('حتى ٣٠ عملية بحث في الساعة للزائر (٢٠٠ عند تسجيل الدخول)', 'Up to 30 searches/hour per visitor (200 when logged in)'),
+        L('الأضعف ضد نسخ البيانات بالجملة', 'Weakest against bulk copying'),
       ],
     },
     {
       value: 'MEDIUM',
       title: L('متوسط (موصى به)', 'Medium (recommended)'),
-      summary: L('البحث عام، والأصول الثمينة محمية', 'Search public, the valuable assets protected'),
+      summary: L('كل شيء متاح، مع حدّ لعدد عمليات البحث', 'Everything open, with a search quota'),
       points: [
-        L('البحث والتفاصيل الأساسية تبقى متاحة للجميع', 'Search + basic details stay public'),
-        L('صور الكشوف والخرائط تتطلب تسجيل الدخول بالهاتف', 'Sheet scans and maps require phone login'),
-        L('حتى ٥٠ نتيجة + حد للطلبات لكل زائر', 'Up to 50 results + per-visitor rate limit'),
+        L('كل شيء متاح بدون تسجيل — لا حاجة لتسجيل الدخول للتصفح', 'Everything public, no login needed to browse'),
+        L('١٠ عمليات بحث/فتح سجل في الساعة للزائر، أكثر عند تسجيل الدخول', '10 searches/record-views per hour for visitors, more when logged in'),
+        L('يمنع النسخ بالجملة دون إزعاج المستخدم العادي', 'Stops bulk copying without annoying normal users'),
       ],
     },
     {
       value: 'HIGH',
-      title: L('عالٍ', 'High'),
-      summary: L('أقصى حماية — للحوادث أو الطوارئ', 'Maximum protection — for incidents'),
+      title: L('عالٍ — للطوارئ', 'High — emergency'),
+      summary: L('أقصى حماية أثناء محاولة نسخ فعلية', 'Maximum protection during an active attack'),
       points: [
-        L('صفحة التفاصيل الكاملة والصور والخرائط تتطلب تسجيل الدخول', 'Full detail page, scans and maps all require login'),
-        L('تفاصيل إعلانات السوق تتطلب تسجيل الدخول', 'Marketplace listing details require login'),
-        L('حتى ٢٥ نتيجة + تشديد حد الطلبات', 'Up to 25 results + tighter rate limit'),
+        L('صور الكشوف والخرائط تتطلب تسجيل الدخول بالهاتف', 'Sheet scans and maps require phone login'),
+        L('عدد عمليات بحث أقل بكثير للزائر (٥ في الساعة)', 'Much lower visitor quota (5/hour)'),
+        L('استخدمه مؤقتًا عند رصد محاولة نسخ ثم أعده للمتوسط', 'Use temporarily during a scraping attempt, then revert'),
       ],
     },
   ];
@@ -55,8 +55,8 @@ export default async function SecurityPage() {
       </div>
       <p className="max-w-2xl text-sm opacity-70">
         {L(
-          'يتحكّم هذا الإعداد في كمية البيانات المتاحة للزوّار دون تسجيل، وفي مدى صرامة حدود الطلبات. المستوى «المتوسط» موصى به. ارفعه إلى «عالٍ» فورًا عند الاشتباه في محاولة نسخ للبيانات — يسري التغيير مباشرةً بلا إعادة نشر.',
-          'This setting controls how much data visitors can see without logging in, and how strict the rate limits are. "Medium" is recommended. Raise it to "High" immediately if you suspect someone is copying your data — it takes effect at once, no redeploy.',
+          'يتحكّم هذا الإعداد في عدد عمليات البحث المسموحة للزائر في الساعة على موقع العبور الجديد (لا يؤثر على الصواري). المستوى «المتوسط» موصى به: كل شيء متاح للجميع، مع حدّ لطيف يمنع نسخ البيانات بالجملة. ارفعه إلى «عالٍ» مؤقتًا عند الاشتباه في محاولة نسخ — يسري التغيير مباشرةً بلا إعادة نشر.',
+          'This setting controls how many searches a visitor may do per hour on New Obour (it does not affect Al Sawarey). "Medium" is recommended: everything stays open to everyone, with a gentle quota that blocks bulk copying. Raise it to "High" temporarily if you suspect scraping — it takes effect at once, no redeploy.',
         )}
       </p>
       <SecurityClient
