@@ -5,6 +5,7 @@ import { auth, requirePermission, loadSmsConfig } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { sendSms } from '@noc/sms';
 import { stampMapCopy } from '../../../../lib/mapStamp';
+import { sanitizeRichHtml } from '../../../../lib/sanitize';
 
 type GeoLevel = 'district' | 'neighborhood' | 'block' | 'land';
 function revDetail(level: GeoLevel, id: string) {
@@ -170,7 +171,7 @@ export async function addGeoUpdate(input: {
   const session = await auth();
   const uid = session?.user?.id ?? null;
   try {
-    const body = input.body?.trim();
+    const body = sanitizeRichHtml(input.body);
     if (!body) return { ok: false, error: 'failed' };
     let happenedAt: Date | undefined;
     if (input.happenedAt) {
@@ -636,7 +637,7 @@ export async function deleteAmenity(id: string): Promise<Result> {
 export async function updateGeoUpdate(input: { id: string; title?: string; body: string; happenedAt?: string }): Promise<Result> {
   await requirePermission('lands', 'UPDATE');
   try {
-    const body = input.body?.trim();
+    const body = sanitizeRichHtml(input.body);
     if (!body) return { ok: false, error: 'failed' };
     let happenedAt: Date | undefined;
     if (input.happenedAt) {

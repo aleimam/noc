@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requestOtp } from '@noc/auth';
+import { rateLimit, clientIp } from '../../../../../lib/rateLimit';
 
 export async function POST(req: NextRequest) {
+  if (!rateLimit(`otp:${clientIp(req.headers)}`, 5, 10 * 60 * 1000)) {
+    return NextResponse.json({ ok: false, error: 'rate_limited' }, { status: 429 });
+  }
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
   const phone = typeof body?.phone === 'string' ? body.phone : '';
   if (!phone) return NextResponse.json({ ok: false, error: 'invalid_phone' }, { status: 400 });

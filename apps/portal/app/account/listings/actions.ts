@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
 import { auth } from '@noc/auth';
 
+import { sanitizeRichHtml } from '../../../lib/sanitize';
+
 export type ValueInput = {
   attributeId: string;
   text?: string | null;
@@ -91,7 +93,7 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         purposeOptionId: input.purposeOptionId,
         conditionOptionId: input.conditionOptionId,
         title: input.title.trim(),
-        description: input.description?.trim() || null,
+        description: sanitizeRichHtml(input.description?.trim() || null) || null,
         price: input.price ?? null,
         priceUnit: input.priceUnit ?? 'TOTAL',
         priceNegotiable: input.priceNegotiable ?? false,

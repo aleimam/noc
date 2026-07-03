@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { sanitizeRichHtml } from '../../../../lib/sanitize';
 
 type Result = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -29,8 +30,8 @@ export async function savePage(input: {
     slug,
     titleAr,
     titleEn: input.titleEn?.trim() || null,
-    bodyAr: input.bodyAr ?? '',
-    bodyEn: input.bodyEn ?? null,
+    bodyAr: sanitizeRichHtml(input.bodyAr),
+    bodyEn: input.bodyEn != null ? sanitizeRichHtml(input.bodyEn) : null,
     published: !!input.published,
     footerOrder: Number.isFinite(input.footerOrder) ? Number(input.footerOrder) : 0,
   };

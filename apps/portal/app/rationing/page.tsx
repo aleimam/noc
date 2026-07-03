@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { rateLimit, clientIp } from '../../lib/rateLimit';
 import { SiteShell } from '../_components/SiteShell';
 import { SearchBar } from './SearchBar';
 import { RegisterCards } from './RegisterCards';
@@ -48,11 +50,14 @@ export default async function RationingSearch({
   });
 
   const searched = q.length > 0;
+  // Per-IP throttle on the public search — a human does a handful of searches; a scraper
+  // enumerating the register does hundreds. 45/min is invisible to real users (F5).
+  const throttled = searched && !rateLimit(`rationing:${clientIp(await headers())}`, 45, 60_000);
   let results: SheetCard[] = [];
   let total = 0;
   let suggestions: { display: string; score: number }[] = [];
 
-  if (searched) {
+  if (searched && !throttled) {
     const out = await searchSheets({
       q,
       field,
@@ -133,7 +138,9 @@ export default async function RationingSearch({
           </div>
         )}
 
-        {searched ? (
+        {throttled ? (
+          <SlowDown locale={locale} whatsapp={site.whatsappHelp} />
+        ) : searched ? (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="text-base text-ink-500">
@@ -177,6 +184,33 @@ export default async function RationingSearch({
         <RegisterCards q={q} />
       </div>
     </SiteShell>
+  );
+}
+
+function SlowDown({ locale, whatsapp }: { locale: 'ar' | 'en'; whatsapp?: string | null }) {
+  const ar = locale === 'ar';
+  return (
+    <div className="rounded-2xl border-2 border-gold/50 bg-gold-50 p-6 text-center">
+      <div className="text-4xl" aria-hidden>
+        ⏳
+      </div>
+      <p className="mt-3 text-2xl font-black text-navy-800">
+        {ar ? 'لقد أجريت عمليات بحث كثيرة بسرعة' : 'Too many searches, too fast'}
+      </p>
+      <p className="mt-2 text-lg text-ink-700">
+        {ar
+          ? 'من فضلك انتظر دقيقة واحدة ثم حاول البحث مرة أخرى.'
+          : 'Please wait one minute, then try your search again.'}
+      </p>
+      {whatsapp && (
+        <a
+          href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}`}
+          className="mt-4 inline-block rounded-xl bg-navy-700 px-5 py-3 text-lg font-bold text-white"
+        >
+          {ar ? 'تحتاج مساعدة؟ راسلنا' : 'Need help? Message us'}
+        </a>
+      )}
+    </div>
   );
 }
 

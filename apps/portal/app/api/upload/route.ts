@@ -6,6 +6,7 @@ import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { uploadRoot } from '@/lib/uploads';
 import { stampForCategory, BAKED_CATEGORIES, type StampCategory } from '@/lib/stamp';
+import { rateLimit } from '@/lib/rateLimit';
 
 const MAX_BYTES = 32 * 1024 * 1024;
 
@@ -53,6 +54,9 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+  }
+  if (!rateLimit(`upload:${session.user.id}`, 40, 60 * 1000)) {
+    return NextResponse.json({ ok: false, error: 'rate_limited' }, { status: 429 });
   }
 
   const form = await req.formData();

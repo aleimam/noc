@@ -4,6 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { prisma } from '@noc/db';
 import { uploadRoot } from '../../../lib/uploads';
+import { rateLimit, clientIp } from '../../../lib/rateLimit';
 
 // Public upload for the "sell your land" form (visitors aren't logged in). Accepts images,
 // plus documents (PDF/DOCX/XLSX) when kind=document. Bytes are sniffed, not trusted.
@@ -36,6 +37,10 @@ function sniffDoc(buf: Buffer, name: string): string | null {
 }
 
 export async function POST(req: NextRequest) {
+  // Public/unauthenticated endpoint — key by IP so the sell form can't be abused to fill disk (F1).
+  if (!rateLimit(`upload:${clientIp(req.headers)}`, 20, 60 * 1000)) {
+    return NextResponse.json({ ok: false, error: 'rate_limited' }, { status: 429 });
+  }
   const form = await req.formData();
   const file = form.get('file');
   if (!(file instanceof File)) return NextResponse.json({ ok: false, error: 'no_file' }, { status: 400 });

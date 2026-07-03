@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { sanitizeRichHtml } from '../../../../../lib/sanitize';
 
 type Result = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -31,8 +32,8 @@ export async function saveBuildingCondition(input: {
     unitLabelEn: input.unitLabelEn?.trim() || unitLabelAr,
     titleAr,
     titleEn: input.titleEn?.trim() || titleAr,
-    bodyAr: input.bodyAr ?? '',
-    bodyEn: input.bodyEn ?? '',
+    bodyAr: sanitizeRichHtml(input.bodyAr),
+    bodyEn: sanitizeRichHtml(input.bodyEn),
     order: Number.isFinite(input.order) ? Number(input.order) : 0,
     published: input.published ?? true,
   };

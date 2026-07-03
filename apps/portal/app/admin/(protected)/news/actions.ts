@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { auth, requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { sanitizeRichHtml } from '../../../../lib/sanitize';
 
 type Result = { ok: true } | { ok: false; error: string };
 type Cat = 'FACILITIES' | 'ROADS' | 'HANDOVERS' | 'REGULATIONS' | 'GENERAL';
@@ -31,8 +32,8 @@ export async function upsertNews(input: {
   const data = {
     titleAr: input.titleAr.trim(),
     titleEn: input.titleEn?.trim() || null,
-    bodyAr: input.bodyAr.trim(),
-    bodyEn: input.bodyEn?.trim() || null,
+    bodyAr: sanitizeRichHtml(input.bodyAr),
+    bodyEn: input.bodyEn ? sanitizeRichHtml(input.bodyEn) : null,
     category: input.category,
     pinned: !!input.pinned,
     publishedAt,

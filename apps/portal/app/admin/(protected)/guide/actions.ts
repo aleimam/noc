@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { sanitizeRichHtml } from '../../../../lib/sanitize';
 
 type Result = { ok: true } | { ok: false; error: string };
 type Sec = 'LICENSING' | 'HANDOVER' | 'COMPANIES' | 'COSTS';
@@ -23,8 +24,8 @@ export async function upsertGuideEntry(input: {
     section: input.section,
     titleAr: input.titleAr.trim(),
     titleEn: input.titleEn?.trim() || null,
-    bodyAr: input.bodyAr.trim(),
-    bodyEn: input.bodyEn?.trim() || null,
+    bodyAr: sanitizeRichHtml(input.bodyAr),
+    bodyEn: input.bodyEn ? sanitizeRichHtml(input.bodyEn) : null,
     order: input.order ?? 0,
     isActive: input.isActive ?? true,
   };
