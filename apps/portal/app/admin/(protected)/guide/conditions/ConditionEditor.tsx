@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { RichEditor } from '../../pages/RichEditor';
+import { ConditionImages } from './ConditionImages';
 import { saveBuildingCondition } from './actions';
 
 type Draft = {
@@ -14,6 +15,7 @@ type Draft = {
   titleEn: string;
   bodyAr: string;
   bodyEn: string;
+  images: string[];
   order: number;
   published: boolean;
 };
@@ -57,6 +59,11 @@ export function ConditionEditor({ initial }: { initial: Draft }) {
       <div>
         <div className="mb-1 text-sm font-medium">المحتوى (إنجليزي)</div>
         <RichEditor value={d.bodyEn} onChange={(html) => set('bodyEn', html)} dir="ltr" />
+      </div>
+
+      <div>
+        <div className="mb-1 text-sm font-medium">الصور (تظهر أسفل الصفحة، قابلة للتكبير)</div>
+        <ConditionImages value={d.images} onChange={(v) => set('images', v)} />
       </div>
 
       <div className="flex items-center gap-3">

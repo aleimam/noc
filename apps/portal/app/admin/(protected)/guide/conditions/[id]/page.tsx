@@ -15,10 +15,13 @@ export default async function EditBuildingCondition({ params }: { params: Promis
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">تعديل: {c.unitLabelAr}</h1>
-        <a href="/admin/guide/conditions" className="text-sm text-accent">← رجوع</a>
+        <div className="flex items-center gap-4">
+          <a href={`/guide/conditions/${c.slug}`} target="_blank" rel="noopener noreferrer" className="text-sm text-accent">عرض الصفحة ↗</a>
+          <a href="/admin/guide/conditions" className="text-sm text-accent">← رجوع</a>
+        </div>
       </div>
       <ConditionEditor
-        initial={{ id: c.id, slug: c.slug, unitLabelAr: c.unitLabelAr, unitLabelEn: c.unitLabelEn, titleAr: c.titleAr, titleEn: c.titleEn, bodyAr: c.bodyAr, bodyEn: c.bodyEn, order: c.order, published: c.published }}
+        initial={{ id: c.id, slug: c.slug, unitLabelAr: c.unitLabelAr, unitLabelEn: c.unitLabelEn, titleAr: c.titleAr, titleEn: c.titleEn, bodyAr: c.bodyAr, bodyEn: c.bodyEn, images: Array.isArray(c.images) ? (c.images as string[]) : [], order: c.order, published: c.published }}
       />
     </div>
   );

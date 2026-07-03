@@ -18,6 +18,7 @@ export async function saveBuildingCondition(input: {
   titleEn?: string;
   bodyAr?: string;
   bodyEn?: string;
+  images?: string[];
   order?: number;
   published?: boolean;
 }): Promise<Result> {
@@ -34,6 +35,7 @@ export async function saveBuildingCondition(input: {
     titleEn: input.titleEn?.trim() || titleAr,
     bodyAr: sanitizeRichHtml(input.bodyAr),
     bodyEn: sanitizeRichHtml(input.bodyEn),
+    images: Array.isArray(input.images) ? input.images.filter((s) => typeof s === 'string' && s) : [],
     order: Number.isFinite(input.order) ? Number(input.order) : 0,
     published: input.published ?? true,
   };

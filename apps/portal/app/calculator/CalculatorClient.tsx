@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { pick } from '@noc/i18n';
 import { netArea, deriveStandard, reconcile, type CalculatorConfig, type ReconcileResult } from '../../lib/calculator/calc';
 
 type Tab = 'area' | 'reconcile';
@@ -212,7 +213,7 @@ function ReconcileCalc({ config, locale }: { config: CalculatorConfig; locale: '
             {busy ? t('preparing') : `⬇ ${t('downloadImage')}`}
           </button>
 
-          <p className="px-1 text-center text-xs text-ink-400">{locale === 'en' ? config.disclaimerEn : config.disclaimerAr}</p>
+          <p className="px-1 text-center text-xs text-ink-400">{pick(config.disclaimerAr, config.disclaimerEn, locale)}</p>
         </div>
       )}
     </div>
@@ -449,7 +450,7 @@ async function renderStatement(
   if ('direction' in ctx) ctx.direction = rtl ? 'rtl' : 'ltr';
   ctx.fillStyle = '#9aa6b8';
   ctx.font = '12px Tajawal, Arial, sans-serif';
-  const disc = locale === 'en' ? cfg.disclaimerEn : cfg.disclaimerAr;
+  const disc = pick(cfg.disclaimerAr, cfg.disclaimerEn, locale);
   ctx.fillText(truncate(disc, 95), W / 2, fy + 62);
 
   return canvas.toDataURL('image/png');

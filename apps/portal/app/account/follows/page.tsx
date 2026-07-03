@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { pick } from '@noc/i18n';
 import { DeleteFollowButton } from './FollowRow';
 
 export const dynamic = 'force-dynamic';
@@ -66,7 +67,7 @@ export default async function MyFollowsPage() {
         ) : (
           <ul className="space-y-3">
             {lands.map((f) => {
-              const area = [f.district && (locale === 'en' ? f.district.nameEn : f.district.nameAr), f.neighborhood && (locale === 'en' ? f.neighborhood.nameEn : f.neighborhood.nameAr)].filter(Boolean).join(' • ');
+              const area = [f.district && pick(f.district.nameAr, f.district.nameEn, locale), f.neighborhood && pick(f.neighborhood.nameAr, f.neighborhood.nameEn, locale)].filter(Boolean).join(' • ');
               return (
                 <li key={f.id} className="flex items-start justify-between gap-3 rounded-xl border border-graphite/15 p-4">
                   <div>

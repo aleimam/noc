@@ -9,7 +9,7 @@ export default async function NewBuildingCondition() {
         <h1 className="text-2xl font-bold text-primary">اشتراطات البناء: صفحة جديدة</h1>
         <a href="/admin/guide/conditions" className="text-sm text-accent">← رجوع</a>
       </div>
-      <ConditionEditor initial={{ slug: '', unitLabelAr: '', unitLabelEn: '', titleAr: '', titleEn: '', bodyAr: '', bodyEn: '', order: 0, published: true }} />
+      <ConditionEditor initial={{ slug: '', unitLabelAr: '', unitLabelEn: '', titleAr: '', titleEn: '', bodyAr: '', bodyEn: '', images: [], order: 0, published: true }} />
     </div>
   );
 }

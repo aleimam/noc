@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@noc/db';
+import { PhotoGallery } from '@noc/ui';
+import { pick } from '@noc/i18n';
 import { SiteShell } from '../../../_components/SiteShell';
 
 export const dynamic = 'force-dynamic';
@@ -12,8 +14,8 @@ export default async function ConditionPage({ params }: { params: Promise<{ slug
   const c = await prisma.buildingCondition.findUnique({ where: { slug } });
   if (!c || !c.published) notFound();
 
-  const title = locale === 'en' ? c.titleEn : c.titleAr;
-  const body = locale === 'en' ? c.bodyEn || c.bodyAr : c.bodyAr;
+  const title = pick(c.titleAr, c.titleEn, locale);
+  const body = pick(c.bodyAr, c.bodyEn, locale);
   const images = Array.isArray(c.images) ? (c.images as string[]) : [];
 
   return (
@@ -23,11 +25,9 @@ export default async function ConditionPage({ params }: { params: Promise<{ slug
         <h1 className="mt-3 mb-6 text-3xl font-black text-navy-800 dark:text-soft">{title}</h1>
         <div className="page-content leading-relaxed text-ink-800" dangerouslySetInnerHTML={{ __html: body }} />
         {images.length > 0 && (
-          <div className="mt-6 space-y-4">
-            {images.map((src, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={src} alt="" className="w-full rounded-xl ring-1 ring-ink-200" />
-            ))}
+          <div className="mt-8 space-y-3">
+            <h2 className="text-xl font-bold text-navy-800 dark:text-soft">{locale === 'en' ? 'Official sheet' : 'الكشف الرسمي'}</h2>
+            <PhotoGallery photos={images} />
           </div>
         )}
       </article>

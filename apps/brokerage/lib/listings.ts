@@ -308,7 +308,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
     amenities,
     conditions: l.buildingConditions.map((b) => ({
       slug: b.condition.slug,
-      title: locale === 'en' ? b.condition.titleEn : b.condition.titleAr,
+      title: L(b.condition.titleAr, b.condition.titleEn || b.condition.titleAr),
       body: locale === 'en' ? b.condition.bodyEn || b.condition.bodyAr : b.condition.bodyAr,
     })),
   };

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { pick } from '@noc/i18n';
 import { MyLandsClient, type LandRow } from './MyLandsClient';
 
 export const dynamic = 'force-dynamic';
@@ -40,8 +41,8 @@ export default async function MyLandsPage() {
       </div>
       <MyLandsClient
         lands={lands}
-        districts={districts.map((d) => ({ id: d.id, name: locale === 'en' ? d.nameEn : d.nameAr }))}
-        neighborhoods={neighborhoods.map((n) => ({ id: n.id, districtId: n.districtId, name: locale === 'en' ? n.nameEn : n.nameAr }))}
+        districts={districts.map((d) => ({ id: d.id, name: pick(d.nameAr, d.nameEn, locale) }))}
+        neighborhoods={neighborhoods.map((n) => ({ id: n.id, districtId: n.districtId, name: pick(n.nameAr, n.nameEn, locale) }))}
       />
     </div>
   );

@@ -16,6 +16,18 @@ export function dirForLocale(locale: Locale): 'rtl' | 'ltr' {
   return locale === 'ar' ? 'rtl' : 'ltr';
 }
 
+/**
+ * Bilingual content fallback: show the value in the active language, or the other language if
+ * the active one is empty. Use for admin-entered content (titles, bodies, names) so a missing
+ * translation renders the available language instead of blank. Not for UI chrome — those
+ * strings come from the message bundles.
+ */
+export function pick(ar: string | null | undefined, en: string | null | undefined, locale: Locale): string {
+  const a = (ar ?? '').trim();
+  const e = (en ?? '').trim();
+  return locale === 'en' ? e || a : a || e;
+}
+
 // Unit labels are stored/entered in Arabic. Only the unit SUFFIX is localized —
 // the entered value itself (a number, a typed note) never changes between locales.
 const UNIT_EN: Record<string, string> = {
