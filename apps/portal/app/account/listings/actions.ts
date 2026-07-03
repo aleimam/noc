@@ -33,6 +33,7 @@ export type ListingInput = {
   showOnBrokerage?: boolean;
   values: ValueInput[];
   photoIds: string[];
+  buildingConditionIds?: string[];
   status: 'DRAFT' | 'PENDING';
 };
 
@@ -162,6 +163,16 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         },
         data: { ownerType: null, ownerId: null, attributeId: null },
       });
+
+      // ── Attached building-conditions pages (manual, optional) ──
+      const condIds = [...new Set(input.buildingConditionIds ?? [])];
+      await tx.listingBuildingCondition.deleteMany({ where: { listingId } });
+      if (condIds.length) {
+        await tx.listingBuildingCondition.createMany({
+          data: condIds.map((conditionId) => ({ listingId, conditionId })),
+          skipDuplicates: true,
+        });
+      }
 
       return listingId;
     });

@@ -501,6 +501,7 @@ model Listing {
   neighborhood Neighborhood?  @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)
   sourceLand   Land?          @relation("LandListing")
   values       ListingValue[]
+  buildingConditions ListingBuildingCondition[]
 
   @@index([status, propertyTypeId])
   @@index([sellerId, status])
@@ -530,6 +531,39 @@ model ListingValue {
   @@index([attributeId, optionId])
   @@index([attributeId, listItemId])
   @@index([attributeId, number])
+}
+
+/// Building-conditions ("اشتراطات البناء") reference page for one unit (e.g. أرض 209م).
+/// Free-form unit label + rich bilingual body (tables/text) + optional images. Guide service.
+model BuildingCondition {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  unitLabelAr String
+  unitLabelEn String
+  titleAr     String
+  titleEn     String
+  bodyAr      String   @db.Text
+  bodyEn      String   @db.Text
+  images      Json? // array of uploaded image paths
+  order       Int      @default(0)
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  listings ListingBuildingCondition[]
+}
+
+/// Manual attach: a listing optionally shows one or more building-conditions pages.
+model ListingBuildingCondition {
+  id          String @id @default(cuid())
+  listingId   String
+  conditionId String
+
+  listing   Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  condition BuildingCondition @relation(fields: [conditionId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, conditionId])
+  @@index([conditionId])
 }
 
 enum OwnerType {

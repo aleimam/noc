@@ -8,12 +8,12 @@ import { loadCatalog, buildVals, loadListingAttachments } from '@/app/account/li
 export default async function StaffEditListing({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission('marketplace', 'UPDATE');
   const { id } = await params;
-  const listing = await prisma.listing.findUnique({ where: { id }, include: { values: true } });
+  const listing = await prisma.listing.findUnique({ where: { id }, include: { values: true, buildingConditions: { select: { conditionId: true } } } });
   if (!listing) notFound();
 
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
-  const { classifiers, sections, attributes, standardAreas } = await loadCatalog();
+  const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();
   const [owners, attachData] = await Promise.all([
     prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } }),
     loadListingAttachments(id),
@@ -35,6 +35,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
         attributes={attributes}
         locale={locale}
         standardAreas={standardAreas}
+        buildingConditions={buildingConditions}
         initial={{
           id: listing.id,
           typeOptionId: listing.typeOptionId ?? '',
@@ -55,6 +56,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
           vals,
           photos,
           attachs,
+          buildingConditionIds: listing.buildingConditions.map((b) => b.conditionId),
         }}
       />
     </div>

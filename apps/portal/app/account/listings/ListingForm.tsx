@@ -42,6 +42,7 @@ export type ListingFormInitial = {
   vals: Record<string, string | boolean | string[]>;
   photos: UploadedAttachment[];
   attachs: Record<string, UploadedAttachment[]>;
+  buildingConditionIds?: string[];
 };
 
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
@@ -55,6 +56,7 @@ export function ListingForm({
   staffMode = false,
   owners = [],
   standardAreas = [],
+  buildingConditions = [],
   returnTo,
 }: {
   classifiers: Classifier[];
@@ -65,6 +67,7 @@ export function ListingForm({
   staffMode?: boolean;
   owners?: OwnerOpt[];
   standardAreas?: number[];
+  buildingConditions?: { id: string; unitLabelAr: string; unitLabelEn: string }[];
   returnTo?: string;
 }) {
   const t = useTranslations('mp');
@@ -108,6 +111,7 @@ export function ListingForm({
   const [vals, setVals] = useState<Record<string, string | boolean | string[]>>(initial.vals);
   const [photos, setPhotos] = useState<UploadedAttachment[]>(initial.photos);
   const [attachs, setAttachs] = useState<Record<string, UploadedAttachment[]>>(initial.attachs);
+  const [condIds, setCondIds] = useState<string[]>(initial.buildingConditionIds ?? []);
 
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const setVal = (id: string, v: string | boolean | string[]) => setVals((p) => ({ ...p, [id]: v }));
@@ -237,6 +241,7 @@ export function ListingForm({
       showOnBrokerage,
       values: buildValues(),
       photoIds: photos.map((p) => p.id),
+      buildingConditionIds: condIds,
       status,
     };
     start(async () => {
@@ -392,6 +397,25 @@ export function ListingForm({
           </label>
           <p className="mt-1 text-xs opacity-60">{alsawarey ? t('alsawareyLimited') : t('newObourOnly')}</p>
         </div>
+      )}
+
+      {/* Optional: attach building-conditions ("اشتراطات البناء") pages to this listing. */}
+      {buildingConditions.length > 0 && (
+        <section className="space-y-2 rounded-lg border border-graphite/15 p-4">
+          <h3 className="font-bold text-primary">{L('اشتراطات البناء (اختياري)', 'Building conditions (optional)')}</h3>
+          <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
+            {buildingConditions.map((c) => (
+              <label key={c.id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={condIds.includes(c.id)}
+                  onChange={() => setCondIds((s) => (s.includes(c.id) ? s.filter((x) => x !== c.id) : [...s, c.id]))}
+                />
+                {L(c.unitLabelAr, c.unitLabelEn)}
+              </label>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* ── Basic details (shown for every listing) ── */}

@@ -10,13 +10,13 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
   if (!session?.user) redirect('/account/login');
   const { id } = await params;
 
-  const listing = await prisma.listing.findUnique({ where: { id }, include: { values: true } });
+  const listing = await prisma.listing.findUnique({ where: { id }, include: { values: true, buildingConditions: { select: { conditionId: true } } } });
   if (!listing) notFound();
   if (listing.sellerId !== session.user.id && session.user.type !== 'STAFF') notFound();
 
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
-  const { classifiers, sections, attributes, standardAreas } = await loadCatalog();
+  const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();
   const { photos, attachs } = await loadListingAttachments(id);
   const vals = buildVals(listing.values, new Map(attributes.map((a) => [a.id, a.type])));
 
@@ -32,6 +32,7 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
         attributes={attributes}
         locale={locale}
         standardAreas={standardAreas}
+        buildingConditions={buildingConditions}
         initial={{
           id: listing.id,
           typeOptionId: listing.typeOptionId ?? '',
@@ -52,6 +53,7 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
           vals,
           photos,
           attachs,
+          buildingConditionIds: listing.buildingConditions.map((b) => b.conditionId),
         }}
       />
     </div>

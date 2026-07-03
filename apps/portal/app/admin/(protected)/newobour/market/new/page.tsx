@@ -14,7 +14,7 @@ export default async function NewObourNewListing() {
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);
-  const { classifiers, sections, attributes, standardAreas } = await loadCatalog();
+  const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();
   const owners = await prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } });
 
   return (
@@ -32,6 +32,7 @@ export default async function NewObourNewListing() {
         attributes={attributes}
         locale={locale}
         standardAreas={standardAreas}
+        buildingConditions={buildingConditions}
         initial={{
           typeOptionId: '',
           purposeOptionId: '',

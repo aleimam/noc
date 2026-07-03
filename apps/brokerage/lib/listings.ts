@@ -178,6 +178,7 @@ export type LandDetail = {
   gallery: string[];
   specs: { label: string; value: string; link?: 'url' | 'tel'; sectionAr: string; sectionEn: string; sectionOrder: number; attrOrder: number }[]; // public attributes, localized
   amenities: { type: string; title: string; details: string | null; photos: string[] }[]; // inherited from the neighborhood
+  conditions: { slug: string; title: string; body: string }[]; // attached building-conditions pages
 };
 
 export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<LandDetail | null> {
@@ -196,6 +197,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
       priceNote: true,
       status: true,
       typeOption: { select: { nameAr: true, nameEn: true } },
+      buildingConditions: { select: { condition: { select: { slug: true, titleAr: true, titleEn: true, bodyAr: true, bodyEn: true } } } },
       values: {
         select: {
           number: true,
@@ -304,6 +306,11 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
     gallery,
     specs,
     amenities,
+    conditions: l.buildingConditions.map((b) => ({
+      slug: b.condition.slug,
+      title: locale === 'en' ? b.condition.titleEn : b.condition.titleAr,
+      body: locale === 'en' ? b.condition.bodyEn || b.condition.bodyAr : b.condition.bodyAr,
+    })),
   };
 }
 

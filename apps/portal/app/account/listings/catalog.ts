@@ -30,7 +30,7 @@ export type AttrConfig = {
 
 /** Loads the active catalog shaped for the listing form (types grouped by category, sections, attributes). */
 export async function loadCatalog() {
-  const [classifiers, sections, attrs, standardAreas] = await Promise.all([
+  const [classifiers, sections, attrs, standardAreas, conditionRows] = await Promise.all([
     prisma.classifier.findMany({
       orderBy: { order: 'asc' },
       include: { options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true, allowedOnAlsawarey: true, parentLinks: { select: { parentId: true } } } } },
@@ -56,6 +56,7 @@ export async function loadCatalog() {
       },
     }),
     getStandardAreas(),
+    prisma.buildingCondition.findMany({ where: { published: true }, orderBy: { order: 'asc' }, select: { id: true, unitLabelAr: true, unitLabelEn: true } }),
   ]);
 
   const attributes = attrs.map((a) => ({
@@ -89,6 +90,7 @@ export async function loadCatalog() {
     sections,
     attributes,
     standardAreas,
+    buildingConditions: conditionRows,
   };
 }
 

@@ -11,7 +11,7 @@ export default async function NewListing() {
 
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
-  const { classifiers, sections, attributes, standardAreas } = await loadCatalog();
+  const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();
   const dbUser = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { phone: true },
@@ -29,6 +29,7 @@ export default async function NewListing() {
         attributes={attributes}
         locale={locale}
         standardAreas={standardAreas}
+        buildingConditions={buildingConditions}
         initial={{
           typeOptionId: '',
           purposeOptionId: '',

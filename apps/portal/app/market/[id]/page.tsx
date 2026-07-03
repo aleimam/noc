@@ -30,7 +30,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const listing = await prisma.listing.findUnique({
     where: { id },
-    include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: true },
+    include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: true, buildingConditions: { include: { condition: true } } },
   });
   if (!listing || listing.status !== 'PUBLISHED') notFound();
 
@@ -200,6 +200,21 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
           </div>
         </div>
       ))}
+
+      {listing.buildingConditions.length > 0 && (
+        <details className="rounded-lg border border-graphite/15 p-4">
+          <summary className="cursor-pointer font-semibold text-primary">{locale === 'en' ? 'Building conditions' : 'اشتراطات البناء'}</summary>
+          <div className="mt-3 space-y-6">
+            {listing.buildingConditions.map((b) => (
+              <div key={b.conditionId}>
+                <h3 className="mb-2 font-bold text-primary">{L(b.condition.titleAr, b.condition.titleEn)}</h3>
+                <div className="page-content leading-relaxed text-ink-800" dangerouslySetInnerHTML={{ __html: L(b.condition.bodyAr, b.condition.bodyEn || b.condition.bodyAr) }} />
+                <a href={`/guide/conditions/${b.condition.slug}`} className="mt-1 inline-block text-sm text-accent">{locale === 'en' ? 'Open full page ↗' : 'فتح الصفحة كاملة ↗'}</a>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
 
       <div className="fixed inset-x-0 bottom-0 mx-auto flex max-w-3xl gap-3 border-t border-graphite/15 bg-bg p-3">
         {contactWhatsapp && (

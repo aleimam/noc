@@ -20,7 +20,8 @@
     "seed:districts": "dotenv -e ../../.env -- node prisma/seed-districts.mjs",
     "studio": "dotenv -e ../../.env -- prisma studio",
     "reset": "dotenv -e ../../.env -- prisma migrate reset",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed:conditions": "dotenv -e ../../.env -- node prisma/seed-conditions.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"

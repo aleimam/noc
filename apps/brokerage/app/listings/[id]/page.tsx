@@ -177,6 +177,20 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
           </section>
         )}
 
+        {land.conditions.length > 0 && (
+          <details className="mt-6 rounded-2xl bg-white p-5 shadow-md">
+            <summary className="cursor-pointer text-lg font-bold text-navy-800">{L('اشتراطات البناء', 'Building conditions')}</summary>
+            <div className="mt-3 space-y-6">
+              {land.conditions.map((c) => (
+                <div key={c.slug}>
+                  <h3 className="mb-2 font-bold text-navy-800">{c.title}</h3>
+                  <div className="page-content leading-relaxed text-ink-700" dangerouslySetInnerHTML={{ __html: c.body }} />
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
         {land.amenities.length > 0 && (
           <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
             <h2 className="mb-3 text-lg font-bold text-navy-800">{L('مرافق المنطقة', 'Area amenities')}</h2>
