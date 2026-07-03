@@ -690,7 +690,11 @@
     "otpResend": "تغيير الرقم / إعادة الإرسال",
     "otpInvalid": "الكود غير صحيح، حاول مرة أخرى",
     "submitting": "جارٍ الحفظ…",
-    "registerError": "حدث خطأ، حاول مرة أخرى"
+    "registerError": "حدث خطأ، حاول مرة أخرى",
+    "chooseImportFile": "اختر ملف الاستيراد",
+    "dropOrPaste": "أو اسحب وأفلت الملف أو الصقه هنا",
+    "chooseImages": "اختر الصور",
+    "nFilesSelected": "تم اختيار {n} ملف"
   },
   "lands": {
     "title": "الأحياء والمجاورات",

@@ -1,16 +1,16 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { compressImage } from '@noc/ui';
+import { compressImage, FileDropzone } from '@noc/ui';
 import { registerScans, deleteScan, recordsForScan, type ScanRecord } from './actions';
 import type { ScanReport } from '../types';
 
 export function ScansManager({ report }: { report: ScanReport }) {
   const t = useTranslations('rationing');
   const router = useRouter();
-  const ref = useRef<HTMLInputElement>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -25,7 +25,6 @@ export function ScansManager({ report }: { report: ScanReport }) {
   }
 
   async function upload() {
-    const files = Array.from(ref.current?.files ?? []);
     if (!files.length) {
       setMsg({ ok: false, text: t('err_no_file') });
       return;
@@ -50,7 +49,7 @@ export function ScansManager({ report }: { report: ScanReport }) {
       const r = await registerScans(registered);
       if (r.ok) {
         setMsg({ ok: true, text: t('scansUploaded', { n: registered.length }) });
-        if (ref.current) ref.current.value = '';
+        setFiles([]);
         router.refresh();
       } else {
         setMsg({ ok: false, text: t('err_failed') });
@@ -71,12 +70,18 @@ export function ScansManager({ report }: { report: ScanReport }) {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-dashed border-graphite/30 bg-graphite/5 p-6 text-center">
-        <div className="text-sm text-graphite/80">{t('scanDropHint')}</div>
-        <div className="mt-1 text-xs opacity-60">{t('scanDropSub')}</div>
-        <input ref={ref} type="file" accept="image/*" multiple className="mt-3 block w-full text-sm" />
-        <div className="mt-3 flex items-center justify-center gap-3">
-          <button onClick={upload} disabled={busy} className="rounded-md bg-primary px-5 py-2 text-sm text-soft disabled:opacity-50">
+      <div className="space-y-3">
+        <FileDropzone
+          accept="image/*"
+          multiple
+          onFiles={(fs) => { setFiles(fs); setMsg(null); }}
+          label={t('chooseImages')}
+          hint={t('scanDropSub')}
+          selectedName={files.length ? t('nFilesSelected', { n: files.length }) : undefined}
+          busy={busy}
+        />
+        <div className="flex items-center gap-3">
+          <button onClick={upload} disabled={busy || !files.length} className="rounded-md bg-primary px-5 py-2 text-sm text-soft disabled:opacity-50">
             {busy && progress ? t('uploadingN', { done: progress.done, total: progress.total }) : t('uploadScans')}
           </button>
           {msg && <span className={msg.ok ? 'text-sm text-green' : 'text-sm text-red-600'}>{msg.text}</span>}

@@ -9,6 +9,7 @@ export { EnterToSubmit } from './components/EnterToSubmit';
 export { toast, Toaster } from './components/Toast';
 export { AdminShell, type AdminNavItem, type AdminNavGroup } from './components/AdminShell';
 export { ImageAttachment, type UploadedAttachment } from './components/ImageAttachment';
+export { FileDropzone } from './components/FileDropzone';
 export { Lightbox } from './components/Lightbox';
 export { PhotoGallery } from './components/PhotoGallery';
 export { ListingCard } from './components/ListingCard';

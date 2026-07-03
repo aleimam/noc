@@ -690,7 +690,11 @@
     "otpResend": "Change number / resend",
     "otpInvalid": "Wrong code, please try again",
     "submitting": "Saving…",
-    "registerError": "Something went wrong, please try again"
+    "registerError": "Something went wrong, please try again",
+    "chooseImportFile": "Choose import file",
+    "dropOrPaste": "or drag & drop or paste here",
+    "chooseImages": "Choose images",
+    "nFilesSelected": "{n} file(s) selected"
   },
   "lands": {
     "title": "Districts & Neighborhoods",

@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import { FileDropzone } from '@noc/ui';
 import { previewImport, commitImport, deleteBatch, setInquiryStatus } from './actions';
 import type { PreviewResult } from './types';
 
@@ -26,12 +27,11 @@ export function ImportSheets() {
   // Independent defaults: keep both copies of in-file repeats; ignore rows already on the server.
   const [fileConflict, setFileConflict] = useState<Conflict>('keepBoth');
   const [serverConflict, setServerConflict] = useState<Conflict>('skip');
-  const ref = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
 
   const errText = (e: string) => t(ERR_KEY[e as keyof typeof ERR_KEY] ?? 'err_failed');
 
   function doPreview() {
-    const file = ref.current?.files?.[0];
     if (!file) {
       setMsg({ ok: false, text: t('err_no_file') });
       return;
@@ -47,7 +47,6 @@ export function ImportSheets() {
   }
 
   function doCommit() {
-    const file = ref.current?.files?.[0];
     if (!file) return;
     const fd = new FormData();
     fd.append('file', file);
@@ -58,7 +57,7 @@ export function ImportSheets() {
       if (r.ok) {
         setMsg({ ok: true, text: t('importSummary', { created: r.created, updated: r.updated, dup: r.duplicates }) });
         setPreview(null);
-        if (ref.current) ref.current.value = '';
+        setFile(null);
         router.refresh();
       } else {
         setMsg({ ok: false, text: errText(r.error) });
@@ -68,12 +67,21 @@ export function ImportSheets() {
 
   return (
     <div className="space-y-4 rounded-lg border border-graphite/15 p-4">
+      <FileDropzone
+        accept=".xlsx,.xls,.csv"
+        onFiles={(fs) => { setFile(fs[0] ?? null); setPreview(null); setMsg(null); }}
+        label={t('chooseImportFile')}
+        hint={t('dropOrPaste')}
+        selectedName={file?.name}
+        busy={pending}
+      />
       <div className="flex flex-wrap items-center gap-3">
-        <input ref={ref} type="file" accept=".xlsx,.xls" className="text-sm" onChange={() => setPreview(null)} />
-        <button onClick={doPreview} disabled={pending} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">
+        <button onClick={doPreview} disabled={pending || !file} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">
           {pending && !preview ? t('analyzing') : t('previewImport')}
         </button>
-        <a href="/admin/rationing/sheets/template" className="text-sm text-accent">{t('downloadTemplate')}</a>
+        <a href="/admin/rationing/sheets/template" className="inline-flex items-center gap-1.5 rounded-md border border-accent px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/5">
+          ⬇ {t('downloadTemplate')}
+        </a>
         {msg && <span className={msg.ok ? 'text-sm text-green' : 'text-sm text-red-600'}>{msg.text}</span>}
       </div>
 
