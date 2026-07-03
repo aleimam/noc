@@ -203,6 +203,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
           text: true,
           attribute: { select: { key: true, labelAr: true, labelEn: true, unit: true, type: true, config: true, order: true, isActive: true } },
           option: { select: { labelAr: true, labelEn: true } },
+          listItem: { select: { labelAr: true, labelEn: true } },
         },
       },
     },
@@ -237,7 +238,9 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
   for (const v of l.values) {
     if (!v.attribute.isActive) continue;
     const label = L(v.attribute.labelAr, v.attribute.labelEn);
-    const value = v.option
+    const value = v.listItem
+      ? L(v.listItem.labelAr, v.listItem.labelEn)
+      : v.option
       ? L(v.option.labelAr, v.option.labelEn)
       : formatDetailValue({
           type: v.attribute.type,

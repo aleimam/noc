@@ -176,11 +176,12 @@ export async function upsertAttribute(input: {
   filterable?: boolean;
   order?: number;
   isActive?: boolean;
-  options?: AttrOptionInput[];
+  optionListId?: string | null; // shared OptionList for SELECT / MULTI_SELECT
   optionIds?: string[]; // ClassifierOption ids the attribute applies to (Type/Purpose/Condition)
 }): Promise<Result> {
   await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
   const cfg = input.config && Object.keys(input.config).length ? input.config : null;
+  const usesList = input.type === 'SELECT' || input.type === 'MULTI_SELECT';
   const core = {
     sectionId: input.sectionId,
     labelAr: input.labelAr.trim(),
@@ -190,12 +191,11 @@ export async function upsertAttribute(input: {
     helpAr: input.helpAr?.trim() || null,
     helpEn: input.helpEn?.trim() || null,
     config: cfg ?? Prisma.JsonNull,
+    optionListId: usesList ? input.optionListId || null : null,
     filterable: input.filterable ?? false,
     order: input.order ?? 0,
     isActive: input.isActive ?? true,
   };
-  const hasOptions = input.type === 'SELECT' || input.type === 'MULTI_SELECT';
-  const options = hasOptions ? (input.options ?? []) : [];
   const optionIds = input.optionIds ?? [];
 
   try {
@@ -204,22 +204,8 @@ export async function upsertAttribute(input: {
         ? await tx.attribute.update({ where: { id: input.id }, data: core })
         : await tx.attribute.create({ data: { key: input.key.trim(), ...core } });
 
-      // Sync options (by id; delete missing, upsert present).
-      const existing = await tx.attributeOption.findMany({ where: { attributeId: attr.id } });
-      const keepIds = new Set(options.filter((o) => o.id).map((o) => o.id));
-      const toDelete = existing.filter((o) => !keepIds.has(o.id)).map((o) => o.id);
-      if (toDelete.length) await tx.attributeOption.deleteMany({ where: { id: { in: toDelete } } });
-      for (const [i, o] of options.entries()) {
-        const odata = {
-          key: o.key.trim(),
-          labelAr: o.labelAr.trim(),
-          labelEn: o.labelEn.trim(),
-          order: o.order ?? i,
-          isActive: o.isActive ?? true,
-        };
-        if (o.id) await tx.attributeOption.update({ where: { id: o.id }, data: odata });
-        else await tx.attributeOption.create({ data: { attributeId: attr.id, ...odata } });
-      }
+      // SELECT/MULTI_SELECT choices live in the shared OptionList now; legacy inline
+      // AttributeOption rows are left untouched (old data + saved values depend on them).
 
       // Sync classifier applicability (delete missing, create new).
       const links = await tx.attributeClassifier.findMany({ where: { attributeId: attr.id } });
@@ -244,6 +230,50 @@ export async function deleteAttribute(id: string): Promise<Result> {
   await requirePermission('marketplace', 'DELETE');
   try {
     await prisma.attribute.delete({ where: { id } });
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ─────────────────────── Reusable option lists ───────────────────────
+
+export type OptionItemInput = { id?: string; key: string; labelAr: string; labelEn: string; order?: number; isActive?: boolean };
+
+export async function upsertOptionList(input: { id?: string; name: string; items: OptionItemInput[] }): Promise<Result> {
+  await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
+  const name = input.name.trim();
+  if (!name) return { ok: false, error: 'failed' };
+  try {
+    await prisma.$transaction(async (tx) => {
+      const list = input.id
+        ? await tx.optionList.update({ where: { id: input.id }, data: { name } })
+        : await tx.optionList.create({ data: { name } });
+      // Sync items by id (removing an item also removes it from listings that used it).
+      const existing = await tx.optionListItem.findMany({ where: { listId: list.id } });
+      const keep = new Set(input.items.filter((i) => i.id).map((i) => i.id));
+      const del = existing.filter((e) => !keep.has(e.id)).map((e) => e.id);
+      if (del.length) await tx.optionListItem.deleteMany({ where: { id: { in: del } } });
+      for (const [i, it] of input.items.entries()) {
+        const data = { key: it.key.trim(), labelAr: it.labelAr.trim(), labelEn: it.labelEn.trim(), order: it.order ?? i, isActive: it.isActive ?? true };
+        if (it.id) await tx.optionListItem.update({ where: { id: it.id }, data });
+        else await tx.optionListItem.create({ data: { listId: list.id, ...data } });
+      }
+    });
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function deleteOptionList(id: string): Promise<Result> {
+  await requirePermission('marketplace', 'DELETE');
+  const used = await prisma.attribute.count({ where: { optionListId: id } });
+  if (used > 0) return { ok: false, error: 'in_use' };
+  try {
+    await prisma.optionList.delete({ where: { id } });
     revalidate();
     return { ok: true };
   } catch (e) {

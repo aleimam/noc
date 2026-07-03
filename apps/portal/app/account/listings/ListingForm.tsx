@@ -198,9 +198,9 @@ export function ListingForm({
       } else if (NUMERIC_TYPES.has(a.type)) {
         if (typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v))) out.push({ attributeId: a.id, number: Number(v) });
       } else if (a.type === 'SELECT') {
-        if (typeof v === 'string' && v) out.push({ attributeId: a.id, optionIds: [v] });
+        if (typeof v === 'string' && v) out.push({ attributeId: a.id, listItemIds: [v] });
       } else if (a.type === 'MULTI_SELECT') {
-        if (Array.isArray(v) && v.length) out.push({ attributeId: a.id, optionIds: v });
+        if (Array.isArray(v) && v.length) out.push({ attributeId: a.id, listItemIds: v });
       } else if (a.type === 'PHOTOS' || a.type === 'DOCUMENTS') {
         out.push({ attributeId: a.id, attachmentIds: (attachs[a.id] ?? []).map((x) => x.id) });
       } else if (typeof v === 'string' && v.trim() !== '') {

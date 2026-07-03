@@ -379,14 +379,20 @@ model Attribute {
   filterable Boolean  @default(false)
   order      Int      @default(0)
   isActive   Boolean  @default(true)
+  // SELECT / MULTI_SELECT choices come from a shared, reusable OptionList. The legacy
+  // per-attribute `options` remain for old data but new lists live in OptionList.
+  optionListId String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   section        AttributeSection        @relation(fields: [sectionId], references: [id], onDelete: Restrict)
   options        AttributeOption[]
+  optionList     OptionList?             @relation(fields: [optionListId], references: [id], onDelete: SetNull)
   typeLinks      PropertyTypeAttribute[] // legacy
   classifierLinks AttributeClassifier[]
   values         ListingValue[]
+
+  @@index([optionListId])
 
   @@index([sectionId, order])
   @@index([filterable])
@@ -407,6 +413,34 @@ model AttributeOption {
 
   @@unique([attributeId, key])
   @@index([attributeId, order])
+}
+
+/// A named, reusable list of choices shared across SELECT / MULTI_SELECT attributes.
+model OptionList {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items      OptionListItem[]
+  attributes Attribute[]
+}
+
+/// One choice inside an OptionList. Bilingual.
+model OptionListItem {
+  id       String  @id @default(cuid())
+  listId   String
+  key      String
+  labelAr  String
+  labelEn  String
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  list   OptionList     @relation(fields: [listId], references: [id], onDelete: Cascade)
+  values ListingValue[]
+
+  @@unique([listId, key])
+  @@index([listId, order])
 }
 
 /// type ↔ attribute mapping (which attributes apply to which property types).
@@ -483,15 +517,18 @@ model ListingValue {
   text        String?  @db.Text
   number      Decimal? @db.Decimal(14, 2)
   bool        Boolean?
-  optionId    String?
+  optionId    String? // legacy per-attribute AttributeOption
+  listItemId  String? // shared OptionListItem (SELECT / MULTI_SELECT via OptionList)
 
   listing   Listing          @relation(fields: [listingId], references: [id], onDelete: Cascade)
   attribute Attribute        @relation(fields: [attributeId], references: [id], onDelete: Cascade)
   option    AttributeOption? @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  listItem  OptionListItem?  @relation(fields: [listItemId], references: [id], onDelete: Cascade)
 
   @@unique([listingId, attributeId, optionId])
   @@index([listingId])
   @@index([attributeId, optionId])
+  @@index([attributeId, listItemId])
   @@index([attributeId, number])
 }
 

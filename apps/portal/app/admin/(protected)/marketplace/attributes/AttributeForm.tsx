@@ -27,6 +27,7 @@ export type AttrData = {
   order: number;
   isActive: boolean;
   options: Opt[];
+  optionListId: string; // shared OptionList for SELECT / MULTI_SELECT ('' = none)
   optionIds: string[]; // ClassifierOption ids the attribute applies to
 };
 
@@ -51,11 +52,13 @@ export function AttributeForm({
   initial,
   sections,
   classifiers,
+  lists,
   action,
 }: {
   initial: AttrData;
   sections: { id: string; nameAr: string; nameEn: string }[];
   classifiers: ClassifierData[];
+  lists: { id: string; name: string }[];
   action: (i: AttrData) => Promise<Result>;
 }) {
   const t = useTranslations('mp');
@@ -141,21 +144,18 @@ export function AttributeForm({
         <label className="flex items-center gap-2">{t('order')} <input type="number" value={f.order} onChange={(e) => set({ order: +e.target.value })} className="w-20 rounded-md border border-graphite/20 bg-transparent px-2 py-1" /></label>
       </div>
 
+      {/* SELECT / MULTI_SELECT draw their choices from a shared, reusable Option List. */}
       {hasOptions && (
         <div className="space-y-2 rounded-lg border border-graphite/15 p-3">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold">{t('options')}</h3>
-            <button onClick={() => set({ options: [...f.options, { key: '', labelAr: '', labelEn: '' }] })} className="rounded border border-graphite/25 px-2 py-1 text-xs">+ {t('add')}</button>
+            <h3 className="font-semibold">{t('optionList')}</h3>
+            <a href="/admin/marketplace/option-lists" target="_blank" className="text-xs text-accent">{t('manageLists')} ↗</a>
           </div>
-          {f.options.map((o, i) => (
-            <div key={i} className="flex flex-wrap items-center gap-2">
-              <input dir="ltr" placeholder={t('key')} value={o.key} onChange={(e) => { const c = [...f.options]; c[i] = { ...o, key: e.target.value }; set({ options: c }); }} className="w-28 rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm" />
-              <input placeholder={t('labelAr')} value={o.labelAr} onChange={(e) => { const c = [...f.options]; c[i] = { ...o, labelAr: e.target.value }; set({ options: c }); }} className={cell} />
-              <input dir="ltr" placeholder={t('labelEn')} value={o.labelEn} onChange={(e) => { const c = [...f.options]; c[i] = { ...o, labelEn: e.target.value }; set({ options: c }); }} className={cell} />
-              <button onClick={() => set({ options: f.options.filter((_, j) => j !== i) })} className="px-1 text-red-600">✕</button>
-            </div>
-          ))}
-          {f.options.length === 0 && <p className="text-xs opacity-50">{t('none')}</p>}
+          <select value={f.optionListId} onChange={(e) => set({ optionListId: e.target.value })} className={inp}>
+            <option value="">—</option>
+            {lists.map((l) => (<option key={l.id} value={l.id}>{l.name}</option>))}
+          </select>
+          <p className="text-xs opacity-60">{t('optionListPickHint')}</p>
         </div>
       )}
 

@@ -413,7 +413,15 @@
     "ownerLands": "الأراضي",
     "ownerNothing": "لا يوجد",
     "backToOwners": "الملاك",
-    "ownerInfo": "بيانات المالك"
+    "ownerInfo": "بيانات المالك",
+    "optionList": "قائمة الاختيارات",
+    "manageLists": "إدارة القوائم",
+    "optionListPickHint": "اختر قائمة جاهزة أو أنشئ واحدة من صفحة إدارة القوائم",
+    "optionLists": "قوائم الاختيارات",
+    "optionListsHint": "قوائم قابلة لإعادة الاستخدام عبر عدة تفاصيل — تعديل القائمة يحدّث كل التفاصيل المرتبطة بها",
+    "newList": "قائمة جديدة",
+    "listName": "اسم القائمة",
+    "usedByAttrs": "تفاصيل مرتبطة"
   },
   "rationing": {
     "title": "كشوف التقنين",

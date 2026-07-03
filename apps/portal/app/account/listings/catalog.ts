@@ -49,6 +49,9 @@ export async function loadCatalog() {
           orderBy: { order: 'asc' },
           select: { id: true, labelAr: true, labelEn: true },
         },
+        optionList: {
+          select: { items: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, labelAr: true, labelEn: true } } },
+        },
         classifierLinks: { select: { optionId: true } },
       },
     }),
@@ -64,7 +67,8 @@ export async function loadCatalog() {
     unit: a.unit,
     config: (a.config as AttrConfig | null) ?? {},
     order: a.order,
-    options: a.options,
+    // SELECT/MULTI_SELECT choices come from the linked shared list; fall back to legacy inline options.
+    options: a.optionListId && a.optionList ? a.optionList.items : a.options,
     optionIds: a.classifierLinks.map((l) => l.optionId),
   }));
 
@@ -112,6 +116,7 @@ type RawValue = {
   number: unknown;
   bool: boolean | null;
   optionId: string | null;
+  listItemId: string | null;
 };
 
 /** Rebuilds the form value map from stored ListingValue rows, keyed by attribute type.
@@ -123,9 +128,11 @@ export function buildVals(values: RawValue[], attrType: Map<string, string>) {
     if (!tp || tp === 'PHOTOS' || tp === 'DOCUMENTS') continue;
     if (tp === 'MULTI_SELECT') {
       const cur = Array.isArray(vals[v.attributeId]) ? (vals[v.attributeId] as string[]) : [];
-      if (v.optionId) vals[v.attributeId] = [...cur, v.optionId];
+      const choice = v.listItemId ?? v.optionId;
+      if (choice) vals[v.attributeId] = [...cur, choice];
     } else if (tp === 'SELECT') {
-      if (v.optionId) vals[v.attributeId] = v.optionId;
+      const choice = v.listItemId ?? v.optionId;
+      if (choice) vals[v.attributeId] = choice;
     } else if (tp === 'BOOLEAN' || tp === 'YESNO') {
       vals[v.attributeId] = v.bool ?? false;
     } else if (tp === 'NUMBER' || tp === 'MONEY' || tp === 'MONEY_THOUSANDS' || tp === 'AREA_ORIGINAL' || tp === 'AREA_ALLOCATED') {

@@ -9,7 +9,8 @@ export type ValueInput = {
   text?: string | null;
   number?: number | null;
   bool?: boolean | null;
-  optionIds?: string[];
+  optionIds?: string[]; // legacy inline AttributeOption ids
+  listItemIds?: string[]; // shared OptionListItem ids (SELECT / MULTI_SELECT)
   attachmentIds?: string[]; // PHOTOS / DOCUMENTS — ids of files for this attribute
 };
 
@@ -47,7 +48,9 @@ async function writeValues(tx: any, listingId: string, values: ValueInput[]) {
       if (v.attachmentIds.length) rows.push({ listingId, attributeId: v.attributeId, text: JSON.stringify(v.attachmentIds) });
       continue;
     }
-    if (v.optionIds && v.optionIds.length) {
+    if (v.listItemIds && v.listItemIds.length) {
+      for (const listItemId of v.listItemIds) rows.push({ listingId, attributeId: v.attributeId, listItemId });
+    } else if (v.optionIds && v.optionIds.length) {
       for (const optionId of v.optionIds) rows.push({ listingId, attributeId: v.attributeId, optionId });
     } else if (typeof v.text === 'string' && v.text.trim() !== '') {
       rows.push({ listingId, attributeId: v.attributeId, text: v.text.trim() });

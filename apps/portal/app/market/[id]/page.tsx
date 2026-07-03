@@ -25,7 +25,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const listing = await prisma.listing.findUnique({
     where: { id },
-    include: { values: { include: { option: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: true },
+    include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: true },
   });
   if (!listing || listing.status !== 'PUBLISHED') notFound();
 
@@ -68,7 +68,9 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     if (!a || a.type === 'DOCUMENTS' || a.type === 'PHOTOS') continue;
     if (!perAttr.has(a.id)) perAttr.set(a.id, { attr: a, texts: [] });
     const bucket = perAttr.get(a.id)!;
-    if (v.option) {
+    if (v.listItem) {
+      bucket.texts.push(L(v.listItem.labelAr, v.listItem.labelEn));
+    } else if (v.option) {
       bucket.texts.push(L(v.option.labelAr, v.option.labelEn));
     } else if (a.type === 'DATE' && v.text) {
       bucket.texts.push(formatMonthYear(v.text, locale));

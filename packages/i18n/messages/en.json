@@ -413,7 +413,15 @@
     "ownerLands": "Lands",
     "ownerNothing": "None",
     "backToOwners": "Owners",
-    "ownerInfo": "Owner details"
+    "ownerInfo": "Owner details",
+    "optionList": "Option list",
+    "manageLists": "Manage lists",
+    "optionListPickHint": "Pick a ready list, or create one from the lists page",
+    "optionLists": "Option lists",
+    "optionListsHint": "Reusable lists shared across details — editing a list updates every detail that uses it",
+    "newList": "New list",
+    "listName": "List name",
+    "usedByAttrs": "linked details"
   },
   "rationing": {
     "title": "Rationing Sheets",
