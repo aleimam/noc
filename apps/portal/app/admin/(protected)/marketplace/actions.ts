@@ -226,6 +226,25 @@ export async function upsertAttribute(input: {
   }
 }
 
+// Category-centric applicability: set which attributes apply to one classifier option
+// (the inverse of picking options inside the attribute form).
+export async function setOptionAttributes(optionId: string, attributeIds: string[]): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    const existing = await prisma.attributeClassifier.findMany({ where: { optionId }, select: { id: true, attributeId: true } });
+    const want = new Set(attributeIds);
+    const have = new Set(existing.map((e) => e.attributeId));
+    const toDelete = existing.filter((e) => !want.has(e.attributeId)).map((e) => e.id);
+    const toAdd = attributeIds.filter((a) => !have.has(a));
+    if (toDelete.length) await prisma.attributeClassifier.deleteMany({ where: { id: { in: toDelete } } });
+    if (toAdd.length) await prisma.attributeClassifier.createMany({ data: toAdd.map((attributeId) => ({ optionId, attributeId })), skipDuplicates: true });
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function deleteAttribute(id: string): Promise<Result> {
   await requirePermission('marketplace', 'DELETE');
   try {

@@ -176,7 +176,7 @@ export type LandDetail = {
   status: string;
   typeAr: string | null;
   gallery: string[];
-  specs: { label: string; value: string; link?: 'url' | 'tel' }[]; // public attributes, localized
+  specs: { label: string; value: string; link?: 'url' | 'tel'; sectionAr: string; sectionEn: string; sectionOrder: number; attrOrder: number }[]; // public attributes, localized
   amenities: { type: string; title: string; details: string | null; photos: string[] }[]; // inherited from the neighborhood
 };
 
@@ -201,7 +201,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
           number: true,
           bool: true,
           text: true,
-          attribute: { select: { key: true, labelAr: true, labelEn: true, unit: true, type: true, config: true, order: true, isActive: true } },
+          attribute: { select: { key: true, labelAr: true, labelEn: true, unit: true, type: true, config: true, order: true, isActive: true, section: { select: { nameAr: true, nameEn: true, order: true } } } },
           option: { select: { labelAr: true, labelEn: true } },
           listItem: { select: { labelAr: true, labelEn: true } },
         },
@@ -253,8 +253,18 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
           standardAreas,
         });
     const link = v.attribute.type === 'URL' ? 'url' : v.attribute.type === 'PHONE' ? 'tel' : undefined;
-    if (value) specs.push({ label, value, link });
+    if (value)
+      specs.push({
+        label,
+        value,
+        link,
+        sectionAr: v.attribute.section?.nameAr ?? '',
+        sectionEn: v.attribute.section?.nameEn ?? '',
+        sectionOrder: v.attribute.section?.order ?? 999,
+        attrOrder: v.attribute.order ?? 0,
+      });
   }
+  specs.sort((a, b) => a.sectionOrder - b.sectionOrder || a.attrOrder - b.attrOrder);
 
   // Public-realm amenities inherited from the land's neighborhood.
   const amenities: LandDetail['amenities'] = [];

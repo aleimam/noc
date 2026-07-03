@@ -48,6 +48,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
         { href: '/admin/marketplace/classifiers', label: L('التصنيفات', 'Classifiers'), section: 'marketplace' },
         { href: '/admin/marketplace/attributes', label: L('التفاصيل', 'Details'), section: 'marketplace' },
         { href: '/admin/marketplace/sections', label: L('مجموعات التفاصيل', 'Detail groups'), section: 'marketplace' },
+        { href: '/admin/marketplace/category-attributes', label: L('الفئات والتفاصيل', 'Categories & details'), section: 'marketplace' },
         { href: '/admin/marketplace/option-lists', label: L('قوائم الاختيارات', 'Option lists'), section: 'marketplace' },
       ],
     },

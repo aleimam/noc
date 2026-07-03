@@ -43,6 +43,15 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     `مرحباً، أريد شراء الأرض: ${land.title}`,
     `Hello, I'm interested in buying: ${land.title}`,
   );
+
+  // Group specs into their detail-group (section), preserving section then attribute order.
+  const specGroups = land.specs.reduce<{ title: string; items: typeof land.specs }[]>((acc, s) => {
+    const title = L(s.sectionAr, s.sectionEn) || L('بيانات الأرض', 'Land details');
+    const last = acc[acc.length - 1];
+    if (last && last.title === title) last.items.push(s);
+    else acc.push({ title, items: [s] });
+    return acc;
+  }, []);
   const perLabel =
     land.priceUnit === 'UNIT' ? L('للوحدة', 'per unit') : land.priceUnit === 'SQM' ? L('للمتر', 'per m²') : '';
   const priceShort =
@@ -135,11 +144,11 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
           </aside>
         </div>
 
-        {land.specs.length > 0 && (
-          <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
-            <h2 className="mb-3 text-lg font-bold text-navy-800">{L('بيانات الأرض', 'Land details')}</h2>
+        {specGroups.map((g) => (
+          <section key={g.title} className="mt-6 rounded-2xl bg-white p-5 shadow-md">
+            <h2 className="mb-3 text-lg font-bold text-navy-800">{g.title}</h2>
             <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-              {land.specs.map((s) => (
+              {g.items.map((s) => (
                 <div key={s.label} className="flex justify-between gap-3 border-b border-ink-100 pb-2">
                   <dt className="text-sm text-ink-500">{s.label}</dt>
                   <dd className="text-sm font-medium text-navy-800">
@@ -155,7 +164,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
               ))}
             </dl>
           </section>
-        )}
+        ))}
 
         {land.description && (
           <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">

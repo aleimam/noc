@@ -421,7 +421,10 @@
     "optionListsHint": "Reusable lists shared across details — editing a list updates every detail that uses it",
     "newList": "New list",
     "listName": "List name",
-    "usedByAttrs": "linked details"
+    "usedByAttrs": "linked details",
+    "categoryAttrs": "Categories & details",
+    "categoryAttrsHint": "Pick a category (Type / Purpose / Condition), then tick the details that apply to it.",
+    "pickCategory": "Pick a category"
   },
   "rationing": {
     "title": "Rationing Sheets",
