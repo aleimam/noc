@@ -79,7 +79,7 @@ export default async function AdminDashboard() {
             { label: L('صور الكشوف', 'Scans'), value: scans, href: '/admin/rationing/scans' },
             { label: L('متابعات', 'Follows'), value: ratFollows },
             { label: L('عمليات البحث', 'Searches'), value: searches, href: '/admin/rationing/searches' },
-            { label: L('المدن', 'Cities'), value: cities },
+            { label: L('الجمعيات', 'Cities'), value: cities },
           ]}
         />
       )}

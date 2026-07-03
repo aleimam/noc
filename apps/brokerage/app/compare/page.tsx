@@ -17,7 +17,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
   const rows: { label: string; get: (l: LandCard) => string }[] = [
     { label: L('السعر', 'Price'), get: (l) => (l.status === 'SOLD' ? L('تم البيع', 'Sold') : l.price != null ? `${fmt(l.price)} ${L('ج.م', 'EGP')}` : L('عند الطلب', 'On request')) },
     { label: L('المساحة', 'Area'), get: (l) => (l.area != null ? `${fmt(l.area)} ${L('م²', 'm²')}` : '—') },
-    { label: L('المدينة', 'City'), get: (l) => l.cityAr ?? '—' },
+    { label: L('الجمعية', 'City'), get: (l) => l.cityAr ?? '—' },
     { label: L('الحي', 'District'), get: (l) => l.districtAr ?? '—' },
     { label: L('ناصية', 'Corner'), get: (l) => (l.corner ? '✔' : '—') },
     { label: L('شارع رئيسي', 'Main road'), get: (l) => (l.onMainStreet ? '✔' : '—') },

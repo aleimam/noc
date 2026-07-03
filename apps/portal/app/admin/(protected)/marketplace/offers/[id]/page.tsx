@@ -44,7 +44,7 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
           ['البلوك', o.blockNo ?? '—'],
           ['القطعة', o.plotNo ?? '—'],
         ] as [string, string][])
-      : ([['المدينة', o.city?.name ?? '—']] as [string, string][])),
+      : ([['الجمعية', o.city?.name ?? '—']] as [string, string][])),
     ['السعر المطلوب', o.requiredPrice != null ? `${Number(o.requiredPrice).toLocaleString('en')} ج.م` : '—'],
     ['مُرسِل', o.user ? `${o.user.name ?? ''} ${o.user.phone ?? ''}`.trim() : 'زائر (بدون حساب)'],
     ['التاريخ', fmt(o.createdAt)],
