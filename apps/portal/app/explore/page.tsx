@@ -30,7 +30,9 @@ export default async function ExplorePage() {
 
       {withNb.map((d) => (
         <section key={d.id} className="space-y-3">
-          <h2 className="text-lg font-bold text-primary">{L(d.nameAr, d.nameEn)}</h2>
+          <h2 className="text-lg font-bold text-primary">
+            <a href={`/explore/district/${d.id}`} className="hover:text-accent hover:underline">{L(d.nameAr, d.nameEn)}</a>
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {d.neighborhoods.map((n) => {
               const areas = (n.areas as number[] | null) ?? [];

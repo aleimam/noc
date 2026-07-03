@@ -30,7 +30,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const listing = await prisma.listing.findUnique({
     where: { id },
-    include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: true, buildingConditions: { include: { condition: true } } },
+    include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: true, buildingConditions: { include: { condition: true } }, neighborhood: { include: { district: true } } },
   });
   if (!listing || listing.status !== 'PUBLISHED') notFound();
 
@@ -164,6 +164,15 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         <span className="opacity-70">{t('owner')}: </span>
         <span className="font-medium">{weAreContact ? t('listedByUs') : ownerName || '—'}</span>
       </div>
+
+      {listing.neighborhood && (
+        <div className="text-sm">
+          <span className="opacity-70">{L('المنطقة', 'Location')}: </span>
+          <a href={`/explore/district/${listing.neighborhood.districtId}`} className="text-accent hover:underline">{L(listing.neighborhood.district.nameAr, listing.neighborhood.district.nameEn)}</a>
+          <span className="opacity-50"> — </span>
+          <a href={`/explore/${listing.neighborhood.id}`} className="text-accent hover:underline">{L(listing.neighborhood.nameAr, listing.neighborhood.nameEn)}</a>
+        </div>
+      )}
 
       {listing.description &&
         (/<\w/.test(listing.description) ? (

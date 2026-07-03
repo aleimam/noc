@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
-import { PhotoGallery } from '@noc/ui';
-import { localizeUnit, type Locale } from '@noc/i18n';
+import { PhotoGallery, ListingCard } from '@noc/ui';
+import { localizeUnit, currency, type Locale } from '@noc/i18n';
 import { BUILDING_TYPES, MAIN_ROADS } from '@noc/config';
 import { FollowArea } from '../FollowArea';
+import { areaListings } from '../../../lib/areaListings';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,7 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
     }),
     prisma.amenity.findMany({ where: { neighborhoodId: id }, orderBy: [{ order: 'asc' }], include: { type: true } }),
   ]);
+  const listingCards = await areaListings({ neighborhoodId: id });
   const amIds = amenityRows.map((a) => a.id);
   const amPhotos = amIds.length
     ? await prisma.attachment.findMany({ where: { ownerType: 'Amenity', ownerId: { in: amIds } }, orderBy: { createdAt: 'asc' }, select: { ownerId: true, path: true } })
@@ -82,7 +84,7 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <a href="/explore" className="text-sm text-accent">← {t('exploreTitle')}</a>
       <div>
-        <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{L(n.district.nameAr, n.district.nameEn)}</span>
+        <a href={`/explore/district/${n.districtId}`} className="inline-block rounded bg-graphite/10 px-2 py-0.5 text-xs text-accent hover:underline">{L(n.district.nameAr, n.district.nameEn)}</a>
         <h1 className="mt-2 text-2xl font-bold text-primary">{L(n.nameAr, n.nameEn)}</h1>
       </div>
 
@@ -167,6 +169,17 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
           })}
         </ul>
       </section>
+
+      {listingCards.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="font-semibold text-primary">{t('listingsHere')}</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {listingCards.map((c) => (
+              <ListingCard key={c.id} href={`/market/${c.id}`} cover={c.cover} title={c.title} subtitle={L(c.typeAr, c.typeEn)} price={c.price} currency={currency(locale)} />
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

@@ -835,7 +835,8 @@
     "annotSaveErr": "تعذّر الحفظ، حاول مرة أخرى",
     "annotArrow": "سهم",
     "annotDraw": "رسم حر",
-    "annotDrawHint": "اضغط واسحب على الخريطة للرسم"
+    "annotDrawHint": "اضغط واسحب على الخريطة للرسم",
+    "listingsHere": "عروض في هذه المنطقة"
   },
   "account": {
     "backToAccount": "حسابي",

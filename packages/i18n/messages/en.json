@@ -835,7 +835,8 @@
     "annotSaveErr": "Could not save, please try again",
     "annotArrow": "Arrow",
     "annotDraw": "Freehand",
-    "annotDrawHint": "Press and drag on the map to draw"
+    "annotDrawHint": "Press and drag on the map to draw",
+    "listingsHere": "Listings in this area"
   },
   "account": {
     "backToAccount": "My account",
