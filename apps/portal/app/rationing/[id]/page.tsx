@@ -1,9 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
+import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { SiteShell } from '../../_components/SiteShell';
+import { LoginToView } from '../../_components/LoginToView';
 import { getRationingConfig } from '../../../lib/rationing/settings';
+import { getSecurityGates } from '../../../lib/security';
 import { rationingScanOverlay } from '../../../lib/stamp';
 import { SourceSheetViewer } from './SourceSheetViewer';
 import { ShareButton } from './ShareButton';
@@ -36,6 +39,10 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
     config.showSourceSheets && sheet.sourceFile
       ? await prisma.rationingScan.findUnique({ where: { fileName: sheet.sourceFile }, select: { path: true, fileName: true } })
       : null;
+
+  // Posture gate (F6): at MEDIUM/HIGH the source scan requires a logged-in customer.
+  const [gates, session] = await Promise.all([getSecurityGates(), auth()]);
+  const showScan = !gates.gateScans || !!session?.user;
 
   // Public fields only — remarks + sourceFile are internal and never rendered here.
   const facts: { label: string; value: string }[] = [
@@ -92,7 +99,20 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
 
             <div className="mt-5 flex flex-wrap gap-2.5">
               {scan ? (
-                <SourceSheetViewer src={scan.path} fileName={scan.fileName} watermark={scanWatermark} />
+                showScan ? (
+                  <SourceSheetViewer src={scan.path} fileName={scan.fileName} watermark={scanWatermark} />
+                ) : (
+                  <LoginToView
+                    next={`/rationing/${sheet.id}`}
+                    title={locale === 'ar' ? 'صورة الكشف تتطلب تسجيل الدخول' : 'Sign in to view the sheet scan'}
+                    note={
+                      locale === 'ar'
+                        ? 'سجّل الدخول برقم هاتفك لعرض صورة الكشف الأصلية.'
+                        : 'Sign in with your phone number to view the original sheet scan.'
+                    }
+                    cta={locale === 'ar' ? 'تسجيل الدخول' : 'Sign in'}
+                  />
+                )
               ) : config.showSourceSheets && sheet.sourceFile ? (
                 <span className="inline-flex items-center gap-2 rounded-xl border border-ink-200 px-4 py-2.5 text-ink-400">
                   🖼 {t('viewSourceSoon')}

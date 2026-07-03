@@ -60,7 +60,7 @@ it instantly during an incident.
 | Capability | LIGHT | **MEDIUM** (default) | HIGH |
 |---|---|---|---|
 | Rationing **search** (name → few matches) | public | public | public |
-| Full **sheet detail** page | public | **login (phone-OTP)** | login |
+| Full **sheet detail** page (name, plot, block, city) | public | public | login |
 | High-res **source scans** | public + watermark | **login + watermark** | login + watermark |
 | District / neighborhood **maps** | public + watermark | **login + watermark** | login + watermark |
 | Marketplace **listing** browse + detail | public | public | full detail needs login |
@@ -113,9 +113,14 @@ it instantly during an incident.
 - `AUTH_SECRET`: strong random ≥32 bytes in prod; the app must **refuse to start** (throw)
   on a missing/weak secret in production — no silent dev fallback.
 - Cookies: `httpOnly` + `Secure` + `SameSite=Lax`; short TTL; sign-out clears the session.
-- Both apps send: `Content-Security-Policy`, `X-Frame-Options: DENY` (or CSP
-  `frame-ancestors 'none'`), `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+- Both apps send (in `next.config.mjs`, implemented): `Content-Security-Policy`,
+  `X-Frame-Options: SAMEORIGIN` + CSP `frame-ancestors 'self'` (single-origin apps — blocks
+  all cross-site framing = clickjacking), `X-Content-Type-Options: nosniff`, `Referrer-Policy:
   strict-origin-when-cross-origin`, `Strict-Transport-Security`, `Permissions-Policy`.
+- The CSP keeps `script-src`/`style-src` `'unsafe-inline'` (Next injects inline bootstrap
+  without a nonce) and allow-lists only GA4 + Meta Pixel; `'unsafe-eval'` and
+  `upgrade-insecure-requests` are **prod-only** (dev keeps Turbopack HMR working). CSP here is
+  defence-in-depth — the real XSS vector is closed at the source by `sanitizeRichHtml` (§4.2).
 
 ### 4.7 Edge / network (primary anti-scrape + DDoS layer)
 - **Cloudflare** in front of both domains: Bot Fight Mode, WAF managed rules, edge rate-
@@ -131,10 +136,28 @@ it instantly during an incident.
 
 ## 5. Infrastructure standard (server / proxy / DB / OS)
 
-**Apache/Nginx (CWP)**
+**Apache/Nginx (CWP)** — the authoritative edge layer (prod serves `/uploads/*` directly via
+`Alias`, bypassing Next; the app-level guard in `app/uploads/[...path]/route.ts` only mirrors
+this for dev/fallback).
 - `/uploads/*`: hotlink protection (serve only when Referer is our domains), per-IP rate
-  limit, `Options -Indexes`.
+  limit, `Options -Indexes`. Concrete Apache rule:
+  ```apache
+  <Directory "/…/uploads">
+    Options -Indexes
+    RewriteEngine On
+    RewriteCond %{HTTP_REFERER} !^$
+    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?newobour\.com/  [NC]
+    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?alsawarey\.com/ [NC]
+    RewriteRule \.(png|jpe?g|gif|webp|avif)$ - [F,NC]
+  </Directory>
+  ```
 - Force HTTPS + **HSTS**; TLS 1.2+ only; never expose the Next.js port directly.
+
+**Secrets / env**
+- `AUTH_SECRET` must be a strong random value (`openssl rand -base64 32`); it signs sessions,
+  the cross-app admin token, and OTP hashes. The app **refuses to start signing in production**
+  if it is missing or < 16 chars (F7) — no silent dev fallback. Rotate on staff offboarding
+  or suspected leak.
 
 **MariaDB**
 - App connects as a **least-privilege** user (DML only — no `DROP`/`GRANT`/`FILE`), never
@@ -181,14 +204,14 @@ From the review; severities Critical / High / Medium / Low. Update **Status** as
 
 | # | Sev | Finding | Status |
 |---|-----|---------|--------|
-| F1 | High | No rate limiting (login / OTP / search / upload / submissions) | open |
-| F2 | High | Listing `description` rendered as raw HTML → stored XSS | open |
-| F3 | Med | No security headers / CSP on either app | open |
-| F4 | Med | `/uploads` lacks hotlink protection / throttle | open |
-| F5 | Med | Heavy uncapped public queries (name pool 8000, browse 3000) | open |
-| F6 | Med | Full sheet / scans / maps not gated at MEDIUM posture yet | open |
-| F7 | Low | `AUTH_SECRET` dev fallback must be impossible in prod | open |
-| F8 | Low | OTP throttled per-phone only, not per-IP | open |
+| F1 | High | No rate limiting (login / OTP / search / upload / submissions) | **fixed (3a)** — `lib/rateLimit` on OTP, uploads, public search |
+| F2 | High | Listing `description` (and all rich text) rendered as raw HTML → stored XSS | **fixed (3a)** — `sanitizeRichHtml` at write-time; DB backfill pending |
+| F3 | Med | No security headers / CSP on either app | **fixed (3c)** — CSP + HSTS + nosniff + frame/referrer/permissions in both `next.config.mjs` |
+| F4 | Med | `/uploads` lacks hotlink protection / throttle | **fixed (3c)** — app-level Referer guard + concrete Apache edge rule (§5) |
+| F5 | Med | Heavy uncapped public queries (name pool 8000, browse 3000) | **fixed (3b)** — page size + per-IP rate scale with posture; lists bounded |
+| F6 | Med | Full sheet / scans / maps not gated at MEDIUM posture yet | **fixed (3b)** — scans + maps require login at MEDIUM/HIGH; detail public by design (see §3) |
+| F7 | Low | `AUTH_SECRET` dev fallback must be impossible in prod | **fixed (3c)** — `appSecret()` throws in prod if unset/weak |
+| F8 | Low | OTP throttled per-phone only, not per-IP | **fixed (3a)** — per-IP cap added on both apps |
 
 ---
 

@@ -1,9 +1,12 @@
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
+import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { PhotoGallery, ListingCard } from '@noc/ui';
 import { localizeUnit, currency, type Locale } from '@noc/i18n';
+import { LoginToView } from '../../../_components/LoginToView';
 import { areaListings } from '../../../../lib/areaListings';
+import { getSecurityGates } from '../../../../lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +49,10 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
   const locationMap = pickMap('location');
   const masterplanMap = pickMap('masterplan');
 
+  // Posture gate (F6): at MEDIUM/HIGH the maps require a logged-in customer.
+  const [gates, session] = await Promise.all([getSecurityGates(), auth()]);
+  const showMaps = !gates.gateMaps || !!session?.user;
+
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <a href="/explore" className="text-sm text-accent">← {t('exploreTitle')}</a>
@@ -80,10 +87,19 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
       {locationMap && (
         <section className="space-y-2">
           <h2 className="font-semibold text-primary">{t('locationMap')}</h2>
-          <PhotoGallery photos={[locationMap]} />
+          {showMaps ? (
+            <PhotoGallery photos={[locationMap]} />
+          ) : (
+            <LoginToView
+              next={`/explore/district/${d.id}`}
+              title={L('الخرائط تتطلب تسجيل الدخول', 'Sign in to view maps')}
+              note={L('سجّل الدخول برقم هاتفك لعرض الخرائط.', 'Sign in with your phone number to view the maps.')}
+              cta={L('تسجيل الدخول', 'Sign in')}
+            />
+          )}
         </section>
       )}
-      {masterplanMap && (
+      {masterplanMap && showMaps && (
         <section className="space-y-2">
           <h2 className="font-semibold text-primary">{t('masterplan')}</h2>
           <PhotoGallery photos={[masterplanMap]} />

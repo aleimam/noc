@@ -15,6 +15,41 @@ process.env.AUTH_URL ||= process.env.PORTAL_URL;
 
 const withNextIntl = createNextIntlPlugin('../../packages/i18n/src/request.ts');
 
+// ── Security headers (F3) ─────────────────────────────────────────────────────
+// A pragmatic CSP: it locks down framing, MIME sniffing, base-uri and object/embed,
+// and allow-lists exactly the third parties we load (GA4 + Meta Pixel, consent-gated).
+// script/style keep 'unsafe-inline' because Next.js injects inline bootstrap without a
+// nonce — the actual injection vector (stored XSS) is closed at the source by
+// sanitizeRichHtml, so CSP here is defence-in-depth, not the primary control. 'unsafe-eval'
+// and upgrade-insecure-requests are prod-only vs dev to avoid breaking Turbopack HMR / http
+// localhost. See security.md §4.3.
+const isDev = process.env.NODE_ENV !== 'production';
+const csp = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'self'",
+  "form-action 'self'",
+  "img-src 'self' data: blob: https:",
+  "media-src 'self'",
+  "font-src 'self' data:",
+  "worker-src 'self' blob:",
+  "style-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://www.googletagmanager.com https://connect.facebook.net`,
+  "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://connect.facebook.net https://www.facebook.com",
+  "frame-src 'self' https://www.facebook.com https://td.doubleclick.net",
+  ...(isDev ? [] : ['upgrade-insecure-requests']),
+].join('; ');
+
+const securityHeaders = [
+  { key: 'Content-Security-Policy', value: csp },
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), browsing-topics=()' },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -22,6 +57,9 @@ const nextConfig = {
   transpilePackages: ['@noc/ui', '@noc/i18n', '@noc/auth', '@noc/db', '@noc/sms', '@noc/config'],
   // Lint is run separately (`npm run lint`); keep production builds focused on compile + types.
   eslint: { ignoreDuringBuilds: true },
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }];
+  },
   // Konva (via react-konva) references the optional Node-only `canvas` package; we only
   // use its browser build, so stub it out of the bundle.
   webpack: (config) => {

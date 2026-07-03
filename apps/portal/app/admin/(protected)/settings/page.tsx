@@ -11,6 +11,7 @@ export default async function SettingsHub() {
     { href: '/admin/settings/users', label: t('settingsUsers'), desc: t('settingsUsersDesc') },
     { href: '/admin/settings/customers', label: t('settingsCustomers'), desc: t('settingsCustomersDesc') },
     { href: '/admin/settings/apis', label: t('settingsApis'), desc: t('settingsApisDesc') },
+    { href: '/admin/settings/security', label: 'الأمان والحماية', desc: 'مستوى حماية البيانات من النسخ' },
     { href: '/admin/settings/appearance', label: t('settingsAppearance'), desc: t('settingsAppearanceDesc') },
     { href: '/admin/settings/branding', label: 'الشعارات والهوية', desc: 'شعار وأيقونة كل موقع' },
     { href: '/admin/settings/modules', label: 'الخدمات الظاهرة', desc: 'تفعيل/إخفاء خدمات العبور الجديد' },

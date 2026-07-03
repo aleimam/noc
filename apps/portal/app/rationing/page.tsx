@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { rateLimit, clientIp } from '../../lib/rateLimit';
+import { getSecurityGates } from '../../lib/security';
 import { SiteShell } from '../_components/SiteShell';
 import { SearchBar } from './SearchBar';
 import { RegisterCards } from './RegisterCards';
@@ -36,12 +37,14 @@ export default async function RationingSearch({
   const dymOptOut = str(sp.dym) === '0';
   const usedSuggestion = str(sp.sug) === '1';
   const page = Math.max(1, parseInt(str(sp.page) || '1', 10) || 1);
-  const per = PER_OPTIONS.includes(parseInt(str(sp.per), 10)) ? parseInt(str(sp.per), 10) : 10;
+  const perRaw = PER_OPTIONS.includes(parseInt(str(sp.per), 10)) ? parseInt(str(sp.per), 10) : 10;
   const sort = (['name', 'plot', 'newest'].includes(str(sp.sort)) ? str(sp.sort) : 'name') as SortKey;
 
   const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('rationing');
-  const [config, site] = await Promise.all([getRationingConfig(), getSiteConfig()]);
+  const [config, site, gates] = await Promise.all([getRationingConfig(), getSiteConfig(), getSecurityGates()]);
+  // Cap page size to the posture max (F5) — HIGH tightens 50 → 25.
+  const per = Math.min(perRaw, gates.maxResults);
 
   const cities = await prisma.rationingCity.findMany({
     where: { isActive: true },
@@ -51,8 +54,9 @@ export default async function RationingSearch({
 
   const searched = q.length > 0;
   // Per-IP throttle on the public search — a human does a handful of searches; a scraper
-  // enumerating the register does hundreds. 45/min is invisible to real users (F5).
-  const throttled = searched && !rateLimit(`rationing:${clientIp(await headers())}`, 45, 60_000);
+  // enumerating the register does hundreds. The cap scales with posture (F5): 120/60/30 per
+  // minute for LIGHT/MEDIUM/HIGH — invisible to real users, ruinous for a scraper.
+  const throttled = searched && !rateLimit(`rationing:${clientIp(await headers())}`, gates.ratePerMin, 60_000);
   let results: SheetCard[] = [];
   let total = 0;
   let suggestions: { display: string; score: number }[] = [];

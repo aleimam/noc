@@ -21,7 +21,8 @@
     "studio": "dotenv -e ../../.env -- prisma studio",
     "reset": "dotenv -e ../../.env -- prisma migrate reset",
     "typecheck": "tsc --noEmit",
-    "seed:conditions": "dotenv -e ../../.env -- node prisma/seed-conditions.mjs"
+    "seed:conditions": "dotenv -e ../../.env -- node prisma/seed-conditions.mjs",
+    "sanitize:backfill": "dotenv -e ../../.env -- node prisma/sanitize-backfill.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"

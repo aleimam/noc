@@ -4,7 +4,9 @@ import path from 'node:path';
 import { uploadRoot } from '@/lib/uploads';
 
 // Dev-only static serving of uploaded media. In production Apache serves
-// /uploads/* directly via `Alias` and this route isn't hit.
+// /uploads/* directly via `Alias` and this route isn't hit — the authoritative hotlink
+// rule lives at the edge (Apache/Cloudflare, see security.md §5). This guard mirrors it
+// for any environment where Next does serve the file (F4).
 const TYPES: Record<string, string> = {
   png: 'image/png',
   jpg: 'image/jpeg',
@@ -14,7 +16,33 @@ const TYPES: Record<string, string> = {
   avif: 'image/avif',
 };
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+// Block cross-site hotlinking: a Referer from another host is refused; direct opens
+// (no Referer) and same-site loads are allowed, so nothing legitimate breaks.
+function refererAllowed(req: NextRequest): boolean {
+  const ref = req.headers.get('referer');
+  if (!ref) return true;
+  try {
+    const refHost = new URL(ref).host;
+    const allowed = new Set<string>();
+    const selfHost = req.headers.get('host');
+    if (selfHost) allowed.add(selfHost);
+    for (const u of [process.env.PORTAL_URL, process.env.BROKERAGE_URL]) {
+      if (u) {
+        try {
+          allowed.add(new URL(u).host);
+        } catch {
+          /* ignore malformed env */
+        }
+      }
+    }
+    return allowed.has(refHost);
+  } catch {
+    return true; // unparseable Referer — don't break legitimate loads
+  }
+}
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  if (!refererAllowed(req)) return new NextResponse('Forbidden', { status: 403 });
   const { path: parts } = await params;
   const safe = parts.filter((p) => p && p !== '..' && !p.includes('/') && !p.includes('\\'));
   const root = uploadRoot();

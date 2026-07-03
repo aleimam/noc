@@ -1,6 +1,7 @@
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { prisma } from '@noc/db';
 import { sendSms, type SmsConfig } from '@noc/sms';
+import { appSecret } from './secret';
 
 const SMS_KEYS = ['sms_provider', 'sms_username', 'sms_password', 'sms_sender', 'sms_environment'];
 
@@ -24,8 +25,7 @@ const MAX_SENDS_PER_WINDOW = 3;
 const WINDOW_MS = 10 * 60 * 1000; // per 10 minutes
 
 function hashCode(phone: string, code: string): string {
-  const secret = process.env.AUTH_SECRET ?? 'dev-secret';
-  return createHmac('sha256', secret).update(`${phone}:${code}`).digest('hex');
+  return createHmac('sha256', appSecret()).update(`${phone}:${code}`).digest('hex');
 }
 
 /** Normalize to E.164-ish. Handles Egyptian local numbers (01xxxxxxxxx → +201xxxxxxxxx). */

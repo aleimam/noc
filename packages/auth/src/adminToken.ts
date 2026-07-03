@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { appSecret } from './secret';
 
 // Cross-app "view ALSWARY as admin" token. Signed with AUTH_SECRET (shared by both apps)
 // so the New Obour backend can mint a short-lived token that alsawarey.com trusts, without
@@ -6,7 +7,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 const DEFAULT_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 
 function secret(): string {
-  return process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'dev-insecure-secret';
+  return appSecret();
 }
 
 function b64url(buf: Buffer | string): string {
