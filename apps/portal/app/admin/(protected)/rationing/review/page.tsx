@@ -33,7 +33,17 @@ export default async function ReviewPage() {
       </div>
       <p className="text-sm opacity-70">{t('reviewHint')}</p>
       <ReviewClient
-        rows={rows.map((r) => ({ id: r.id, applicantName: r.applicantName, plotFullRef: r.plotFullRef, cityName: r.city?.name ?? null, remarks: r.remarks, scanPath: (r.sourceFile && scanByFile.get(r.sourceFile)) || null }))}
+        rows={rows.map((r) => ({
+          id: r.id,
+          applicantName: r.applicantName,
+          plotNo: r.plotNo ?? '',
+          blockNo: r.blockNo ?? '',
+          plotFullRef: r.plotFullRef,
+          cityName: r.city?.name ?? null,
+          originalOwner: r.originalOwner,
+          remarks: r.remarks,
+          scanPath: (r.sourceFile && scanByFile.get(r.sourceFile)) || null,
+        }))}
       />
     </div>
   );
