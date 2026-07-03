@@ -176,7 +176,7 @@ export type LandDetail = {
   status: string;
   typeAr: string | null;
   gallery: string[];
-  specs: { label: string; value: string }[]; // public attributes, localized
+  specs: { label: string; value: string; link?: 'url' | 'tel' }[]; // public attributes, localized
   amenities: { type: string; title: string; details: string | null; photos: string[] }[]; // inherited from the neighborhood
 };
 
@@ -234,7 +234,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
 
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const standardAreas = await getStandardAreas();
-  const specs: { label: string; value: string }[] = [];
+  const specs: LandDetail['specs'] = [];
   for (const v of l.values) {
     if (!v.attribute.isActive) continue;
     const label = L(v.attribute.labelAr, v.attribute.labelEn);
@@ -252,7 +252,8 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
           locale,
           standardAreas,
         });
-    if (value) specs.push({ label, value });
+    const link = v.attribute.type === 'URL' ? 'url' : v.attribute.type === 'PHONE' ? 'tel' : undefined;
+    if (value) specs.push({ label, value, link });
   }
 
   // Public-realm amenities inherited from the land's neighborhood.

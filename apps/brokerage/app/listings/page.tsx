@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
-import { Prisma } from '@noc/db';
+import { Prisma, prisma } from '@noc/db';
 import { StoreShell } from '../_components/StoreShell';
 import { StoreLandCard } from '../_components/StoreLandCard';
 import { listLands, ATTR } from '../../lib/listings';
@@ -53,6 +53,20 @@ export default async function Catalogue({
   if (priceMin != null || priceMax != null) {
     and.push({ price: { ...(priceMin != null ? { gte: priceMin } : {}), ...(priceMax != null ? { lte: priceMax } : {}) } });
   }
+
+  // Dynamic range filters for every filterable numeric/money/area detail.
+  const rangeAttrs = await prisma.attribute.findMany({
+    where: { isActive: true, filterable: true, type: { in: ['NUMBER', 'MONEY', 'MONEY_THOUSANDS', 'AREA_ORIGINAL', 'AREA_ALLOCATED'] } },
+    orderBy: { order: 'asc' },
+    select: { key: true, labelAr: true, labelEn: true, unit: true },
+  });
+  for (const fa of rangeAttrs) {
+    const mn = num(sp[`fmin_${fa.key}`]);
+    const mx = num(sp[`fmax_${fa.key}`]);
+    if (mn != null || mx != null) {
+      and.push(attr(fa.key, { number: { ...(mn != null ? { gte: mn } : {}), ...(mx != null ? { lte: mx } : {}) } }));
+    }
+  }
   if (corner) and.push(attr(ATTR.corner, { bool: true }));
   if (main) and.push(attr(ATTR.mainStreet, { bool: true }));
   if (services) and.push(attr('electricity', { option: { key: 'connected' } }));
@@ -81,7 +95,8 @@ export default async function Catalogue({
 
   const chip = 'rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm hover:border-gold';
   const chipOn = 'rounded-lg border-2 border-gold bg-gold-50 px-3 py-1.5 text-sm font-bold text-gold-800';
-  const noFilters = !corner && !main && !services && !featured && area == null && areaMin == null && areaMax == null && priceMin == null && priceMax == null && !statusSold;
+  const rangeActive = rangeAttrs.some((fa) => str(sp[`fmin_${fa.key}`]) || str(sp[`fmax_${fa.key}`]));
+  const noFilters = !corner && !main && !services && !featured && area == null && areaMin == null && areaMax == null && priceMin == null && priceMax == null && !statusSold && !rangeActive;
 
   return (
     <StoreShell>
@@ -99,6 +114,47 @@ export default async function Catalogue({
           ))}
           <Link href={withParam('status', 'sold')} className={statusSold ? chipOn : chip}>{L('المباعة', 'Sold')}</Link>
         </div>
+
+        {/* Price + spec range filters (GET form; preserves the active chips above) */}
+        <details
+          className="mt-3 rounded-lg border border-ink-200 bg-white px-4 py-3"
+          open={priceMin != null || priceMax != null || rangeAttrs.some((fa) => str(sp[`fmin_${fa.key}`]) || str(sp[`fmax_${fa.key}`]))}
+        >
+          <summary className="cursor-pointer text-sm font-bold text-navy-800">{L('فلترة بالسعر والمواصفات', 'Filter by price & specs')}</summary>
+          <form method="get" className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {q && <input type="hidden" name="q" value={q} />}
+            {corner && <input type="hidden" name="corner" value="1" />}
+            {main && <input type="hidden" name="main" value="1" />}
+            {services && <input type="hidden" name="services" value="1" />}
+            {featured && <input type="hidden" name="featured" value="1" />}
+            {statusSold && <input type="hidden" name="status" value="sold" />}
+            {area != null && <input type="hidden" name="area" value={String(area)} />}
+            {sort && <input type="hidden" name="sort" value={sort} />}
+
+            <div className="text-sm">
+              <span className="mb-1 block">{L('السعر (ج.م)', 'Price (EGP)')}</span>
+              <div className="flex gap-2">
+                <input name="priceMin" type="number" inputMode="numeric" dir="ltr" defaultValue={priceMin ?? ''} placeholder={L('من', 'Min')} className="w-full rounded-md border border-ink-200 px-2 py-1.5 text-sm" />
+                <input name="priceMax" type="number" inputMode="numeric" dir="ltr" defaultValue={priceMax ?? ''} placeholder={L('إلى', 'Max')} className="w-full rounded-md border border-ink-200 px-2 py-1.5 text-sm" />
+              </div>
+            </div>
+
+            {rangeAttrs.map((fa) => (
+              <div key={fa.key} className="text-sm">
+                <span className="mb-1 block">{L(fa.labelAr, fa.labelEn)}{fa.unit ? ` (${fa.unit})` : ''}</span>
+                <div className="flex gap-2">
+                  <input name={`fmin_${fa.key}`} type="number" inputMode="numeric" dir="ltr" defaultValue={str(sp[`fmin_${fa.key}`])} placeholder={L('من', 'Min')} className="w-full rounded-md border border-ink-200 px-2 py-1.5 text-sm" />
+                  <input name={`fmax_${fa.key}`} type="number" inputMode="numeric" dir="ltr" defaultValue={str(sp[`fmax_${fa.key}`])} placeholder={L('إلى', 'Max')} className="w-full rounded-md border border-ink-200 px-2 py-1.5 text-sm" />
+                </div>
+              </div>
+            ))}
+
+            <div className="flex items-end gap-2">
+              <button type="submit" className="rounded-lg bg-navy px-5 py-2 text-sm font-bold text-white">{L('تطبيق', 'Apply')}</button>
+              <a href="/listings" className="rounded-lg border border-ink-200 px-4 py-2 text-sm">{L('مسح', 'Clear')}</a>
+            </div>
+          </form>
+        </details>
 
         <div className="mt-4 flex items-center justify-between text-sm text-ink-500">
           <span>{L(`${total} نتيجة`, `${total} results`)}</span>

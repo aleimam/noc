@@ -19,7 +19,12 @@ function formatMonthYear(s: string, locale: string): string {
   }
 }
 
-type Item = { label: string; value?: string; photos?: string[] };
+type Item = { label: string; value?: string; photos?: string[]; link?: 'url' | 'tel' };
+
+/** Ensure a user-entered URL has a scheme so it links correctly. */
+function safeUrl(v: string): string {
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
 
 export default async function ListingDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -100,7 +105,8 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   };
   for (const { attr, texts } of perAttr.values()) {
     if (!texts.length) continue;
-    pushItem(attr.section, { label: L(attr.labelAr, attr.labelEn), value: texts.join(locale === 'ar' ? '، ' : ', ') });
+    const link = attr.type === 'URL' ? 'url' : attr.type === 'PHONE' ? 'tel' : undefined;
+    pushItem(attr.section, { label: L(attr.labelAr, attr.labelEn), value: texts.join(locale === 'ar' ? '، ' : ', '), link });
   }
   for (const a of attrs) {
     if (a.type !== 'PHOTOS') continue;
@@ -179,7 +185,15 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
               ) : (
                 <div key={i} className="flex justify-between gap-3 border-b border-graphite/10 py-1.5 text-sm">
                   <span className="opacity-70">{it.label}</span>
-                  <span className="text-end font-medium">{it.value}</span>
+                  <span className="text-end font-medium">
+                    {it.link === 'url' && it.value ? (
+                      <a href={safeUrl(it.value)} target="_blank" rel="noopener noreferrer" dir="ltr" className="text-accent underline">{it.value}</a>
+                    ) : it.link === 'tel' && it.value ? (
+                      <a href={`tel:${it.value.replace(/\s/g, '')}`} dir="ltr" className="text-accent underline">{it.value}</a>
+                    ) : (
+                      it.value
+                    )}
+                  </span>
                 </div>
               ),
             )}

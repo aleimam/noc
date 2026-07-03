@@ -142,7 +142,15 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
               {land.specs.map((s) => (
                 <div key={s.label} className="flex justify-between gap-3 border-b border-ink-100 pb-2">
                   <dt className="text-sm text-ink-500">{s.label}</dt>
-                  <dd className="text-sm font-medium text-navy-800">{s.value}</dd>
+                  <dd className="text-sm font-medium text-navy-800">
+                    {s.link === 'url' ? (
+                      <a href={/^https?:\/\//i.test(s.value) ? s.value : `https://${s.value}`} target="_blank" rel="noopener noreferrer" dir="ltr" className="text-gold-700 underline">{s.value}</a>
+                    ) : s.link === 'tel' ? (
+                      <a href={`tel:${s.value.replace(/\s/g, '')}`} dir="ltr" className="text-gold-700 underline">{s.value}</a>
+                    ) : (
+                      s.value
+                    )}
+                  </dd>
                 </div>
               ))}
             </dl>

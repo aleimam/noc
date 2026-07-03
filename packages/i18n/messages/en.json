@@ -825,7 +825,10 @@
     "annotCancel": "Cancel",
     "annotHint": "Add a shape, then drag it or resize from the corners, and pick a color. Shapes are saved onto the map.",
     "annotLoadErr": "Could not load the image",
-    "annotSaveErr": "Could not save, please try again"
+    "annotSaveErr": "Could not save, please try again",
+    "annotArrow": "Arrow",
+    "annotDraw": "Freehand",
+    "annotDrawHint": "Press and drag on the map to draw"
   },
   "account": {
     "backToAccount": "My account",
