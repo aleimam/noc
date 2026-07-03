@@ -4,16 +4,16 @@
 // Business-module models (sheets, lands, districts, owners…) are added later.
 
 generator client {
-  provider   = "prisma-client-js"
-  // Native (.node) engine has no Windows/ARM64 build; the binary engine runs the
-  // x64 query-engine.exe as a child process (works under Win11 ARM emulation,
-  // and natively on the Linux server).
-  engineType = "binary"
+  // Prisma 7 Rust-free client (TypeScript output, no query engine) — this also removes the
+  // old Windows/ARM64 binary-engine workaround. DB access goes through the mariadb driver
+  // adapter (see src/index.ts / prisma/db-client.mjs).
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {
+  // Connection URL lives in prisma.config.ts (Prisma 7) — schema keeps only the provider.
   provider = "mysql"
-  url      = env("DATABASE_URL")
 }
 
 enum UserType {

@@ -1,11 +1,10 @@
 // Seed the rationing module (Module 1, v2). If the sample workbook is present it is
 // imported in full (cities + applicant rows + expanded names); otherwise a tiny sample
 // is seeded. Idempotent: a fixed seed batch is wiped and recreated on every run.
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './db-client.mjs';
 import * as XLSX from 'xlsx';
 import fs from 'node:fs';
 
-const prisma = new PrismaClient();
 const BATCH_ID = 'seed_rationing_batch';
 const SAMPLE_PATH = 'C:/Claude/NOC/input data/2026-06 Rationing - corrected.xlsx';
 

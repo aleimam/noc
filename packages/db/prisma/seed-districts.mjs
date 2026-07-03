@@ -1,9 +1,8 @@
 // Seed New Obour's 40 districts (الحي الأول … الحي الأربعون). Idempotent: upsert by the
 // `key` ordinal word, matching the existing rows (first … eleventh). Existing rows keep
 // their names (only order/active are refreshed); 12–40 are created.
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './db-client.mjs';
 
-const prisma = new PrismaClient();
 
 const EN = [
   'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth',

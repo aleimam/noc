@@ -1,8 +1,7 @@
 // Seed Module 2 geography: New Obour districts + a few sample neighborhoods.
 // Idempotent: districts upsert by key; sample neighborhoods upsert by fixed id.
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './db-client.mjs';
 
-const prisma = new PrismaClient();
 
 const DISTRICTS = [
   { key: 'first', nameAr: 'الحي الأول', nameEn: 'First District' },
