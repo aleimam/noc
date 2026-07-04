@@ -3,7 +3,7 @@ import { getLocale } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { PhotoGallery } from '@noc/ui';
-import { OfferStatusButtons } from '../OfferActions';
+import { OfferStatusButtons, DeleteOfferButton } from '../OfferActions';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,7 +57,10 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
         <a href="/admin/marketplace/offers" className="text-sm text-accent">← العروض</a>
       </div>
 
-      <OfferStatusButtons id={o.id} current={o.status} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <OfferStatusButtons id={o.id} current={o.status} />
+        <DeleteOfferButton id={o.id} redirectTo="/admin/marketplace/offers" />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-lg border border-graphite/15 p-4">

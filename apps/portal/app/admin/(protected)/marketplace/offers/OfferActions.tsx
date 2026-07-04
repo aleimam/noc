@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { setOfferStatus } from './actions';
+import { setOfferStatus, deleteOffer } from './actions';
 
 const STATUSES: { key: 'NEW' | 'REVIEWING' | 'ACCEPTED' | 'REJECTED'; ar: string }[] = [
   { key: 'NEW', ar: 'جديد' },
@@ -27,5 +27,28 @@ export function OfferStatusButtons({ id, current }: { id: string; current: strin
         </button>
       ))}
     </div>
+  );
+}
+
+export function DeleteOfferButton({ id, redirectTo }: { id: string; redirectTo?: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <button
+      disabled={pending}
+      onClick={() => {
+        if (!confirm('حذف هذا العرض نهائيًا؟ لا يمكن التراجع.')) return;
+        start(async () => {
+          const r = await deleteOffer(id);
+          if (r.ok) {
+            if (redirectTo) router.push(redirectTo);
+            else router.refresh();
+          }
+        });
+      }}
+      className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+    >
+      حذف
+    </button>
   );
 }

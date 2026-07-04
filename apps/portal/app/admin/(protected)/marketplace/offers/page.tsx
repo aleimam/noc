@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { DeleteOfferButton } from './OfferActions';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,7 +56,12 @@ export default async function OffersPage() {
                   <td className="p-2 font-num" dir="ltr">{o.requiredPrice != null ? Number(o.requiredPrice).toLocaleString('en') : '—'}</td>
                   <td className="p-2"><span className={`rounded px-2 py-0.5 text-xs ${TONE[o.status] ?? ''}`}>{STATUS[o.status]}</span></td>
                   <td className="p-2" dir="ltr">{fmt(o.createdAt)}</td>
-                  <td className="p-2 text-end"><Link href={`/admin/marketplace/offers/${o.id}`} className="text-accent">عرض</Link></td>
+                  <td className="p-2 text-end">
+                    <div className="flex items-center justify-end gap-3">
+                      <Link href={`/admin/marketplace/offers/${o.id}`} className="text-accent">عرض</Link>
+                      <DeleteOfferButton id={o.id} />
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

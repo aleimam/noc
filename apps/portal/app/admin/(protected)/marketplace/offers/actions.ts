@@ -30,3 +30,20 @@ export async function saveOfferNote(id: string, note: string): Promise<{ ok: tru
     return { ok: false, error: 'failed' };
   }
 }
+
+export async function deleteOffer(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requirePermission('marketplace', 'DELETE');
+  try {
+    // Unlink the offer's photos (files stay on disk; rows become unowned drafts).
+    await prisma.attachment.updateMany({
+      where: { ownerType: 'LandOffer', ownerId: id },
+      data: { ownerType: null, ownerId: null },
+    });
+    await prisma.landOffer.delete({ where: { id } });
+    revalidatePath('/admin/marketplace/offers');
+    return { ok: true };
+  } catch (e) {
+    console.error('deleteOffer failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}

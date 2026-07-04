@@ -40,6 +40,9 @@ export function ClassifierOptionsEditor({
   };
   const toggleParent = (id: string) =>
     setDraft((d) => (d ? { ...d, parentIds: d.parentIds.includes(id) ? d.parentIds.filter((x) => x !== id) : [...d.parentIds, id] } : d));
+  const allParentsSelected = !!draft && parentOptions.length > 0 && draft.parentIds.length === parentOptions.length;
+  const toggleAllParents = () =>
+    setDraft((d) => (d ? { ...d, parentIds: allParentsSelected ? [] : parentOptions.map((p) => p.id) } : d));
 
   function save() {
     if (!draft || !draft.nameAr.trim() || (!draft.id && !draft.key.trim())) { setError('failed'); return; }
@@ -70,7 +73,12 @@ export function ClassifierOptionsEditor({
           <label className="text-sm">{t('order')}<input type="number" dir="ltr" value={draft.order} onChange={(e) => setDraft({ ...draft, order: parseInt(e.target.value, 10) || 0 })} className={inp} /></label>
           {parentOptions.length > 0 && (
             <div className="text-sm sm:col-span-2">
-              <div className="mb-1">{parentLabel} (الأصل) <span className="opacity-60">— {t('parentMultiHint')}</span></div>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span>{parentLabel} (الأصل) <span className="opacity-60">— {t('parentMultiHint')}</span></span>
+                <button type="button" onClick={toggleAllParents} className="whitespace-nowrap text-xs text-accent hover:underline">
+                  {allParentsSelected ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+                </button>
+              </div>
               <div className="grid grid-cols-2 gap-1 rounded-md border border-graphite/20 p-2 sm:grid-cols-3">
                 {parentOptions.map((p) => (
                   <label key={p.id} className="flex items-center gap-2">
