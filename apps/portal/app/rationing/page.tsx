@@ -184,7 +184,11 @@ export default async function RationingSearch({
           totals && <TotalsCard totals={totals} />
         )}
 
-        {/* Crowd-source missing sheets: visitors report sheets we haven't digitized yet. */}
+        <HelpButton number={site.whatsappHelp} />
+        <RegisterCards q={q} />
+
+        {/* Crowd-source missing sheets: visitors report sheets we haven't digitized yet.
+            Placed below the follow-up cards — those come first in importance. */}
         <div className="rounded-2xl border-2 border-dashed border-navy-200 bg-white p-5 text-center">
           <p className="text-xl font-bold text-navy-800">{t('reportCardTitle')}</p>
           <p className="mt-1 text-ink-600">{t('reportCardBody')}</p>
@@ -192,9 +196,6 @@ export default async function RationingSearch({
             📄 {t('reportMissedBtn')}
           </Link>
         </div>
-
-        <HelpButton number={site.whatsappHelp} />
-        <RegisterCards q={q} />
       </div>
     </SiteShell>
   );
