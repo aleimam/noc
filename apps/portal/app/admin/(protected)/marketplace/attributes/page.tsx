@@ -59,7 +59,7 @@ export default async function AttributesPage() {
                     <td className="p-2 text-xs opacity-60">{a.unit ?? ''}</td>
                     <td className="p-2 text-xs">{a.filterable ? '🔍' : ''}</td>
                     <td className="p-2 text-xs opacity-60">
-                      {(() => { const n = catCountOf(a); return <span className={n === 0 ? 'text-red-600' : n === totalCats ? 'text-green' : ''}>{n} / {totalCats} {t('catCount')}</span>; })()}
+                      {(() => { const n = catCountOf(a); return <span className={n === 0 ? 'text-red-600' : n === totalCats ? 'text-green' : ''}><span dir="ltr">{n}/{totalCats}</span> {t('catCount')}</span>; })()}
                       {a._count.options ? ` · ${a._count.options} ${t('optionCount')}` : ''}
                     </td>
                     <td className="p-2 text-end">

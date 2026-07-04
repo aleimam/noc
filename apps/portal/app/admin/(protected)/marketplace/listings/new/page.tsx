@@ -9,11 +9,17 @@ export default async function StaffNewListing() {
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();
-  const [owners, settings] = await Promise.all([
+  const [owners, settings, defOpts] = await Promise.all([
     prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } }),
     prisma.setting.findMany({ where: { key: { in: ['alswarey_phone', 'alswarey_whatsapp'] } } }),
+    // Default classifiers for a new ALSWARY listing (staff can still change them).
+    prisma.classifierOption.findMany({
+      where: { key: { in: ['land_allocated', 'housing_building', 'utility_ongoing'] }, classifier: { key: { in: ['type', 'purpose', 'condition'] } } },
+      select: { id: true, key: true, classifier: { select: { key: true } } },
+    }),
   ]);
   const sett = Object.fromEntries(settings.map((s) => [s.key, s.value]));
+  const defOpt = (ck: string, ok: string) => defOpts.find((o) => o.classifier.key === ck && o.key === ok)?.id ?? '';
   // Default the owner to our own "US" owner (Al Sawarey) when one exists.
   const defaultOwnerId = owners.find((o) => o.type === 'US')?.id ?? '';
 
@@ -33,9 +39,9 @@ export default async function StaffNewListing() {
         standardAreas={standardAreas}
         buildingConditions={buildingConditions}
         initial={{
-          typeOptionId: '',
-          purposeOptionId: '',
-          conditionOptionId: '',
+          typeOptionId: defOpt('type', 'land_allocated'),
+          purposeOptionId: defOpt('purpose', 'housing_building'),
+          conditionOptionId: defOpt('condition', 'utility_ongoing'),
           title: '',
           description: '',
           area: '',
