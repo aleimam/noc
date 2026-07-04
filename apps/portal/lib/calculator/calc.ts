@@ -120,7 +120,9 @@ export type ReconcileResult =
       utilityRate: number;
       utilityBase: number; // meters utilities are charged on
       utilities: number;
-      adminFee: number;
+      adminFeePct: number; // the % part: adminPct × (utilities + buy cost)
+      adminFeeFlat: number; // the flat EGP part
+      adminFee: number; // adminFeePct + adminFeeFlat (used in the payment schedule)
       total: number; // areaDiffCost + utilities (financed over 4 settlements)
       downPayment: number; // paid before allocation
       estekmal: number; // الاستكمال — remainder of settlement 1 after the down payment
@@ -165,8 +167,10 @@ export function reconcile(originalArea: number, standardArea: number | null, cfg
   const utilityRate = bracketRate(standard, cfg.utilityBrackets);
   const utilities = utilityRate * utilityBase;
   // Admin fee: % of (utilities + area-difference cost when BUYING — a sell credit never
-  // reduces the fee base) + a flat amount charged on every calculation.
-  const adminFee = (cfg.adminPct / 100) * (utilities + Math.max(0, areaDiffCost)) + (cfg.adminFlat ?? 0);
+  // reduces the fee base) + a flat amount charged on every calculation. Shown as two rows.
+  const adminFeePct = (cfg.adminPct / 100) * (utilities + Math.max(0, areaDiffCost));
+  const adminFeeFlat = cfg.adminFlat ?? 0;
+  const adminFee = adminFeePct + adminFeeFlat;
   const total = areaDiffCost + utilities;
 
   const dp = downPayment(originalArea, cfg.downPaymentBands);
@@ -200,6 +204,8 @@ export function reconcile(originalArea: number, standardArea: number | null, cfg
     utilityRate,
     utilityBase,
     utilities: round(utilities),
+    adminFeePct: round(adminFeePct),
+    adminFeeFlat: round(adminFeeFlat),
     adminFee: round(adminFee),
     total: round(total),
     downPayment: round(dp),

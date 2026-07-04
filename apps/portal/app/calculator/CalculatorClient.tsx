@@ -188,7 +188,8 @@ function ReconcileCalc({ config, locale }: { config: CalculatorConfig; locale: '
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <Row label={t('areaDiffCost')} value={money(result.areaDiffCost)} />
             <Row label={t('utilities')} value={money(result.utilities)} />
-            <Row label={t('adminFee', { pct: config.adminPct, flat: config.adminFlat })} value={money(result.adminFee)} />
+            <Row label={t('adminFee', { pct: config.adminPct })} value={money(result.adminFeePct)} />
+            <Row label={t('adminFeeFlat')} value={money(result.adminFeeFlat)} />
             <Row label={t('totalCost')} value={money(result.total)} strong />
           </div>
 
@@ -330,7 +331,8 @@ async function renderStatement(
     { kind: 'section', text: t('imageResults') },
     { kind: 'row', label: t('areaDiffCost'), value: money(r.areaDiffCost) },
     { kind: 'row', label: t('utilities'), value: money(r.utilities) },
-    { kind: 'row', label: t('adminFee', { pct: cfg.adminPct, flat: cfg.adminFlat }), value: money(r.adminFee) },
+    { kind: 'row', label: t('adminFee', { pct: cfg.adminPct }), value: money(r.adminFeePct) },
+    { kind: 'row', label: t('adminFeeFlat'), value: money(r.adminFeeFlat) },
     { kind: 'row', label: t('totalCost'), value: money(r.total), strong: true },
     { kind: 'phase', text: t('phaseBefore') },
     { kind: 'row', label: t('downPayment'), value: money(r.downPayment) },
