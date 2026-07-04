@@ -112,6 +112,22 @@ export async function deleteClassifierOption(id: string): Promise<Result> {
   }
 }
 
+// Quick toggle of a single flag from the options list (click the status icon).
+export async function toggleClassifierOptionFlag(
+  id: string,
+  flag: 'isActive' | 'allowedOnAlsawarey',
+  value: boolean,
+): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    await prisma.classifierOption.update({ where: { id }, data: { [flag]: value } });
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 // ───────────────────────────── Sections ─────────────────────────────
 
 export async function upsertSection(input: {

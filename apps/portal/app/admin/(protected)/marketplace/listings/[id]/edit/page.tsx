@@ -43,6 +43,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
           conditionOptionId: listing.conditionOptionId ?? '',
           title: listing.title,
           description: listing.description ?? '',
+          area: listing.area != null ? String(listing.area) : '',
           price: listing.price != null ? String(listing.price) : '',
           priceUnit: listing.priceUnit,
           priceNegotiable: listing.priceNegotiable,

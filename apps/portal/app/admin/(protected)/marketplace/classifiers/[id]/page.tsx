@@ -4,7 +4,7 @@ import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { ClassifierOptionsEditor } from './ClassifierOptionsEditor';
 import { OrderableList } from '../../OrderableList';
-import { upsertClassifierOption, deleteClassifierOption, reorderClassifierOptions } from '../../actions';
+import { upsertClassifierOption, deleteClassifierOption, reorderClassifierOptions, toggleClassifierOptionFlag } from '../../actions';
 
 // Hard nesting: a Purpose option's parent is a Type option; a Condition option's parent is a Purpose option.
 const PARENT_KEY: Record<string, string | undefined> = { purpose: 'type', condition: 'purpose' };
@@ -49,6 +49,7 @@ export default async function ClassifierOptionsPage({ params }: { params: Promis
         showAlsawarey={showAlsawarey}
         upsert={upsertClassifierOption.bind(null, classifier.id)}
         remove={deleteClassifierOption}
+        toggleFlag={toggleClassifierOptionFlag}
       />
       <OrderableList items={classifier.options.map((o) => ({ id: o.id, label: `${o.nameAr} / ${o.nameEn}` }))} action={reorderClassifierOptions} />
     </div>

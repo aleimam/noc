@@ -30,6 +30,7 @@ export type ListingFormInitial = {
   conditionOptionId: string;
   title: string;
   description: string;
+  area: string;
   price: string;
   priceUnit: 'TOTAL' | 'UNIT' | 'SQM';
   priceNegotiable: boolean;
@@ -99,6 +100,7 @@ export function ListingForm({
   };
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description);
+  const [area, setArea] = useState(initial.area);
   const [price, setPrice] = useState(initial.price);
   const [priceUnit, setPriceUnit] = useState(initial.priceUnit);
   const [priceNegotiable, setPriceNegotiable] = useState(initial.priceNegotiable);
@@ -230,6 +232,7 @@ export function ListingForm({
       conditionOptionId: selOf('condition'),
       title,
       description,
+      area: area.trim() ? Number(area) : null,
       price: price.trim() ? Number(price) : null,
       priceUnit,
       priceNegotiable,
@@ -488,6 +491,7 @@ export function ListingForm({
 
         {/* Price + price-per + negotiable */}
         <div className="grid gap-4 sm:grid-cols-3">
+          <label className="text-sm">{t('actualAreaField')}<input type="number" dir="ltr" inputMode="decimal" value={area} onChange={(e) => setArea(e.target.value)} className={inp} /></label>
           <label className="text-sm">{t('price')}<input type="number" dir="ltr" value={price} onChange={(e) => setPrice(e.target.value)} className={inp} /></label>
           <label className="text-sm">{t('pricePer')}
             <select value={priceUnit} onChange={(e) => setPriceUnit(e.target.value as 'TOTAL' | 'UNIT' | 'SQM')} className={inp}>

@@ -168,6 +168,7 @@ export type LandDetail = {
   adNumber: string | null;
   title: string;
   description: string | null;
+  actualArea: number | null; // fixed Listing.area (المساحة الفعلية)
   price: number | null;
   priceUnit: string;
   priceNegotiable: boolean;
@@ -190,6 +191,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
       neighborhoodId: true,
       title: true,
       description: true,
+      area: true,
       price: true,
       priceUnit: true,
       priceNegotiable: true,
@@ -313,6 +315,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
     adNumber: l.adNumber ?? null,
     title: l.title,
     description: l.description,
+    actualArea: l.area != null ? Number(l.area) : null,
     price: l.price != null ? Number(l.price) : null,
     priceUnit: l.priceUnit,
     priceNegotiable: l.priceNegotiable,

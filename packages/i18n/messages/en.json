@@ -324,6 +324,7 @@
     "listingTitle": "Listing title",
     "description": "Details",
     "price": "Price",
+    "actualAreaField": "Actual area (m²)",
     "priceNote": "Price note",
     "photos": "Photos",
     "contactPhone": "Contact phone",

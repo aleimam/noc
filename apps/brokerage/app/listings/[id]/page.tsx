@@ -100,6 +100,11 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
                 <WishlistButton listingId={land.id} initialSaved={wished.has(land.id)} size="lg" />
               </div>
               {land.typeAr && <p className="mt-1 text-ink-500">{land.typeAr}</p>}
+              {land.actualArea != null && (
+                <p className="mt-1 text-lg font-semibold text-navy-800">
+                  {L('المساحة الفعلية', 'Actual area')}: {land.actualArea} {L('م²', 'm²')}
+                </p>
+              )}
 
               <div className="mt-4 border-t border-ink-100 pt-4">
                 {sold ? (

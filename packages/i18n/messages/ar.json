@@ -324,6 +324,7 @@
     "listingTitle": "عنوان العرض",
     "description": "تفاصيل العرض",
     "price": "السعر",
+    "actualAreaField": "المساحة الفعلية (م²)",
     "priceNote": "ملاحظة على السعر",
     "photos": "الصور",
     "contactPhone": "رقم التواصل",

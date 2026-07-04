@@ -40,6 +40,7 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
           conditionOptionId: listing.conditionOptionId ?? '',
           title: listing.title,
           description: listing.description ?? '',
+          area: listing.area != null ? String(listing.area) : '',
           price: listing.price != null ? String(listing.price) : '',
           priceUnit: listing.priceUnit,
           priceNegotiable: listing.priceNegotiable,

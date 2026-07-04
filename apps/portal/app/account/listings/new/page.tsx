@@ -36,6 +36,7 @@ export default async function NewListing() {
           conditionOptionId: '',
           title: '',
           description: '',
+          area: '',
           price: '',
           priceUnit: 'TOTAL',
           priceNegotiable: false,

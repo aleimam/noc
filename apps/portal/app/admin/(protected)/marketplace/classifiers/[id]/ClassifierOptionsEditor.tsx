@@ -20,6 +20,7 @@ export function ClassifierOptionsEditor({
   showAlsawarey,
   upsert,
   remove,
+  toggleFlag,
 }: {
   initial: Opt[];
   parentOptions: ParentOpt[];
@@ -27,6 +28,7 @@ export function ClassifierOptionsEditor({
   showAlsawarey: boolean;
   upsert: (input: Draft) => Promise<Result>;
   remove: (id: string) => Promise<Result>;
+  toggleFlag: (id: string, flag: 'isActive' | 'allowedOnAlsawarey', value: boolean) => Promise<Result>;
 }) {
   const t = useTranslations('mp');
   const router = useRouter();
@@ -57,6 +59,14 @@ export function ClassifierOptionsEditor({
     start(async () => {
       const r = await remove(id);
       if (r.ok) { router.refresh(); toast(t('deleted')); }
+      else setError(r.error);
+    });
+  }
+
+  function flip(id: string, flag: 'isActive' | 'allowedOnAlsawarey', value: boolean) {
+    start(async () => {
+      const r = await toggleFlag(id, flag, value);
+      if (r.ok) { router.refresh(); toast(t('savedOk')); }
       else setError(r.error);
     });
   }
@@ -106,11 +116,39 @@ export function ClassifierOptionsEditor({
       <div className="space-y-2">
         {initial.map((o) => (
           <div key={o.id} className="flex items-center justify-between gap-3 rounded-lg border border-graphite/15 p-3">
-            <div>
-              <span className="font-semibold">{o.nameAr}</span> <span className="text-xs opacity-60" dir="ltr">{o.nameEn}</span>
-              {!o.isActive && <span className="ms-1 rounded bg-graphite/10 px-2 py-0.5 text-xs">{t('inactive')}</span>}
-              {hasParent && o.parentIds.length > 0 && <span className="ms-1 text-xs opacity-60">← {pNames(o.parentIds)}</span>}
-              {showAlsawarey && o.allowedOnAlsawarey && <span className="ms-1 rounded bg-gold/20 px-2 py-0.5 text-xs text-gold-800">{t('onAlsawareyShort')}</span>}
+            <div className="flex items-center gap-2.5">
+              {/* Active toggle: green check when active, grey when not. */}
+              <button
+                type="button"
+                disabled={pending}
+                title={o.isActive ? t('active') : t('inactive')}
+                onClick={() => flip(o.id, 'isActive', !o.isActive)}
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-sm ${o.isActive ? 'bg-green/15 text-green' : 'bg-graphite/10 text-graphite/40'}`}
+              >
+                ✓
+              </button>
+              {/* ALSWARY toggle: full-color logo when allowed, greyscale when not. */}
+              {showAlsawarey && (
+                <button
+                  type="button"
+                  disabled={pending}
+                  title={o.allowedOnAlsawarey ? t('allowedOnAlsawarey') : t('onAlsawareyShort')}
+                  onClick={() => flip(o.id, 'allowedOnAlsawarey', !o.allowedOnAlsawarey)}
+                  className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full ring-1 ring-graphite/15"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/brand/alsawarey-logo"
+                    alt="ALSWARY"
+                    className="h-full w-full object-contain"
+                    style={{ filter: o.allowedOnAlsawarey ? 'none' : 'grayscale(1)', opacity: o.allowedOnAlsawarey ? 1 : 0.4 }}
+                  />
+                </button>
+              )}
+              <div>
+                <span className="font-semibold">{o.nameAr}</span> <span className="text-xs opacity-60" dir="ltr">{o.nameEn}</span>
+                {hasParent && o.parentIds.length > 0 && <span className="ms-1 text-xs opacity-60">← {pNames(o.parentIds)}</span>}
+              </div>
             </div>
             <div className="flex gap-3 text-sm">
               <button onClick={() => setDraft({ id: o.id, key: o.key, nameAr: o.nameAr, nameEn: o.nameEn, order: o.order, isActive: o.isActive, parentIds: [...o.parentIds], allowedOnAlsawarey: o.allowedOnAlsawarey })} className="text-accent">{t('edit')}</button>

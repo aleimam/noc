@@ -38,6 +38,7 @@ export default async function StaffNewListing() {
           conditionOptionId: '',
           title: '',
           description: '',
+          area: '',
           price: '',
           priceUnit: 'TOTAL',
           priceNegotiable: false,

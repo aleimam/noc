@@ -471,6 +471,7 @@ model Listing {
   conditionOptionId String?
   title           String
   description     String?       @db.Text
+  area            Decimal?      @db.Decimal(14, 2) // fixed "actual area" (م²), shown on every listing
   price           Decimal?      @db.Decimal(14, 2)
   priceUnit       PriceUnit     @default(TOTAL) // price is per: total plot / unit / m²
   priceNegotiable Boolean       @default(false)

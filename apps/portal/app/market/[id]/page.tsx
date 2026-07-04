@@ -165,6 +165,11 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
           ))}
         </div>
         <h1 className="mt-2 text-2xl font-bold text-primary">{listing.title}</h1>
+        {listing.area != null && (
+          <div className="mt-1 text-lg font-semibold text-primary">
+            {locale === 'ar' ? 'المساحة الفعلية' : 'Actual area'}: {String(listing.area)} <span className="text-sm font-normal">{locale === 'ar' ? 'م²' : 'm²'}</span>
+          </div>
+        )}
         {listing.price != null && (
           <div className="mt-1 text-xl font-bold text-primary">
             {String(listing.price)} <span className="text-sm font-normal">{currency(locale)}{perLabel ? ` / ${perLabel}` : ''}</span>

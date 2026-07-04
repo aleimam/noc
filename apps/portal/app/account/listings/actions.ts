@@ -23,6 +23,7 @@ export type ListingInput = {
   conditionOptionId: string;
   title: string;
   description?: string;
+  area?: number | null;
   price?: number | null;
   priceUnit?: 'TOTAL' | 'UNIT' | 'SQM';
   priceNegotiable?: boolean;
@@ -114,6 +115,7 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         conditionOptionId: input.conditionOptionId,
         title: input.title.trim(),
         description: sanitizeRichHtml(input.description?.trim() || null) || null,
+        area: input.area != null && !Number.isNaN(input.area) ? input.area : null,
         price: input.price ?? null,
         priceUnit: input.priceUnit ?? 'TOTAL',
         priceNegotiable: input.priceNegotiable ?? false,

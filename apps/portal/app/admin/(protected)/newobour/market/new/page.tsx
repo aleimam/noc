@@ -39,6 +39,7 @@ export default async function NewObourNewListing() {
           conditionOptionId: '',
           title: '',
           description: '',
+          area: '',
           price: '',
           priceUnit: 'TOTAL',
           priceNegotiable: false,

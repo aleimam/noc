@@ -12,6 +12,7 @@ const MAP: Record<string, string> = {
   logo: 'brand_newobour_logo',
   'logo-dark': 'brand_newobour_logo_dark',
   favicon: 'brand_newobour_favicon',
+  'alsawarey-logo': 'brand_alsawarey_logo',
 };
 
 const TYPES: Record<string, string> = {
