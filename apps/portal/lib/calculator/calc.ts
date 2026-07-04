@@ -110,6 +110,7 @@ function downPayment(original: number, bands: DownPaymentBand[]): number {
 }
 
 const round = (n: number) => Math.round(n);
+const round2 = (n: number) => Math.round(n * 100) / 100; // keep piasters (e.g. the fixed 135.35)
 
 export type ReconcileResult =
   | { overMax: true; maxArea: number }
@@ -197,7 +198,8 @@ export function reconcile(originalArea: number, standardArea: number | null, cfg
   // Single public line item: per-m² rate + the Authority's small fixed charges (135.35).
   const transferFee = cfg.transferRate * standard + (cfg.transferFlat ?? 0);
   const inst = round(installment);
-  const grandTotal = round(dp + estekmal + transferFee + inst * 3);
+  // Grand total keeps piasters so it matches the sum of the rows (à la the official order's 165,135.35).
+  const grandTotal = round2(round(dp) + round(estekmal) + round2(transferFee) + inst * 3);
 
   return {
     overMax: false,
@@ -217,7 +219,7 @@ export function reconcile(originalArea: number, standardArea: number | null, cfg
     total: round(total),
     downPayment: round(dp),
     estekmal: round(estekmal),
-    transferFee: round(transferFee),
+    transferFee: round2(transferFee),
     installments: [inst, inst, inst],
     grandTotal,
   };

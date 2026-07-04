@@ -280,7 +280,8 @@ function PhaseHeader({ children }: { children: React.ReactNode }) {
 /* ---------------- number formatting ---------------- */
 
 function fmtNum(n: number): string {
-  return Math.round(n).toLocaleString('en-US');
+  // Whole numbers stay clean; piasters show when present (e.g. transfer fee's 135.35).
+  return (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
 }
 function fmtArea(n: number): string {
   return (Math.round(n * 100) / 100).toLocaleString('en-US');
