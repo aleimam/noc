@@ -8,7 +8,7 @@ export default async function RationingHub() {
   await requirePermission('sheets', 'VIEW');
   const t = await getTranslations('rationing');
 
-  const [sheets, inquiries, searches, cities, scans, review, dupGroups] = await Promise.all([
+  const [sheets, inquiries, searches, cities, scans, review, dupGroups, missedReports] = await Promise.all([
     prisma.rationingSheet.count(),
     prisma.inquiryRequest.count({ where: { status: 'OPEN' } }),
     prisma.sheetSearchLog.count(),
@@ -16,12 +16,14 @@ export default async function RationingHub() {
     prisma.rationingScan.count(),
     prisma.rationingSheet.count({ where: { needsReview: true } }),
     prisma.rationingSheet.groupBy({ by: ['dedupeKey'], _count: { _all: true }, having: { dedupeKey: { _count: { gt: 1 } } } }),
+    prisma.missedSheetReport.count({ where: { status: 'NEW' } }),
   ]);
   const cards = [
     { href: '/admin/rationing/sheets', label: t('sheets'), count: sheets },
     { href: '/admin/rationing/scans', label: t('scansTitle'), count: scans },
     { href: '/admin/rationing/review', label: t('reviewTitle'), count: review },
     { href: '/admin/rationing/duplicates', label: t('duplicatesTitle'), count: dupGroups.length },
+    { href: '/admin/rationing/reports', label: t('missedReportsTitle'), count: missedReports },
     { href: '/admin/rationing/inquiries', label: t('inquiries'), count: inquiries },
     { href: '/admin/rationing/searches', label: t('searches'), count: searches },
     { href: '/admin/rationing/settings', label: t('settingsTitle'), count: cities },

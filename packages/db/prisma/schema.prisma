@@ -769,11 +769,32 @@ model RationingCity {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  sheets  RationingSheet[]
-  follows RationingFollow[]
-  offers  LandOffer[]
+  sheets        RationingSheet[]
+  follows       RationingFollow[]
+  offers        LandOffer[]
+  missedReports MissedSheetReport[]
 
   @@index([isActive, order])
+}
+
+/// Visitor report of a rationing sheet seen on the Facebook page but missing from the
+/// digitized register. Photos attach via Attachment (ownerType 'MissedSheetReport').
+model MissedSheetReport {
+  id            String    @id @default(cuid())
+  reporterName  String
+  reporterPhone String
+  userId        String? // set when the reporter was logged in (details taken from the account)
+  fbDate        DateTime? // publishing date on the Facebook page
+  cityId        String?
+  originalOwner String?
+  blockNo       String?
+  plotNo        String?
+  status        String    @default("NEW") // NEW | DONE
+  createdAt     DateTime  @default(now())
+
+  city RationingCity? @relation(fields: [cityId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
 }
 
 /// One applicant row of a government rationing sheet (كشف تقنين). Staff import these from Excel.

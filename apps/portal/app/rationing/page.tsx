@@ -184,6 +184,15 @@ export default async function RationingSearch({
           totals && <TotalsCard totals={totals} />
         )}
 
+        {/* Crowd-source missing sheets: visitors report sheets we haven't digitized yet. */}
+        <div className="rounded-2xl border-2 border-dashed border-navy-200 bg-white p-5 text-center">
+          <p className="text-xl font-bold text-navy-800">{t('reportCardTitle')}</p>
+          <p className="mt-1 text-ink-600">{t('reportCardBody')}</p>
+          <Link href="/rationing/report" className="mt-3 inline-block rounded-xl bg-gold px-6 py-3 text-lg font-extrabold text-navy-900">
+            📄 {t('reportMissedBtn')}
+          </Link>
+        </div>
+
         <HelpButton number={site.whatsappHelp} />
         <RegisterCards q={q} />
       </div>
