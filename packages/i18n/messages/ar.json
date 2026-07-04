@@ -456,6 +456,8 @@
     "conflictServerPrompt": "صفوف موجودة بالفعل على الخادم — ماذا نفعل؟ (الافتراضي: تجاهل)",
     "exportRecords": "تنزيل كل السجلات (Excel)",
     "exportPlots": "تنزيل قائمة القطع (Excel)",
+    "exportNoPhoto": "تنزيل سجلات بلا صورة (Excel)",
+    "noPhotoFilter": "بدون صورة مطابقة",
     "exportScansReport": "تنزيل تقرير الصور (Excel)",
     "expandedNames": "الأسماء المستخرجة",
     "status": "الحالة",

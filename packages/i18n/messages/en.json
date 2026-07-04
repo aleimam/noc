@@ -456,6 +456,8 @@
     "conflictServerPrompt": "Rows already on the server — what to do? (default: skip)",
     "exportRecords": "Download all records (Excel)",
     "exportPlots": "Download plot list (Excel)",
+    "exportNoPhoto": "Download records without photo (Excel)",
+    "noPhotoFilter": "No matched photo",
     "exportScansReport": "Download photos report (Excel)",
     "expandedNames": "Parsed names",
     "status": "Status",

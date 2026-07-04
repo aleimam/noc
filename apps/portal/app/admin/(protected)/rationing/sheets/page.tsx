@@ -28,10 +28,23 @@ export default async function SheetsPage({ searchParams }: { searchParams: Promi
   const q = str(sp.q);
   const cityId = str(sp.city);
   const review = str(sp.review) === '1';
+  const noPhoto = str(sp.nophoto) === '1';
   const sort = (['newest', 'name', 'plot', 'listDate'].includes(str(sp.sort)) ? str(sp.sort) : 'newest') as Sort;
   const page = Math.max(1, num(sp.page) ?? 1);
 
+  // "No matched photo": records whose sourceFile has no uploaded RationingScan (or none at all).
+  // Matching is by fileName string (no FK), so resolve the scan names first.
+  const scanNames = noPhoto
+    ? (await prisma.rationingScan.findMany({ select: { fileName: true } })).map((s) => s.fileName)
+    : [];
+  const noPhotoCond: Prisma.RationingSheetWhereInput = noPhoto
+    ? scanNames.length
+      ? { OR: [{ sourceFile: null }, { sourceFile: '' }, { sourceFile: { notIn: scanNames } }] }
+      : {} // no scans uploaded yet → every record lacks a photo
+    : {};
+
   const where: Prisma.RationingSheetWhereInput = {
+    ...(noPhoto ? { AND: [noPhotoCond] } : {}),
     ...(cityId ? { cityId } : {}),
     ...(review ? { needsReview: true } : {}),
     ...(q
@@ -62,14 +75,14 @@ export default async function SheetsPage({ searchParams }: { searchParams: Promi
   const build = (over: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams();
     const set = (k: string, v: string | number | undefined) => { if (v !== undefined && v !== '' && v !== null) p.set(k, String(v)); };
-    const cur = { q, city: cityId, review: review ? '1' : '', sort: sort !== 'newest' ? sort : '', page: page > 1 ? page : '', ...over };
-    set('q', cur.q); set('city', cur.city); set('review', cur.review); set('sort', cur.sort); set('page', cur.page);
+    const cur = { q, city: cityId, review: review ? '1' : '', nophoto: noPhoto ? '1' : '', sort: sort !== 'newest' ? sort : '', page: page > 1 ? page : '', ...over };
+    set('q', cur.q); set('city', cur.city); set('review', cur.review); set('nophoto', cur.nophoto); set('sort', cur.sort); set('page', cur.page);
     const s = p.toString();
     return `/admin/rationing/sheets${s ? `?${s}` : ''}`;
   };
   const sortHref = (s: Sort) => build({ sort: s === 'newest' ? undefined : s, page: undefined });
   const arrow = (s: Sort) => (sort === s ? ' ▾' : '');
-  const active = !!q || !!cityId || review;
+  const active = !!q || !!cityId || review || noPhoto;
 
   return (
     <div className="space-y-6">
@@ -83,6 +96,7 @@ export default async function SheetsPage({ searchParams }: { searchParams: Promi
       <div className="flex flex-wrap gap-2">
         <a href="/admin/rationing/sheets/export" className="rounded-md border border-graphite/25 px-3 py-1.5 text-sm hover:bg-graphite/10">⬇ {t('exportRecords')}</a>
         <a href="/admin/rationing/sheets/export-plots" className="rounded-md border border-graphite/25 px-3 py-1.5 text-sm hover:bg-graphite/10">⬇ {t('exportPlots')}</a>
+        <a href="/admin/rationing/sheets/export-nophoto" className="rounded-md border border-graphite/25 px-3 py-1.5 text-sm hover:bg-graphite/10">⬇ {t('exportNoPhoto')}</a>
       </div>
 
       <ImportSheets />
@@ -135,6 +149,7 @@ export default async function SheetsPage({ searchParams }: { searchParams: Promi
           </label>
           {sort !== 'newest' && <input type="hidden" name="sort" value={sort} />}
           <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name="review" value="1" defaultChecked={review} /> {t('needsReview')}</label>
+          <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name="nophoto" value="1" defaultChecked={noPhoto} /> {t('noPhotoFilter')}</label>
           <button className="rounded-md bg-primary px-4 py-2 text-sm text-soft">{t('search')}</button>
           {active && <a href="/admin/rationing/sheets" className="rounded-md border border-graphite/25 px-3 py-2 text-sm">{t('cancel')}</a>}
         </form>
