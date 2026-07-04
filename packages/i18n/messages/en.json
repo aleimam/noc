@@ -189,7 +189,7 @@
     "meters": "m²",
     "areaDiffCost": "Area-difference cost",
     "utilities": "Utilities fees",
-    "adminFee": "Admin fee ({pct}%)",
+    "adminFee": "Admin fee ({pct}% + {flat} EGP)",
     "totalCost": "Total cost",
     "paymentPlan": "Payment plan",
     "phaseBefore": "Before allocation (lottery)",

@@ -189,7 +189,7 @@
     "meters": "م²",
     "areaDiffCost": "قيمة فرق المساحة",
     "utilities": "مصاريف الترفيق",
-    "adminFee": "مصاريف إدارية (%{pct})",
+    "adminFee": "مصاريف إدارية (%{pct} + {flat} جنيه)",
     "totalCost": "إجمالي التكلفة",
     "paymentPlan": "جدول السداد",
     "phaseBefore": "قبل القرعة (التخصيص)",

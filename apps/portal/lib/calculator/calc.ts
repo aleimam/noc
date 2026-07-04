@@ -20,7 +20,8 @@ export type CalculatorConfig = {
   buyPrice: number; // EGP/m² the owner pays to buy the shortfall from the Authority
   sellPrice: number; // EGP/m² the owner receives selling the surplus
   transferRate: number; // مصاريف نقل الملكية per m² of standard area
-  adminPct: number; // % admin fee on utilities (charged once, in settlement 1)
+  adminPct: number; // % admin fee on (utilities + area-difference BUY cost); charged once, in settlement 1
+  adminFlat: number; // flat EGP added to the admin fee for every calculation, all areas
   downPaymentBands: DownPaymentBand[]; // pre-allocation down payment, by ORIGINAL area
   maxArea: number; // above this → no calculation (contact us)
   /** Shown on the downloadable image. */
@@ -42,6 +43,7 @@ export const DEFAULT_CALC_CONFIG: CalculatorConfig = {
   sellPrice: 750,
   transferRate: 330,
   adminPct: 1.5,
+  adminFlat: 1500,
   downPaymentBands: [
     { max: 300, amount: 60000 },
     { max: 500, amount: 100000 },
@@ -162,7 +164,9 @@ export function reconcile(originalArea: number, standardArea: number | null, cfg
 
   const utilityRate = bracketRate(standard, cfg.utilityBrackets);
   const utilities = utilityRate * utilityBase;
-  const adminFee = (cfg.adminPct / 100) * utilities;
+  // Admin fee: % of (utilities + area-difference cost when BUYING — a sell credit never
+  // reduces the fee base) + a flat amount charged on every calculation.
+  const adminFee = (cfg.adminPct / 100) * (utilities + Math.max(0, areaDiffCost)) + (cfg.adminFlat ?? 0);
   const total = areaDiffCost + utilities;
 
   const dp = downPayment(originalArea, cfg.downPaymentBands);

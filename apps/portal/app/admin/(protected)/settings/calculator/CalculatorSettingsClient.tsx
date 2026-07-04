@@ -85,8 +85,11 @@ export function CalculatorSettingsClient({ initial }: { initial: CalculatorConfi
           <Field label="مصاريف نقل الملكية / م²">
             <Inp value={cfg.transferRate} onChange={(v) => patch({ transferRate: num(v) })} />
           </Field>
-          <Field label="نسبة المصاريف الإدارية %">
+          <Field label="نسبة المصاريف الإدارية % (من الترفيق + تكلفة فرق المساحة عند الشراء)">
             <Inp step="0.1" value={cfg.adminPct} onChange={(v) => patch({ adminPct: num(v) })} />
+          </Field>
+          <Field label="مبلغ إداري ثابت (جنيه) يُضاف لكل الحالات">
+            <Inp value={cfg.adminFlat} onChange={(v) => patch({ adminFlat: num(v) })} />
           </Field>
           <Field label="أقصى مساحة للحساب (م²)">
             <Inp value={cfg.maxArea} onChange={(v) => patch({ maxArea: num(v) })} />
