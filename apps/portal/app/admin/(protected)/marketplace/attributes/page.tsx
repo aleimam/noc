@@ -10,15 +10,24 @@ export default async function AttributesPage() {
   await requirePermission('marketplace', 'VIEW');
   const t = await getTranslations('mp');
   const standardAreas = await getStandardAreas();
+  // "Categories" = the Type classifier's options; count how many each attribute applies to.
+  const typeCls = await prisma.classifier.findUnique({ where: { key: 'type' }, select: { options: { select: { id: true } } } });
+  const typeOptionIds = new Set((typeCls?.options ?? []).map((o) => o.id));
+  const totalCats = typeOptionIds.size;
   const sections = await prisma.attributeSection.findMany({
     orderBy: { order: 'asc' },
     include: {
       attributes: {
         orderBy: { order: 'asc' },
-        include: { _count: { select: { options: true, typeLinks: true } } },
+        include: {
+          _count: { select: { options: true } },
+          classifierLinks: { select: { optionId: true } },
+        },
       },
     },
   });
+  const catCountOf = (a: { classifierLinks: { optionId: string }[] }) =>
+    a.classifierLinks.filter((l) => typeOptionIds.has(l.optionId)).length;
 
   return (
     <div className="space-y-6">
@@ -50,7 +59,7 @@ export default async function AttributesPage() {
                     <td className="p-2 text-xs opacity-60">{a.unit ?? ''}</td>
                     <td className="p-2 text-xs">{a.filterable ? '🔍' : ''}</td>
                     <td className="p-2 text-xs opacity-60">
-                      {a._count.typeLinks} {t('typeCount')}
+                      {(() => { const n = catCountOf(a); return <span className={n === 0 ? 'text-red-600' : n === totalCats ? 'text-green' : ''}>{n} / {totalCats} {t('catCount')}</span>; })()}
                       {a._count.options ? ` · ${a._count.options} ${t('optionCount')}` : ''}
                     </td>
                     <td className="p-2 text-end">

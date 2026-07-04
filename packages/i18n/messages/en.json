@@ -301,6 +301,7 @@
     "attributeCount": "Attributes",
     "optionCount": "Options",
     "typeCount": "Types",
+    "catCount": "categories",
     "selectAll": "All",
     "categories": "Categories",
     "categoriesHint": "Top level of the catalog. Open a category to manage its groups; assign each type to a group from the Types screen.",
