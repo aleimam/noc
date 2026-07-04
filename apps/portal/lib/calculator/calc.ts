@@ -20,6 +20,11 @@ export type CalculatorConfig = {
   buyPrice: number; // EGP/m² the owner pays to buy the shortfall from the Authority
   sellPrice: number; // EGP/m² the owner receives selling the surplus
   transferRate: number; // مصاريف نقل الملكية per m² of standard area
+  /** Fixed EGP added to the transfer fee on any plot (shown merged into the single
+   *  transfer-fee row). Per the Authority's payment order it itemises as: التقديم طبقاً
+   *  لقرار الوزير 100 + ض14 · رسم إداري 10 + ض1.40 · الشهداء 5 · تنمية الموارد 2 ·
+   *  متابعة بالموبايل 2 · إيصال 0.95 = 135.35. */
+  transferFlat: number;
   adminPct: number; // % admin fee on (utilities + area-difference BUY cost); charged once, in settlement 1
   adminFlat: number; // flat EGP added to the admin fee for every calculation, all areas
   downPaymentBands: DownPaymentBand[]; // pre-allocation down payment, by ORIGINAL area
@@ -42,6 +47,7 @@ export const DEFAULT_CALC_CONFIG: CalculatorConfig = {
   buyPrice: 3000,
   sellPrice: 750,
   transferRate: 330,
+  transferFlat: 135.35,
   adminPct: 1.5,
   adminFlat: 1500,
   downPaymentBands: [
@@ -188,7 +194,8 @@ export function reconcile(originalArea: number, standardArea: number | null, cfg
     installment = 0.25 * total;
   }
 
-  const transferFee = cfg.transferRate * standard;
+  // Single public line item: per-m² rate + the Authority's small fixed charges (135.35).
+  const transferFee = cfg.transferRate * standard + (cfg.transferFlat ?? 0);
   const inst = round(installment);
   const grandTotal = round(dp + estekmal + transferFee + inst * 3);
 

@@ -85,6 +85,12 @@ export function CalculatorSettingsClient({ initial }: { initial: CalculatorConfi
           <Field label="مصاريف نقل الملكية / م²">
             <Inp value={cfg.transferRate} onChange={(v) => patch({ transferRate: num(v) })} />
           </Field>
+          <Field label="مبلغ ثابت يُضاف لنقل الملكية (جنيه)">
+            <Inp step="0.01" value={cfg.transferFlat} onChange={(v) => patch({ transferFlat: num(v) })} />
+            <p className="mt-1 text-[11px] leading-relaxed opacity-60">
+              حسب أمر الدفع الرسمي: التقديم طبقاً لقرار الوزير 100 + ض14 · رسم إداري 10 + ض1.40 · الشهداء 5 · تنمية الموارد 2 · متابعة بالموبايل 2 · إيصال 0.95 = 135.35 — يظهر للجمهور مدموجًا في بند «مصاريف نقل الملكية» كسطر واحد.
+            </p>
+          </Field>
           <Field label="نسبة المصاريف الإدارية % (من الترفيق + تكلفة فرق المساحة عند الشراء)">
             <Inp step="0.1" value={cfg.adminPct} onChange={(v) => patch({ adminPct: num(v) })} />
           </Field>
