@@ -50,18 +50,22 @@ export default async function RationingSearch({
   });
 
   const searched = q.length > 0;
+  // Require a full name (≥2 words) for name-based searches — cuts noise + scraping. Numeric
+  // plot/block lookups are exempt. When short, we show a prompt instead of searching.
+  const nameField = field === 'all' || field === 'name' || field === 'owner';
+  const needFullName = searched && nameField && q.split(/\s+/).filter(Boolean).length < 2;
   // Meter a NEW search (page 1) against the anti-scrape quota (New Obour only) — paginating an
   // existing search is free. A human does a handful/hour; a scraper enumerating the register
   // does hundreds. Anonymous = per-browser (nob_v) + generous per-IP ceiling; logged-in gets a
   // much higher budget. Over budget → friendly limit card instead of results. See quota.ts.
-  const quota = await consumeRationingQuota(searched && page <= 1);
+  const quota = await consumeRationingQuota(searched && !needFullName && page <= 1);
   const per = Math.min(perRaw, quota.maxResults);
-  const throttled = searched && !quota.ok;
+  const throttled = searched && !needFullName && !quota.ok;
   let results: SheetCard[] = [];
   let total = 0;
   let suggestions: { display: string; score: number }[] = [];
 
-  if (searched && !throttled) {
+  if (searched && !throttled && !needFullName) {
     const out = await searchSheets({
       q,
       field,
@@ -144,6 +148,8 @@ export default async function RationingSearch({
 
         {throttled ? (
           <LimitCard locale={locale} loggedIn={quota.loggedIn} whatsapp={site.whatsappHelp} />
+        ) : needFullName ? (
+          <div className="rounded-2xl border-2 border-gold/60 bg-gold-50 p-5 text-center text-xl font-bold text-navy-800">{t('searchFullName')}</div>
         ) : searched ? (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">

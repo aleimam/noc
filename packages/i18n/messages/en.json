@@ -534,6 +534,7 @@
     "clickToView": "click a name to view details",
     "noMatches": "No matching results",
     "noMatchesHint": "Try a different spelling, or register to be alerted the moment your name appears.",
+    "searchFullName": "Please search using the full name",
     "prev": "Previous",
     "next": "Next",
     "pageOf": "Page {page} of {total}",

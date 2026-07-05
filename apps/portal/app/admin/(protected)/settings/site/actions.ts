@@ -4,7 +4,16 @@ import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 
-const ALLOWED = new Set(['site.mobileMenu', 'site.slogan', 'copyright_newobour', 'copyright_alsawarey', 'site.whatsappHelp']);
+const ALLOWED = new Set([
+  'site.mobileMenu',
+  'site.slogan',
+  'site.slogan_en',
+  'copyright_newobour',
+  'copyright_newobour_en',
+  'copyright_alsawarey',
+  'copyright_alsawarey_en',
+  'site.whatsappHelp',
+]);
 
 export async function saveSiteSettings(values: Record<string, string>): Promise<{ ok: true } | { ok: false; error: string }> {
   await requirePermission('settings', 'UPDATE');

@@ -357,17 +357,21 @@ async function main() {
         create: { attributeId: attr.id, key: o.key, labelAr: o.ar, labelEn: o.en, order: j },
       });
     }
-    // Applicability: map the attribute's type keys to Type-classifier options (Purpose/Condition left open).
-    const types = a.to === 'ALL' ? ALL : a.to;
-    for (const tk of types) {
-      const oid = optionId[`type:${tk}`];
-      if (!oid) continue;
-      await prisma.attributeClassifier.upsert({
-        where: { attributeId_optionId: { attributeId: attr.id, optionId: oid } },
-        update: {},
-        create: { attributeId: attr.id, optionId: oid },
-      });
-      mappings++;
+    // Applicability (attribute ↔ category): only seed default links on an explicit opt-in
+    // (SEED_ATTR_LINKS=1), e.g. a fresh install. Admins manage applicability in the UI, so by
+    // default the seed must NOT re-add links on every deploy (that would undo their choices).
+    if (process.env.SEED_ATTR_LINKS === '1') {
+      const types = a.to === 'ALL' ? ALL : a.to;
+      for (const tk of types) {
+        const oid = optionId[`type:${tk}`];
+        if (!oid) continue;
+        await prisma.attributeClassifier.upsert({
+          where: { attributeId_optionId: { attributeId: attr.id, optionId: oid } },
+          update: {},
+          create: { attributeId: attr.id, optionId: oid },
+        });
+        mappings++;
+      }
     }
   }
 

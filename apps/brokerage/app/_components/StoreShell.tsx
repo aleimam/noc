@@ -24,19 +24,22 @@ const SOCIAL_ICON: Record<string, string> = {
 export async function StoreShell({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
-  const [content, footerPages, copyrightRow] = await Promise.all([
+  const [content, footerPages, copyrightRows] = await Promise.all([
     getStorefront(),
     prisma.page.findMany({
       where: { brand: 'alsawarey', published: true },
       orderBy: { footerOrder: 'asc' },
       select: { slug: true, titleAr: true, titleEn: true },
     }),
-    prisma.setting.findUnique({ where: { key: 'copyright_alsawarey' } }),
+    prisma.setting.findMany({ where: { key: { in: ['copyright_alsawarey', 'copyright_alsawarey_en'] } } }),
   ]);
   const Lc = (t: { ar: string; en: string }) => (locale === 'ar' ? t.ar : t.en);
   const whatsapp = content.contact.whatsapp;
   const socials = (content.contact.socials ?? []).filter((s) => s.url.trim());
-  const copyright = copyrightRow?.value || `© ${new Date().getFullYear()} alsawarey.com`;
+  const cw = Object.fromEntries(copyrightRows.map((r) => [r.key, r.value]));
+  const copyright =
+    (locale === 'en' ? cw['copyright_alsawarey_en'] || cw['copyright_alsawarey'] : cw['copyright_alsawarey']) ||
+    (locale === 'en' ? '© ALSWARY Real-estate Investment' : `© ${new Date().getFullYear()} alsawarey.com`);
   const adminView = await getAdminViewer();
 
   return (

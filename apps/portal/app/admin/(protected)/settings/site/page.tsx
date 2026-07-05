@@ -1,11 +1,15 @@
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { DEFAULT_COPYRIGHT_NEWOBOUR, DEFAULT_COPYRIGHT_ALSAWAREY, DEFAULT_SLOGAN_NEWOBOUR } from '../../../../../lib/site';
+import {
+  DEFAULT_COPYRIGHT_NEWOBOUR, DEFAULT_COPYRIGHT_NEWOBOUR_EN,
+  DEFAULT_COPYRIGHT_ALSAWAREY, DEFAULT_COPYRIGHT_ALSAWAREY_EN,
+  DEFAULT_SLOGAN_NEWOBOUR, DEFAULT_SLOGAN_NEWOBOUR_EN,
+} from '../../../../../lib/site';
 import { SiteSettingsClient } from './SiteSettingsClient';
 
 export const dynamic = 'force-dynamic';
 
-const KEYS = ['site.mobileMenu', 'site.slogan', 'copyright_newobour', 'copyright_alsawarey', 'site.whatsappHelp'];
+const KEYS = ['site.mobileMenu', 'site.slogan', 'site.slogan_en', 'copyright_newobour', 'copyright_newobour_en', 'copyright_alsawarey', 'copyright_alsawarey_en', 'site.whatsappHelp'];
 
 export default async function SiteSettingsPage() {
   await requirePermission('settings', 'VIEW');
@@ -15,8 +19,11 @@ export default async function SiteSettingsPage() {
   const initial = {
     mobileMenu: v['site.mobileMenu'] === 'compact' ? 'compact' : 'full',
     sloganNewobour: v['site.slogan'] ?? DEFAULT_SLOGAN_NEWOBOUR,
+    sloganNewobourEn: v['site.slogan_en'] ?? DEFAULT_SLOGAN_NEWOBOUR_EN,
     copyrightNewobour: v['copyright_newobour'] ?? DEFAULT_COPYRIGHT_NEWOBOUR,
+    copyrightNewobourEn: v['copyright_newobour_en'] ?? DEFAULT_COPYRIGHT_NEWOBOUR_EN,
     copyrightAlsawarey: v['copyright_alsawarey'] ?? DEFAULT_COPYRIGHT_ALSAWAREY,
+    copyrightAlsawareyEn: v['copyright_alsawarey_en'] ?? DEFAULT_COPYRIGHT_ALSAWAREY_EN,
     whatsappHelp: v['site.whatsappHelp'] ?? '',
   };
 

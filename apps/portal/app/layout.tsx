@@ -1,14 +1,19 @@
 import type { Metadata } from 'next';
-import { Tajawal, Playfair_Display } from 'next/font/google';
+import { Tajawal, Playfair_Display, Cairo, Almarai } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { dirForLocale, type Locale } from '@noc/i18n';
 import { ThemeScript, Analytics, ConsentBanner, EnterToSubmit } from '@noc/ui';
+import { buildThemeCss } from '@noc/config';
 import { prisma } from '@noc/db';
+import { getBrandTheme } from '../lib/theme';
 import './globals.css';
 
 const tajawal = Tajawal({ subsets: ['arabic', 'latin'], weight: ['300', '400', '500', '700', '800', '900'], variable: '--font-tajawal', display: 'swap' });
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['400', '600', '700'], variable: '--font-playfair', display: 'swap' });
+// Optional theme fonts (loaded only when an admin selects them — preload off keeps them lazy).
+const cairo = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '600', '700'], variable: '--font-cairo', display: 'swap', preload: false });
+const almarai = Almarai({ subsets: ['arabic'], weight: ['400', '700', '800'], variable: '--font-almarai', display: 'swap', preload: false });
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
@@ -28,16 +33,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const messages = await getMessages();
   const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_newobour', 'pixel_newobour', 'gsc_newobour'] } } });
   const s = Object.fromEntries(ids.map((r) => [r.key, r.value]));
+  const themeCss = buildThemeCss(await getBrandTheme('newobour'));
 
   return (
     <html
       lang={locale}
       dir={dirForLocale(locale)}
-      className={`${tajawal.variable} ${playfair.variable}`}
+      className={`${tajawal.variable} ${playfair.variable} ${cairo.variable} ${almarai.variable}`}
       suppressHydrationWarning
     >
       <head>
         <ThemeScript />
+        {themeCss && <style id="brand-theme" dangerouslySetInnerHTML={{ __html: themeCss }} />}
         {s.gsc_newobour && <meta name="google-site-verification" content={s.gsc_newobour} />}
       </head>
       <body className="min-h-screen font-sans antialiased">

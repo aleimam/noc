@@ -26,7 +26,7 @@ export async function SiteShell({ active, children }: { active?: string; childre
   const footerPages = pages.map((p) => ({ href: `/p/${p.slug}`, label: locale === 'en' ? p.titleEn || p.titleAr : p.titleAr }));
   const loggedIn = session?.user?.type === 'CUSTOMER';
   return (
-    <PublicShell active={active} hiddenKeys={hidden} footerPages={footerPages} copyright={site.copyright} tagline={site.slogan} mobileMenuMode={site.mobileMenuMode} loggedIn={loggedIn} accountLabel={locale === 'en' ? 'My account' : 'حسابي'}>
+    <PublicShell active={active} hiddenKeys={hidden} footerPages={footerPages} copyright={locale === 'en' ? site.copyrightEn : site.copyright} tagline={locale === 'en' ? site.sloganEn : site.slogan} mobileMenuMode={site.mobileMenuMode} loggedIn={loggedIn} accountLabel={locale === 'en' ? 'My account' : 'حسابي'}>
       {children}
     </PublicShell>
   );

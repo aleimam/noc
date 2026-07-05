@@ -4,6 +4,108 @@ import { z } from 'zod';
 export const BRANDS = ['portal', 'brokerage'] as const;
 export type Brand = (typeof BRANDS)[number];
 
+// ── Editable per-brand appearance (theme) ──────────────────────────────────────────────
+// Stored per site in Setting `theme.<brand>` as JSON. buildThemeCss() turns it into a CSS
+// override block injected at runtime; it only emits vars that are set, so an unconfigured
+// brand renders exactly like the compiled theme.css defaults (fully backward-compatible).
+export type BrandTheme = {
+  navy?: string; // primary spine (navbars, headings, CTAs) — derives the navy ramp
+  gold?: string; // accent / trust-mark — derives the gold ramp
+  bg?: string; // light background
+  fg?: string; // light text
+  darkBg?: string; // dark-mode background
+  darkFg?: string; // dark-mode text
+  font?: string; // font key (see THEME_FONTS)
+  radius?: 'sharp' | 'soft' | 'round';
+  density?: 'compact' | 'normal' | 'airy';
+};
+
+export const THEME_FONTS = [
+  { key: 'tajawal', label: 'Tajawal', varName: '--font-tajawal' },
+  { key: 'cairo', label: 'Cairo', varName: '--font-cairo' },
+  { key: 'almarai', label: 'Almarai', varName: '--font-almarai' },
+] as const;
+
+const RADIUS_SCALE: Record<NonNullable<BrandTheme['radius']>, [number, number, number, number, number]> = {
+  sharp: [4, 6, 8, 10, 14],
+  soft: [8, 12, 16, 20, 28],
+  round: [14, 18, 24, 28, 36],
+};
+const DENSITY_FONT: Record<NonNullable<BrandTheme['density']>, string> = { compact: '15px', normal: '16px', airy: '17px' };
+
+function clampByte(n: number) {
+  return Math.max(0, Math.min(255, Math.round(n)));
+}
+function parseHex(hex: string): [number, number, number] | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m || !m[1]) return null;
+  const int = parseInt(m[1], 16);
+  return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+}
+function toHex(r: number, g: number, b: number) {
+  return '#' + [r, g, b].map((v) => clampByte(v).toString(16).padStart(2, '0')).join('');
+}
+/** Mix `hex` toward `other` by ratio r (0 = hex, 1 = other). */
+function mix(hex: string, other: string, r: number): string {
+  const a = parseHex(hex);
+  const b = parseHex(other);
+  if (!a || !b) return hex;
+  return toHex(a[0] + (b[0] - a[0]) * r, a[1] + (b[1] - a[1]) * r, a[2] + (b[2] - a[2]) * r);
+}
+// A 50→900 ramp derived from a base that sits around the 800 step (matches the brand navy).
+function ramp(base: string): Record<number, string> {
+  const W = '#ffffff';
+  const K = '#000000';
+  return {
+    50: mix(base, W, 0.93),
+    100: mix(base, W, 0.86),
+    200: mix(base, W, 0.7),
+    300: mix(base, W, 0.52),
+    400: mix(base, W, 0.34),
+    500: mix(base, W, 0.2),
+    600: mix(base, W, 0.1),
+    700: mix(base, K, 0.1),
+    800: base,
+    900: mix(base, K, 0.28),
+  };
+}
+
+/** Build the CSS override block for a brand theme. Returns '' when nothing is configured. */
+export function buildThemeCss(theme: BrandTheme | null | undefined): string {
+  if (!theme) return '';
+  const root: string[] = [];
+  const dark: string[] = [];
+
+  if (theme.navy && parseHex(theme.navy)) {
+    const r = ramp(theme.navy);
+    root.push(`--color-navy:${theme.navy}`, `--primary:${theme.navy}`);
+    for (const k of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]) root.push(`--color-navy-${k}:${r[k]}`);
+  }
+  if (theme.gold && parseHex(theme.gold)) {
+    const r = ramp(theme.gold);
+    root.push(`--color-gold:${theme.gold}`, `--accent:${theme.gold}`);
+    for (const k of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]) root.push(`--color-gold-${k}:${r[k]}`);
+  }
+  if (theme.bg && parseHex(theme.bg)) root.push(`--bg:${theme.bg}`);
+  if (theme.fg && parseHex(theme.fg)) root.push(`--fg:${theme.fg}`);
+  if (theme.font) {
+    const f = THEME_FONTS.find((x) => x.key === theme.font);
+    if (f) root.push(`--font-sans:var(${f.varName}), var(--font-tajawal), 'Segoe UI', system-ui, sans-serif`);
+  }
+  if (theme.radius && RADIUS_SCALE[theme.radius]) {
+    const [sm, md, lg, xl, x2] = RADIUS_SCALE[theme.radius];
+    root.push(`--radius-sm:${sm}px`, `--radius-md:${md}px`, `--radius-lg:${lg}px`, `--radius-xl:${xl}px`, `--radius-2xl:${x2}px`);
+  }
+  if (theme.density && DENSITY_FONT[theme.density]) root.push(`font-size:${DENSITY_FONT[theme.density]}`);
+  if (theme.darkBg && parseHex(theme.darkBg)) dark.push(`--bg:${theme.darkBg}`);
+  if (theme.darkFg && parseHex(theme.darkFg)) dark.push(`--fg:${theme.darkFg}`);
+
+  let css = '';
+  if (root.length) css += `:root{${root.join(';')}}`;
+  if (dark.length) css += `.dark{${dark.join(';')}}`;
+  return css;
+}
+
 /**
  * Shared phone-number validation for both apps. A value is accepted when it is
  * EITHER an Egyptian local mobile (exactly 11 digits starting `01`, e.g.
