@@ -17,7 +17,10 @@
     "consentText": "We use cookies to analyze traffic and improve our service.",
     "consentAccept": "Accept",
     "consentDecline": "Decline",
-    "phoneInvalid": "Enter a valid phone: 11 digits starting with 01, or an international number starting with +"
+    "phoneInvalid": "Enter a valid phone: 11 digits starting with 01, or an international number starting with +",
+    "saveFailed": "Couldn't save, please try again",
+    "fillRequired": "Please complete the required fields",
+    "uploadFailed": "Couldn't upload the file, please try again"
   },
   "auth": {
     "signIn": "Sign in",
@@ -428,7 +431,12 @@
     "usedByAttrs": "linked details",
     "categoryAttrs": "Categories & details",
     "categoryAttrsHint": "Pick a category (Type / Purpose / Condition), then tick the details that apply to it.",
-    "pickCategory": "Pick a category"
+    "pickCategory": "Pick a category",
+    "applicableDetails": "Details that apply to this category",
+    "applicableDetailsHint": "Tick the details that apply to this category. Changes save automatically. Click a detail's name to open its edit page.",
+    "filterAll": "All",
+    "filterApplicable": "Applicable",
+    "filterNotApplicable": "Not applicable"
   },
   "rationing": {
     "title": "Rationing Sheets",

@@ -30,14 +30,18 @@ export function SearchBar({
   const [advanced, setAdvanced] = useState(initialField !== 'all');
   const [dym, setDym] = useState(!dymOptOut);
 
-  function submit() {
+  // `cityValue` lets the city dropdown submit its new value immediately (React state
+  // isn't updated yet inside the same onChange), so picking a city re-runs the search
+  // without a second click on Search.
+  function go(cityValue = city) {
     const params = new URLSearchParams();
     if (q.trim()) params.set('q', q.trim());
     if (field !== 'all') params.set('field', field);
-    if (city) params.set('city', city);
+    if (cityValue) params.set('city', cityValue);
     if (dymGloballyEnabled && !dym) params.set('dym', '0');
     router.push(`/rationing?${params.toString()}`);
   }
+  const submit = () => go();
 
   return (
     <div className="rounded-2xl bg-white p-3.5 shadow-md">
@@ -100,7 +104,7 @@ export function SearchBar({
         {cities.length > 0 && (
           <label className="flex items-center gap-2 text-ink-600">
             {t('colCity')}:
-            <select value={city} onChange={(e) => setCity(e.target.value)} className="rounded-lg border border-ink-200 bg-white px-2 py-1 text-sm">
+            <select value={city} onChange={(e) => { setCity(e.target.value); go(e.target.value); }} className="rounded-lg border border-ink-200 bg-white px-2 py-1 text-sm">
               <option value="">{t('allCities')}</option>
               {cities.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>

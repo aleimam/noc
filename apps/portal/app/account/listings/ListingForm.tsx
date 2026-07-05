@@ -195,7 +195,7 @@ export function ListingForm({
     const res = await fetch('/api/upload', { method: 'POST', body: fd });
     const json = await res.json().catch(() => ({}));
     if (res.ok && json?.ok) setAttachs((s) => ({ ...s, [attrId]: [...(s[attrId] ?? []), json.attachment as UploadedAttachment] }));
-    else setError('failed');
+    else setError(tc('uploadFailed'));
   }
 
   function buildValues(): ValueInput[] {
@@ -223,7 +223,7 @@ export function ListingForm({
   function submit(status: 'DRAFT' | 'PENDING') {
     setError('');
     if (!allChosen || !title.trim() || !contactPhone.trim()) {
-      setError('failed');
+      setError(tc('fillRequired'));
       return;
     }
     if (!isValidPhone(contactPhone)) { setError(tc('phoneInvalid')); return; }
@@ -253,7 +253,7 @@ export function ListingForm({
     start(async () => {
       const r = await saveListing(input);
       if (r.ok) router.push(returnTo ?? (staffMode ? '/admin/marketplace/listings' : '/account/listings'));
-      else setError(r.error === 'invalid_phone' ? tc('phoneInvalid') : r.error);
+      else setError(r.error === 'invalid_phone' ? tc('phoneInvalid') : tc('saveFailed'));
     });
   }
 

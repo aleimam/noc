@@ -43,6 +43,17 @@ export default async function PlotsTab({ searchParams }: { searchParams: Promise
     params.set('page', String(p));
     return `/rationing/plots?${params.toString()}`;
   };
+  // City chips apply instantly (they're links) — keep the current query/sort/per so
+  // switching city narrows the existing search instead of resetting it.
+  const cityHref = (cid: string) => {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (cid) params.set('city', cid);
+    if (per !== 10) params.set('per', String(per));
+    if (sort !== 'count') params.set('sort', sort);
+    const qs = params.toString();
+    return `/rationing/plots${qs ? `?${qs}` : ''}`;
+  };
 
   return (
     <SiteShell active="rationing">
@@ -60,9 +71,9 @@ export default async function PlotsTab({ searchParams }: { searchParams: Promise
         {cities.length > 0 && (
           <div className="flex flex-wrap gap-2">
             <span className="self-center text-sm text-ink-500">{t('fastFilters')}:</span>
-            <Link href="/rationing/plots" className={`rounded-full px-4 py-1.5 text-base ${!cityId ? 'bg-navy text-soft' : 'border border-ink-200 text-navy-700'}`}>{t('allCities')}</Link>
+            <Link href={cityHref('')} className={`rounded-full px-4 py-1.5 text-base ${!cityId ? 'bg-navy text-soft' : 'border border-ink-200 text-navy-700'}`}>{t('allCities')}</Link>
             {cities.map((c) => (
-              <Link key={c.id} href={`/rationing/plots?city=${c.id}`} className={`rounded-full px-4 py-1.5 text-base ${cityId === c.id ? 'bg-navy text-soft' : 'border border-ink-200 text-navy-700'}`}>
+              <Link key={c.id} href={cityHref(c.id)} className={`rounded-full px-4 py-1.5 text-base ${cityId === c.id ? 'bg-navy text-soft' : 'border border-ink-200 text-navy-700'}`}>
                 {c.name}
               </Link>
             ))}
