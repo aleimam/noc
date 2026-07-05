@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { loadUpdates, loadAreaMaps, loadAdjacency, loadAmenities } from '../../geo';
+import { loadUpdates, loadAreaMaps, loadAdjacency } from '../../geo';
+import { amenitiesForNeighborhood } from '@/lib/amenities';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,16 +17,14 @@ export default async function NeighborhoodDetail({ params }: { params: Promise<{
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
-  const [siblings, advantages, amenities, types, maps, updates, adjacencyIds] = await Promise.all([
+  const [siblings, advantages, amenities, maps, updates, adjacencyIds] = await Promise.all([
     prisma.neighborhood.findMany({ where: { districtId: n.districtId, id: { not: id } }, orderBy: [{ order: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
     prisma.advantage.findMany({ where: { neighborhoodId: id }, orderBy: { order: 'asc' } }),
-    loadAmenities(id),
-    prisma.amenityType.findMany({ orderBy: [{ order: 'asc' }] }),
+    amenitiesForNeighborhood(id, n.districtId),
     loadAreaMaps('neighborhood', id),
     loadUpdates({ neighborhoodId: id }),
     loadAdjacency('neighborhood', id),
   ]);
-  const typeName = new Map(types.map((x) => [x.id, L(x.titleAr, x.titleEn)]));
   const adjacent = adjacencyIds.length
     ? await prisma.neighborhood.findMany({ where: { id: { in: adjacencyIds } }, include: { district: true } })
     : [];
@@ -77,7 +76,7 @@ export default async function NeighborhoodDetail({ params }: { params: Promise<{
           <ul className="space-y-2">
             {amenities.map((a) => (
               <li key={a.id} className="rounded-lg border border-graphite/15 p-3">
-                <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{typeName.get(a.typeId) ?? '—'}</span>
+                {a.category && <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{locale === 'ar' ? a.category.ar : a.category.en || a.category.ar}</span>}
                 <span className="ms-2 font-semibold">{locale === 'ar' ? a.titleAr : a.titleEn || a.titleAr}</span>
                 {(a.detailsAr || a.detailsEn) && <p className="mt-1 whitespace-pre-wrap text-sm opacity-80">{locale === 'ar' ? a.detailsAr : a.detailsEn || a.detailsAr}</p>}
               </li>

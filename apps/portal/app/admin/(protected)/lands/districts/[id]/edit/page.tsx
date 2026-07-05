@@ -4,6 +4,8 @@ import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, UpdatesEditor } from '../../../GeoContentEditors';
 import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency } from '../../../geo';
+import { AmenityAttachPicker } from '../../../AmenityAttachPicker';
+import { amenityPickOptions, placedAmenityIds } from '@/lib/amenities';
 import { EditSaveBar } from '@/app/_components/EditSaveBar';
 
 export const dynamic = 'force-dynamic';
@@ -18,13 +20,15 @@ export default async function DistrictEdit({ params }: { params: Promise<{ id: s
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
-  const [advantages, updates, maps, followers, adjacency, others] = await Promise.all([
+  const [advantages, updates, maps, followers, adjacency, others, amenityOptions, attachedAmenities] = await Promise.all([
     prisma.advantage.findMany({ where: { districtId: id }, orderBy: { order: 'asc' } }),
     loadUpdates({ districtId: id }),
     loadAreaMaps('district', id),
     followerCount('district', id),
     loadAdjacency('district', id),
     prisma.district.findMany({ where: { id: { not: id } }, orderBy: [{ order: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
+    amenityPickOptions(locale),
+    placedAmenityIds('district', id),
   ]);
   const candidates = others.map((d) => ({ id: d.id, name: L(d.nameAr, d.nameEn) }));
 
@@ -41,6 +45,11 @@ export default async function DistrictEdit({ params }: { params: Promise<{ id: s
       <section className="space-y-2">
         <h2 className="font-semibold text-primary">{t('advantages')}</h2>
         <AdvantagesEditor level="district" targetId={id} advantages={advantages.map((a) => ({ id: a.id, textAr: a.textAr, textEn: a.textEn, order: a.order }))} locale={locale} />
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold text-primary">{t('publicRealm')}</h2>
+        <AmenityAttachPicker scope="district" scopeId={id} options={amenityOptions} initial={attachedAmenities} />
       </section>
 
       <div className="grid gap-6 sm:grid-cols-2">

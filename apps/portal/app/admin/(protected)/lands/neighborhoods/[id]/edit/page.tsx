@@ -3,8 +3,10 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { BlocksManager } from '../../../BlocksManager';
-import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, AmenitiesEditor, UpdatesEditor, InheritedUpdates } from '../../../GeoContentEditors';
-import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency, loadAmenities } from '../../../geo';
+import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, UpdatesEditor, InheritedUpdates } from '../../../GeoContentEditors';
+import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency } from '../../../geo';
+import { AmenityAttachPicker } from '../../../AmenityAttachPicker';
+import { amenityPickOptions, placedAmenityIds } from '@/lib/amenities';
 import { EditSaveBar } from '@/app/_components/EditSaveBar';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +21,7 @@ export default async function NeighborhoodEdit({ params }: { params: Promise<{ i
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
-  const [advantages, updates, maps, followers, adjacency, others, inherited, amenityTypes, amenities] = await Promise.all([
+  const [advantages, updates, maps, followers, adjacency, others, inherited, amenityOptions, attachedAmenities] = await Promise.all([
     prisma.advantage.findMany({ where: { neighborhoodId: id }, orderBy: { order: 'asc' } }),
     loadUpdates({ neighborhoodId: id }),
     loadAreaMaps('neighborhood', id),
@@ -27,11 +29,10 @@ export default async function NeighborhoodEdit({ params }: { params: Promise<{ i
     loadAdjacency('neighborhood', id),
     prisma.neighborhood.findMany({ where: { id: { not: id } }, orderBy: [{ order: 'asc' }], include: { district: true } }),
     loadUpdates({ districtId: n.districtId }),
-    prisma.amenityType.findMany({ where: { isActive: true }, orderBy: [{ order: 'asc' }] }),
-    loadAmenities(id),
+    amenityPickOptions(locale),
+    placedAmenityIds('neighborhood', id),
   ]);
   const candidates = others.map((o) => ({ id: o.id, name: `${L(o.district.nameAr, o.district.nameEn)} · ${L(o.nameAr, o.nameEn)}` }));
-  const types = amenityTypes.map((x) => ({ id: x.id, name: L(x.titleAr, x.titleEn) }));
 
   return (
     <div className="space-y-6">
@@ -57,7 +58,7 @@ export default async function NeighborhoodEdit({ params }: { params: Promise<{ i
 
       <section className="space-y-2">
         <h2 className="font-semibold text-primary">{t('publicRealm')}</h2>
-        <AmenitiesEditor neighborhoodId={id} types={types.map((x) => ({ id: x.id, title: x.name }))} amenities={amenities} locale={locale} />
+        <AmenityAttachPicker scope="neighborhood" scopeId={id} options={amenityOptions} initial={attachedAmenities} />
       </section>
 
       <div className="grid gap-6 sm:grid-cols-2">

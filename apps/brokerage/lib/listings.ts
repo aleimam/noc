@@ -288,10 +288,21 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
   specs.sort((a, b) => a.sectionOrder - b.sectionOrder || a.attrOrder - b.attrOrder);
 
   // Public-realm amenities inherited from the land's neighborhood.
+  // Amenities: attached directly to this listing + inherited from its neighborhood + district.
   const amenities: LandDetail['amenities'] = [];
-  if (l.neighborhoodId) {
-    const rows = await prisma.amenity.findMany({ where: { neighborhoodId: l.neighborhoodId }, orderBy: [{ order: 'asc' }], include: { type: true } });
-    const ids = rows.map((r) => r.id);
+  {
+    const nb = l.neighborhoodId ? await prisma.neighborhood.findUnique({ where: { id: l.neighborhoodId }, select: { districtId: true } }) : null;
+    const or: Prisma.AmenityPlacementWhereInput[] = [{ listingId: l.id }];
+    if (l.neighborhoodId) or.push({ neighborhoodId: l.neighborhoodId });
+    if (nb?.districtId) or.push({ districtId: nb.districtId });
+    const placements = await prisma.amenityPlacement.findMany({
+      where: { OR: or },
+      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      include: { amenity: { include: { category: { select: { labelAr: true, labelEn: true } } } } },
+    });
+    const seen = new Set<string>();
+    const active = placements.map((p) => p.amenity).filter((a) => a.isActive && !seen.has(a.id) && (seen.add(a.id), true));
+    const ids = active.map((a) => a.id);
     const ph = ids.length ? await prisma.attachment.findMany({ where: { ownerType: 'Amenity', ownerId: { in: ids } }, orderBy: { createdAt: 'asc' }, select: { ownerId: true, path: true } }) : [];
     const byA = new Map<string, string[]>();
     for (const p of ph) {
@@ -300,12 +311,12 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
       arr.push(p.path);
       byA.set(p.ownerId, arr);
     }
-    for (const r of rows) {
+    for (const a of active) {
       amenities.push({
-        type: L(r.type.titleAr, r.type.titleEn),
-        title: L(r.titleAr, r.titleEn || r.titleAr),
-        details: locale === 'ar' ? r.detailsAr : r.detailsEn || r.detailsAr,
-        photos: byA.get(r.id) ?? [],
+        type: a.category ? L(a.category.labelAr, a.category.labelEn) : '',
+        title: L(a.titleAr, a.titleEn || a.titleAr),
+        details: locale === 'ar' ? a.detailsAr : a.detailsEn || a.detailsAr,
+        photos: byA.get(a.id) ?? [],
       });
     }
   }

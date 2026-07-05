@@ -9,6 +9,7 @@ import { FollowArea } from '../FollowArea';
 import { LoginToView } from '../../_components/LoginToView';
 import { areaListings } from '../../../lib/areaListings';
 import { getSecurityGates } from '../../../lib/security';
+import { amenitiesForNeighborhood } from '../../../lib/amenities';
 import { SiteShell } from '../../_components/SiteShell';
 
 export const dynamic = 'force-dynamic';
@@ -39,20 +40,10 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
       orderBy: { happenedAt: 'desc' },
       take: 50,
     }),
-    prisma.amenity.findMany({ where: { neighborhoodId: id }, orderBy: [{ order: 'asc' }], include: { type: true } }),
+    // attached amenities: this neighborhood's own + inherited from its district
+    amenitiesForNeighborhood(id, n.districtId),
   ]);
   const listingCards = await areaListings({ neighborhoodId: id });
-  const amIds = amenityRows.map((a) => a.id);
-  const amPhotos = amIds.length
-    ? await prisma.attachment.findMany({ where: { ownerType: 'Amenity', ownerId: { in: amIds } }, orderBy: { createdAt: 'asc' }, select: { ownerId: true, path: true } })
-    : [];
-  const amPhotosBy = new Map<string, string[]>();
-  for (const p of amPhotos) {
-    if (!p.ownerId) continue;
-    const arr = amPhotosBy.get(p.ownerId) ?? [];
-    arr.push(p.path);
-    amPhotosBy.set(p.ownerId, arr);
-  }
   const pickMap = (kind: string) => {
     const r = areaMaps.find((x) => x.kind === kind);
     return r ? r.newobourPath || r.cleanPath : null;
@@ -134,17 +125,14 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
         <section className="space-y-2">
           <h2 className="font-semibold text-primary">{t('publicRealm')}</h2>
           <ul className="space-y-2">
-            {amenityRows.map((a) => {
-              const pics = amPhotosBy.get(a.id) ?? [];
-              return (
-                <li key={a.id} className="rounded-lg border border-graphite/15 p-3">
-                  <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{L(a.type.titleAr, a.type.titleEn)}</span>
-                  <span className="ms-2 font-semibold">{L(a.titleAr, a.titleEn || a.titleAr)}</span>
-                  {(a.detailsAr || a.detailsEn) && <p className="mt-1 whitespace-pre-line text-sm opacity-80">{locale === 'ar' ? a.detailsAr : a.detailsEn || a.detailsAr}</p>}
-                  {pics.length > 0 && <div className="mt-2"><PhotoGallery photos={pics} /></div>}
-                </li>
-              );
-            })}
+            {amenityRows.map((a) => (
+              <li key={a.id} className="rounded-lg border border-graphite/15 p-3">
+                {a.category && <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{L(a.category.ar, a.category.en)}</span>}
+                <span className="ms-2 font-semibold">{L(a.titleAr, a.titleEn || a.titleAr)}</span>
+                {(a.detailsAr || a.detailsEn) && <p className="mt-1 whitespace-pre-line text-sm opacity-80">{locale === 'ar' ? a.detailsAr : a.detailsEn || a.detailsAr}</p>}
+                {a.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={a.photos} /></div>}
+              </li>
+            ))}
           </ul>
         </section>
       )}

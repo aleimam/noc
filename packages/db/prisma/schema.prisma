@@ -438,8 +438,9 @@ model OptionListItem {
   order    Int     @default(0)
   isActive Boolean @default(true)
 
-  list   OptionList     @relation(fields: [listId], references: [id], onDelete: Cascade)
-  values ListingValue[]
+  list      OptionList     @relation(fields: [listId], references: [id], onDelete: Cascade)
+  values    ListingValue[]
+  amenities Amenity[]
 
   @@unique([listId, key])
   @@index([listId, order])
@@ -505,6 +506,7 @@ model Listing {
   sourceLand   Land?          @relation("LandListing")
   values       ListingValue[]
   buildingConditions ListingBuildingCondition[]
+  amenityPlacements  AmenityPlacement[]
 
   @@index([status, propertyTypeId])
   @@index([sellerId, status])
@@ -1029,6 +1031,7 @@ model District {
   updates       GeoUpdate[]
   follows       LandFollow[]
   landOffers    LandOffer[]
+  amenityPlacements AmenityPlacement[]
   linksFrom     DistrictLink[] @relation("DistrictLinkFrom")
   linksTo       DistrictLink[] @relation("DistrictLinkTo")
 
@@ -1059,7 +1062,7 @@ model Neighborhood {
   follows    LandFollow[]
   listings   Listing[]
   landOffers LandOffer[]
-  amenities  Amenity[]
+  amenityPlacements AmenityPlacement[]
   linksFrom  NeighborhoodLink[] @relation("NeighborhoodLinkFrom")
   linksTo    NeighborhoodLink[] @relation("NeighborhoodLinkTo")
 
@@ -1193,38 +1196,48 @@ model DistrictLink {
 }
 
 /// Public-realm amenity type (Roads, Services, …) — admin-managed taxonomy.
-model AmenityType {
-  id        String   @id @default(cuid())
-  titleAr   String
-  titleEn   String
-  order     Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  amenities Amenity[]
-
-  @@index([isActive, order])
-}
-
-/// A public-realm amenity attached to a neighborhood (photos via Attachment 'Amenity').
+/// A reusable public-realm amenity, built once in the global library then attached to any
+/// number of neighborhoods / districts / listings via AmenityPlacement. Category comes from
+/// a Shared Option List ("Amenity categories"). Photos via Attachment ownerType 'Amenity'.
 model Amenity {
   id             String   @id @default(cuid())
-  neighborhoodId String
-  typeId         String
+  categoryItemId String? // → OptionListItem in the "Amenity categories" list
   titleAr        String
   titleEn        String?
   detailsAr      String?  @db.Text
   detailsEn      String?  @db.Text
   order          Int      @default(0)
+  isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  neighborhood Neighborhood @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
-  type         AmenityType  @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  category   OptionListItem?    @relation(fields: [categoryItemId], references: [id], onDelete: SetNull)
+  placements AmenityPlacement[]
 
+  @@index([isActive, order])
+  @@index([categoryItemId])
+}
+
+/// Attaches a library Amenity to exactly one place: a neighborhood, a district (inherited by
+/// its neighborhoods/lands), or a single listing. Cascades when the amenity or place is removed.
+model AmenityPlacement {
+  id             String   @id @default(cuid())
+  amenityId      String
+  neighborhoodId String?
+  districtId     String?
+  listingId      String?
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  amenity      Amenity       @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+  neighborhood Neighborhood? @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
+  district     District?     @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  listing      Listing?      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([amenityId])
   @@index([neighborhoodId])
-  @@index([typeId])
+  @@index([districtId])
+  @@index([listingId])
 }
 
 /// Reciprocal neighborhood adjacency.

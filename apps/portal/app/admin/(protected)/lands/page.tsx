@@ -20,7 +20,7 @@ export default async function LandsHub() {
     { href: '/admin/lands/districts', label: t('districts'), count: districts },
     { href: '/admin/lands/neighborhoods', label: t('neighborhoods'), count: neighborhoods },
     { href: '/admin/lands/updates', label: t('updates'), count: updates },
-    { href: '/admin/lands/amenity-types', label: t('amenityTypes'), count: null },
+    { href: '/admin/lands/amenities', label: t('amenityLibrary'), count: null },
     { href: '/admin/lands/follows', label: t('follows'), count: follows },
   ];
   const stats = [{ label: t('blocks'), count: blocks }];

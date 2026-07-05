@@ -16,8 +16,6 @@ import {
   notifyGeoUpdate,
   setDistrictAdjacency,
   setNeighborhoodAdjacency,
-  upsertAmenity,
-  deleteAmenity,
 } from './actions';
 
 type Level = 'district' | 'neighborhood';
@@ -197,111 +195,6 @@ export function AdjacencyEditor({ level, targetId, candidates, selected }: { lev
   );
 }
 
-type AmenityRow = { id: string; typeId: string; titleAr: string; titleEn: string | null; detailsAr: string | null; detailsEn: string | null; photos: string[] };
-
-/** Public-realm amenities for a neighborhood, grouped under admin-defined types. */
-export function AmenitiesEditor({ neighborhoodId, types, amenities, locale }: { neighborhoodId: string; types: { id: string; title: string }[]; amenities: AmenityRow[]; locale: 'ar' | 'en' }) {
-  const t = useTranslations('lands');
-  const router = useRouter();
-  const [pending, start] = useTransition();
-  type Draft = { id?: string; typeId: string; titleAr: string; titleEn: string; detailsAr: string; detailsEn: string; photos: UploadedAttachment[] };
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [zoom, setZoom] = useState<string | null>(null);
-  const typeName = (id: string) => types.find((x) => x.id === id)?.title ?? '—';
-
-  if (types.length === 0) return <p className="text-sm opacity-60">{t('amenityNoTypes')}</p>;
-
-  function save() {
-    if (!draft || !draft.titleAr.trim() || !draft.typeId) return;
-    start(async () => {
-      await upsertAmenity({
-        id: draft.id,
-        neighborhoodId,
-        typeId: draft.typeId,
-        titleAr: draft.titleAr,
-        titleEn: draft.titleEn,
-        detailsAr: draft.detailsAr,
-        detailsEn: draft.detailsEn,
-        ...(draft.id ? {} : { photoIds: draft.photos.map((p) => p.id) }),
-      });
-      setDraft(null);
-      router.refresh();
-    });
-  }
-  function del(id: string) {
-    if (!confirm(t('confirmDelete'))) return;
-    start(async () => {
-      await deleteAmenity(id);
-      router.refresh();
-    });
-  }
-
-  return (
-    <div className="space-y-2">
-      <ul className="space-y-2">
-        {amenities.length === 0 && <li className="text-sm opacity-60">{t('none')}</li>}
-        {amenities.map((a) => (
-          <li key={a.id} className="rounded-lg border border-graphite/15 p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{typeName(a.typeId)}</span>
-                <span className="ms-2 font-semibold">{locale === 'ar' ? a.titleAr : a.titleEn || a.titleAr}</span>
-              </div>
-              <span className="flex gap-2 text-xs">
-                <button onClick={() => setDraft({ id: a.id, typeId: a.typeId, titleAr: a.titleAr, titleEn: a.titleEn ?? '', detailsAr: a.detailsAr ?? '', detailsEn: a.detailsEn ?? '', photos: [] })} className="text-accent">{t('edit')}</button>
-                <button disabled={pending} onClick={() => del(a.id)} className="text-red-600">{t('delete')}</button>
-              </span>
-            </div>
-            {(a.detailsAr || a.detailsEn) && <p className="mt-1 whitespace-pre-wrap text-sm opacity-80">{locale === 'ar' ? a.detailsAr : a.detailsEn || a.detailsAr}</p>}
-            {a.photos.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {a.photos.map((src, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img key={i} src={src} alt="" onClick={() => setZoom(src)} className="h-14 w-14 cursor-pointer rounded object-cover ring-1 ring-graphite/15" />
-                ))}
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      {draft ? (
-        <div className="grid gap-2 rounded border border-graphite/15 p-3 sm:grid-cols-2">
-          <label className="text-sm sm:col-span-2">
-            {t('amenityType')}
-            <select value={draft.typeId} onChange={(e) => setDraft({ ...draft, typeId: e.target.value })} className={inp}>
-              <option value="">—</option>
-              {types.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
-            </select>
-          </label>
-          <label className="text-sm">{t('nameAr')}<input value={draft.titleAr} onChange={(e) => setDraft({ ...draft, titleAr: e.target.value })} className={inp} /></label>
-          <label className="text-sm">{t('nameEn')}<input dir="ltr" value={draft.titleEn} onChange={(e) => setDraft({ ...draft, titleEn: e.target.value })} className={inp} /></label>
-          <label className="text-sm">{t('detailsAr')}<textarea value={draft.detailsAr} onChange={(e) => setDraft({ ...draft, detailsAr: e.target.value })} rows={2} className={inp} /></label>
-          <label className="text-sm">{t('detailsEn')}<textarea dir="ltr" value={draft.detailsEn} onChange={(e) => setDraft({ ...draft, detailsEn: e.target.value })} rows={2} className={inp} /></label>
-          {!draft.id && (
-            <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
-              {draft.photos.map((p) => (
-                <span key={p.id} className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.path} alt="" className="h-12 w-12 rounded object-cover ring-1 ring-graphite/20" />
-                  <button type="button" onClick={() => setDraft({ ...draft, photos: draft.photos.filter((x) => x.id !== p.id) })} className="absolute -end-1 -top-1 rounded-full bg-red-600 px-1 text-xs text-white">✕</button>
-                </span>
-              ))}
-              <div className="w-28"><ImageAttachment stampCategory="amenity" value={null} onChange={(a) => a && setDraft((d) => (d ? { ...d, photos: [...d.photos, a] } : d))} /></div>
-            </div>
-          )}
-          <div className="flex gap-2 sm:col-span-2">
-            <button disabled={pending} onClick={save} className="rounded bg-primary px-3 py-1.5 text-sm text-soft disabled:opacity-50">{t('save')}</button>
-            <button onClick={() => setDraft(null)} className="px-2 py-1 text-sm opacity-70">{t('cancel')}</button>
-          </div>
-        </div>
-      ) : (
-        <button onClick={() => setDraft({ typeId: types[0]?.id ?? '', titleAr: '', titleEn: '', detailsAr: '', detailsEn: '', photos: [] })} className="rounded border border-graphite/25 px-3 py-1 text-sm hover:bg-graphite/10">+ {t('add')}</button>
-      )}
-      {zoom && <Lightbox src={zoom} onClose={() => setZoom(null)} />}
-    </div>
-  );
-}
 
 type UpdateRow = { id: string; title: string | null; body: string; happenedAt: string; notifiedAt: string | null; photos: string[]; author: string | null };
 

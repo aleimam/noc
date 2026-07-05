@@ -548,42 +548,31 @@ export async function setNeighborhoodAdjacency(id: string, neighborIds: string[]
   }
 }
 
-// ── Public-realm amenity types (admin taxonomy) ──
-export async function upsertAmenityType(input: { id?: string; titleAr: string; titleEn: string; order?: number; isActive?: boolean }): Promise<Result> {
-  await requirePermission('lands', input.id ? 'UPDATE' : 'CREATE');
-  try {
-    const data = { titleAr: input.titleAr.trim(), titleEn: input.titleEn.trim(), order: input.order ?? 0, isActive: input.isActive ?? true };
-    if (!data.titleAr) return { ok: false, error: 'failed' };
-    if (input.id) await prisma.amenityType.update({ where: { id: input.id }, data });
-    else await prisma.amenityType.create({ data });
-    revalidatePath('/admin/lands/amenity-types');
-    return { ok: true };
-  } catch (e) {
-    return fail(e);
+// ── Amenity categories: a Shared Option List (find-or-create, id pinned in Settings) ──
+const AMENITY_CATEGORY_LIST_KEY = 'amenity.categoryListId';
+
+/** Returns the id of the "Amenity categories" Shared Option List, creating it on first use. */
+export async function getAmenityCategoryListId(): Promise<string> {
+  const row = await prisma.setting.findUnique({ where: { key: AMENITY_CATEGORY_LIST_KEY } });
+  if (row?.value) {
+    const exists = await prisma.optionList.findUnique({ where: { id: row.value }, select: { id: true } });
+    if (exists) return exists.id;
   }
+  const list = await prisma.optionList.create({ data: { name: 'أنواع المرافق / Amenity categories' } });
+  await prisma.setting.upsert({ where: { key: AMENITY_CATEGORY_LIST_KEY }, update: { value: list.id }, create: { key: AMENITY_CATEGORY_LIST_KEY, value: list.id } });
+  return list.id;
 }
 
-export async function deleteAmenityType(id: string): Promise<Result> {
-  await requirePermission('lands', 'DELETE');
-  try {
-    await prisma.amenityType.delete({ where: { id } });
-    revalidatePath('/admin/lands/amenity-types');
-    return { ok: true };
-  } catch (e) {
-    return fail(e); // P2003 → in_use when amenities still reference it
-  }
-}
-
-// ── Amenities (per neighborhood; photos via Attachment 'Amenity') ──
+// ── Global amenity library (built once; photos via Attachment 'Amenity') ──
 export async function upsertAmenity(input: {
   id?: string;
-  neighborhoodId: string;
-  typeId: string;
+  categoryItemId?: string | null;
   titleAr: string;
   titleEn?: string;
   detailsAr?: string;
   detailsEn?: string;
   order?: number;
+  isActive?: boolean;
   photoIds?: string[];
 }): Promise<Result> {
   await requirePermission('lands', input.id ? 'UPDATE' : 'CREATE');
@@ -591,20 +580,21 @@ export async function upsertAmenity(input: {
   const uid = session?.user?.id ?? null;
   try {
     const data = {
-      typeId: input.typeId,
+      categoryItemId: input.categoryItemId || null,
       titleAr: input.titleAr.trim(),
       titleEn: input.titleEn?.trim() || null,
       detailsAr: input.detailsAr?.trim() || null,
       detailsEn: input.detailsEn?.trim() || null,
       order: input.order ?? 0,
+      isActive: input.isActive ?? true,
     };
-    if (!data.titleAr || !data.typeId) return { ok: false, error: 'failed' };
+    if (!data.titleAr) return { ok: false, error: 'failed' };
     let amenityId: string;
     if (input.id) {
       await prisma.amenity.update({ where: { id: input.id }, data });
       amenityId = input.id;
     } else {
-      const a = await prisma.amenity.create({ data: { ...data, neighborhoodId: input.neighborhoodId } });
+      const a = await prisma.amenity.create({ data });
       amenityId = a.id;
     }
     if (input.photoIds && uid) {
@@ -614,7 +604,7 @@ export async function upsertAmenity(input: {
         data: { ownerType: null, ownerId: null },
       });
     }
-    revDetail('neighborhood', input.neighborhoodId);
+    revalidatePath('/admin/lands/amenities');
     return { ok: true, id: amenityId };
   } catch (e) {
     return fail(e);
@@ -625,8 +615,34 @@ export async function deleteAmenity(id: string): Promise<Result> {
   await requirePermission('lands', 'DELETE');
   try {
     await prisma.attachment.updateMany({ where: { ownerType: 'Amenity', ownerId: id }, data: { ownerType: null, ownerId: null } });
-    const a = await prisma.amenity.delete({ where: { id } });
-    revDetail('neighborhood', a.neighborhoodId);
+    await prisma.amenity.delete({ where: { id } }); // placements cascade
+    revalidatePath('/admin/lands/amenities');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ── Attach/detach library amenities to a place (neighborhood / district / listing) ──
+export async function setAmenityPlacements(
+  scope: 'neighborhood' | 'district' | 'listing',
+  scopeId: string,
+  amenityIds: string[],
+): Promise<Result> {
+  await requirePermission('lands', 'UPDATE');
+  try {
+    const where =
+      scope === 'neighborhood' ? { neighborhoodId: scopeId } : scope === 'district' ? { districtId: scopeId } : { listingId: scopeId };
+    const existing = await prisma.amenityPlacement.findMany({ where, select: { id: true, amenityId: true } });
+    const want = new Set(amenityIds);
+    const have = new Set(existing.map((e) => e.amenityId));
+    const toDelete = existing.filter((e) => !want.has(e.amenityId)).map((e) => e.id);
+    const toAdd = amenityIds.filter((a) => !have.has(a));
+    if (toDelete.length) await prisma.amenityPlacement.deleteMany({ where: { id: { in: toDelete } } });
+    if (toAdd.length) await prisma.amenityPlacement.createMany({ data: toAdd.map((amenityId) => ({ amenityId, ...where })) });
+    if (scope === 'neighborhood') revDetail('neighborhood', scopeId);
+    else if (scope === 'district') revDetail('district', scopeId);
+    else revalidatePath(`/admin/marketplace/listings/${scopeId}`);
     return { ok: true };
   } catch (e) {
     return fail(e);

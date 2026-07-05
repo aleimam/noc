@@ -7,6 +7,7 @@ import { localizeUnit, currency, type Locale } from '@noc/i18n';
 import { LoginToView } from '../../../_components/LoginToView';
 import { areaListings } from '../../../../lib/areaListings';
 import { getSecurityGates } from '../../../../lib/security';
+import { amenitiesForDistrict } from '../../../../lib/amenities';
 import { SiteShell } from '../../../_components/SiteShell';
 
 export const dynamic = 'force-dynamic';
@@ -24,10 +25,11 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const m2 = localizeUnit('م²', locale);
 
-  const [advantages, areaMaps, updates] = await Promise.all([
+  const [advantages, areaMaps, updates, amenityRows] = await Promise.all([
     prisma.advantage.findMany({ where: { districtId: id }, orderBy: { order: 'asc' } }),
     prisma.areaMap.findMany({ where: { level: 'district', areaId: id } }),
     prisma.geoUpdate.findMany({ where: { districtId: id, neighborhoodId: null }, orderBy: { happenedAt: 'desc' }, take: 50 }),
+    amenitiesForDistrict(id),
   ]);
   const listingCards = await areaListings({ neighborhood: { districtId: id } });
 
@@ -82,6 +84,22 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
           <h2 className="font-semibold text-primary">{t('advantages')}</h2>
           <ul className="list-disc space-y-1 ps-5 text-sm">
             {advantages.map((a) => <li key={a.id}>{locale === 'ar' ? a.textAr : a.textEn || a.textAr}</li>)}
+          </ul>
+        </section>
+      )}
+
+      {amenityRows.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold text-primary">{t('publicRealm')}</h2>
+          <ul className="space-y-2">
+            {amenityRows.map((a) => (
+              <li key={a.id} className="rounded-lg border border-graphite/15 p-3">
+                {a.category && <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{L(a.category.ar, a.category.en)}</span>}
+                <span className="ms-2 font-semibold">{L(a.titleAr, a.titleEn || a.titleAr)}</span>
+                {(a.detailsAr || a.detailsEn) && <p className="mt-1 whitespace-pre-line text-sm opacity-80">{locale === 'ar' ? a.detailsAr : a.detailsEn || a.detailsAr}</p>}
+                {a.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={a.photos} /></div>}
+              </li>
+            ))}
           </ul>
         </section>
       )}
