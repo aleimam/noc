@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requirePermission, loadSmsConfig, normalizePhone } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { sendSms } from '@noc/sms';
+import { isValidPhone } from '@noc/config';
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -28,8 +29,8 @@ export async function setSetting(key: string, value: string): Promise<Result> {
 
 export async function sendTestSms(rawPhone: string): Promise<Result> {
   await requirePermission('settings', 'UPDATE');
+  if (!isValidPhone(rawPhone)) return { ok: false, error: 'invalid_phone' };
   const phone = normalizePhone(rawPhone);
-  if (!/^\+?\d{8,15}$/.test(phone)) return { ok: false, error: 'invalid_phone' };
   const cfg = await loadSmsConfig();
   const r = await sendSms(phone, 'New Obour — اختبار / test ✅', cfg);
   return r.ok ? { ok: true } : { ok: false, error: r.error ?? 'failed' };

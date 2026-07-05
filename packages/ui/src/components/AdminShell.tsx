@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { ThemeToggle } from './ThemeToggle';
 
 export interface AdminNavItem {
   href: string;
@@ -63,7 +62,6 @@ export function AdminShell({
           <span className="text-sm opacity-80">{userLabel}</span>
           <div className="flex flex-wrap items-center gap-2">
             <LanguageSwitcher />
-            <ThemeToggle />
             {(storeLinks ?? [{ label: backToSiteLabel, href: '/' }]).map((s) => (
               <a
                 key={s.href}

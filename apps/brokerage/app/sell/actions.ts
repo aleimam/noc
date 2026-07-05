@@ -2,6 +2,7 @@
 
 import { auth } from '@noc/auth';
 import { prisma, Prisma } from '@noc/db';
+import { isValidPhone } from '@noc/config';
 
 export type OfferInput = {
   mode: 'SHEET' | 'ALLOCATED';
@@ -38,6 +39,8 @@ export async function createLandOffer(input: OfferInput): Promise<{ ok: true } |
   const ownerName = cap(input.ownerName, 120);
   const phone1 = cap(input.phone1, 30);
   if (!ownerName || !phone1) return { ok: false, error: 'required' };
+  if (!isValidPhone(phone1)) return { ok: false, error: 'invalid_phone' };
+  if (input.phone2?.trim() && !isValidPhone(input.phone2)) return { ok: false, error: 'invalid_phone' };
 
   try {
     const offer = await prisma.landOffer.create({

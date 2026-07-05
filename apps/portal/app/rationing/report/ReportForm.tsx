@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { isValidPhone } from '@noc/config';
 import { submitMissedSheetReport } from './actions';
 
 type City = { id: string; name: string };
@@ -39,6 +40,8 @@ export function ReportForm({ cities, account }: { cities: City[]; account: { nam
 
   function submit() {
     setError('');
+    // Guests supply a phone; enforce the shared rule before hitting the server.
+    if (!account && f.reporterPhone.trim() && !isValidPhone(f.reporterPhone)) { setError(t('phoneInvalid')); return; }
     start(async () => {
       const r = await submitMissedSheetReport({ ...f, photoIds: photos.map((p) => p.id) });
       if (r.ok) setDoneName(r.name);

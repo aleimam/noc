@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { auth, hasPermission } from '@noc/auth';
 import { AdminShell, Toaster, type AdminNavGroup } from '@noc/ui';
 import { SignOutButton } from '../../_components/SignOutButton';
+import { AdminLightGuard } from '../../_components/AdminLightGuard';
 
 export default async function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -101,6 +102,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
       ]}
       signOut={<SignOutButton />}
     >
+      <AdminLightGuard />
       {children}
       <Toaster />
     </AdminShell>

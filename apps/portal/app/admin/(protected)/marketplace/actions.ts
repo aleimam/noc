@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { prisma, Prisma } from '@noc/db';
 import { requirePermission } from '@noc/auth';
+import { isValidPhone } from '@noc/config';
 import { ensureAdNumber } from '../../../../lib/adNumber';
 import { STANDARD_AREAS_KEY } from '../../../../lib/marketplace';
 
@@ -378,6 +379,8 @@ export async function upsertOwner(input: {
   await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
   const name = input.name.trim();
   if (!name) return { ok: false, error: 'failed' };
+  if (input.phone1?.trim() && !isValidPhone(input.phone1)) return { ok: false, error: 'invalid_phone' };
+  if (input.phone2?.trim() && !isValidPhone(input.phone2)) return { ok: false, error: 'invalid_phone' };
 
   // Personal owners hold no code; coded owners are range-checked by type.
   let codes: number[] = [];
@@ -429,6 +432,10 @@ export async function deleteOwner(id: string): Promise<Result> {
 
 export async function updateSetting(key: string, value: string): Promise<Result> {
   await requirePermission('marketplace', 'UPDATE');
+  // Phone-type settings must satisfy the shared phone rule when non-empty.
+  if (/_phone$/.test(key) && value.trim() && !isValidPhone(value)) {
+    return { ok: false, error: 'invalid_phone' };
+  }
   try {
     await prisma.setting.upsert({
       where: { key },

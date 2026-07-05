@@ -1,5 +1,6 @@
 import { prisma } from '@noc/db';
 import { normalizePhone, requestOtp, verifyOtp } from '@noc/auth';
+import { isValidPhone } from '@noc/config';
 
 // Shared logic for the no-login "follow" forms (rationing watch/found + land area).
 //
@@ -21,8 +22,8 @@ export async function beginPhoneFollow(
 ): Promise<BeginFollow> {
   if (sessionUserId) return { kind: 'ready', userId: sessionUserId };
 
+  if (!isValidPhone(rawPhone)) return { kind: 'error', error: 'invalid_phone' };
   const phone = normalizePhone(rawPhone);
-  if (!/^\+?\d{8,15}$/.test(phone)) return { kind: 'error', error: 'invalid_phone' };
 
   const existing = await prisma.user.findUnique({ where: { phone }, select: { id: true } });
   if (!existing) {

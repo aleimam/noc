@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { isValidPhone } from '@noc/config';
 import { rateLimit, clientIp } from '../../../lib/rateLimit';
 
 export type ReportInput = {
@@ -41,7 +42,7 @@ export async function submitMissedSheetReport(input: ReportInput): Promise<Resul
     reporterName = clean(input.reporterName);
     reporterPhone = clean(input.reporterPhone).replace(/[\s()-]/g, '');
     if (reporterName.length < 2) return { ok: false, error: 'name_required' };
-    if (!/^\+?\d{8,15}$/.test(reporterPhone)) return { ok: false, error: 'invalid_phone' };
+    if (!isValidPhone(reporterPhone)) return { ok: false, error: 'invalid_phone' };
   }
 
   const fbDateStr = clean(input.fbDate, 10);

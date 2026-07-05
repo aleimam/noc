@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
+import { isValidPhone } from '@noc/config';
 import { upsertOwner, deleteOwner } from '../actions';
 
 type OwnerType = 'PERSONAL' | 'COMPANY' | 'BROKER' | 'US';
@@ -24,6 +25,7 @@ function poolFor(type: OwnerType): number[] {
 
 export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; takenCodes: number[] }) {
   const t = useTranslations('mp');
+  const tc = useTranslations('common');
   const router = useRouter();
   const [pending, start] = useTransition();
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -48,6 +50,8 @@ export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; taken
 
   function save() {
     if (!draft || !draft.name.trim()) { setError('failed'); return; }
+    if (draft.phone1.trim() && !isValidPhone(draft.phone1)) { setError('invalid_phone'); return; }
+    if (draft.phone2.trim() && !isValidPhone(draft.phone2)) { setError('invalid_phone'); return; }
     setError('');
     start(async () => {
       const r = await upsertOwner({ ...draft, codes: draft.type === 'PERSONAL' ? [] : draft.codes });
@@ -65,7 +69,7 @@ export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; taken
 
   return (
     <div className="space-y-4">
-      {error && <p className="text-sm text-red-600">{error === 'owner_code_taken' ? t('ownerCodeTaken') : error === 'owner_code_range' ? t('ownerCodesHint') : t('none')}</p>}
+      {error && <p className="text-sm text-red-600">{error === 'owner_code_taken' ? t('ownerCodeTaken') : error === 'owner_code_range' ? t('ownerCodesHint') : error === 'invalid_phone' ? tc('phoneInvalid') : t('none')}</p>}
 
       {draft ? (
         <div className="space-y-3 rounded-lg border border-graphite/15 p-4">

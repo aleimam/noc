@@ -3,6 +3,9 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { SiteShell } from '../../_components/SiteShell';
+import { RationingTabs } from '../RationingTabs';
+import { SearchBar } from '../SearchBar';
+import { getRationingConfig } from '../../../lib/rationing/settings';
 
 export const dynamic = 'force-dynamic';
 const str = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '').trim();
@@ -13,18 +16,25 @@ export default async function PlotDetail({ searchParams }: { searchParams: Promi
   const t = await getTranslations('rationing');
   if (!ref) notFound();
 
-  const sheets = await prisma.rationingSheet.findMany({
-    where: { plotFullRef: ref },
-    orderBy: { applicantName: 'asc' },
-    take: 1000,
-    include: { city: { select: { name: true } } },
-  });
+  const [sheets, config, cities] = await Promise.all([
+    prisma.rationingSheet.findMany({
+      where: { plotFullRef: ref },
+      orderBy: { applicantName: 'asc' },
+      take: 1000,
+      include: { city: { select: { name: true } } },
+    }),
+    getRationingConfig(),
+    prisma.rationingCity.findMany({ where: { isActive: true }, orderBy: [{ order: 'asc' }, { name: 'asc' }], select: { id: true, name: true } }),
+  ]);
   if (sheets.length === 0) notFound();
   const first = sheets[0]!;
 
   return (
     <SiteShell active="rationing">
       <div className="mx-auto max-w-3xl space-y-5 p-4 sm:p-6">
+        <RationingTabs active="plots" showDashboard={config.showDashboard} />
+        <SearchBar cities={cities} dymGloballyEnabled={config.didYouMeanEnabled} dymOptOut={false} />
+
         <Link href="/rationing/plots" className="inline-block text-sm text-navy-600">‹ {t('tabPlots')}</Link>
 
         <div className="rounded-2xl bg-navy-800 p-5 text-white">

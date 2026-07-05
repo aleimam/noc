@@ -2,7 +2,10 @@
 
 import { useRef, useState, useTransition, type ClipboardEvent, type DragEvent } from 'react';
 import { compressImage, track } from '@noc/ui';
+import { isValidPhone } from '@noc/config';
 import { createLandOffer, type OfferInput } from './actions';
+
+const PHONE_ERR = 'أدخل رقم موبايل صحيح: 11 رقمًا يبدأ بـ 01، أو رقمًا دوليًا يبدأ بعلامة +';
 
 type Opt = { id: string; name: string };
 type Hood = { id: string; name: string; districtId: string };
@@ -71,11 +74,13 @@ export function SellForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!f.ownerName.trim() || !f.phone1.trim()) { setError('أدخل الاسم ورقم الهاتف'); return; }
+    if (!isValidPhone(f.phone1)) { setError(PHONE_ERR); return; }
+    if (f.phone2?.trim() && !isValidPhone(f.phone2)) { setError(PHONE_ERR); return; }
     setError('');
     start(async () => {
       const r = await createLandOffer({ ...f, mode, attachmentIds: att.map((p) => p.id) });
       if (r.ok) { track('sell_offer', { mode }); setDone(true); }
-      else setError('تعذّر الإرسال، حاول مرة أخرى');
+      else setError(r.error === 'invalid_phone' ? PHONE_ERR : 'تعذّر الإرسال، حاول مرة أخرى');
     });
   }
 

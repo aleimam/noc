@@ -153,6 +153,10 @@
 @layer utilities {
   .dark .bg-soft { background-color: #060f1e; }
   .dark .bg-white { background-color: #0f2138; }
+  /* Light gold-tint fills (highlight cards / chips / hovers) darken so the dark text
+     inside — flipped to light by the rules below — still sits on a legible surface. */
+  .dark .bg-gold-50,
+  .dark .bg-gold-100 { background-color: #16294a; }
   .dark .text-navy,
   .dark .text-navy-900,
   .dark .text-navy-800,

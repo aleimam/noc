@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
 import { auth } from '@noc/auth';
+import { isValidPhone } from '@noc/config';
 
 import { sanitizeRichHtml } from '../../../lib/sanitize';
 
@@ -74,6 +75,7 @@ export async function saveListing(input: ListingInput): Promise<Result> {
   if (!input.typeOptionId || !input.purposeOptionId || !input.conditionOptionId || !input.title.trim() || !input.contactPhone.trim()) {
     return { ok: false, error: 'failed' };
   }
+  if (!isValidPhone(input.contactPhone)) return { ok: false, error: 'invalid_phone' };
   const isStaff = user.type === 'STAFF';
 
   // Al-Sawarey channel is staff-only and limited to allowed Types/Purposes (backstop; the

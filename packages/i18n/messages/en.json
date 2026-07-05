@@ -16,7 +16,8 @@
     "admin": "Admin",
     "consentText": "We use cookies to analyze traffic and improve our service.",
     "consentAccept": "Accept",
-    "consentDecline": "Decline"
+    "consentDecline": "Decline",
+    "phoneInvalid": "Enter a valid phone: 11 digits starting with 01, or an international number starting with +"
   },
   "auth": {
     "signIn": "Sign in",

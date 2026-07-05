@@ -9,6 +9,7 @@ import { FollowArea } from '../FollowArea';
 import { LoginToView } from '../../_components/LoginToView';
 import { areaListings } from '../../../lib/areaListings';
 import { getSecurityGates } from '../../../lib/security';
+import { SiteShell } from '../../_components/SiteShell';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,7 +90,8 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
   );
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
+    <SiteShell active="explore">
+      <div className="mx-auto max-w-3xl space-y-6 p-6">
       <a href="/explore" className="text-sm text-accent">← {t('exploreTitle')}</a>
       <div>
         <a href={`/explore/district/${n.districtId}`} className="inline-block rounded bg-graphite/10 px-2 py-0.5 text-xs text-accent hover:underline">{L(n.district.nameAr, n.district.nameEn)}</a>
@@ -197,6 +199,7 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
           </div>
         </section>
       )}
-    </main>
+      </div>
+    </SiteShell>
   );
 }

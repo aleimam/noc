@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ImageAttachment, Lightbox, type UploadedAttachment } from '@noc/ui';
 import { localizeUnit } from '@noc/i18n';
-import { roundToStandardArea, formatMoneyThousands, formatMoneyEgp, formatArea } from '@noc/config';
+import { roundToStandardArea, formatMoneyThousands, formatMoneyEgp, formatArea, isValidPhone } from '@noc/config';
 import { RichEditor } from '../../admin/(protected)/pages/RichEditor';
 import { saveListing, type ListingInput, type ValueInput } from './actions';
 
@@ -73,6 +73,7 @@ export function ListingForm({
   returnTo?: string;
 }) {
   const t = useTranslations('mp');
+  const tc = useTranslations('common');
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState('');
@@ -225,6 +226,7 @@ export function ListingForm({
       setError('failed');
       return;
     }
+    if (!isValidPhone(contactPhone)) { setError(tc('phoneInvalid')); return; }
     const input: ListingInput = {
       id: initial.id,
       typeOptionId: selOf('type'),
@@ -251,7 +253,7 @@ export function ListingForm({
     start(async () => {
       const r = await saveListing(input);
       if (r.ok) router.push(returnTo ?? (staffMode ? '/admin/marketplace/listings' : '/account/listings'));
-      else setError(r.error);
+      else setError(r.error === 'invalid_phone' ? tc('phoneInvalid') : r.error);
     });
   }
 

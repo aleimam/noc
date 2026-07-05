@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
+import { isValidPhone } from '@noc/config';
 
 // Only allow same-site relative paths as a post-login destination (no open redirects).
 function safeNext(raw: string | null): string {
@@ -13,6 +14,7 @@ function safeNext(raw: string | null): string {
 
 export default function CustomerLoginPage() {
   const t = useTranslations('auth');
+  const tc = useTranslations('common');
   const locale = useLocale();
   const router = useRouter();
   const next = safeNext(useSearchParams().get('next'));
@@ -25,6 +27,7 @@ export default function CustomerLoginPage() {
 
   async function sendCode(e: FormEvent) {
     e.preventDefault();
+    if (!isValidPhone(phone)) { setError(tc('phoneInvalid')); return; }
     setLoading(true);
     setError('');
     setMsg('');

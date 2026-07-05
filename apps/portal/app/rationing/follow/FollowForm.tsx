@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { isValidPhone } from '@noc/config';
 import { startFollow, confirmFollow } from './actions';
 
 type City = { id: string; name: string };
@@ -98,6 +99,7 @@ export function FollowForm({
         e.preventDefault();
         if (!f.applicantName.trim()) return;
         if (!loggedIn && !phone.trim()) { setError(t('phoneRequired')); return; }
+        if (!loggedIn && !isValidPhone(phone)) { setError(t('phoneInvalid')); return; }
         setError('');
         start(async () => {
           const r = await startFollow({ ...payload, phone: loggedIn ? undefined : phone.trim() });

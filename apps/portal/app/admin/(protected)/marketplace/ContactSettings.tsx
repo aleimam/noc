@@ -3,20 +3,26 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { isValidPhone } from '@noc/config';
 import { updateSetting } from './actions';
 
 export function ContactSettings({ phone, whatsapp }: { phone: string; whatsapp: string }) {
   const t = useTranslations('mp');
+  const tc = useTranslations('common');
   const router = useRouter();
   const [pending, start] = useTransition();
   const [p, setP] = useState(phone);
   const [w, setW] = useState(whatsapp);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
   function save() {
     setSaved(false);
+    setError('');
+    if (p.trim() && !isValidPhone(p)) { setError(tc('phoneInvalid')); return; }
     start(async () => {
-      await updateSetting('alswarey_phone', p);
+      const r1 = await updateSetting('alswarey_phone', p);
+      if (!r1.ok) { setError(tc('phoneInvalid')); return; }
       await updateSetting('alswarey_whatsapp', w);
       setSaved(true);
       router.refresh();
@@ -36,6 +42,7 @@ export function ContactSettings({ phone, whatsapp }: { phone: string; whatsapp: 
         <button disabled={pending} onClick={save} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{t('save')}</button>
         {saved && <span className="text-sm text-green">✓</span>}
       </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }

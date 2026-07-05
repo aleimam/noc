@@ -1,6 +1,7 @@
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { prisma } from '@noc/db';
 import { sendSms, type SmsConfig } from '@noc/sms';
+import { isValidPhone } from '@noc/config';
 import { appSecret } from './secret';
 
 const SMS_KEYS = ['sms_provider', 'sms_username', 'sms_password', 'sms_sender', 'sms_environment'];
@@ -49,8 +50,9 @@ function otpMessage(code: string, locale: 'ar' | 'en'): string {
 }
 
 export async function requestOtp(rawPhone: string, locale: 'ar' | 'en' = 'ar'): Promise<OtpRequestResult> {
+  // Enforce the shared phone rule (11-digit 01… or international +…) on the raw input.
+  if (!isValidPhone(rawPhone)) return { ok: false, error: 'invalid_phone' };
   const phone = normalizePhone(rawPhone);
-  if (!/^\+?\d{8,15}$/.test(phone)) return { ok: false, error: 'invalid_phone' };
 
   const now = Date.now();
   const recent = await prisma.otpCode.findMany({

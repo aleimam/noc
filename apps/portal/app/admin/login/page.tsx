@@ -17,10 +17,21 @@ export default function StaffLoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const res = await signIn('staff', { email, password, redirect: false });
-    setLoading(false);
-    if (res?.ok) router.push('/admin');
-    else setError(t('invalidCredentials'));
+    try {
+      // Auth.js v5 can either resolve with { ok:false, error } OR reject when
+      // credentials are wrong — handle both so the message always appears.
+      const res = await signIn('staff', { email, password, redirect: false });
+      if (res && res.ok && !res.error) {
+        router.push('/admin');
+        router.refresh();
+        return;
+      }
+      setError(t('invalidCredentials'));
+    } catch {
+      setError(t('invalidCredentials'));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

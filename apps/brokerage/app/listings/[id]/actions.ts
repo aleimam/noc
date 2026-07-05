@@ -2,6 +2,7 @@
 
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { isValidPhone } from '@noc/config';
 
 // Save a buyer lead. Anonymous visitors may send (name/phone optional); logged-in
 // customers are linked. The client also opens WhatsApp to the central number.
@@ -12,6 +13,7 @@ export async function createContactRequest(input: {
   message?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await auth();
+  if (input.phone?.trim() && !isValidPhone(input.phone)) return { ok: false, error: 'invalid_phone' };
   const cap = (v: string | undefined, n: number) => {
     const s = (v ?? '').trim();
     return s ? s.slice(0, n) : null;

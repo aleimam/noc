@@ -7,6 +7,7 @@ import { localizeUnit, currency, type Locale } from '@noc/i18n';
 import { LoginToView } from '../../../_components/LoginToView';
 import { areaListings } from '../../../../lib/areaListings';
 import { getSecurityGates } from '../../../../lib/security';
+import { SiteShell } from '../../../_components/SiteShell';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,7 +55,8 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
   const showMaps = !gates.loginWall || !!session?.user;
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
+    <SiteShell active="explore">
+      <div className="mx-auto max-w-3xl space-y-6 p-6">
       <a href="/explore" className="text-sm text-accent">← {t('exploreTitle')}</a>
       <h1 className="text-2xl font-bold text-primary">{L(d.nameAr, d.nameEn)}</h1>
 
@@ -134,6 +136,7 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
           </div>
         </section>
       )}
-    </main>
+      </div>
+    </SiteShell>
   );
 }

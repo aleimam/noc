@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { auth, requirePermission, hashPassword, normalizePhone, MIN_PASSWORD_LENGTH } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { isValidPhone } from '@noc/config';
 
 type Result = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -60,8 +61,8 @@ export async function upsertStaff(input: {
 
 export async function upsertCustomer(input: { id?: string; phone: string; name?: string; isActive?: boolean }): Promise<Result> {
   await requirePermission('customers', input.id ? 'UPDATE' : 'CREATE');
+  if (!isValidPhone(input.phone)) return { ok: false, error: 'invalid_phone' };
   const phone = normalizePhone(input.phone);
-  if (!/^\+?\d{8,15}$/.test(phone)) return { ok: false, error: 'invalid_phone' };
   try {
     const data = { type: 'CUSTOMER' as const, phone, name: input.name?.trim() || null, isActive: input.isActive ?? true };
     if (input.id) await prisma.user.update({ where: { id: input.id }, data });
@@ -99,6 +100,7 @@ export async function upsertPartner(input: {
   await requirePermission('partners', input.id ? 'UPDATE' : 'CREATE');
   const name = input.name.trim();
   if (!name) return { ok: false, error: 'name_required' };
+  if (input.phone?.trim() && !isValidPhone(input.phone)) return { ok: false, error: 'invalid_phone' };
   try {
     const data = {
       type: 'PARTNER' as const,

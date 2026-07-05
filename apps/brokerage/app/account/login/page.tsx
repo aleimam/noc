@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
+import { isValidPhone } from '@noc/config';
 
 function safeNext(raw: string | null): string {
   if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw;
@@ -24,6 +25,10 @@ export default function CustomerLogin() {
 
   async function sendCode(e: FormEvent) {
     e.preventDefault();
+    if (!isValidPhone(phone)) {
+      setError(L('أدخل رقم موبايل صحيح: 11 رقمًا يبدأ بـ 01، أو رقمًا دوليًا يبدأ بعلامة +', 'Enter a valid phone: 11 digits starting with 01, or an international number starting with +'));
+      return;
+    }
     setLoading(true);
     setError('');
     const res = await fetch('/api/auth/otp/request', {

@@ -4,6 +4,25 @@ import { z } from 'zod';
 export const BRANDS = ['portal', 'brokerage'] as const;
 export type Brand = (typeof BRANDS)[number];
 
+/**
+ * Shared phone-number validation for both apps. A value is accepted when it is
+ * EITHER an Egyptian local mobile (exactly 11 digits starting `01`, e.g.
+ * `01001234567`) OR an international number (leading `+` then 8–15 digits, e.g.
+ * `+14155550123`). Separators (spaces, dashes, parentheses) are ignored.
+ * Pure + client-safe, so both server actions and client forms can share it.
+ */
+const PHONE_EG_LOCAL = /^01\d{9}$/;
+const PHONE_INTL = /^\+\d{8,15}$/;
+
+export function cleanPhone(input: string | null | undefined): string {
+  return (input ?? '').trim().replace(/[\s()-]/g, '');
+}
+
+export function isValidPhone(input: string | null | undefined): boolean {
+  const p = cleanPhone(input);
+  return PHONE_EG_LOCAL.test(p) || PHONE_INTL.test(p);
+}
+
 /** RBAC section keys. Add a new key when a new module is introduced. */
 export const SECTIONS = [
   'homepage',

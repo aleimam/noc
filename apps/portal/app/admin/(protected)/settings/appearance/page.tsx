@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
-import { LanguageSwitcher, ThemeToggle } from '@noc/ui';
+import { LanguageSwitcher } from '@noc/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,10 +19,6 @@ export default async function AppearancePage() {
         <div className="flex items-center gap-4">
           <span className="w-24 text-sm">{tc('language')}</span>
           <LanguageSwitcher />
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="w-24 text-sm">{tc('appearance')}</span>
-          <ThemeToggle />
         </div>
       </div>
     </div>
