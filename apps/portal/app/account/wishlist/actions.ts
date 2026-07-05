@@ -56,7 +56,10 @@ export async function toggleWishlist(listingId: string): Promise<{ ok: true; sav
 
 export async function removeWishlistItem(itemId: string): Promise<{ ok: true } | { ok: false }> {
   try {
-    await prisma.wishlistItem.delete({ where: { id: itemId } });
+    // Scope the delete to the caller's own list(s) — never trust a bare item id (no IDOR).
+    const { ownerKey } = await ownerForWrite();
+    const res = await prisma.wishlistItem.deleteMany({ where: { id: itemId, list: { ownerKey } } });
+    if (res.count === 0) return { ok: false };
     revalidatePath('/account/wishlist');
     return { ok: true };
   } catch (e) {

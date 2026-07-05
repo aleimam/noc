@@ -4,8 +4,14 @@ import { revalidatePath } from 'next/cache';
 import { auth, loadSmsConfig } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { sendSms } from '@noc/sms';
+import { rateLimit } from '../../../lib/rateLimit';
 
 type Result = { ok: true } | { ok: false; error: string };
+
+// Each offer/counter/decision SMSes the other party — cap per user to stop SMS-cost abuse
+// and harassment (20 negotiation actions/hour is far above any real negotiation).
+const NEGO_LIMIT = 20;
+const NEGO_WINDOW = 60 * 60 * 1000;
 
 // Best-effort SMS to the counterparty; never fails the action.
 async function notify(phone: string | null | undefined, text: string) {
@@ -23,7 +29,8 @@ export async function makeOffer(listingId: string, amount: number, note?: string
   const session = await auth();
   const user = session?.user;
   if (!user || user.type !== 'CUSTOMER') return { ok: false, error: 'unauthorized' };
-  if (!(amount > 0)) return { ok: false, error: 'invalid_amount' };
+  if (!rateLimit(`nego:${user.id}`, NEGO_LIMIT, NEGO_WINDOW)) return { ok: false, error: 'rate_limited' };
+  if (!(amount > 0) || amount > 1e11) return { ok: false, error: 'invalid_amount' };
   const listing = await prisma.listing.findUnique({
     where: { id: listingId },
     select: { id: true, sellerId: true, status: true, title: true, contactPhone: true, seller: { select: { phone: true } } },
@@ -54,6 +61,7 @@ export async function respondNegotiation(
   const session = await auth();
   const user = session?.user;
   if (!user) return { ok: false, error: 'unauthorized' };
+  if (!rateLimit(`nego:${user.id}`, NEGO_LIMIT, NEGO_WINDOW)) return { ok: false, error: 'rate_limited' };
   const neg = await prisma.negotiation.findUnique({
     where: { id: negotiationId },
     include: {
@@ -82,7 +90,7 @@ export async function respondNegotiation(
     await prisma.negotiation.update({ where: { id: neg.id }, data: { status: 'REJECTED' } });
     await notify(other, `العبور الجديد: تم رفض العرض على «${title}».`);
   } else if (action === 'counter') {
-    if (!(amount && amount > 0)) return { ok: false, error: 'invalid_amount' };
+    if (!(amount && amount > 0) || amount > 1e11) return { ok: false, error: 'invalid_amount' };
     await prisma.negotiationOffer.create({ data: { negotiationId: neg.id, byRole: isSeller ? 'SELLER' : 'BUYER', amount, note: note?.trim() || null } });
     await prisma.negotiation.update({ where: { id: neg.id }, data: { status: 'OPEN' } });
     await notify(other, `العبور الجديد: عرض مضاد جديد على «${title}». راجعه في حسابك.`);

@@ -1,8 +1,10 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { auth } from '@noc/auth';
 import { prisma, Prisma } from '@noc/db';
 import { isValidPhone } from '@noc/config';
+import { rateLimit, clientIp } from '../../lib/rateLimit';
 
 export type OfferInput = {
   mode: 'SHEET' | 'ALLOCATED';
@@ -35,6 +37,7 @@ const cap = (v: string | undefined, n: number) => {
 };
 
 export async function createLandOffer(input: OfferInput): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!rateLimit(`sell:${clientIp(await headers())}`, 8, 60 * 60 * 1000)) return { ok: false, error: 'rate_limited' };
   const session = await auth();
   const ownerName = cap(input.ownerName, 120);
   const phone1 = cap(input.phone1, 30);
