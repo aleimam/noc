@@ -80,6 +80,7 @@ model User {
   wishlists       WishlistList[]
   landOffers      LandOffer[]
   userLands       UserLand[]
+  negotiations    Negotiation[]      @relation("NegotiationBuyer")
 
   @@index([type])
 }
@@ -225,6 +226,45 @@ enum ListingStatus {
   REJECTED
   SOLD
   ARCHIVED
+}
+
+/// Peer price-negotiation between a buyer (customer) and a listing's seller (New Obour market).
+enum NegotiationStatus {
+  OPEN // still going (latest offer awaits a response)
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+model Negotiation {
+  id        String            @id @default(cuid())
+  listingId String
+  buyerId   String
+  status    NegotiationStatus @default(OPEN)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  listing Listing            @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer   User               @relation("NegotiationBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  offers  NegotiationOffer[]
+
+  @@unique([listingId, buyerId]) // one thread per buyer per listing
+  @@index([listingId])
+  @@index([buyerId])
+}
+
+/// One price offer in a negotiation thread, from the buyer or the seller.
+model NegotiationOffer {
+  id            String   @id @default(cuid())
+  negotiationId String
+  byRole        String // 'BUYER' | 'SELLER'
+  amount        Decimal  @db.Decimal(14, 2)
+  note          String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  negotiation Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+
+  @@index([negotiationId])
 }
 
 enum AttrType {
@@ -507,6 +547,7 @@ model Listing {
   values       ListingValue[]
   buildingConditions ListingBuildingCondition[]
   amenityPlacements  AmenityPlacement[]
+  negotiations       Negotiation[]
 
   @@index([status, propertyTypeId])
   @@index([sellerId, status])

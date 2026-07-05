@@ -24,6 +24,7 @@ export default async function CustomerHome() {
     { href: '/account/follows', title: t('myFollows'), desc: t('goFollows') },
     { href: '/account/lands', title: t('myLands'), desc: t('goLands') },
     { href: '/account/listings', title: tm('myOffers'), desc: t('goListings') },
+    { href: '/account/offers', title: tm('negoTitle'), desc: tm('negoManageDesc') },
     { href: '/account/profile', title: tp('title'), desc: t('goProfile') },
   ];
 

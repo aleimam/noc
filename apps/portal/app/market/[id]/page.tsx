@@ -4,7 +4,10 @@ import { prisma } from '@noc/db';
 import { PhotoGallery } from '@noc/ui';
 import { localizeUnit, currency } from '@noc/i18n';
 import { formatDetailValue, type DetailConfig } from '@noc/config';
+import { auth } from '@noc/auth';
 import { getStandardAreas } from '../../../lib/marketplace';
+import { getBuyerNegotiation } from '../../../lib/negotiation';
+import { NegotiationThread } from '../../_components/NegotiationThread';
 
 /** "YYYY-MM" → localized "Month Year". */
 function formatMonthYear(s: string, locale: string): string {
@@ -37,6 +40,12 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('mp');
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
+
+  // Peer negotiation: a logged-in customer (not the seller) can make/track price offers.
+  const session = await auth();
+  const viewerId = session?.user?.type === 'CUSTOMER' ? session.user.id : null;
+  const isSeller = !!viewerId && viewerId === listing.sellerId;
+  const negotiation = viewerId && !isSeller ? await getBuyerNegotiation(listing.id, viewerId) : null;
 
   // Main gallery = attachments with no attribute. Per-property files carry an attributeId.
   const [photos, propRows] = await Promise.all([
@@ -244,6 +253,23 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
             ))}
           </div>
         </details>
+      )}
+
+      {/* Peer price negotiation (New Obour market) */}
+      {viewerId && !isSeller && (
+        <section className="mb-24">
+          <NegotiationThread role="buyer" listingId={listing.id} negotiation={negotiation} locale={locale} />
+        </section>
+      )}
+      {isSeller && (
+        <div className="mb-24 rounded-2xl border border-ink-200 bg-white p-4 text-center text-sm">
+          <a href="/account/offers" className="font-bold text-accent">{t('negoIncoming')}</a>
+        </div>
+      )}
+      {!viewerId && (
+        <div className="mb-24 rounded-2xl border border-ink-200 bg-white p-4 text-center text-sm">
+          <a href={`/account/login?next=/market/${listing.id}`} className="font-bold text-accent">{t('negoLoginToOffer')}</a>
+        </div>
       )}
 
       <div className="fixed inset-x-0 bottom-0 mx-auto flex max-w-3xl gap-3 border-t border-graphite/15 bg-bg p-3">
