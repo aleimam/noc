@@ -34,6 +34,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_newobour', 'pixel_newobour', 'gsc_newobour'] } } });
   const s = Object.fromEntries(ids.map((r) => [r.key, r.value]));
   const themeCss = buildThemeCss(await getBrandTheme('newobour'));
+  const siteUrl = (process.env.PORTAL_URL || 'https://newobour.com').replace(/\/$/, '');
+  const jsonLd = [
+    { '@context': 'https://schema.org', '@type': 'Organization', name: 'العبور الجديد', alternateName: 'New Obour', url: siteUrl, logo: `${siteUrl}/brand/logo` },
+    { '@context': 'https://schema.org', '@type': 'WebSite', name: 'العبور الجديد', alternateName: 'New Obour', url: siteUrl, inLanguage: ['ar', 'en'], potentialAction: { '@type': 'SearchAction', target: `${siteUrl}/rationing?q={search_term_string}`, 'query-input': 'required name=search_term_string' } },
+  ];
 
   return (
     <html
@@ -46,6 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeScript />
         {themeCss && <style id="brand-theme" dangerouslySetInnerHTML={{ __html: themeCss }} />}
         {s.gsc_newobour && <meta name="google-site-verification" content={s.gsc_newobour} />}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
       <body className="min-h-screen font-sans antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>

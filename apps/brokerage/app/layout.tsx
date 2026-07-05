@@ -33,6 +33,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_alsawarey', 'pixel_alsawarey', 'gsc_alsawarey'] } } });
   const s = Object.fromEntries(ids.map((r) => [r.key, r.value]));
   const themeCss = buildThemeCss(await getBrandTheme('alsawarey'));
+  const siteUrl = (process.env.BROKERAGE_URL || 'https://alsawarey.com').replace(/\/$/, '');
+  const jsonLd = [
+    { '@context': 'https://schema.org', '@type': 'Organization', name: 'الصواري للاستثمار العقاري', alternateName: 'ALSWARY Real-estate Investment', url: siteUrl, logo: `${siteUrl}/brand/logo` },
+    { '@context': 'https://schema.org', '@type': 'WebSite', name: 'الصواري', alternateName: 'ALSWARY', url: siteUrl, inLanguage: ['ar', 'en'], potentialAction: { '@type': 'SearchAction', target: `${siteUrl}/listings?q={search_term_string}`, 'query-input': 'required name=search_term_string' } },
+  ];
 
   return (
     <html
@@ -45,6 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeScript />
         {themeCss && <style id="brand-theme" dangerouslySetInnerHTML={{ __html: themeCss }} />}
         {s.gsc_alsawarey && <meta name="google-site-verification" content={s.gsc_alsawarey} />}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
       <body className="min-h-screen font-sans antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
