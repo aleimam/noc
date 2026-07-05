@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { Prisma, prisma } from '@noc/db';
 import { StoreShell } from '../_components/StoreShell';
+import { RecentlyViewed } from '@noc/ui';
 import { StoreLandCard } from '../_components/StoreLandCard';
 import { listLands, ATTR } from '../../lib/listings';
 import { getAdminViewer, ownerBadges } from '../../lib/adminView';
@@ -180,6 +181,8 @@ export default async function Catalogue({
             {page < totalPages && <Link href={withParam('page', String(page + 1))} className={chip}>{L('التالي', 'Next')}</Link>}
           </div>
         )}
+
+        <div className="mt-10"><RecentlyViewed title={L('شوهدت مؤخرًا', 'Recently viewed')} /></div>
       </div>
     </StoreShell>
   );

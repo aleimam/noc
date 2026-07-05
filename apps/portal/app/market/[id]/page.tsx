@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
-import { PhotoGallery } from '@noc/ui';
+import { PhotoGallery, TrackView, ListingCard } from '@noc/ui';
 import { localizeUnit, currency } from '@noc/i18n';
 import { formatDetailValue, type DetailConfig } from '@noc/config';
 import { auth } from '@noc/auth';
@@ -74,6 +74,25 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     : [];
   const attrById = new Map(attrs.map((a) => [a.id, a]));
   const standardAreas = await getStandardAreas();
+
+  // Recommendations: other published listings of the same type ("like what you're viewing").
+  const similar = listing.typeOptionId
+    ? await prisma.listing.findMany({
+        where: { status: 'PUBLISHED', typeOptionId: listing.typeOptionId, id: { not: listing.id } },
+        orderBy: { publishedAt: 'desc' },
+        take: 6,
+        select: { id: true, title: true, price: true, typeOption: { select: { nameAr: true, nameEn: true } } },
+      })
+    : [];
+  const simCovers = new Map<string, string>();
+  if (similar.length) {
+    const rows = await prisma.attachment.findMany({
+      where: { ownerType: 'Listing', ownerId: { in: similar.map((s) => s.id) }, attributeId: null },
+      orderBy: { createdAt: 'asc' },
+      select: { ownerId: true, path: true },
+    });
+    for (const r of rows) if (r.ownerId && !simCovers.has(r.ownerId)) simCovers.set(r.ownerId, r.path);
+  }
 
   // Resolve DISTRICT / NEIGHBORHOOD values (stored as geo ids) to localized names.
   const geoIds = listing.values
@@ -164,6 +183,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6 pb-24">
+      <TrackView item={{ id: listing.id, title: listing.title, cover: photos[0]?.path ?? null, price: listing.price != null ? String(listing.price) : null, href: `/market/${listing.id}` }} />
       <a href="/market" className="text-sm text-accent">← {t('title')}</a>
       <PhotoGallery photos={photos.map((p) => p.path)} />
 
@@ -253,6 +273,17 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
             ))}
           </div>
         </details>
+      )}
+
+      {similar.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-bold text-navy-800 dark:text-soft">{t('similarListings')}</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {similar.map((s) => (
+              <ListingCard key={s.id} href={`/market/${s.id}`} cover={simCovers.get(s.id) ?? null} title={s.title} subtitle={L(s.typeOption?.nameAr ?? '', s.typeOption?.nameEn ?? '')} price={s.price != null ? String(s.price) : null} currency={currency(locale)} />
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Peer price negotiation (New Obour market) */}

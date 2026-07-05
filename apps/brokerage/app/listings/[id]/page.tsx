@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
-import { PhotoGallery } from '@noc/ui';
+import { PhotoGallery, TrackView } from '@noc/ui';
 import { StoreShell } from '../../_components/StoreShell';
 import { StoreLandCard } from '../../_components/StoreLandCard';
 import { getLandDetail, similarLands } from '../../../lib/listings';
@@ -77,6 +77,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     <StoreShell>
       {/* Escape "<" so seller-authored fields (name/description) can't break out of the script tag. */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
+      <TrackView item={{ id: land.id, title: land.title, cover: land.gallery[0] ?? null, price: land.price != null ? String(land.price) : null, href: `/listings/${land.id}` }} />
       <div className="mx-auto max-w-5xl px-4 pt-6 pb-24 lg:pb-6">
         <Link href="/listings" className="text-sm text-navy-600">‹ {L('كل الأراضي', 'All lands')}</Link>
 

@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma, Prisma } from '@noc/db';
-import { ListingCard } from '@noc/ui';
+import { ListingCard, RecentlyViewed } from '@noc/ui';
 import { SiteShell } from '../_components/SiteShell';
 import { currency } from '@noc/i18n';
 import { MarketFilters } from './MarketFilters';
@@ -99,6 +99,7 @@ export default async function MarketPage({
           />
         ))}
       </div>
+      <div className="mt-8"><RecentlyViewed title={t('recentlyViewed')} /></div>
       </div>
     </SiteShell>
   );

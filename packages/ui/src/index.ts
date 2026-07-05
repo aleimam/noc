@@ -3,6 +3,7 @@ export { compressImage } from './lib/compress';
 export { track, getConsent, setConsent } from './lib/track';
 export { Analytics, ConsentBanner } from './components/Analytics';
 export { LanguageSwitcher } from './components/LanguageSwitcher';
+export { TrackView, RecentlyViewed, type ViewedItem } from './components/RecentlyViewed';
 export { ThemeToggle } from './components/ThemeToggle';
 export { ThemeScript } from './components/ThemeScript';
 export { EnterToSubmit } from './components/EnterToSubmit';
