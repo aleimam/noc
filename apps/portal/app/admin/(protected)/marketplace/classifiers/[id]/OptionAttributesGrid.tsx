@@ -34,13 +34,11 @@ export function OptionAttributesGrid({
     });
   }
   function toggle(id: string) {
-    setChecked((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      persist(n);
-      return n;
-    });
+    const next = new Set(checked);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setChecked(next);
+    persist(next);
   }
 
   const shown = useMemo(() => {

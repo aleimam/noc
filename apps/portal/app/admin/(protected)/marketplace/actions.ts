@@ -256,7 +256,10 @@ export async function setOptionAttributes(optionId: string, attributeIds: string
     const toAdd = attributeIds.filter((a) => !have.has(a));
     if (toDelete.length) await prisma.attributeClassifier.deleteMany({ where: { id: { in: toDelete } } });
     if (toAdd.length) await prisma.attributeClassifier.createMany({ data: toAdd.map((attributeId) => ({ optionId, attributeId })), skipDuplicates: true });
-    revalidate();
+    // No revalidate() here: this is an optimistic per-toggle auto-save. A layout-wide
+    // revalidatePath on every checkbox tick refreshes the whole marketplace admin subtree,
+    // which interrupts the next click (you could only tick one box per reload). Callers that
+    // need fresh data (CategoryAttributesManager) call router.refresh() themselves after Save.
     return { ok: true };
   } catch (e) {
     return fail(e);
