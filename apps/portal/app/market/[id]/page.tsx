@@ -7,7 +7,9 @@ import { formatDetailValue, type DetailConfig } from '@noc/config';
 import { auth } from '@noc/auth';
 import { getStandardAreas } from '../../../lib/marketplace';
 import { getBuyerNegotiation } from '../../../lib/negotiation';
+import { wishedSet } from '../../../lib/wishlist';
 import { NegotiationThread } from '../../_components/NegotiationThread';
+import { MarketCardActions } from '../../_components/MarketCardActions';
 
 /** "YYYY-MM" → localized "Month Year". */
 function formatMonthYear(s: string, locale: string): string {
@@ -46,6 +48,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const viewerId = session?.user?.type === 'CUSTOMER' ? session.user.id : null;
   const isSeller = !!viewerId && viewerId === listing.sellerId;
   const negotiation = viewerId && !isSeller ? await getBuyerNegotiation(listing.id, viewerId) : null;
+  const saved = (await wishedSet([listing.id])).has(listing.id);
 
   // Main gallery = attachments with no attribute. Per-property files carry an attributeId.
   const [photos, propRows] = await Promise.all([
@@ -184,6 +187,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6 pb-24">
       <TrackView item={{ id: listing.id, title: listing.title, cover: photos[0]?.path ?? null, price: listing.price != null ? String(listing.price) : null, href: `/market/${listing.id}` }} />
+      <div className="flex justify-end"><MarketCardActions listingId={listing.id} initialSaved={saved} compareLabel={t('compare')} /></div>
       <a href="/market" className="text-sm text-accent">← {t('title')}</a>
       <PhotoGallery photos={photos.map((p) => p.path)} />
 

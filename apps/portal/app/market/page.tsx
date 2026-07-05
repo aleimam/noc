@@ -4,6 +4,9 @@ import { ListingCard, RecentlyViewed } from '@noc/ui';
 import { SiteShell } from '../_components/SiteShell';
 import { currency } from '@noc/i18n';
 import { MarketFilters } from './MarketFilters';
+import { MarketCardActions } from '../_components/MarketCardActions';
+import { CompareBar } from '../_components/CompareBar';
+import { wishedSet } from '../../lib/wishlist';
 
 export default async function MarketPage({
   searchParams,
@@ -69,6 +72,7 @@ export default async function MarketPage({
     : [];
   const cover = new Map<string, string>();
   for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
+  const wished = await wishedSet(ids);
 
   return (
     <SiteShell active="market">
@@ -96,11 +100,13 @@ export default async function MarketPage({
             subtitle={L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
             price={l.price != null ? String(l.price) : null}
             currency={currency(locale)}
+            badge={<MarketCardActions listingId={l.id} initialSaved={wished.has(l.id)} compareLabel={t('compare')} />}
           />
         ))}
       </div>
       <div className="mt-8"><RecentlyViewed title={t('recentlyViewed')} /></div>
       </div>
+      <CompareBar labels={{ compare: t('compare'), clear: t('clear'), items: t('compareItems') }} />
     </SiteShell>
   );
 }
