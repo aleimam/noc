@@ -71,6 +71,14 @@ export function AttributeForm({
   const [pending, start] = useTransition();
   const [f, setF] = useState<AttrData>(initial);
   const [error, setError] = useState('');
+  // "Duplicate" mode: editing an existing attribute but about to save it as a NEW one.
+  // The key must become editable + unique, and Save creates instead of updating.
+  const [dup, setDup] = useState(false);
+  const errText = (e: string) =>
+    e === 'duplicate_key' || e === 'keyTaken' ? t('keyTaken')
+      : e === 'needNewKey' ? t('needNewKey')
+        : e === 'in_use' ? t('inUse')
+          : e;
   const set = (patch: Partial<AttrData>) => setF((x) => ({ ...x, ...patch }));
   const setCfg = (patch: Partial<AttrConfig>) => setF((x) => ({ ...x, config: { ...x.config, ...patch } }));
   const hasOptions = f.type === 'SELECT' || f.type === 'MULTI_SELECT';
@@ -92,6 +100,31 @@ export function AttributeForm({
     });
   }
 
+  // Enter duplicate mode: unlock the key, suggest a fresh one, and let the admin tweak
+  // any fields before saving a brand-new attribute (the original stays untouched).
+  function startDuplicate() {
+    setError('');
+    setDup(true);
+    set({ key: `${initial.key}_copy`, isActive: true });
+  }
+  function cancelDuplicate() {
+    setError('');
+    setDup(false);
+    set({ key: initial.key });
+  }
+  // Save the current (possibly edited) form as a NEW attribute — id omitted forces create.
+  function saveAsNew() {
+    setError('');
+    const key = f.key.trim();
+    if (!key || !f.sectionId || !f.labelAr.trim() || !f.labelEn.trim()) { setError('failed'); return; }
+    if (key === initial.key) { setError('needNewKey'); return; }
+    start(async () => {
+      const r = await action({ ...f, id: undefined });
+      if (r.ok) router.push('/admin/marketplace/attributes');
+      else setError(r.error);
+    });
+  }
+
   // Hard-delete this attribute. Cascades remove its option-list links, category
   // applicability, and any saved listing values, so any attribute can be removed.
   function del() {
@@ -101,18 +134,19 @@ export function AttributeForm({
     start(async () => {
       const r = await remove(initial.id!);
       if (r.ok) router.push('/admin/marketplace/attributes');
-      else setError(r.error === 'in_use' ? t('inUse') : r.error);
+      else setError(r.error);
     });
   }
 
   return (
     <div className="max-w-3xl space-y-5">
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600">{errText(error)}</p>}
+      {dup && <p className="rounded-md bg-accent/10 px-3 py-2 text-sm text-primary">{t('duplicateBanner')}</p>}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm">
           {t('key')}
-          <input dir="ltr" value={f.key} disabled={!!initial.id} onChange={(e) => set({ key: e.target.value })} className={inp + (initial.id ? ' opacity-60' : '')} />
+          <input dir="ltr" value={f.key} disabled={!!initial.id && !dup} onChange={(e) => set({ key: e.target.value })} className={inp + (initial.id && !dup ? ' opacity-60' : '')} />
         </label>
         <label className="text-sm">
           {t('section')}
@@ -209,15 +243,27 @@ export function AttributeForm({
         })}
       </div>
 
-      <div className="flex items-center gap-3">
-        <button disabled={pending} onClick={submit} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{t('save')}</button>
-        <a href="/admin/marketplace/attributes" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">{t('cancel')}</a>
-        {initial.id && remove && (
-          <button type="button" disabled={pending} onClick={del} className="ms-auto rounded-md border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50">
-            {t('delete')}
-          </button>
-        )}
-      </div>
+      {dup ? (
+        <div className="flex items-center gap-3">
+          <button type="button" disabled={pending} onClick={saveAsNew} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{t('saveNewAttribute')}</button>
+          <button type="button" disabled={pending} onClick={cancelDuplicate} className="rounded-md border border-graphite/25 px-4 py-2 text-sm">{t('cancelCopy')}</button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <button disabled={pending} onClick={submit} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{t('save')}</button>
+          <a href="/admin/marketplace/attributes" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">{t('cancel')}</a>
+          {initial.id && (
+            <button type="button" disabled={pending} onClick={startDuplicate} className="rounded-md border border-accent/40 px-4 py-2 text-sm text-accent hover:bg-accent/5 disabled:opacity-50">
+              {t('saveAsNew')}
+            </button>
+          )}
+          {initial.id && remove && (
+            <button type="button" disabled={pending} onClick={del} className="ms-auto rounded-md border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50">
+              {t('delete')}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
