@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
@@ -8,6 +9,7 @@ import { getLandDetail, similarLands } from '../../../lib/listings';
 import { getAdminViewer, ownerDetailFor } from '../../../lib/adminView';
 import { wishlistListingIds } from '../../../lib/wishlist';
 import { getStorefront } from '../../../lib/storefront';
+import { pageMeta, breadcrumbLd, ldJson } from '../../../lib/seo';
 import { BuyButton } from './BuyButton';
 import { WishlistButton } from '../../_components/WishlistButton';
 
@@ -15,17 +17,19 @@ export const dynamic = 'force-dynamic';
 const fmt = (n: number) => n.toLocaleString('en');
 const BASE = (process.env.BROKERAGE_URL || 'https://alsawarey.com').replace(/\/$/, '');
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const land = await getLandDetail(id, 'ar');
-  if (!land) return { title: 'الصواري' };
-  const desc = [land.typeAr, ...land.specs.slice(0, 4).map((s) => `${s.label}: ${s.value}`)].filter(Boolean).join(' · ');
-  const img = land.gallery[0] ? `${BASE}${land.gallery[0]}` : undefined;
-  return {
-    title: `${land.title} — الصواري`,
-    description: desc.slice(0, 160),
-    openGraph: { title: land.title, description: desc.slice(0, 160), images: img ? [img] : [], type: 'website' },
-  };
+  const locale = (await getLocale()) as 'ar' | 'en';
+  const land = await getLandDetail(id, locale);
+  if (!land) return { title: locale === 'en' ? 'ALSWARY' : 'الصواري' };
+  const desc = [land.typeAr, ...land.specs.slice(0, 4).map((s) => `${s.label}: ${s.value}`)].filter(Boolean).join(' · ').slice(0, 160);
+  return pageMeta({
+    title: `${land.title} — ${locale === 'en' ? 'ALSWARY' : 'الصواري'}`,
+    description: desc,
+    path: `/listings/${id}`,
+    images: land.gallery.slice(0, 1),
+    locale,
+  });
 }
 
 export default async function LandDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -72,11 +76,16 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
       url: `${BASE}/listings/${land.id}`,
     },
   };
+  const crumbsLd = breadcrumbLd([
+    { name: L('الرئيسية', 'Home'), path: '/' },
+    { name: L('كل الأراضي', 'All lands'), path: '/listings' },
+    { name: land.title, path: `/listings/${land.id}` },
+  ]);
 
   return (
     <StoreShell>
       {/* Escape "<" so seller-authored fields (name/description) can't break out of the script tag. */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([jsonLd, crumbsLd]) }} />
       <TrackView item={{ id: land.id, title: land.title, cover: land.gallery[0] ?? null, price: land.price != null ? String(land.price) : null, href: `/listings/${land.id}` }} />
       <div className="mx-auto max-w-5xl px-4 pt-6 pb-24 lg:pb-6">
         <Link href="/listings" className="text-sm text-navy-600">‹ {L('كل الأراضي', 'All lands')}</Link>

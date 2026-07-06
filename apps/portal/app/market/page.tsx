@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma, Prisma } from '@noc/db';
 import { ListingCard, RecentlyViewed } from '@noc/ui';
@@ -7,6 +8,17 @@ import { MarketFilters } from './MarketFilters';
 import { MarketCardActions } from '../_components/MarketCardActions';
 import { CompareBar } from '../_components/CompareBar';
 import { wishedSet } from '../../lib/wishlist';
+import { pageMeta } from '../../lib/seo';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = (await getLocale()) as 'ar' | 'en';
+  return pageMeta({
+    title: locale === 'en' ? 'Marketplace — New Obour' : 'سوق العبور — العبور الجديد',
+    description: locale === 'en' ? 'Lands and properties for sale in New Obour City — browse, filter and contact owners directly.' : 'أراضٍ وعقارات للبيع في مدينة العبور الجديدة — تصفّح وفلتر وتواصل مع الملاك مباشرة.',
+    path: '/market',
+    locale,
+  });
+}
 
 export default async function MarketPage({
   searchParams,

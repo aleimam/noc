@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
@@ -9,8 +10,25 @@ import { areaListings } from '../../../../lib/areaListings';
 import { getSecurityGates } from '../../../../lib/security';
 import { amenitiesForDistrict } from '../../../../lib/amenities';
 import { SiteShell } from '../../../_components/SiteShell';
+import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const locale = (await getLocale()) as 'ar' | 'en';
+  const d = await prisma.district.findUnique({ where: { id }, select: { nameAr: true, nameEn: true, isActive: true } });
+  if (!d || !d.isActive) return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديد' };
+  const name = locale === 'ar' ? d.nameAr : d.nameEn;
+  return pageMeta({
+    title: `${name} — ${locale === 'en' ? 'New Obour districts' : 'مناطق العبور الجديدة'}`,
+    description: locale === 'en'
+      ? `${name} in New Obour City: neighborhoods, advantages, public realm, maps and lands for sale.`
+      : `${name} بمدينة العبور الجديدة: المجاورات والمميزات والمرافق والخرائط والأراضي المعروضة.`,
+    path: `/explore/district/${id}`,
+    locale,
+  });
+}
 
 export default async function DistrictPublic({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -56,8 +74,15 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
   const [gates, session] = await Promise.all([getSecurityGates(), auth()]);
   const showMaps = !gates.loginWall || !!session?.user;
 
+  const crumbsLd = breadcrumbLd([
+    { name: L('الرئيسية', 'Home'), path: '/' },
+    { name: t('exploreTitle'), path: '/explore' },
+    { name: L(d.nameAr, d.nameEn), path: `/explore/district/${d.id}` },
+  ]);
+
   return (
     <SiteShell active="explore">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(crumbsLd) }} />
       <div className="mx-auto max-w-3xl space-y-6 p-6">
       <a href="/explore" className="text-sm text-accent">← {t('exploreTitle')}</a>
       <h1 className="text-2xl font-bold text-primary">{L(d.nameAr, d.nameEn)}</h1>

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { Prisma, prisma } from '@noc/db';
@@ -7,8 +8,19 @@ import { StoreLandCard } from '../_components/StoreLandCard';
 import { listLands, ATTR } from '../../lib/listings';
 import { getAdminViewer, ownerBadges } from '../../lib/adminView';
 import { wishlistListingIds } from '../../lib/wishlist';
+import { pageMeta } from '../../lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = (await getLocale()) as 'ar' | 'en';
+  return pageMeta({
+    title: locale === 'en' ? 'Lands for sale — ALSWARY' : 'أراضٍ للبيع — الصواري',
+    description: locale === 'en' ? 'Selected lands for sale in New Obour City and beyond — filter by area, price, district and features.' : 'أراضٍ مختارة للبيع في مدينة العبور الجديدة وما حولها — فلترة بالمساحة والسعر والمنطقة والمميزات.',
+    path: '/listings',
+    locale,
+  });
+}
 
 const PAGE = 24;
 const str = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '').trim();

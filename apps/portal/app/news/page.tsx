@@ -1,9 +1,21 @@
+import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { Badge } from '@noc/ui';
 import { SiteShell } from '../_components/SiteShell';
+import { pageMeta } from '../../lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = (await getLocale()) as 'ar' | 'en';
+  return pageMeta({
+    title: locale === 'en' ? 'News — New Obour' : 'الأخبار — العبور الجديد',
+    description: locale === 'en' ? 'Latest news and updates about New Obour City services and development.' : 'آخر الأخبار والمستجدات عن خدمات وتطوير مدينة العبور الجديدة.',
+    path: '/news',
+    locale,
+  });
+}
 
 export default async function NewsPage() {
   const locale = (await getLocale()) as 'ar' | 'en';

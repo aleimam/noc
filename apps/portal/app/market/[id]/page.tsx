@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
@@ -6,6 +7,35 @@ import { localizeUnit, currency } from '@noc/i18n';
 import { formatDetailValue, type DetailConfig } from '@noc/config';
 import { auth } from '@noc/auth';
 import { getStandardAreas } from '../../../lib/marketplace';
+import { pageMeta, breadcrumbLd, ldJson, abs } from '../../../lib/seo';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const locale = (await getLocale()) as 'ar' | 'en';
+  const l = await prisma.listing.findUnique({
+    where: { id },
+    select: { title: true, status: true, price: true, area: true, description: true, typeOption: { select: { nameAr: true, nameEn: true } } },
+  });
+  if (!l || l.status !== 'PUBLISHED') return { title: locale === 'en' ? 'Listing — New Obour' : 'إعلان — العبور الجديد' };
+  const cover = await prisma.attachment.findFirst({
+    where: { ownerType: 'Listing', ownerId: id, attributeId: null },
+    orderBy: { createdAt: 'asc' },
+    select: { path: true },
+  });
+  const parts = [
+    l.typeOption ? (locale === 'ar' ? l.typeOption.nameAr : l.typeOption.nameEn) : '',
+    l.area != null ? `${String(l.area)} ${locale === 'ar' ? 'م²' : 'm²'}` : '',
+    l.price != null ? `${String(l.price)} ${locale === 'ar' ? 'ج.م' : 'EGP'}` : '',
+  ].filter(Boolean);
+  const desc = ((l.description ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || parts.join(' · ')).slice(0, 160);
+  return pageMeta({
+    title: `${l.title} — ${locale === 'en' ? 'New Obour' : 'العبور الجديد'}`,
+    description: desc,
+    path: `/market/${id}`,
+    images: cover ? [cover.path] : [],
+    locale,
+  });
+}
 import { getBuyerNegotiation } from '../../../lib/negotiation';
 import { wishedSet } from '../../../lib/wishlist';
 import { NegotiationThread } from '../../_components/NegotiationThread';
@@ -184,8 +214,31 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const perLabel =
     listing.priceUnit === 'UNIT' ? (locale === 'ar' ? 'للوحدة' : 'per unit') : listing.priceUnit === 'SQM' ? (locale === 'ar' ? 'للمتر' : 'per m²') : '';
 
+  // Structured data: a land listing (Product/RealEstateListing + Offer) and its breadcrumb trail.
+  const canonicalPath = `/market/${listing.id}`;
+  const plainDesc = (listing.description ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const listingLd = {
+    '@context': 'https://schema.org',
+    '@type': ['Product', 'RealEstateListing'],
+    name: listing.title,
+    image: photos.map((p) => abs(p.path)),
+    ...(plainDesc ? { description: plainDesc.slice(0, 500) } : {}),
+    category: 'Real Estate Land',
+    url: abs(canonicalPath),
+    ...(listing.publishedAt ? { datePosted: listing.publishedAt.toISOString() } : {}),
+    ...(listing.price != null
+      ? { offers: { '@type': 'Offer', priceCurrency: 'EGP', price: Number(listing.price), availability: 'https://schema.org/InStock', url: abs(canonicalPath) } }
+      : {}),
+  };
+  const crumbsLd = breadcrumbLd([
+    { name: L('الرئيسية', 'Home'), path: '/' },
+    { name: t('title'), path: '/market' },
+    { name: listing.title, path: canonicalPath },
+  ]);
+
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6 pb-24">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([listingLd, crumbsLd]) }} />
       <TrackView item={{ id: listing.id, title: listing.title, cover: photos[0]?.path ?? null, price: listing.price != null ? String(listing.price) : null, href: `/market/${listing.id}` }} />
       <div className="flex justify-end"><MarketCardActions listingId={listing.id} initialSaved={saved} compareLabel={t('compare')} /></div>
       <a href="/market" className="text-sm text-accent">← {t('title')}</a>

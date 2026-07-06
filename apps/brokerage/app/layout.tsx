@@ -30,12 +30,23 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as Locale;
   const messages = await getMessages();
-  const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_alsawarey', 'pixel_alsawarey', 'gsc_alsawarey'] } } });
+  const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_alsawarey', 'pixel_alsawarey', 'gsc_alsawarey', 'alswarey_phone'] } } });
   const s = Object.fromEntries(ids.map((r) => [r.key, r.value]));
   const themeCss = buildThemeCss(await getBrandTheme('alsawarey'));
   const siteUrl = (process.env.BROKERAGE_URL || 'https://alsawarey.com').replace(/\/$/, '');
   const jsonLd = [
-    { '@context': 'https://schema.org', '@type': 'Organization', name: 'الصواري للاستثمار العقاري', alternateName: 'ALSWARY Real-estate Investment', url: siteUrl, logo: `${siteUrl}/brand/logo` },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'RealEstateAgent',
+      name: 'الصواري للاستثمار العقاري',
+      alternateName: 'ALSWARY Real-estate Investment',
+      url: siteUrl,
+      logo: `${siteUrl}/brand/logo`,
+      image: `${siteUrl}/brand/logo`,
+      ...(s.alswarey_phone ? { telephone: s.alswarey_phone } : {}),
+      areaServed: [{ '@type': 'City', name: 'New Obour City' }, { '@type': 'Country', name: 'Egypt' }],
+      address: { '@type': 'PostalAddress', addressLocality: 'New Obour City', addressRegion: 'Qalyubia', addressCountry: 'EG' },
+    },
     { '@context': 'https://schema.org', '@type': 'WebSite', name: 'الصواري', alternateName: 'ALSWARY', url: siteUrl, inLanguage: ['ar', 'en'], potentialAction: { '@type': 'SearchAction', target: `${siteUrl}/listings?q={search_term_string}`, 'query-input': 'required name=search_term_string' } },
   ];
 

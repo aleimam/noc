@@ -1,9 +1,21 @@
+import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { SiteShell } from '../_components/SiteShell';
 import { localizeUnit } from '@noc/i18n';
+import { pageMeta } from '../../lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = (await getLocale()) as 'ar' | 'en';
+  return pageMeta({
+    title: locale === 'en' ? 'Land price index — New Obour' : 'مؤشر أسعار الأراضي — العبور الجديد',
+    description: locale === 'en' ? 'Indicative land price ranges and trends across New Obour City districts.' : 'نطاقات ومؤشرات أسعار الأراضي التقريبية عبر مناطق مدينة العبور الجديدة.',
+    path: '/price-index',
+    locale,
+  });
+}
 
 function Metric({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (

@@ -1,9 +1,21 @@
+import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { SiteShell } from '../_components/SiteShell';
 import { localizeUnit } from '@noc/i18n';
+import { pageMeta } from '../../lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = (await getLocale()) as 'ar' | 'en';
+  return pageMeta({
+    title: locale === 'en' ? 'Explore districts & neighborhoods — New Obour' : 'استكشف المناطق والمجاورات — العبور الجديد',
+    description: locale === 'en' ? 'Browse New Obour City districts and neighborhoods: plot areas, advantages, public realm, maps and lands for sale.' : 'تصفّح مناطق ومجاورات مدينة العبور الجديدة: مساحات القطع والمميزات والمرافق والخرائط والأراضي المعروضة.',
+    path: '/explore',
+    locale,
+  });
+}
 
 export default async function ExplorePage() {
   const locale = (await getLocale()) as 'ar' | 'en';
