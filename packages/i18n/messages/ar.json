@@ -55,6 +55,16 @@
     "back": "رجوع"
   },
   "admin": {
+    "searchPlaceholder": "بحث في الصفحات والتفاصيل والتصنيفات…",
+    "searchNoResults": "لا توجد نتائج",
+    "grp_page": "الصفحات",
+    "grp_attribute": "التفاصيل",
+    "grp_classifier": "التصنيفات",
+    "grp_option": "خيارات التصنيف",
+    "grp_section": "مجموعات التفاصيل",
+    "grp_optionList": "قوائم الاختيارات",
+    "grp_amenity": "المرافق",
+    "grp_condition": "اشتراطات البناء",
     "dashboard": "الرئيسية",
     "sections": "الأقسام",
     "marketplace": "السوق العقاري",

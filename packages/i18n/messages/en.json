@@ -55,6 +55,16 @@
     "back": "Back"
   },
   "admin": {
+    "searchPlaceholder": "Search pages, details, classifiers…",
+    "searchNoResults": "No results",
+    "grp_page": "Pages",
+    "grp_attribute": "Details",
+    "grp_classifier": "Classifiers",
+    "grp_option": "Classifier options",
+    "grp_section": "Detail groups",
+    "grp_optionList": "Option lists",
+    "grp_amenity": "Amenities",
+    "grp_condition": "Building conditions",
     "dashboard": "Dashboard",
     "sections": "Sections",
     "marketplace": "Marketplace",

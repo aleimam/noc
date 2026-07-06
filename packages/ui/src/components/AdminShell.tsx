@@ -23,6 +23,7 @@ export function AdminShell({
   backToSiteLabel,
   storeLinks,
   signOut,
+  search,
   children,
 }: {
   brand: string;
@@ -31,6 +32,8 @@ export function AdminShell({
   backToSiteLabel: string;
   storeLinks?: { label: string; href: string }[];
   signOut?: ReactNode;
+  /** Optional global-search box rendered in the topbar. */
+  search?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -59,7 +62,10 @@ export function AdminShell({
 
       <div className="flex min-h-screen flex-col">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-graphite/15 px-4 py-3">
-          <span className="text-sm opacity-80">{userLabel}</span>
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            {search && <div className="min-w-0 flex-1">{search}</div>}
+            <span className="hidden shrink-0 text-sm opacity-80 lg:inline">{userLabel}</span>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <LanguageSwitcher />
             {(storeLinks ?? [{ label: backToSiteLabel, href: '/' }]).map((s) => (

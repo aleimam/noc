@@ -4,6 +4,8 @@ import { auth, hasPermission } from '@noc/auth';
 import { AdminShell, Toaster, type AdminNavGroup } from '@noc/ui';
 import { SignOutButton } from '../../_components/SignOutButton';
 import { AdminLightGuard } from '../../_components/AdminLightGuard';
+import { AdminSearch } from '../../_components/AdminSearch';
+import { adminSearch } from './search-actions';
 
 export default async function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -90,11 +92,15 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
     .map((g) => ({ title: g.title, items: g.items.filter((i) => !i.section || hasPermission(user.perms, i.section, 'VIEW')) }))
     .filter((g) => g.items.length > 0);
 
+  // Flattened, permission-filtered pages feed the global search's "modules" group.
+  const searchPages = nav.flatMap((g) => g.items.map((i) => ({ label: i.label, href: i.href })));
+
   return (
     <AdminShell
       brand={tc('portalName')}
       userLabel={user.email ?? user.id}
       nav={nav}
+      search={<AdminSearch pages={searchPages} action={adminSearch} />}
       backToSiteLabel={tc('backToSite')}
       storeLinks={[
         { label: 'العبور الجديد', href: process.env.PORTAL_URL || '/' },
