@@ -57,12 +57,14 @@ export function AttributeForm({
   classifiers,
   lists,
   action,
+  remove,
 }: {
   initial: AttrData;
   sections: { id: string; nameAr: string; nameEn: string }[];
   classifiers: ClassifierData[];
   lists: { id: string; name: string }[];
   action: (i: AttrData) => Promise<Result>;
+  remove?: (id: string) => Promise<Result>;
 }) {
   const t = useTranslations('mp');
   const router = useRouter();
@@ -87,6 +89,19 @@ export function AttributeForm({
       const r = await action(f);
       if (r.ok) router.push('/admin/marketplace/attributes');
       else setError(r.error);
+    });
+  }
+
+  // Hard-delete this attribute. Cascades remove its option-list links, category
+  // applicability, and any saved listing values, so any attribute can be removed.
+  function del() {
+    if (!initial.id || !remove) return;
+    if (!window.confirm(t('confirmDeleteAttr'))) return;
+    setError('');
+    start(async () => {
+      const r = await remove(initial.id!);
+      if (r.ok) router.push('/admin/marketplace/attributes');
+      else setError(r.error === 'in_use' ? t('inUse') : r.error);
     });
   }
 
@@ -194,9 +209,14 @@ export function AttributeForm({
         })}
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex items-center gap-3">
         <button disabled={pending} onClick={submit} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{t('save')}</button>
         <a href="/admin/marketplace/attributes" className="rounded-md border border-graphite/25 px-4 py-2 text-sm">{t('cancel')}</a>
+        {initial.id && remove && (
+          <button type="button" disabled={pending} onClick={del} className="ms-auto rounded-md border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50">
+            {t('delete')}
+          </button>
+        )}
       </div>
     </div>
   );

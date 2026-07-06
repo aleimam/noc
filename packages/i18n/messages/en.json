@@ -393,6 +393,7 @@
     "allowedOnAlsawarey": "Allowed on ALSWARY",
     "onAlsawareyShort": "ALSWARY",
     "inUse": "In use — can't delete",
+    "confirmDeleteAttr": "Delete this attribute permanently? It will be removed from every category and any saved listing values. This cannot be undone.",
     "publishOnAlsawarey": "Publish this listing on ALSWARY",
     "alsawareyLimited": "Will show on ALSWARY and New Obour — Types/Purposes limited to what ALSWARY allows.",
     "newObourOnly": "Will show on New Obour only.",

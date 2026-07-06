@@ -269,7 +269,18 @@ export async function setOptionAttributes(optionId: string, attributeIds: string
 export async function deleteAttribute(id: string): Promise<Result> {
   await requirePermission('marketplace', 'DELETE');
   try {
-    await prisma.attribute.delete({ where: { id } });
+    // Clear every dependent row first so ANY attribute can be removed — even one
+    // linked to categories or with saved listing values. Schema cascades would
+    // handle this too, but doing it explicitly in one transaction makes deletion
+    // independent of DB-level FK settings. (Attachment.attributeId is a loose tag
+    // with no FK, so it neither blocks nor needs cleanup here.)
+    await prisma.$transaction([
+      prisma.listingValue.deleteMany({ where: { attributeId: id } }),
+      prisma.attributeClassifier.deleteMany({ where: { attributeId: id } }),
+      prisma.propertyTypeAttribute.deleteMany({ where: { attributeId: id } }),
+      prisma.attributeOption.deleteMany({ where: { attributeId: id } }),
+      prisma.attribute.delete({ where: { id } }),
+    ]);
     revalidate();
     return { ok: true };
   } catch (e) {

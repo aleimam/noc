@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { AttributeForm, type AttrData } from '../AttributeForm';
-import { upsertAttribute } from '../../actions';
+import { upsertAttribute, deleteAttribute } from '../../actions';
 
 export default async function EditAttribute({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission('marketplace', 'VIEW');
@@ -54,6 +54,7 @@ export default async function EditAttribute({ params }: { params: Promise<{ id: 
         classifiers={classifiers.map((c) => ({ id: c.id, nameAr: c.nameAr, nameEn: c.nameEn, options: c.options }))}
         lists={lists}
         action={upsertAttribute}
+        remove={deleteAttribute}
       />
     </div>
   );
