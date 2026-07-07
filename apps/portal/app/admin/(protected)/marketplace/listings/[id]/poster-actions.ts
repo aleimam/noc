@@ -3,13 +3,17 @@
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { renderPoster, savePng, type PosterData, type PosterBrand, type PosterGroup } from '../../../../../../lib/poster/render';
+import {
+  renderPoster, renderCard, renderAdvantages, savePng,
+  type PosterData, type PosterBrand, type PosterGroup, type CardData, type AdvGroup,
+} from '../../../../../../lib/poster/render';
+import { advantagesForNeighborhood } from '../../../../../../lib/advantages';
 
 type Result = { ok: true } | { ok: false; error: string };
-const BRANDS: PosterBrand[] = ['newobour', 'alsawarey', 'unbranded'];
+const POSTER_BRANDS: PosterBrand[] = ['newobour', 'alsawarey', 'unbranded'];
+const CARD_BRANDS = ['newobour', 'alsawarey'] as const;
 const ICONS: PosterGroup['icon'][] = ['pin', 'bld', 'doc'];
 
-// Turn one stored listing value into a short display string (Arabic — posters are ar-only).
 function valStr(v: {
   number: unknown; bool: boolean | null; text: string | null;
   option: { labelAr: string } | null; listItem: { labelAr: string } | null;
@@ -23,7 +27,25 @@ function valStr(v: {
   return null;
 }
 
-async function buildData(listingId: string): Promise<PosterData | null> {
+// Pack short value strings into up to `maxLines` lines of ~maxLen chars.
+function toLines(items: string[], maxLen = 40, maxLines = 3): string[] {
+  const lines: string[] = [];
+  let cur = '';
+  for (const it of items) {
+    const next = cur ? `${cur} · ${it}` : it;
+    if (next.length > maxLen && cur) {
+      lines.push(cur);
+      cur = it;
+      if (lines.length >= maxLines) return lines.slice(0, maxLines);
+    } else cur = next;
+  }
+  if (cur && lines.length < maxLines) lines.push(cur);
+  return lines.slice(0, maxLines);
+}
+
+type Gathered = { poster: PosterData; cards: CardData[]; advantages: AdvGroup[] };
+
+async function gather(listingId: string): Promise<Gathered | null> {
   const l = await prisma.listing.findUnique({
     where: { id: listingId },
     select: {
@@ -40,8 +62,7 @@ async function buildData(listingId: string): Promise<PosterData | null> {
   });
   if (!l) return null;
 
-  // Group value strings by attribute section (ordered). The FIRST section = Area (shown in
-  // the title pill, no card); the next up-to-3 sections become Card 1/2/3.
+  // Group value strings by section (ordered). First section = Area (title pill only).
   const bySec = new Map<string, { name: string; order: number; items: string[] }>();
   for (const v of l.values) {
     const sec = v.attribute.section;
@@ -53,16 +74,12 @@ async function buildData(listingId: string): Promise<PosterData | null> {
     bySec.set(sec.id, g);
   }
   const ordered = [...bySec.values()].sort((a, b) => a.order - b.order);
-  const cardSecs = ordered.slice(1, 4); // skip Area (first), take next 3
-  const groups: PosterGroup[] = cardSecs.map((s, i) => {
-    const joined = s.items.join(' · ');
-    const mid = joined.length > 34 ? joined.lastIndexOf(' · ', Math.ceil(joined.length / 2)) : -1;
-    const l1 = mid > 0 ? joined.slice(0, mid) : joined;
-    const l2 = mid > 0 ? joined.slice(mid + 3) : '';
-    return { name: s.name, l1: l1.slice(0, 46), l2: l2.slice(0, 46), icon: ICONS[i] ?? 'doc' };
-  });
+  const nonArea = ordered.slice(1); // drop the Area group (first)
+  const areaShort = l.area != null ? `${String(l.area)} م²` : '';
 
-  // Maps: the listing's annotated location map + the city masterplan.
+  const cards: CardData[] = nonArea.map((s, i) => ({ name: s.name, lines: toLines(s.items), icon: ICONS[i % ICONS.length]!, areaShort }));
+
+  // Maps: annotated listing location + city masterplan.
   const nbMap = await prisma.areaMap.findFirst({ where: { level: 'listing', areaId: listingId, kind: 'location' }, select: { cleanPath: true } });
   let cityMap: { cleanPath: string } | null = null;
   if (l.neighborhoodId) {
@@ -71,22 +88,26 @@ async function buildData(listingId: string): Promise<PosterData | null> {
     if (cityId) cityMap = await prisma.areaMap.findFirst({ where: { level: 'city', areaId: cityId, kind: 'masterplan' }, select: { cleanPath: true } });
   }
 
-  return {
+  const poster: PosterData = {
     adNumber: l.adNumber ? `#${l.adNumber}` : '',
     title: l.title,
     areaText: l.area != null ? `المساحة الفعلية · ${String(l.area)} م²` : '',
-    groups,
+    groups: cards.slice(0, 3).map((c) => ({ name: c.name, l1: c.lines[0] ?? '', l2: c.lines[1] ?? '', icon: c.icon })),
     neighborhoodMap: nbMap?.cleanPath ?? null,
     cityMap: cityMap?.cleanPath ?? null,
   };
+
+  const advantages = await advantagesForNeighborhood(l.neighborhoodId, 'ar');
+  return { poster, cards, advantages };
 }
 
-/** (Re)generate the New Obour / Al Sawarey / unbranded poster variants for a listing. */
+/** (Re)generate the full image set for a listing: poster ×3 brands, one card per non-Area
+ *  group ×2 brands, and the advantages photo ×2 brands. Stored as Attachment rows. */
 export async function generateListingPosters(listingId: string): Promise<Result> {
   await requirePermission('marketplace', 'UPDATE');
   try {
-    const data = await buildData(listingId);
-    if (!data) return { ok: false, error: 'not_found' };
+    const g = await gather(listingId);
+    if (!g) return { ok: false, error: 'not_found' };
     const s = await prisma.setting.findMany({ where: { key: { in: ['brand_newobour_logo', 'brand_alsawarey_logo', 'alswarey_phone'] } } });
     const m = Object.fromEntries(s.map((x) => [x.key, x.value]));
     const phone = m['alswarey_phone'] || '010 408 10000';
@@ -95,24 +116,19 @@ export async function generateListingPosters(listingId: string): Promise<Result>
         ? { logoPath: m['brand_alsawarey_logo'] ?? null, domain: 'alsawarey.com', phone }
         : { logoPath: m['brand_newobour_logo'] ?? null, domain: 'newobour.com', phone };
 
-    // Replace any existing generated posters for this listing.
-    await prisma.attachment.deleteMany({ where: { ownerType: 'ListingPoster', ownerId: listingId, stampCategory: { startsWith: 'poster:' } } });
-    for (const brand of BRANDS) {
-      const buf = await renderPoster(data, brand, cfg(brand));
-      const saved = await savePng(buf);
-      await prisma.attachment.create({
-        data: {
-          filename: saved.filename,
-          originalName: `poster-${brand}.png`,
-          path: saved.path,
-          mime: 'image/png',
-          size: saved.size,
-          ownerType: 'ListingPoster',
-          ownerId: listingId,
-          stampCategory: `poster:${brand}`,
-        },
-      });
+    const save = async (buf: Buffer, cat: string, name: string) => {
+      const f = await savePng(buf);
+      await prisma.attachment.create({ data: { filename: f.filename, originalName: name, path: f.path, mime: 'image/png', size: f.size, ownerType: 'ListingPoster', ownerId: listingId, stampCategory: cat } });
+    };
+
+    await prisma.attachment.deleteMany({ where: { ownerType: 'ListingPoster', ownerId: listingId } });
+
+    for (const brand of POSTER_BRANDS) await save(await renderPoster(g.poster, brand, cfg(brand)), `poster:${brand}`, `poster-${brand}.png`);
+    for (const brand of CARD_BRANDS) {
+      for (let i = 0; i < g.cards.length; i++) await save(await renderCard(g.cards[i]!, brand, cfg(brand)), `card:${brand}:${i}`, `card-${i}-${brand}.png`);
+      if (g.advantages.length) await save(await renderAdvantages(g.advantages, 'مميزات المنطقة', brand, cfg(brand)), `adv:${brand}`, `advantages-${brand}.png`);
     }
+
     revalidatePath(`/admin/marketplace/listings/${listingId}/edit`);
     return { ok: true };
   } catch (e) {
@@ -121,11 +137,17 @@ export async function generateListingPosters(listingId: string): Promise<Result>
   }
 }
 
-/** List the generated poster variants for a listing (for preview + download). */
-export async function listListingPosters(listingId: string): Promise<{ brand: string; path: string }[]> {
+export type GenImage = { kind: 'poster' | 'card' | 'adv'; brand: string; path: string };
+
+/** List all generated images for a listing (poster / card / advantages), for preview + download. */
+export async function listListingPosters(listingId: string): Promise<GenImage[]> {
   const rows = await prisma.attachment.findMany({
-    where: { ownerType: 'ListingPoster', ownerId: listingId, stampCategory: { startsWith: 'poster:' } },
+    where: { ownerType: 'ListingPoster', ownerId: listingId },
     select: { path: true, stampCategory: true },
+    orderBy: { createdAt: 'asc' },
   });
-  return rows.map((r) => ({ brand: (r.stampCategory ?? 'poster:').split(':')[1] || '', path: r.path }));
+  return rows.map((r) => {
+    const [kind, brand] = (r.stampCategory ?? '').split(':');
+    return { kind: (kind === 'card' ? 'card' : kind === 'adv' ? 'adv' : 'poster'), brand: brand || '', path: r.path };
+  });
 }

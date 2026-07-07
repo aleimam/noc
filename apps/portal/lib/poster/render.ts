@@ -95,6 +95,82 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
   return sharp(base).composite(layers).png().toBuffer();
 }
 
+const brackets = (w: number, h: number) =>
+  `<rect x="2" y="2" width="42" height="42" rx="13" fill="${NAVY}"/><rect x="${w - 44}" y="2" width="42" height="42" rx="13" fill="${NAVY}"/>` +
+  `<rect x="2" y="${h - 44}" width="42" height="42" rx="13" fill="${NAVY}"/><rect x="${w - 44}" y="${h - 44}" width="42" height="42" rx="13" fill="${NAVY}"/>`;
+
+// ── Per-group card (banner-pros frame): icon panel + name + gold divider + area pill +
+//    the group's attribute lines. Branded only (New Obour / Al Sawarey). ──
+export type CardData = { name: string; lines: string[]; icon: PosterGroup['icon']; areaShort: string };
+
+export async function renderCard(d: CardData, brand: Exclude<PosterBrand, 'unbranded'>, cfg: BrandCfg): Promise<Buffer> {
+  const w = 1000, h = 400, cx = 657;
+  const lines = d.lines.filter(Boolean).slice(0, 3);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+<rect width="${w}" height="${h}" fill="#ffffff"/>
+<rect x="14" y="14" width="${w - 28}" height="${h - 28}" rx="26" fill="none" stroke="${GOLD}" stroke-width="6"/>
+${brackets(w, h)}
+<rect x="16" y="16" width="300" height="${h - 32}" rx="22" fill="${NAVY}"/>
+<g transform="translate(166 150) scale(3.4)">${GLYPH[d.icon]}</g>
+${T(cx, 110, d.name, { s: 46, w: 800, fill: NAVY })}
+${dvd(cx, 155, 250)}
+${d.areaShort ? `<rect x="${cx - 150}" y="176" width="300" height="46" rx="23" fill="${GOLD}"/>${T(cx, 208, d.areaShort, { s: 26, w: 800, fill: NAVY })}` : ''}
+${lines.map((ln, i) => T(cx, 272 + i * 40, ln, { s: 26, w: 500, fill: INK })).join('')}
+</svg>`;
+  const base = await sharp(Buffer.from(svg)).png().toBuffer();
+  const layers: sharp.OverlayOptions[] = [];
+  if (cfg.logoPath) {
+    try {
+      const sq = brand === 'alsawarey';
+      const logo = await sharp(await readFile(absU(cfg.logoPath))).resize(sq ? 116 : 200, sq ? 116 : 66, { fit: 'inside' }).png().toBuffer();
+      const m = await sharp(logo).metadata();
+      layers.push({ input: logo, top: h - 24 - (m.height || 70), left: 166 - (m.width || 116) / 2 });
+    } catch { /* skip */ }
+  }
+  return sharp(base).composite(layers).png().toBuffer();
+}
+
+// ── Advantages photo (Price Benefits style): a header + one gold section bar per level
+//    (City/District/Neighborhood) with its advantage bullets. Branded only. ──
+export type AdvGroup = { title: string; items: string[] };
+
+export async function renderAdvantages(groups: AdvGroup[], heading: string, brand: Exclude<PosterBrand, 'unbranded'>, cfg: BrandCfg): Promise<Buffer> {
+  const parts: string[] = [];
+  let y = 250;
+  for (const g of groups) {
+    if (y > 1170 || g.items.length === 0) continue;
+    parts.push(`<rect x="60" y="${y}" width="960" height="52" rx="12" fill="${GOLD}"/>` + T(996, y + 36, g.title, { s: 30, w: 800, fill: NAVY, anchor: 'end' }));
+    y += 72;
+    for (const it of g.items) {
+      if (y > 1210) break;
+      parts.push(`<rect x="972" y="${y - 20}" width="13" height="13" fill="${GOLD}" transform="rotate(45 978 ${y - 13})"/>` + T(948, y, it.slice(0, 62), { s: 26, w: 500, fill: INK, anchor: 'end' }));
+      y += 44;
+    }
+    y += 18;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+<rect width="${W}" height="${H}" fill="${CREAM}"/>
+<rect x="18" y="18" width="${W - 36}" height="${H - 36}" rx="30" fill="none" stroke="${GOLD}" stroke-width="6"/>
+${brackets(W, H)}
+${T(540, 150, heading, { s: 46, w: 800, fill: NAVY })}
+${dvd(540, 194, 260)}
+${parts.join('')}
+<rect x="40" y="1256" width="${W - 80}" height="64" rx="18" fill="${NAVY}"/>
+${T(W / 2, 1297, `${cfg.domain}   ·   ${cfg.phone}`, { s: 30, w: 700, fill: GOLD, ltr: true })}
+</svg>`;
+  const base = await sharp(Buffer.from(svg)).png().toBuffer();
+  const layers: sharp.OverlayOptions[] = [];
+  if (cfg.logoPath) {
+    try {
+      const sq = brand === 'alsawarey';
+      const logo = await sharp(await readFile(absU(cfg.logoPath))).resize(sq ? 140 : 230, sq ? 140 : 120, { fit: 'inside' }).png().toBuffer();
+      const m = await sharp(logo).metadata();
+      layers.push({ input: logo, top: 44, left: W - 48 - (m.width || 140) });
+    } catch { /* skip */ }
+  }
+  return sharp(base).composite(layers).png().toBuffer();
+}
+
 /** Persist a PNG buffer under /uploads/<yyyy>/<mm>/<uuid>.png. */
 export async function savePng(buf: Buffer): Promise<{ path: string; filename: string; size: number }> {
   const now = new Date();
