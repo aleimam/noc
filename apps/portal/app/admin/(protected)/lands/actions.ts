@@ -6,6 +6,7 @@ import { prisma, Prisma } from '@noc/db';
 import { sendSms } from '@noc/sms';
 import { stampMapCopy } from '../../../../lib/mapStamp';
 import { sanitizeRichHtml } from '../../../../lib/sanitize';
+import { markAreaListingsStale } from '../../../../lib/poster/generate';
 
 type GeoLevel = 'city' | 'district' | 'neighborhood' | 'block' | 'land';
 function revDetail(level: GeoLevel, id: string) {
@@ -263,6 +264,7 @@ export async function upsertAdvantage(input: {
     if (input.id) await prisma.advantage.update({ where: { id: input.id }, data: base });
     else await prisma.advantage.create({ data: { ...base, ...geoField(input.level, input.targetId) } });
     revDetail(input.level, input.targetId);
+    await markAreaListingsStale(input.level, input.targetId); // advantages feed listing images
     return { ok: true };
   } catch (e) {
     return fail(e);
@@ -272,7 +274,11 @@ export async function upsertAdvantage(input: {
 export async function deleteAdvantage(id: string): Promise<Result> {
   await requirePermission('lands', 'DELETE');
   try {
+    const a = await prisma.advantage.findUnique({ where: { id }, select: { cityId: true, districtId: true, neighborhoodId: true } });
     await prisma.advantage.delete({ where: { id } });
+    if (a?.cityId) await markAreaListingsStale('city', a.cityId);
+    else if (a?.districtId) await markAreaListingsStale('district', a.districtId);
+    else if (a?.neighborhoodId) await markAreaListingsStale('neighborhood', a.neighborhoodId);
     revalidatePath('/admin/lands', 'layout');
     return { ok: true };
   } catch (e) {
@@ -505,6 +511,7 @@ export async function setAreaMap(input: {
         sourcePath: input.sourcePath ?? null,
       },
     });
+    if (input.level === 'listing') await prisma.listing.update({ where: { id: input.targetId }, data: { postersStale: true } }).catch(() => {});
     revMap(input.level, input.targetId);
     return { ok: true };
   } catch (e) {
@@ -516,6 +523,7 @@ export async function clearAreaMap(input: { level: MapLevel; targetId: string; k
   await requirePermission(input.level === 'listing' ? 'marketplace' : 'lands', 'UPDATE');
   try {
     await prisma.areaMap.deleteMany({ where: { level: input.level, areaId: input.targetId, kind: input.kind } });
+    if (input.level === 'listing') await prisma.listing.update({ where: { id: input.targetId }, data: { postersStale: true } }).catch(() => {});
     revMap(input.level, input.targetId);
     return { ok: true };
   } catch (e) {

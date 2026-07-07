@@ -11,7 +11,7 @@ const BRAND_LABEL: Record<string, { ar: string; en: string }> = {
   unbranded: { ar: 'بدون علامة (للشركاء)', en: 'Unbranded (partners)' },
 };
 
-export function PosterPanel({ listingId, images, locale }: { listingId: string; images: GenImage[]; locale: 'ar' | 'en' }) {
+export function PosterPanel({ listingId, images, locale, stale }: { listingId: string; images: GenImage[]; locale: 'ar' | 'en'; stale?: boolean }) {
   const [pending, start] = useTransition();
   const router = useRouter();
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
@@ -45,6 +45,12 @@ export function PosterPanel({ listingId, images, locale }: { listingId: string; 
 
   return (
     <div className="space-y-4">
+      {stale && images.length > 0 && (
+        <p className="rounded-md border border-amber-400/50 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          {L('تغيّرت بيانات العرض أو مميزات المنطقة بعد آخر توليد — أعد توليد الصور لتحديثها.',
+            'The listing data or area advantages changed since these were generated — regenerate to update them.')}
+        </p>
+      )}
       <div className="flex items-center gap-3">
         <button type="button" onClick={gen} disabled={pending} className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-soft disabled:opacity-50">
           {pending ? L('جارٍ التوليد…', 'Generating…') : images.length ? L('إعادة توليد الصور', 'Regenerate images') : L('توليد الصور', 'Generate images')}

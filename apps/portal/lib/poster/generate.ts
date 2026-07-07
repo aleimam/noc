@@ -119,6 +119,17 @@ export async function regenerateListingImages(listingId: string): Promise<void> 
     for (let i = 0; i < g.cards.length; i++) await save(await renderCard(g.cards[i]!, brand, cfg(brand)), `card:${brand}:${i}`, `card-${i}-${brand}.png`);
     if (g.advantages.length) await save(await renderAdvantages(g.advantages, 'مميزات المنطقة', brand, cfg(brand)), `adv:${brand}`, `advantages-${brand}.png`);
   }
+  await prisma.listing.update({ where: { id: listingId }, data: { postersStale: false } });
+}
+
+/** Flag every listing under an area (city/district/neighborhood) as having stale images —
+ *  called when that area's advantages change (advantages feed the poster + advantages photo). */
+export async function markAreaListingsStale(level: 'city' | 'district' | 'neighborhood', areaId: string): Promise<void> {
+  const where =
+    level === 'city' ? { neighborhood: { district: { cityId: areaId } } }
+      : level === 'district' ? { neighborhood: { districtId: areaId } }
+        : { neighborhoodId: areaId };
+  await prisma.listing.updateMany({ where, data: { postersStale: true } });
 }
 
 /** All generated images for a listing (poster / card / advantages). Optionally one brand. */

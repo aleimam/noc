@@ -82,7 +82,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
 
       <section className="space-y-2 rounded-lg border border-graphite/15 p-4">
         <h2 className="font-semibold text-primary">{locale === 'ar' ? 'ملصقات العرض' : 'Listing posters'}</h2>
-        <PosterPanel listingId={id} images={posters} locale={locale} />
+        <PosterPanel listingId={id} images={posters} locale={locale} stale={listing.postersStale} />
       </section>
     </div>
   );

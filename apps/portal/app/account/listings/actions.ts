@@ -139,7 +139,7 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         if (!existing || (existing.sellerId !== user.id && !isStaff)) throw new Error('forbidden');
         await tx.listing.update({
           where: { id: input.id },
-          data: { ...base, rejectionReason: null },
+          data: { ...base, rejectionReason: null, postersStale: true }, // data changed → generated images out of date
         });
         listingId = input.id;
       } else {
