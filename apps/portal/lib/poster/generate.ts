@@ -7,10 +7,11 @@ import {
   type PosterData, type PosterBrand, type PosterGroup, type CardData, type AdvGroup,
 } from './render';
 import { advantagesForNeighborhood } from '../advantages';
+import { isPosterIcon } from './icons';
 
 const POSTER_BRANDS: PosterBrand[] = ['newobour', 'alsawarey', 'unbranded'];
 const CARD_BRANDS = ['newobour', 'alsawarey'] as const;
-const ICONS: PosterGroup['icon'][] = ['pin', 'bld', 'doc'];
+const ICONS: PosterGroup['icon'][] = ['pin', 'bld', 'doc']; // fallback cycle when no admin-assigned icon
 
 export type GenImage = { kind: 'poster' | 'card' | 'adv'; brand: string; path: string };
 
@@ -54,27 +55,33 @@ async function gather(listingId: string): Promise<Gathered | null> {
           number: true, bool: true, text: true,
           option: { select: { labelAr: true } },
           listItem: { select: { labelAr: true } },
-          attribute: { select: { labelAr: true, type: true, unit: true, section: { select: { id: true, nameAr: true, order: true } } } },
+          attribute: { select: { labelAr: true, type: true, unit: true, section: { select: { id: true, nameAr: true, order: true, icon: true } } } },
         },
       },
     },
   });
   if (!l) return null;
 
-  const bySec = new Map<string, { name: string; order: number; items: string[] }>();
+  const bySec = new Map<string, { name: string; order: number; icon: string | null; items: string[] }>();
   for (const v of l.values) {
     const sec = v.attribute.section;
     if (!sec) continue;
     const s = valStr(v);
     if (!s) continue;
-    const g = bySec.get(sec.id) ?? { name: sec.nameAr, order: sec.order, items: [] };
+    const g = bySec.get(sec.id) ?? { name: sec.nameAr, order: sec.order, icon: sec.icon, items: [] };
     g.items.push(s);
     bySec.set(sec.id, g);
   }
   const ordered = [...bySec.values()].sort((a, b) => a.order - b.order);
   const nonArea = ordered.slice(1); // drop Area (first section)
   const areaShort = l.area != null ? `${String(l.area)} م²` : '';
-  const cards: CardData[] = nonArea.map((s, i) => ({ name: s.name, lines: toLines(s.items), icon: ICONS[i % ICONS.length]!, areaShort }));
+  // Admin-assigned icon on the section wins; otherwise fall back to the fixed cycle.
+  const cards: CardData[] = nonArea.map((s, i) => ({
+    name: s.name,
+    lines: toLines(s.items),
+    icon: isPosterIcon(s.icon) ? s.icon : ICONS[i % ICONS.length]!,
+    areaShort,
+  }));
 
   const nbMap = await prisma.areaMap.findFirst({ where: { level: 'listing', areaId: listingId, kind: 'location' }, select: { cleanPath: true } });
   let cityMap: { cleanPath: string } | null = null;

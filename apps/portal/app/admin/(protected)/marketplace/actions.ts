@@ -6,6 +6,7 @@ import { requirePermission } from '@noc/auth';
 import { isValidPhone } from '@noc/config';
 import { ensureAdNumber } from '../../../../lib/adNumber';
 import { regenerateListingImages } from '../../../../lib/poster/generate';
+import { isPosterIcon } from '../../../../lib/poster/icons';
 import { STANDARD_AREAS_KEY } from '../../../../lib/marketplace';
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -145,7 +146,9 @@ export async function upsertSection(input: {
   const data = {
     nameAr: input.nameAr.trim(),
     nameEn: input.nameEn.trim(),
-    icon: input.icon?.trim() || null,
+    // Only touch icon when explicitly provided — the CatalogTable edit form doesn't
+    // send it, and it must not wipe an icon assigned via the SectionIconPicker.
+    ...(input.icon !== undefined ? { icon: input.icon?.trim() || null } : {}),
     order: input.order ?? 0,
     isActive: input.isActive ?? true,
   };
@@ -163,6 +166,19 @@ export async function deleteSection(id: string): Promise<Result> {
   await requirePermission('marketplace', 'DELETE');
   try {
     await prisma.attributeSection.delete({ where: { id } });
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Assign the generated-photos icon for a section (null = auto cycle). */
+export async function setSectionIcon(id: string, icon: string | null): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  if (icon !== null && !isPosterIcon(icon)) return { ok: false, error: 'failed' };
+  try {
+    await prisma.attributeSection.update({ where: { id }, data: { icon } });
     revalidate();
     return { ok: true };
   } catch (e) {

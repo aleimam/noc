@@ -12,6 +12,8 @@ pull the repo there first (`cd /root/noc && git pull`).
 | `backup.env.example` | Optional credential/retention overrides for `backup.sh`. | copy to `ops/backup.env` only if needed |
 | `HARDENING.md` | Gated runbook: key-only SSH + new port, auto-ban, auto-updates. | follow step by step |
 | `RESTORE.md` | How to restore the DB / uploads / env, plus a non-destructive test restore. | reference |
+| `CLOUDFLARE.md` | Cutover runbook: owner's zone/NS steps + server real-IP/CSF config + dashboard checklist. | follow step by step |
+| `cloudflare-realip.sh` | (Re)generate Nginx `set_real_ip_from` + CSF ignore from Cloudflare's ranges. | `bash ops/cloudflare-realip.sh` (after cutover) |
 
 ## Recommended order
 

@@ -4,6 +4,7 @@ import { prisma } from '@noc/db';
 import { CatalogTable } from '../CatalogTable';
 import { OrderableList } from '../OrderableList';
 import { upsertSection, deleteSection, reorderSections } from '../actions';
+import { SectionIconPicker } from './SectionIconPicker';
 
 export default async function SectionsPage() {
   await requirePermission('marketplace', 'VIEW');
@@ -28,6 +29,7 @@ export default async function SectionsPage() {
         <a href="/admin/marketplace" className="text-sm text-accent">← {t('title')}</a>
       </div>
       <CatalogTable initial={data} upsert={upsertSection} remove={deleteSection} />
+      <SectionIconPicker sections={rows.map((x) => ({ id: x.id, nameAr: x.nameAr, nameEn: x.nameEn, icon: x.icon }))} />
       <OrderableList items={rows.map((x) => ({ id: x.id, label: `${x.nameAr} / ${x.nameEn}` }))} action={reorderSections} />
     </div>
   );

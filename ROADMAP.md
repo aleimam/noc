@@ -18,19 +18,23 @@ generated-photos feature is **complete (both phases + mark-stale)** — see belo
 display name **ALSWARY → "Al Sawarey"** throughout (identifiers, `alsawarey.com` domain,
 and Arabic الصواري unchanged; commit `5cd8b98`).
 
-**Immediate backlog (not started):**
+**Immediate backlog:**
 - **Off-server backups** — on-server daily DB+uploads backups already exist and restore
   (see `ops/RESTORE.md`); the gap is an **off-site copy**. Approach chosen = SSH-key push
   from the VPS to the owner's backup server. A VPS keypair was generated; **blocked on the
   owner** supplying the backup server's host / port / user / target path + installing the
   VPS public key there.
-- **Cloudflare** in front of both domains (proxy/CDN/WAF).
+- **Cloudflare** — server-side prep DONE (2026-07-08): `ops/CLOUDFLARE.md` runbook +
+  `ops/cloudflare-realip.sh` (Nginx real-IP + CSF ignore). **Blocked on the owner** doing
+  Part A (create zones, switch nameservers); then run Part B on the VPS + Part C checklist.
 - **`/code-review ultra`** — owner-triggered when wanted.
-- **Live validation of generated photos** — prod had **0 listings** at build time; once a
-  real listing exists, generate one full image set end-to-end to eyeball live output
-  (renderer already validated with sample data on prod).
-- Minor deferred polish: `٪` bidi glyph in generated images; advantages-photo vertical
-  centering with few items; per-group icon admin assignment.
+- **Live validation of generated photos** — still waiting: prod has **0 listings** (checked
+  2026-07-08); once a real listing exists, generate one full image set end-to-end to eyeball
+  live output (renderer already validated with sample data on prod).
+- ~~Minor deferred polish~~ — DONE 2026-07-08: percent/bidi rendering fixed (explicit
+  `direction="rtl"` + Arabic-Indic ٪ digits), advantages photo now vertically centered,
+  and per-group card icons are admin-assignable (8-icon library, Admin → Marketplace →
+  Sections; auto-cycle fallback unchanged).
 
 ---
 

@@ -3,13 +3,14 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { uploadRoot } from '../uploads';
+import { POSTER_ICONS, type PosterIconKey } from './icons';
 
 // Server-side listing-poster renderer (Layout A) in the approved navy/gold/cream identity.
 // Built as an SVG (frame, corner brackets, gold divider, cards, footer) → sharp → PNG, with
 // the two maps + the brand logo composited on top (robust; no SVG image-embedding). Requires
 // the Tajawal font installed on the host (prod: /usr/share/fonts/tajawal).
 
-export type PosterGroup = { name: string; l1: string; l2: string; icon: 'pin' | 'bld' | 'doc' };
+export type PosterGroup = { name: string; l1: string; l2: string; icon: PosterIconKey };
 export type PosterData = {
   adNumber: string;
   title: string;
@@ -26,17 +27,26 @@ const NAVY = '#0f1f4b', GOLD = '#e7ab16', GOLD2 = '#c9983e', CREAM = '#fdfaf3', 
 const absU = (p: string) => path.join(uploadRoot(), p.replace(/^\/uploads\//, ''));
 
 const esc = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const T = (x: number, y: number, t: string, o: { s?: number; w?: number; fill?: string; anchor?: string; ltr?: boolean } = {}) =>
-  `<text x="${x}" y="${y}" font-family="Tajawal" font-size="${o.s ?? 28}" font-weight="${o.w ?? 400}" fill="${o.fill ?? INK}" text-anchor="${o.anchor ?? 'middle'}"${o.ltr ? ' direction="ltr"' : ''}>${esc(t)}</text>`;
+// Arabic text with leading/trailing digits confuses Pango's base-direction guess
+// (e.g. "450 م²" flips to "450²م"; a trailing "15%" jumps across the line — and this
+// librsvg ignores RLM/isolate control chars). Fix deterministically: every non-LTR
+// <text> gets an explicit direction="rtl" (with its start/end anchor swapped, since
+// SVG resolves those against the direction), and percentages render the conventional
+// Arabic way: % → ٪ with Arabic-Indic digits (٦٠٪), which needs no bidi joining.
+const arNum = (n: string) => n.replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[+d]!).replace(/[.,]/g, '٫');
+const rtl = (s: string) =>
+  String(s).replace(/%/g, '٪').replace(/([0-9]+(?:[.,][0-9]+)?)\s*٪/g, (_, n: string) => `${arNum(n)}٪`);
+const T = (x: number, y: number, t: string, o: { s?: number; w?: number; fill?: string; anchor?: string; ltr?: boolean } = {}) => {
+  const a = o.anchor ?? 'middle';
+  const anchor = o.ltr ? a : a === 'end' ? 'start' : a === 'start' ? 'end' : a;
+  return `<text x="${x}" y="${y}" font-family="Tajawal" font-size="${o.s ?? 28}" font-weight="${o.w ?? 400}" fill="${o.fill ?? INK}" text-anchor="${anchor}" direction="${o.ltr ? 'ltr' : 'rtl'}">${esc(o.ltr ? t : rtl(t))}</text>`;
+};
 const dvd = (cx: number, y: number, half: number) =>
   `<line x1="${cx - half}" y1="${y}" x2="${cx - 9}" y2="${y}" stroke="${GOLD}" stroke-width="3"/>` +
   `<line x1="${cx + 9}" y1="${y}" x2="${cx + half}" y2="${y}" stroke="${GOLD}" stroke-width="3"/>` +
   `<rect x="${cx - 6}" y="${y - 6}" width="12" height="12" fill="${GOLD}" transform="rotate(45 ${cx} ${y})"/>`;
-const GLYPH: Record<PosterGroup['icon'], string> = {
-  pin: `<path d="M0,-16 C-9,-16 -16,-9 -16,0 C-16,10 0,22 0,22 C0,22 16,10 16,0 C16,-9 9,-16 0,-16 Z" fill="${GOLD}"/><circle cx="0" cy="-1" r="5.5" fill="${NAVY}"/>`,
-  bld: `<rect x="-15" y="-6" width="12" height="20" fill="${GOLD}"/><rect x="1" y="-15" width="14" height="29" fill="${GOLD}"/><rect x="4" y="-11" width="3" height="3" fill="${NAVY}"/><rect x="9" y="-11" width="3" height="3" fill="${NAVY}"/>`,
-  doc: `<rect x="-13" y="-16" width="26" height="32" rx="3" fill="${GOLD}"/><line x1="-7" y1="-8" x2="7" y2="-8" stroke="${NAVY}" stroke-width="2.5"/><line x1="-7" y1="0" x2="7" y2="0" stroke="${NAVY}" stroke-width="2.5"/><line x1="-7" y1="8" x2="3" y2="8" stroke="${NAVY}" stroke-width="2.5"/>`,
-};
+// Icon shapes live in ./icons (shared with the admin picker); GLYPH keeps the old name.
+const GLYPH = POSTER_ICONS;
 
 function cardSvg(x: number, y: number, w: number, h: number, g: PosterGroup) {
   const cx = x + w / 2, icx = x + w - 58, icy = y + 52;
@@ -135,10 +145,16 @@ ${lines.map((ln, i) => T(cx, 272 + i * 40, ln, { s: 26, w: 500, fill: INK })).jo
 export type AdvGroup = { title: string; items: string[] };
 
 export async function renderAdvantages(groups: AdvGroup[], heading: string, brand: Exclude<PosterBrand, 'unbranded'>, cfg: BrandCfg): Promise<Buffer> {
+  const usable = groups.filter((g) => g.items.length > 0);
+  // Measure the block (same advances as the draw loop) and center it vertically in
+  // the window between the heading divider and the footer — with few advantages the
+  // old fixed start left a large void at the bottom.
+  const blockH = usable.reduce((h, g) => h + 72 + g.items.length * 44 + 18, 0) - (usable.length ? 18 : 0);
+  const top = 230, bottom = 1246;
   const parts: string[] = [];
-  let y = 250;
-  for (const g of groups) {
-    if (y > 1170 || g.items.length === 0) continue;
+  let y = top + Math.max(20, (bottom - top - blockH) / 2);
+  for (const g of usable) {
+    if (y > 1170) continue;
     parts.push(`<rect x="60" y="${y}" width="960" height="52" rx="12" fill="${GOLD}"/>` + T(996, y + 36, g.title, { s: 30, w: 800, fill: NAVY, anchor: 'end' }));
     y += 72;
     for (const it of g.items) {
