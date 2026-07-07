@@ -2,14 +2,17 @@
 
 import { revalidatePath } from 'next/cache';
 import { auth, requirePermission, loadSmsConfig } from '@noc/auth';
-import { prisma } from '@noc/db';
+import { prisma, Prisma } from '@noc/db';
 import { sendSms } from '@noc/sms';
 import { stampMapCopy } from '../../../../lib/mapStamp';
 import { sanitizeRichHtml } from '../../../../lib/sanitize';
 
-type GeoLevel = 'district' | 'neighborhood' | 'block' | 'land';
+type GeoLevel = 'city' | 'district' | 'neighborhood' | 'block' | 'land';
 function revDetail(level: GeoLevel, id: string) {
-  if (level === 'district') {
+  if (level === 'city') {
+    revalidatePath(`/admin/lands/cities/${id}`);
+    revalidatePath(`/admin/lands/cities/${id}/edit`);
+  } else if (level === 'district') {
     revalidatePath(`/admin/lands/districts/${id}`);
     revalidatePath(`/admin/lands/districts/${id}/edit`);
   } else if (level === 'neighborhood') {
@@ -18,13 +21,15 @@ function revDetail(level: GeoLevel, id: string) {
   }
 }
 function geoField(level: GeoLevel, id: string) {
-  return level === 'district'
-    ? { districtId: id }
-    : level === 'neighborhood'
-      ? { neighborhoodId: id }
-      : level === 'block'
-        ? { blockId: id }
-        : { landId: id };
+  return level === 'city'
+    ? { cityId: id }
+    : level === 'district'
+      ? { districtId: id }
+      : level === 'neighborhood'
+        ? { neighborhoodId: id }
+        : level === 'block'
+          ? { blockId: id }
+          : { landId: id };
 }
 
 type Result = { ok: true; id?: string } | { ok: false; error: string };
@@ -41,6 +46,42 @@ function rev() {
   revalidatePath('/admin/lands');
   revalidatePath('/admin/lands/districts');
   revalidatePath('/admin/lands/neighborhoods');
+}
+
+// ── Cities (top of the geo hierarchy: City → District → Neighborhood) ──
+export async function upsertCity(input: {
+  id?: string;
+  key: string;
+  nameAr: string;
+  nameEn: string;
+  order?: number;
+  isActive?: boolean;
+}): Promise<Result> {
+  await requirePermission('lands', input.id ? 'UPDATE' : 'CREATE');
+  try {
+    const data = { nameAr: input.nameAr.trim(), nameEn: input.nameEn.trim(), order: input.order ?? 0, isActive: input.isActive ?? true };
+    if (!data.nameAr || !data.nameEn) return { ok: false, error: 'failed' };
+    if (input.id) await prisma.city.update({ where: { id: input.id }, data });
+    else await prisma.city.create({ data: { ...data, key: input.key.trim() } });
+    rev();
+    revalidatePath('/admin/lands/cities');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function deleteCity(id: string): Promise<Result> {
+  await requirePermission('lands', 'DELETE');
+  try {
+    // Districts are detached (cityId → NULL via FK); city advantages cascade away.
+    await prisma.city.delete({ where: { id } });
+    rev();
+    revalidatePath('/admin/lands/cities');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
 }
 
 // ── Districts ──
@@ -209,7 +250,7 @@ export async function deleteGeoUpdate(id: string): Promise<Result> {
 // ── Advantages (bilingual, per district or neighborhood) ──
 export async function upsertAdvantage(input: {
   id?: string;
-  level: 'district' | 'neighborhood';
+  level: 'city' | 'district' | 'neighborhood';
   targetId: string;
   textAr: string;
   textEn?: string;
@@ -409,14 +450,32 @@ export async function publishLand(id: string): Promise<Result> {
   }
 }
 
-// ── Area maps (location + masterplan; clean original + per-brand stamped copies) ──
+// ── Area maps (city / district / neighborhood / listing × location / masterplan / services /
+// mainroads). Clean original + per-brand stamped copies. A location map can also carry
+// editable annotator shapes + the source (parent masterplan) path it was drawn on, so it
+// can be re-tweaked later. ──
+type MapLevel = 'city' | 'district' | 'neighborhood' | 'listing';
+type MapKind = 'location' | 'masterplan' | 'services' | 'mainroads';
+
+function revMap(level: MapLevel, id: string) {
+  if (level === 'listing') {
+    revalidatePath(`/admin/marketplace/listings/${id}/edit`);
+    revalidatePath(`/market/${id}`);
+    revalidatePath(`/listings/${id}`);
+  } else {
+    revDetail(level, id);
+  }
+}
+
 export async function setAreaMap(input: {
-  level: 'district' | 'neighborhood';
+  level: MapLevel;
   targetId: string;
-  kind: 'location' | 'masterplan';
+  kind: MapKind;
   attachmentId: string;
+  annotation?: unknown; // editable annotator shapes (location maps)
+  sourcePath?: string | null; // parent masterplan the location was annotated on
 }): Promise<Result> {
-  await requirePermission('lands', 'UPDATE');
+  await requirePermission(input.level === 'listing' ? 'marketplace' : 'lands', 'UPDATE');
   try {
     const att = await prisma.attachment.findUnique({ where: { id: input.attachmentId } });
     if (!att) return { ok: false, error: 'failed' };
@@ -429,23 +488,35 @@ export async function setAreaMap(input: {
       stampMapCopy(att.path, lm['brand_newobour_logo'] ?? null),
     ]);
 
+    const annPatch = input.annotation === undefined ? {} : { annotation: (input.annotation ?? Prisma.JsonNull) as Prisma.InputJsonValue };
+    const srcPatch = input.sourcePath === undefined ? {} : { sourcePath: input.sourcePath };
+
     await prisma.areaMap.upsert({
       where: { level_areaId_kind: { level: input.level, areaId: input.targetId, kind: input.kind } },
-      update: { cleanPath: att.path, alswareyPath, newobourPath },
-      create: { level: input.level, areaId: input.targetId, kind: input.kind, cleanPath: att.path, alswareyPath, newobourPath },
+      update: { cleanPath: att.path, alswareyPath, newobourPath, ...annPatch, ...srcPatch },
+      create: {
+        level: input.level,
+        areaId: input.targetId,
+        kind: input.kind,
+        cleanPath: att.path,
+        alswareyPath,
+        newobourPath,
+        annotation: (input.annotation ?? Prisma.JsonNull) as Prisma.InputJsonValue,
+        sourcePath: input.sourcePath ?? null,
+      },
     });
-    revDetail(input.level, input.targetId);
+    revMap(input.level, input.targetId);
     return { ok: true };
   } catch (e) {
     return fail(e);
   }
 }
 
-export async function clearAreaMap(input: { level: 'district' | 'neighborhood'; targetId: string; kind: 'location' | 'masterplan' }): Promise<Result> {
-  await requirePermission('lands', 'UPDATE');
+export async function clearAreaMap(input: { level: MapLevel; targetId: string; kind: MapKind }): Promise<Result> {
+  await requirePermission(input.level === 'listing' ? 'marketplace' : 'lands', 'UPDATE');
   try {
     await prisma.areaMap.deleteMany({ where: { level: input.level, areaId: input.targetId, kind: input.kind } });
-    revDetail(input.level, input.targetId);
+    revMap(input.level, input.targetId);
     return { ok: true };
   } catch (e) {
     return fail(e);

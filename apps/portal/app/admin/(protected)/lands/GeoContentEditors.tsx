@@ -17,8 +17,10 @@ import {
   setDistrictAdjacency,
   setNeighborhoodAdjacency,
 } from './actions';
+import type { Shape } from './MapAnnotator';
 
-type Level = 'district' | 'neighborhood';
+type Level = 'city' | 'district' | 'neighborhood';
+type MapKind = 'location' | 'masterplan' | 'services' | 'mainroads';
 const inp = 'w-full rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm';
 
 export function AdvantagesEditor({
@@ -87,18 +89,34 @@ type MapTriplet = { clean: string; alswarey: string | null; newobour: string | n
 // react-konva touches the DOM/canvas at import — load the annotator client-only.
 const MapAnnotator = dynamic(() => import('./MapAnnotator').then((m) => m.MapAnnotator), { ssr: false });
 
-/** Upload one clean map; the system stores it + a stamped copy per brand. */
-export function AreaMapEditor({ level, targetId, kind, map }: { level: Level; targetId: string; kind: 'location' | 'masterplan'; map: MapTriplet | null }) {
+/**
+ * One area map. Masterplan / services / main-roads are uploaded directly. A **location**
+ * map is produced by annotating the PARENT's masterplan (`parentMasterplan`) — the marks
+ * are saved editably (`annotation`) so it can be re-tweaked, and the source is remembered.
+ * Both a clean copy and a per-brand stamped copy are generated on save.
+ */
+export function AreaMapEditor({
+  level,
+  targetId,
+  kind,
+  map,
+  parentMasterplan,
+  annotation,
+  annotatable = true,
+}: {
+  level: Level | 'listing';
+  targetId: string;
+  kind: MapKind;
+  map: MapTriplet | null;
+  parentMasterplan?: string | null;
+  annotation?: Shape[] | null;
+  annotatable?: boolean; // city location maps are uploaded, not annotated → false
+}) {
   const t = useTranslations('lands');
   const router = useRouter();
   const [, start] = useTransition();
   const [annotating, setAnnotating] = useState(false);
-
-  const attach = (attachmentId: string) =>
-    start(async () => {
-      await setAreaMap({ level, targetId, kind, attachmentId });
-      router.refresh();
-    });
+  const canAnnotate = kind === 'location' && annotatable && !!parentMasterplan;
 
   return (
     <div className="space-y-2">
@@ -113,25 +131,29 @@ export function AreaMapEditor({ level, targetId, kind, map }: { level: Level; ta
           })
         }
       />
-      {/* Annotation is offered on the location map only (not the masterplan). */}
-      {map && kind === 'location' && (
-        <button type="button" onClick={() => setAnnotating(true)} className="rounded-lg border border-graphite/25 px-3 py-1.5 text-sm hover:bg-graphite/10">
-          ✎ {t('annotateMap')}
+      {canAnnotate && (
+        <button type="button" onClick={() => setAnnotating(true)} className="rounded-lg border border-accent/40 px-3 py-1.5 text-sm text-accent hover:bg-accent/5">
+          ✎ {map ? t('editLocationFromParent') : t('genLocationFromParent')}
         </button>
       )}
+      {kind === 'location' && annotatable && !parentMasterplan && <p className="text-xs opacity-60">{t('needParentMasterplan')}</p>}
       {map && (map.alswarey || map.newobour) && (
         <div className="flex flex-wrap gap-3">
           {map.alswarey && <MapThumb label={t('copyAlswarey')} src={map.alswarey} />}
           {map.newobour && <MapThumb label={t('copyNewobour')} src={map.newobour} />}
         </div>
       )}
-      {annotating && map && (
+      {annotating && parentMasterplan && (
         <MapAnnotator
-          src={map.clean}
+          src={parentMasterplan}
+          initialShapes={annotation ?? undefined}
           onClose={() => setAnnotating(false)}
-          onSaved={async (attachmentId) => {
+          onSaved={async (attachmentId, shapes) => {
             setAnnotating(false);
-            attach(attachmentId);
+            start(async () => {
+              await setAreaMap({ level, targetId, kind, attachmentId, annotation: shapes, sourcePath: parentMasterplan });
+              router.refresh();
+            });
           }}
         />
       )}

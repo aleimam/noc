@@ -7,7 +7,8 @@ export const dynamic = 'force-dynamic';
 export default async function LandsHub() {
   await requirePermission('lands', 'VIEW');
   const t = await getTranslations('lands');
-  const [districts, neighborhoods, blocks, follows, updates] = await Promise.all([
+  const [cities, districts, neighborhoods, blocks, follows, updates] = await Promise.all([
+    prisma.city.count(),
     prisma.district.count(),
     prisma.neighborhood.count(),
     prisma.block.count(),
@@ -17,6 +18,7 @@ export default async function LandsHub() {
 
   // Land plots live in their own top-level section now; this hub is the geographic DB.
   const links = [
+    { href: '/admin/lands/cities', label: t('cities'), count: cities },
     { href: '/admin/lands/districts', label: t('districts'), count: districts },
     { href: '/admin/lands/neighborhoods', label: t('neighborhoods'), count: neighborhoods },
     { href: '/admin/lands/updates', label: t('updates'), count: updates },

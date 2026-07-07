@@ -11,6 +11,42 @@ SMS gateway, and next-intl ar/en.
 
 ---
 
+## 🚧 In progress — City geo level, map inheritance, area advantages, generated photos (2026-07)
+
+Agreed with the owner; built in two phases. Full decision log lives in the assistant
+memory (`maps-advantages-photos-plan`).
+
+**Geo:** new **City** level → `City → District → Neighborhood` (`District.cityId`,
+seeded with مدينة العبور الجديدة, all districts backfilled). `Advantage` gains `cityId`.
+
+**Maps (extends `AreaMap`):** City holds 4 uploaded maps (masterplan / location /
+services-areas / main-roads). District & Neighborhood have an uploaded masterplan + a
+**location** map produced by **annotating the parent's masterplan** with the existing
+shared `MapAnnotator` (one component, edited globally). Listings (any with a
+neighborhood) get a location map by annotating the neighborhood masterplan. `AreaMap`
+now carries `annotation` (editable shapes) + `sourcePath`; new `level` values `city`/
+`listing` and `kind` values `services`/`mainroads`; dual clean + per-brand stamp kept.
+Replacing a parent masterplan leaves children's location maps until re-saved.
+
+**Advantages (#1–#3):** City+District+Neighborhood free-text advantages; embedded on
+**both** sites' listing detail as an "Area advantages" section grouped by level (derived
+from the listing's neighborhood). Public **Explore** becomes City → District →
+Neighborhood with a city page (maps + advantages).
+
+**Generated photos — Phase 2 (#4):** new server-side renderer (SVG/HTML→PNG via
+`sharp`, headless for bulk). **Big poster** = title + Area (group 1, no own card) +
+first-4 attribute groups + embedded location map → **3 versions** (New Obour / ALSWARY /
+unbranded-for-partners, same colours/format). **Per-group cards** (every group except
+Area) + a separate **advantages photo** → **2 versions** (New Obour / ALSWARY). Arabic
+only. Live in the public gallery per site; unbranded poster via an admin download
+button. Generated on add; **"Regenerate all"** bulk action; editing advantages/design
+**marks affected listings stale**. Approved visual design still to be supplied.
+
+**Phasing:** Phase 1 = geo City + map inheritance + advantages #1–#3 (data & rendering,
+no image generation). Phase 2 = the renderer + poster/cards/advantages photos.
+
+---
+
 ## 1. "Build-It-For-Me" engine (ابنِ أرضك معنا)
 **Trigger:** a tracked land/listing whose Condition (or land status) reaches *licensed*.
 **Where:** customer dashboard (`/app`) + a `BuildRequestModal`.

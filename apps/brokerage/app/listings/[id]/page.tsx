@@ -2,8 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
-import { PhotoGallery, TrackView } from '@noc/ui';
+import { prisma } from '@noc/db';
+import { PhotoGallery, TrackView, AreaAdvantages } from '@noc/ui';
 import { StoreShell } from '../../_components/StoreShell';
+import { advantagesForNeighborhood } from '../../../lib/advantages';
 import { StoreLandCard } from '../../_components/StoreLandCard';
 import { getLandDetail, similarLands } from '../../../lib/listings';
 import { getAdminViewer, ownerDetailFor } from '../../../lib/adminView';
@@ -39,6 +41,8 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   const land = await getLandDetail(id, locale);
   if (!land) notFound();
   const [wished, similar, store] = await Promise.all([wishlistListingIds(), similarLands(id, 4), getStorefront()]);
+  const nb = await prisma.listing.findUnique({ where: { id }, select: { neighborhoodId: true } });
+  const advGroups = await advantagesForNeighborhood(nb?.neighborhoodId, locale);
   const owner = (await getAdminViewer()) ? await ownerDetailFor(id) : null;
   const ownerTypeLabel: Record<string, string> = { PERSONAL: L('فرد', 'Personal'), COMPANY: L('شركة', 'Company'), BROKER: L('سمسار', 'Broker'), US: L('نحن', 'Us') };
 
@@ -158,6 +162,12 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
             )}
           </aside>
         </div>
+
+        {advGroups.length > 0 && (
+          <div className="mt-6 rounded-2xl bg-white p-5 shadow-md">
+            <AreaAdvantages heading={L('مميزات المنطقة', 'Area advantages')} groups={advGroups} />
+          </div>
+        )}
 
         {specGroups.map((g) => (
           <section key={g.title} className="mt-6 rounded-2xl bg-white p-5 shadow-md">

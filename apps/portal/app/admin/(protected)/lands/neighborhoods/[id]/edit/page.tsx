@@ -4,7 +4,7 @@ import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { BlocksManager } from '../../../BlocksManager';
 import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, UpdatesEditor, InheritedUpdates } from '../../../GeoContentEditors';
-import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency } from '../../../geo';
+import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency, masterplanClean } from '../../../geo';
 import { AmenityAttachPicker } from '../../../AmenityAttachPicker';
 import { amenityPickOptions, placedAmenityIds } from '@/lib/amenities';
 import { EditSaveBar } from '@/app/_components/EditSaveBar';
@@ -33,6 +33,8 @@ export default async function NeighborhoodEdit({ params }: { params: Promise<{ i
     placedAmenityIds('neighborhood', id),
   ]);
   const candidates = others.map((o) => ({ id: o.id, name: `${L(o.district.nameAr, o.district.nameEn)} · ${L(o.nameAr, o.nameEn)}` }));
+  // The neighborhood's location map is drawn on its district's masterplan.
+  const districtMasterplan = await masterplanClean('district', n.districtId);
 
   return (
     <div className="space-y-6">
@@ -64,7 +66,7 @@ export default async function NeighborhoodEdit({ params }: { params: Promise<{ i
       <div className="grid gap-6 sm:grid-cols-2">
         <section className="space-y-2">
           <h2 className="font-semibold text-primary">{t('locationMap')}</h2>
-          <AreaMapEditor level="neighborhood" targetId={id} kind="location" map={maps.location} />
+          <AreaMapEditor level="neighborhood" targetId={id} kind="location" map={maps.location} parentMasterplan={districtMasterplan} annotation={maps.locationAnnotation} />
         </section>
         <section className="space-y-2">
           <h2 className="font-semibold text-primary">{t('masterplan')}</h2>

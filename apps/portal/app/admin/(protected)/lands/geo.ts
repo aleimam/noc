@@ -1,4 +1,5 @@
 import { prisma } from '@noc/db';
+import type { Shape } from './MapAnnotator';
 
 export type UpdateRow = {
   id: string;
@@ -49,15 +50,40 @@ export async function loadUpdates(where: {
 }
 
 export type MapTriplet = { clean: string; alswarey: string | null; newobour: string | null };
+export type MapLevel = 'city' | 'district' | 'neighborhood' | 'listing';
 
-/** The two maps (location + masterplan) for an area, each with its brand copies. */
-export async function loadAreaMaps(level: 'district' | 'neighborhood', areaId: string): Promise<{ location: MapTriplet | null; masterplan: MapTriplet | null }> {
+/** All maps for an area (location / masterplan / services / mainroads), each with its
+ *  brand copies, plus the location map's editable annotation shapes for re-tweaking. */
+export async function loadAreaMaps(
+  level: MapLevel,
+  areaId: string,
+): Promise<{
+  location: MapTriplet | null;
+  masterplan: MapTriplet | null;
+  services: MapTriplet | null;
+  mainroads: MapTriplet | null;
+  locationAnnotation: Shape[] | null;
+}> {
   const rows = await prisma.areaMap.findMany({ where: { level, areaId } });
   const pick = (kind: string): MapTriplet | null => {
     const r = rows.find((x) => x.kind === kind);
     return r ? { clean: r.cleanPath, alswarey: r.alswareyPath, newobour: r.newobourPath } : null;
   };
-  return { location: pick('location'), masterplan: pick('masterplan') };
+  const loc = rows.find((x) => x.kind === 'location');
+  return {
+    location: pick('location'),
+    masterplan: pick('masterplan'),
+    services: pick('services'),
+    mainroads: pick('mainroads'),
+    locationAnnotation: (loc?.annotation as Shape[] | null) ?? null,
+  };
+}
+
+/** Clean-image path of an area's uploaded masterplan (the base its children annotate). */
+export async function masterplanClean(level: 'city' | 'district' | 'neighborhood', areaId: string | null | undefined): Promise<string | null> {
+  if (!areaId) return null;
+  const r = await prisma.areaMap.findFirst({ where: { level, areaId, kind: 'masterplan' } });
+  return r?.cleanPath ?? null;
 }
 
 /** How many distinct followers would a cascade notification reach for this area. */

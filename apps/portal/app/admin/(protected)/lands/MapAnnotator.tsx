@@ -9,7 +9,7 @@ import type Konva from 'konva';
 // arrows or freehand strokes, then save — the stage is flattened to one image, uploaded,
 // and re-attached (which regenerates the brand-stamped copies).
 
-type Shape = {
+export type Shape = {
   id: string;
   type: 'rect' | 'circle' | 'arrow' | 'line';
   x: number;
@@ -29,17 +29,19 @@ let seq = 0;
 
 export function MapAnnotator({
   src,
+  initialShapes,
   onClose,
   onSaved,
 }: {
   src: string;
+  initialShapes?: Shape[];
   onClose: () => void;
-  onSaved: (attachmentId: string) => Promise<void> | void;
+  onSaved: (attachmentId: string, shapes: Shape[]) => Promise<void> | void;
 }) {
   const t = useTranslations('lands');
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [display, setDisplay] = useState({ w: 0, h: 0 });
-  const [shapes, setShapes] = useState<Shape[]>([]);
+  const [shapes, setShapes] = useState<Shape[]>(initialShapes ?? []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [color, setColor] = useState<string>(COLORS[0]!);
   const [tool, setTool] = useState<Tool>('select');
@@ -50,6 +52,15 @@ export function MapAnnotator({
   const trRef = useRef<Konva.Transformer>(null);
   const nodeRefs = useRef<Record<string, Konva.Node>>({});
   const drawingId = useRef<string | null>(null);
+
+  // Continue the id counter past any pre-loaded shapes so new ones don't collide.
+  useEffect(() => {
+    for (const s of initialShapes ?? []) {
+      const n = parseInt(s.id.replace(/\D/g, ''), 10);
+      if (!isNaN(n) && n > seq) seq = n;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const image = new window.Image();
@@ -148,7 +159,7 @@ export function MapAnnotator({
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) throw new Error(json?.error || 'upload');
-      await onSaved(json.attachment.id as string);
+      await onSaved(json.attachment.id as string, shapes);
     } catch {
       setError('save');
       setBusy(false);

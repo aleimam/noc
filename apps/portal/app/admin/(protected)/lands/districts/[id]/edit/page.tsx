@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, UpdatesEditor } from '../../../GeoContentEditors';
-import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency } from '../../../geo';
+import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency, masterplanClean } from '../../../geo';
 import { AmenityAttachPicker } from '../../../AmenityAttachPicker';
 import { amenityPickOptions, placedAmenityIds } from '@/lib/amenities';
 import { EditSaveBar } from '@/app/_components/EditSaveBar';
@@ -31,6 +31,8 @@ export default async function DistrictEdit({ params }: { params: Promise<{ id: s
     placedAmenityIds('district', id),
   ]);
   const candidates = others.map((d) => ({ id: d.id, name: L(d.nameAr, d.nameEn) }));
+  // The district's location map is drawn on its city's masterplan.
+  const cityMasterplan = await masterplanClean('city', district.cityId);
 
   return (
     <div className="space-y-6">
@@ -55,7 +57,7 @@ export default async function DistrictEdit({ params }: { params: Promise<{ id: s
       <div className="grid gap-6 sm:grid-cols-2">
         <section className="space-y-2">
           <h2 className="font-semibold text-primary">{t('locationMap')}</h2>
-          <AreaMapEditor level="district" targetId={id} kind="location" map={maps.location} />
+          <AreaMapEditor level="district" targetId={id} kind="location" map={maps.location} parentMasterplan={cityMasterplan} annotation={maps.locationAnnotation} />
         </section>
         <section className="space-y-2">
           <h2 className="font-semibold text-primary">{t('masterplan')}</h2>
