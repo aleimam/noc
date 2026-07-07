@@ -6,6 +6,8 @@ import { ListingForm } from '@/app/account/listings/ListingForm';
 import { loadCatalog, buildVals, loadListingAttachments } from '@/app/account/listings/catalog';
 import { AreaMapEditor } from '../../../../lands/GeoContentEditors';
 import { loadAreaMaps, masterplanClean } from '../../../../lands/geo';
+import { PosterPanel } from '../PosterPanel';
+import { listListingPosters } from '../poster-actions';
 
 export default async function StaffEditListing({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission('marketplace', 'UPDATE');
@@ -27,6 +29,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
   const tl = await getTranslations('lands');
   const nbMasterplan = await masterplanClean('neighborhood', listing.neighborhoodId);
   const lmaps = await loadAreaMaps('listing', id);
+  const posters = await listListingPosters(id);
 
   return (
     <div className="space-y-4">
@@ -75,6 +78,11 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
         ) : (
           <p className="text-sm opacity-60">{locale === 'ar' ? 'اربط الإعلان بمجاورة أولاً لإنشاء خريطة الموقع.' : 'Link the listing to a neighborhood first to create a location map.'}</p>
         )}
+      </section>
+
+      <section className="space-y-2 rounded-lg border border-graphite/15 p-4">
+        <h2 className="font-semibold text-primary">{locale === 'ar' ? 'ملصقات العرض' : 'Listing posters'}</h2>
+        <PosterPanel listingId={id} posters={posters} locale={locale} />
       </section>
     </div>
   );
