@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
   return pageMeta({
-    title: locale === 'en' ? 'Lands for sale — ALSWARY' : 'أراضٍ للبيع — الصواري',
+    title: locale === 'en' ? 'Lands for sale — Al Sawarey' : 'أراضٍ للبيع — الصواري',
     description: locale === 'en' ? 'Selected lands for sale in New Obour City and beyond — filter by area, price, district and features.' : 'أراضٍ مختارة للبيع في مدينة العبور الجديدة وما حولها — فلترة بالمساحة والسعر والمنطقة والمميزات.',
     path: '/listings',
     locale,

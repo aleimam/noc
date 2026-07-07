@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const base = (process.env.BROKERAGE_URL || 'https://alsawarey.com').replace(/\/$/, '');
   const lines = [
-    '# الصواري للاستثمار العقاري (ALSWARY Real-estate Investment) — alsawarey.com',
+    '# الصواري للاستثمار العقاري (Al Sawarey Real-estate Investment) — alsawarey.com',
     '',
     '> Selected land plots for sale in New Obour City, Egypt and nearby areas. Fully bilingual (Arabic default, English available).',
     '',

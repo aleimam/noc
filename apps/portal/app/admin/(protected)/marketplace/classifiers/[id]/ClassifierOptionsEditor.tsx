@@ -138,7 +138,7 @@ export function ClassifierOptionsEditor({
               >
                 ✓
               </button>
-              {/* ALSWARY toggle: full-color logo when allowed, greyscale when not. */}
+              {/* Al Sawarey toggle: full-color logo when allowed, greyscale when not. */}
               {showAlsawarey && (
                 <button
                   type="button"
@@ -150,7 +150,7 @@ export function ClassifierOptionsEditor({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/brand/alsawarey-logo"
-                    alt="ALSWARY"
+                    alt="Al Sawarey"
                     className="h-full w-full object-contain"
                     style={{ filter: o.allowedOnAlsawarey ? 'none' : 'grayscale(1)', opacity: o.allowedOnAlsawarey ? 1 : 0.4 }}
                   />

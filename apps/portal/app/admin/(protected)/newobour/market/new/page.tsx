@@ -6,9 +6,9 @@ import { loadCatalog } from '@/app/account/listings/catalog';
 
 export const dynamic = 'force-dynamic';
 
-// Same listing form as ALSWARY, but reached from the New Obour section and defaulting
+// Same listing form as Al Sawarey, but reached from the New Obour section and defaulting
 // to New-Obour-only (showOnBrokerage off — staff can still toggle it on to also publish
-// to ALSWARY). Returns to the New Obour market after saving.
+// to Al Sawarey). Returns to the New Obour market after saving.
 export default async function NewObourNewListing() {
   await requirePermission('marketplace', 'CREATE');
   const t = await getTranslations('mp');

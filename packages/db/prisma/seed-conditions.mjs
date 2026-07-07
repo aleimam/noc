@@ -1,4 +1,4 @@
-// Seed the "اشتراطات البناء" (building conditions) reference pages from the ALSWARY
+// Seed the "اشتراطات البناء" (building conditions) reference pages from the Al Sawarey
 // sheets (209/276/350/400/450/500 m²). Idempotent — upserts by slug.
 import { prisma } from './db-client.mjs';
 

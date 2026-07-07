@@ -18,9 +18,9 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);
 
   // Grouped, permission-filtered navigation. Items with no `section` are always shown;
-  // empty groups are dropped. All ALSWARY management lives in one group.
+  // empty groups are dropped. All Al Sawarey management lives in one group.
   type NavItem = { href: string; label: string; section?: string };
-  // Brand-first structure: New Obour services · ALSWARY (store ops + setup) · shared
+  // Brand-first structure: New Obour services · Al Sawarey (store ops + setup) · shared
   // Content · People & access · System. URLs are unchanged — this only regroups the nav.
   const groups: { title?: string; items: NavItem[] }[] = [
     { items: [{ href: '/admin', label: t('dashboard') }] },
@@ -34,7 +34,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
       ],
     },
     {
-      title: L('الصواري — المتجر', 'ALSWARY — store'),
+      title: L('الصواري — المتجر', 'Al Sawarey — store'),
       items: [
         { href: '/admin/marketplace', label: L('نظرة عامة', 'Overview'), section: 'marketplace' },
         { href: '/admin/marketplace/listings', label: L('الأراضي والعروض', 'Lands & listings'), section: 'marketplace' },
@@ -44,7 +44,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
       ],
     },
     {
-      title: L('الصواري — الإعداد', 'ALSWARY — setup'),
+      title: L('الصواري — الإعداد', 'Al Sawarey — setup'),
       items: [
         { href: '/admin/marketplace/storefront', label: L('واجهة المتجر', 'Storefront'), section: 'marketplace' },
         { href: '/admin/marketplace/sell-content', label: L('محتوى صفحة البيع', 'Sell-page content'), section: 'marketplace' },

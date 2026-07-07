@@ -268,7 +268,7 @@ export const envSchema = z.object({
 });
 export type Env = z.infer<typeof envSchema>;
 
-// ── ALSWARY "sell your land" page content (editable in the New Obour backend) ──
+// ── Al Sawarey "sell your land" page content (editable in the New Obour backend) ──
 
 export type SellContent = {
   announceTitle: string;
@@ -322,7 +322,7 @@ export const DEFAULT_SELL_CONTENT: SellContent = {
 };
 
 // ---------------------------------------------------------------------------
-// ALSWARY storefront content — homepage + global chrome, editable from the New
+// Al Sawarey storefront content — homepage + global chrome, editable from the New
 // Obour backend. Shared shape so the portal editor and the brokerage app agree.
 // Content-only (bilingual text, links, images, toggles, order); no theming.
 // ---------------------------------------------------------------------------

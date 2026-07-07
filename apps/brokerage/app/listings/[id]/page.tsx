@@ -23,10 +23,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const locale = (await getLocale()) as 'ar' | 'en';
   const land = await getLandDetail(id, locale);
-  if (!land) return { title: locale === 'en' ? 'ALSWARY' : 'الصواري' };
+  if (!land) return { title: locale === 'en' ? 'Al Sawarey' : 'الصواري' };
   const desc = [land.typeAr, ...land.specs.slice(0, 4).map((s) => `${s.label}: ${s.value}`)].filter(Boolean).join(' · ').slice(0, 160);
   return pageMeta({
-    title: `${land.title} — ${locale === 'en' ? 'ALSWARY' : 'الصواري'}`,
+    title: `${land.title} — ${locale === 'en' ? 'Al Sawarey' : 'الصواري'}`,
     description: desc,
     path: `/listings/${id}`,
     images: land.gallery.slice(0, 1),

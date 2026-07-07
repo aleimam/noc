@@ -7,7 +7,7 @@ import { LanguageSwitcher, ThemeToggle } from '@noc/ui';
 type Item = { label: string; href: string };
 type Group = { title: string; links: Item[] };
 
-// Full-screen, big-tap-target mobile menu for ALSWARY (Golden Rule). The desktop nav is
+// Full-screen, big-tap-target mobile menu for Al Sawarey (Golden Rule). The desktop nav is
 // hidden on phones, so this is the only navigation there.
 export function StoreMobileMenu({
   allLands,

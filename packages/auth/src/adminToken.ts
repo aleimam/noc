@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { appSecret } from './secret';
 
-// Cross-app "view ALSWARY as admin" token. Signed with AUTH_SECRET (shared by both apps)
+// Cross-app "view Al Sawarey as admin" token. Signed with AUTH_SECRET (shared by both apps)
 // so the New Obour backend can mint a short-lived token that alsawarey.com trusts, without
 // a shared session cookie. Payload = { uid, exp }; format = base64url(payload).hexHmac.
 const DEFAULT_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours

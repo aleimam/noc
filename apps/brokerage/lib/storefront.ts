@@ -1,4 +1,4 @@
-// ALSWARY storefront content (homepage + global chrome). Schema, defaults, and the
+// Al Sawarey storefront content (homepage + global chrome). Schema, defaults, and the
 // shape-preserving merge live in @noc/config (shared with the New Obour backend editor);
 // this reads the admin override from Setting('alsawarey.storefront').
 import { prisma } from '@noc/db';

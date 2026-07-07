@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { uploadRoot } from '../../../lib/uploads';
 
-// Serve uploaded media on the ALSWARY domain (land photos, maps, brand assets). Mirrors the
+// Serve uploaded media on the Al Sawarey domain (land photos, maps, brand assets). Mirrors the
 // portal route so alsawarey.com/uploads/* works even when the web server's /uploads alias is
 // scoped to the New Obour vhost. In production a web-server Alias may serve these directly.
 const TYPES: Record<string, string> = {

@@ -39,7 +39,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
   const cw = Object.fromEntries(copyrightRows.map((r) => [r.key, r.value]));
   const copyright =
     (locale === 'en' ? cw['copyright_alsawarey_en'] || cw['copyright_alsawarey'] : cw['copyright_alsawarey']) ||
-    (locale === 'en' ? '© ALSWARY Real-estate Investment' : `© ${new Date().getFullYear()} alsawarey.com`);
+    (locale === 'en' ? '© Al Sawarey Real-estate Investment' : `© ${new Date().getFullYear()} alsawarey.com`);
   const adminView = await getAdminViewer();
 
   return (
@@ -53,7 +53,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-40 bg-navy-800 text-white shadow-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
           <StoreMobileMenu
-            brand={L('الصواري', 'ALSWARY')}
+            brand={L('الصواري', 'Al Sawarey')}
             allLands={{ label: Lc(content.nav.allLands.label), href: content.nav.allLands.href }}
             featured={{ label: Lc(content.nav.featured.label), href: content.nav.featured.href }}
             sell={{ label: Lc(content.nav.sell.label), href: content.nav.sell.href }}
@@ -61,7 +61,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
             account={{ label: L('حسابي', 'Account'), href: '/account' }}
             wishlist={{ label: L('المفضلة', 'Wishlist'), href: '/wishlist' }}
           />
-          <Link href="/" aria-label="ALSWARY" className="flex-none">
+          <Link href="/" aria-label="Al Sawarey" className="flex-none">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/logo" alt="الصواري للاستثمار العقاري" className="h-10 w-auto" />
           </Link>

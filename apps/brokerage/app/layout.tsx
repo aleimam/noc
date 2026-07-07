@@ -19,9 +19,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const en = locale === 'en';
   return {
     metadataBase: new URL(process.env.BROKERAGE_URL || 'https://alsawarey.com'),
-    title: en ? 'ALSWARY Real-estate Investment' : 'الصواري للاستثمار العقاري',
+    title: en ? 'Al Sawarey Real-estate Investment' : 'الصواري للاستثمار العقاري',
     description: en
-      ? 'ALSWARY Real-estate Investment — selected lands for sale in New Obour and beyond'
+      ? 'Al Sawarey Real-estate Investment — selected lands for sale in New Obour and beyond'
       : 'الصواري للاستثمار العقاري — أراضٍ مختارة للبيع في العبور الجديدة وما حولها',
     icons: { icon: '/brand/favicon' },
   };
@@ -39,7 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       '@context': 'https://schema.org',
       '@type': 'RealEstateAgent',
       name: 'الصواري للاستثمار العقاري',
-      alternateName: 'ALSWARY Real-estate Investment',
+      alternateName: 'Al Sawarey Real-estate Investment',
       url: siteUrl,
       logo: `${siteUrl}/brand/logo`,
       image: `${siteUrl}/brand/logo`,
@@ -47,7 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       areaServed: [{ '@type': 'City', name: 'New Obour City' }, { '@type': 'Country', name: 'Egypt' }],
       address: { '@type': 'PostalAddress', addressLocality: 'New Obour City', addressRegion: 'Qalyubia', addressCountry: 'EG' },
     },
-    { '@context': 'https://schema.org', '@type': 'WebSite', name: 'الصواري', alternateName: 'ALSWARY', url: siteUrl, inLanguage: ['ar', 'en'], potentialAction: { '@type': 'SearchAction', target: `${siteUrl}/listings?q={search_term_string}`, 'query-input': 'required name=search_term_string' } },
+    { '@context': 'https://schema.org', '@type': 'WebSite', name: 'الصواري', alternateName: 'Al Sawarey', url: siteUrl, inLanguage: ['ar', 'en'], potentialAction: { '@type': 'SearchAction', target: `${siteUrl}/listings?q={search_term_string}`, 'query-input': 'required name=search_term_string' } },
   ];
 
   return (

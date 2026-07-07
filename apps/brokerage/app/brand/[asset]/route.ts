@@ -4,7 +4,7 @@ import path from 'node:path';
 import { prisma } from '@noc/db';
 import { uploadRoot } from '../../../lib/uploads';
 
-// Stable brand-asset URLs for ALSWARY, editable from the New Obour backend. The stored
+// Stable brand-asset URLs for Al Sawarey, editable from the New Obour backend. The stored
 // value is usually an uploaded /uploads/... path — we STREAM its bytes from the shared
 // disk rather than redirecting, so the asset loads on alsawarey.com regardless of whether
 // the web server aliases /uploads for this vhost (fixes the logo not appearing). Absolute

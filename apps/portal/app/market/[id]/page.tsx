@@ -195,7 +195,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const sections = [...bySection.values()].sort((a, b) => a.section.order - b.section.order);
 
   // Contact rule: an individual owner is reached directly; anything owned by us, a company
-  // or a broker routes to our central ALSWARY number (we broker those).
+  // or a broker routes to our central Al Sawarey number (we broker those).
   const effOwnerType = listing.owner?.type ?? listing.ownerType ?? 'PERSONAL';
   const weAreContact = effOwnerType !== 'PERSONAL';
   let contactPhone = listing.contactPhone;

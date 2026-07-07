@@ -386,7 +386,7 @@ async function main() {
     if (oid) await prisma.listing.update({ where: { id: l.id }, data: { typeOptionId: oid } });
   }
 
-  // Central ALSWARY contact (editable in admin) + drop the redundant seller_role
+  // Central Al Sawarey contact (editable in admin) + drop the redundant seller_role
   // attribute (now folded into Owner.type).
   const SETTINGS = [
     { key: 'alswarey_phone', value: '01040810000' },

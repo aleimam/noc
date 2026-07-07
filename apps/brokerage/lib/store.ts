@@ -1,5 +1,5 @@
 // Storefront config: central contact, top-menu groups, and the featured-filter banners.
-// Banner images live in /public/market/banners (copied from the ALSWARY asset folder).
+// Banner images live in /public/market/banners (copied from the Al Sawarey asset folder).
 // Each entry links to the catalogue with the matching filter querystring.
 
 export const WHATSAPP = '+201040810000';

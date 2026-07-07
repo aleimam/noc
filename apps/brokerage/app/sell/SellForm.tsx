@@ -90,7 +90,7 @@ export function SellForm({
     return (
       <div className="rounded-2xl border-2 border-success bg-white p-6 text-center">
         <div className="text-xl font-extrabold text-success">{L('تم استلام طلبك بنجاح', 'Your request was received')}</div>
-        <p className="mt-2 text-ink-600">{L('سيتواصل معك فريق الصواري قريباً لتقييم أرضك والبدء في تسويقها.', 'The ALSWARY team will contact you soon to evaluate your land and start marketing it.')}</p>
+        <p className="mt-2 text-ink-600">{L('سيتواصل معك فريق الصواري قريباً لتقييم أرضك والبدء في تسويقها.', 'The Al Sawarey team will contact you soon to evaluate your land and start marketing it.')}</p>
       </div>
     );
   }

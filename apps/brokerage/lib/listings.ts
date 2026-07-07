@@ -222,7 +222,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
     })
   ).map((a) => a.path);
 
-  // Append the ALSWARY-stamped location + masterplan maps of the land's neighborhood
+  // Append the Al Sawarey-stamped location + masterplan maps of the land's neighborhood
   // and its district (after the land's own photos).
   if (l.neighborhoodId) {
     const nb = await prisma.neighborhood.findUnique({ where: { id: l.neighborhoodId }, select: { id: true, districtId: true } });

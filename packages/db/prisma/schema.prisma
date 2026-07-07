@@ -763,7 +763,7 @@ model WishlistItem {
   @@index([listingId])
 }
 
-/// Simple key/value app settings (e.g. the central ALSWARY contact number).
+/// Simple key/value app settings (e.g. the central Al Sawarey contact number).
 model Setting {
   key   String @id
   value String @db.Text

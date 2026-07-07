@@ -14,8 +14,8 @@ const STATUS_COLOR: Record<string, string> = {
   ARCHIVED: 'bg-graphite/10 text-graphite',
 };
 
-// New Obour's own marketplace surface. Listings are shared with ALSWARY (a listing
-// shows on ALSWARY only when showOnBrokerage is on); this section is the New-Obour-
+// New Obour's own marketplace surface. Listings are shared with Al Sawarey (a listing
+// shows on Al Sawarey only when showOnBrokerage is on); this section is the New-Obour-
 // branded entry point for adding/managing them.
 export default async function NewObourMarket() {
   await requirePermission('marketplace', 'VIEW');
@@ -34,7 +34,7 @@ export default async function NewObourMarket() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-primary">{L('سوق العبور الجديد', 'New Obour market')}</h1>
-          <p className="text-sm opacity-70">{L('أضف وأدر عروض السوق. العرض يظهر على الصواري فقط عند تفعيل خيار النشر.', 'Add & manage market listings. A listing shows on ALSWARY only when its publish toggle is on.')}</p>
+          <p className="text-sm opacity-70">{L('أضف وأدر عروض السوق. العرض يظهر على الصواري فقط عند تفعيل خيار النشر.', 'Add & manage market listings. A listing shows on Al Sawarey only when its publish toggle is on.')}</p>
         </div>
         <a href="/admin/newobour/market/new" className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-soft">+ {L('إضافة عرض جديد', 'Add listing')}</a>
       </div>
@@ -49,7 +49,7 @@ export default async function NewObourMarket() {
                 <th className="p-2 text-start">{t('listingTitle')}</th>
                 <th className="p-2 text-start">{t('price')}</th>
                 <th className="p-2 text-start">{t('active')}</th>
-                <th className="p-2 text-start">{L('على الصواري', 'On ALSWARY')}</th>
+                <th className="p-2 text-start">{L('على الصواري', 'On Al Sawarey')}</th>
                 <th className="p-2"></th>
               </tr>
             </thead>
@@ -68,7 +68,7 @@ export default async function NewObourMarket() {
         </div>
       )}
 
-      <a href="/admin/marketplace/listings" className="inline-block text-sm text-accent">{L('فتح الإدارة الكاملة (الصواري) ←', 'Open full manager (ALSWARY) →')}</a>
+      <a href="/admin/marketplace/listings" className="inline-block text-sm text-accent">{L('فتح الإدارة الكاملة (الصواري) ←', 'Open full manager (Al Sawarey) →')}</a>
     </div>
   );
 }

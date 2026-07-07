@@ -58,7 +58,7 @@ export default async function MarketplaceHub() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-primary">{L('إدارة متجر الصواري', 'ALSWARY store')}</h1>
+        <h1 className="text-2xl font-bold text-primary">{L('إدارة متجر الصواري', 'Al Sawarey store')}</h1>
         <p className="text-sm opacity-70">{L('العروض والملاك، وإعداد واجهة المتجر وتصنيفاته.', 'Listings & owners, plus storefront design and taxonomy.')}</p>
       </div>
       <Grid title={L('العمليات', 'Operations')} cards={ops} />

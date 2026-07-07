@@ -64,7 +64,7 @@ export function SiteSettingsClient({ initial }: { initial: Initial }) {
           <label className="block text-sm">العبور الجديد — بالعربية<input value={s.copyrightNewobour} onChange={(e) => setS((x) => ({ ...x, copyrightNewobour: e.target.value }))} className={inp} /></label>
           <label className="block text-sm">New Obour — English<input dir="ltr" value={s.copyrightNewobourEn} onChange={(e) => setS((x) => ({ ...x, copyrightNewobourEn: e.target.value }))} className={inp} /></label>
           <label className="block text-sm">الصواري — بالعربية<input value={s.copyrightAlsawarey} onChange={(e) => setS((x) => ({ ...x, copyrightAlsawarey: e.target.value }))} className={inp} /></label>
-          <label className="block text-sm">ALSWARY — English<input dir="ltr" value={s.copyrightAlsawareyEn} onChange={(e) => setS((x) => ({ ...x, copyrightAlsawareyEn: e.target.value }))} className={inp} /></label>
+          <label className="block text-sm">Al Sawarey — English<input dir="ltr" value={s.copyrightAlsawareyEn} onChange={(e) => setS((x) => ({ ...x, copyrightAlsawareyEn: e.target.value }))} className={inp} /></label>
         </div>
       </section>
 

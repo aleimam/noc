@@ -98,12 +98,12 @@ export default async function AdminDashboard() {
 
       {can('marketplace') && (
         <Section
-          title={L('السوق والصواري', 'Marketplace & ALSWARY')}
+          title={L('السوق والصواري', 'Marketplace & Al Sawarey')}
           kpis={[
             { label: L('إجمالي العروض', 'Total listings'), value: listingsTotal, href: '/admin/marketplace/listings' },
             { label: L('بانتظار المراجعة', 'Pending review'), value: listingsPending, href: '/admin/marketplace/listings', alert: listingsPending > 0 },
             { label: L('منشورة', 'Published'), value: listingsPublished },
-            { label: L('على الصواري', 'On ALSWARY'), value: onBrokerage },
+            { label: L('على الصواري', 'On Al Sawarey'), value: onBrokerage },
             { label: L('مباعة', 'Sold'), value: listingsSold },
             { label: L('عروض بيع واردة', 'Incoming offers'), value: offersOpen, href: '/admin/marketplace/offers', alert: offersOpen > 0 },
             { label: L('الملاك', 'Owners'), value: owners, href: '/admin/marketplace/owners' },

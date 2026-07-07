@@ -1,4 +1,4 @@
-// New Obour service/module visibility, toggled from the backend. ALSWARY is fixed
+// New Obour service/module visibility, toggled from the backend. Al Sawarey is fixed
 // (always shows its catalogue/sell/contact) — this is portal-only.
 import { prisma } from '@noc/db';
 
