@@ -5,6 +5,7 @@ import { prisma, Prisma } from '@noc/db';
 import { requirePermission } from '@noc/auth';
 import { isValidPhone } from '@noc/config';
 import { ensureAdNumber } from '../../../../lib/adNumber';
+import { regenerateListingImages } from '../../../../lib/poster/generate';
 import { STANDARD_AREAS_KEY } from '../../../../lib/marketplace';
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -332,6 +333,23 @@ export async function deleteOptionList(id: string): Promise<Result> {
   }
 }
 
+/** Bulk: regenerate the poster/card/advantages images for every published listing
+ *  (run after a design change). Best-effort per listing; returns how many succeeded. */
+export async function regenerateAllListingImages(): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    const ids = (await prisma.listing.findMany({ where: { status: 'PUBLISHED' }, select: { id: true } })).map((l) => l.id);
+    let count = 0;
+    for (const id of ids) {
+      try { await regenerateListingImages(id); count++; } catch (e) { console.error('regenerateAll failed for', id, e); }
+    }
+    return { ok: true, count };
+  } catch (e) {
+    console.error('regenerateAllListingImages failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
 // ──────────────────────────── Moderation ────────────────────────────
 
 export async function approveListing(id: string): Promise<Result> {
@@ -343,6 +361,9 @@ export async function approveListing(id: string): Promise<Result> {
     });
     // Assign the public ad number on first publish (no-op if already set or owner lacks a number).
     await ensureAdNumber(id);
+    // Auto-generate the listing's image set (poster/cards/advantages) — fire-and-forget so
+    // publishing stays snappy; failures are logged, not surfaced.
+    void regenerateListingImages(id).catch((e) => console.error('auto-generate posters failed', e));
     revalidatePath('/admin/marketplace/listings', 'page');
     return { ok: true };
   } catch (e) {

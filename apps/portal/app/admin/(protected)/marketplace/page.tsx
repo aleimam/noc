@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { ContactSettings } from './ContactSettings';
+import { RegenAllButton } from './RegenAllButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,9 +58,12 @@ export default async function MarketplaceHub() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-primary">{L('إدارة متجر الصواري', 'Al Sawarey store')}</h1>
-        <p className="text-sm opacity-70">{L('العروض والملاك، وإعداد واجهة المتجر وتصنيفاته.', 'Listings & owners, plus storefront design and taxonomy.')}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-primary">{L('إدارة متجر الصواري', 'Al Sawarey store')}</h1>
+          <p className="text-sm opacity-70">{L('العروض والملاك، وإعداد واجهة المتجر وتصنيفاته.', 'Listings & owners, plus storefront design and taxonomy.')}</p>
+        </div>
+        <RegenAllButton locale={locale as 'ar' | 'en'} />
       </div>
       <Grid title={L('العمليات', 'Operations')} cards={ops} />
       <Grid title={L('الإعداد', 'Setup')} cards={setup} />

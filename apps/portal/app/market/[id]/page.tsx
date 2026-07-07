@@ -8,6 +8,7 @@ import { formatDetailValue, type DetailConfig } from '@noc/config';
 import { auth } from '@noc/auth';
 import { getStandardAreas } from '../../../lib/marketplace';
 import { advantagesForNeighborhood } from '../../../lib/advantages';
+import { listListingImages } from '../../../lib/poster/generate';
 import { pageMeta, breadcrumbLd, ldJson, abs } from '../../../lib/seo';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -109,6 +110,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const attrById = new Map(attrs.map((a) => [a.id, a]));
   const standardAreas = await getStandardAreas();
   const advGroups = await advantagesForNeighborhood(listing.neighborhoodId, locale);
+  const genImgs = await listListingImages(listing.id, 'newobour');
 
   // Recommendations: other published listings of the same type ("like what you're viewing").
   const similar = listing.typeOptionId
@@ -320,6 +322,13 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       ))}
 
       <AreaAdvantages heading={L('مميزات المنطقة', 'Area advantages')} groups={advGroups} />
+
+      {genImgs.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold text-primary">{L('صور العرض', 'Listing posters')}</h2>
+          <PhotoGallery photos={genImgs.map((g) => g.path)} />
+        </section>
+      )}
 
       {listing.buildingConditions.length > 0 && (
         <details className="rounded-lg border border-graphite/15 p-4">

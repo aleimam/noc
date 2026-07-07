@@ -43,6 +43,11 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   const [wished, similar, store] = await Promise.all([wishlistListingIds(), similarLands(id, 4), getStorefront()]);
   const nb = await prisma.listing.findUnique({ where: { id }, select: { neighborhoodId: true } });
   const advGroups = await advantagesForNeighborhood(nb?.neighborhoodId, locale);
+  const genRows = await prisma.attachment.findMany({
+    where: { ownerType: 'ListingPoster', ownerId: id, stampCategory: { contains: 'alsawarey' } },
+    orderBy: { stampCategory: 'asc' },
+    select: { path: true },
+  });
   const owner = (await getAdminViewer()) ? await ownerDetailFor(id) : null;
   const ownerTypeLabel: Record<string, string> = { PERSONAL: L('فرد', 'Personal'), COMPANY: L('شركة', 'Company'), BROKER: L('سمسار', 'Broker'), US: L('نحن', 'Us') };
 
@@ -166,6 +171,13 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
         {advGroups.length > 0 && (
           <div className="mt-6 rounded-2xl bg-white p-5 shadow-md">
             <AreaAdvantages heading={L('مميزات المنطقة', 'Area advantages')} groups={advGroups} />
+          </div>
+        )}
+
+        {genRows.length > 0 && (
+          <div className="mt-6 rounded-2xl bg-white p-5 shadow-md">
+            <h2 className="mb-3 text-lg font-bold text-navy-800">{L('صور العرض', 'Listing posters')}</h2>
+            <PhotoGallery photos={genRows.map((r) => r.path)} />
           </div>
         )}
 
