@@ -11,39 +11,74 @@ SMS gateway, and next-intl ar/en.
 
 ---
 
-## 🚧 In progress — City geo level, map inheritance, area advantages, generated photos (2026-07)
+## 📌 Current status (2026-07-08)
 
-Agreed with the owner; built in two phases. Full decision log lives in the assistant
+**Just shipped & deployed:** the City-geo / map-inheritance / area-advantages /
+generated-photos feature is **complete (both phases + mark-stale)** — see below. English
+display name **ALSWARY → "Al Sawarey"** throughout (identifiers, `alsawarey.com` domain,
+and Arabic الصواري unchanged; commit `5cd8b98`).
+
+**Immediate backlog (not started):**
+- **Off-server backups** — on-server daily DB+uploads backups already exist and restore
+  (see `ops/RESTORE.md`); the gap is an **off-site copy**. Approach chosen = SSH-key push
+  from the VPS to the owner's backup server. A VPS keypair was generated; **blocked on the
+  owner** supplying the backup server's host / port / user / target path + installing the
+  VPS public key there.
+- **Cloudflare** in front of both domains (proxy/CDN/WAF).
+- **`/code-review ultra`** — owner-triggered when wanted.
+- **Live validation of generated photos** — prod had **0 listings** at build time; once a
+  real listing exists, generate one full image set end-to-end to eyeball live output
+  (renderer already validated with sample data on prod).
+- Minor deferred polish: `٪` bidi glyph in generated images; advantages-photo vertical
+  centering with few items; per-group icon admin assignment.
+
+---
+
+## ✅ Shipped — City geo level, map inheritance, area advantages, generated photos (2026-07)
+
+Agreed with the owner; delivered in two phases. Full decision log lives in the assistant
 memory (`maps-advantages-photos-plan`).
 
-**Geo:** new **City** level → `City → District → Neighborhood` (`District.cityId`,
-seeded with مدينة العبور الجديدة, all districts backfilled). `Advantage` gains `cityId`.
+**Geo (Phase 1, commit `d8d0d11`, migration `20260707120000_city_geo_maps`):** new
+**City** level → `City → District → Neighborhood` (`District.cityId`, seeded with
+مدينة العبور الجديدة, 40 districts backfilled). `Advantage` gains `cityId`. Admin Cities
+section at `/admin/lands/cities`.
 
 **Maps (extends `AreaMap`):** City holds 4 uploaded maps (masterplan / location /
 services-areas / main-roads). District & Neighborhood have an uploaded masterplan + a
-**location** map produced by **annotating the parent's masterplan** with the existing
-shared `MapAnnotator` (one component, edited globally). Listings (any with a
-neighborhood) get a location map by annotating the neighborhood masterplan. `AreaMap`
-now carries `annotation` (editable shapes) + `sourcePath`; new `level` values `city`/
-`listing` and `kind` values `services`/`mainroads`; dual clean + per-brand stamp kept.
-Replacing a parent masterplan leaves children's location maps until re-saved.
+**location** map produced by **annotating the parent's masterplan** with the shared
+`MapAnnotator` (one component, edited globally). Listings (any with a neighborhood) get a
+location map by annotating the neighborhood masterplan (per-listing annotator wired in
+commit `42337f1`). `AreaMap` carries `annotation` (editable shapes) + `sourcePath`; `level`
+adds `city`/`listing`, `kind` adds `services`/`mainroads`; dual clean + per-brand stamp
+kept. Replacing a parent masterplan leaves children's location maps until re-saved.
 
 **Advantages (#1–#3):** City+District+Neighborhood free-text advantages; embedded on
 **both** sites' listing detail as an "Area advantages" section grouped by level (derived
-from the listing's neighborhood). Public **Explore** becomes City → District →
-Neighborhood with a city page (maps + advantages).
+from the listing's neighborhood, via `advantagesForNeighborhood` + `@noc/ui`
+`AreaAdvantages`). Public **Explore** is now City → District → Neighborhood with a city
+page (maps + advantages).
 
-**Generated photos — Phase 2 (#4):** new server-side renderer (SVG/HTML→PNG via
-`sharp`, headless for bulk). **Big poster** = title + Area (group 1, no own card) +
-first-4 attribute groups + embedded location map → **3 versions** (New Obour / ALSWARY /
-unbranded-for-partners, same colours/format). **Per-group cards** (every group except
-Area) + a separate **advantages photo** → **2 versions** (New Obour / ALSWARY). Arabic
-only. Live in the public gallery per site; unbranded poster via an admin download
-button. Generated on add; **"Regenerate all"** bulk action; editing advantages/design
-**marks affected listings stale**. Approved visual design still to be supplied.
-
-**Phasing:** Phase 1 = geo City + map inheritance + advantages #1–#3 (data & rendering,
-no image generation). Phase 2 = the renderer + poster/cards/advantages photos.
+**Generated photos — Phase 2 (commits `dde555e` renderer, `771a0b0` cards+advantages,
+`2133ba8` triggers+display, `be98b87` mark-stale):** server-side renderer =
+**`sharp` + SVG** (NOT Chromium — libvips shapes Arabic/Tajawal correctly; Tajawal
+installed on prod at `/usr/share/fonts/tajawal/`). Code in `apps/portal/lib/poster/`
+(`render.ts` = `renderPoster`/`renderCard`/`renderAdvantages`; `generate.ts` =
+`regenerateListingImages`/`listListingImages`/`markAreaListingsStale`). Approved visual
+identity = the **`Identity/` navy+gold assets** (Layout A poster, gold frame + navy corner
+brackets + gold divider, page-wide footer; **not** flat mockups). Arabic only.
+- **Big poster** = ad no. + title + prominent Area pill + neighborhood map (big) + city
+  masterplan + 3 group cards → **3 versions** (New Obour / Al Sawarey / unbranded-for-partners).
+- **Per-group cards** (every attribute group except Area) + a separate **advantages photo**
+  → **2 versions** (New Obour / Al Sawarey).
+- Stored as `Attachment` rows (`ownerType='ListingPoster'`, `stampCategory`
+  `poster:`/`card:`/`adv:`<brand>). Shown in a public gallery per site + admin download
+  (`PosterPanel` on the listing editor). **Generated on publish** (fire-and-forget in
+  `approveListing`); **"Regenerate all"** bulk action on the marketplace overview.
+- **Mark-stale:** `Listing.postersStale` (migration `20260708120000_listing_posters_stale`)
+  is set when a listing's data changes, its location map is set/cleared, or its area's
+  advantages change (`markAreaListingsStale` cascades city/district/neighborhood → listings);
+  cleared on regenerate; `PosterPanel` shows a "regenerate to update" banner while stale.
 
 ---
 

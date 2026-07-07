@@ -4,7 +4,7 @@ A bilingual (Arabic‑first, RTL) platform for New Obour City, built as one mono
 **two front‑ends sharing one backend**:
 
 - **`apps/portal`** → **newobour.com** — the free community services portal (brand: العبور الجديد / New Obour Real Estate)
-- **`apps/brokerage`** → **alsawarey.com** — the ALSWARY (الصواري) real‑estate brokerage
+- **`apps/brokerage`** → **alsawarey.com** — the Al Sawarey (الصواري) real‑estate brokerage
 
 ## Stack
 Next.js 15 (App Router) · React 19 · Tailwind v4 · TypeScript · Prisma + MySQL/MariaDB ·
