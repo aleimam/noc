@@ -49,16 +49,19 @@ enum Locale {
 model User {
   id              String    @id @default(cuid())
   type            UserType
-  email           String?   @unique // staff
-  passwordHash    String? // staff
-  phone           String?   @unique // customer
+  email           String?   @unique // staff / partner
+  passwordHash    String? // staff / partner
+  phone           String?   @unique // customer / partner
   phoneVerifiedAt DateTime?
+  username        String?   @unique // partner login identifier (admin-created)
+  ownerId         String?   @unique // PARTNER accounts: the Owner this login belongs to
   name            String?
   partnerKind     PartnerKind? // for PARTNER users: broker vs company
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  owner       Owner?           @relation("OwnerPortalUser", fields: [ownerId], references: [id], onDelete: SetNull)
   roles       UserRole[]
   directPerms UserPermission[]
   preference  CustomerPreference?
@@ -331,6 +334,7 @@ model ClassifierOption {
   childLinks        ClassifierOptionParent[] @relation("COPParent")
   attrLinks         AttributeClassifier[]
   sectionRenders    CategorySectionRender[]
+  ownerGrants       OwnerAllowedCategory[]
   typeListings      Listing[]             @relation("ListingType")
   purposeListings   Listing[]             @relation("ListingPurpose")
   conditionListings Listing[]             @relation("ListingCondition")
@@ -547,6 +551,7 @@ model Listing {
   cardTitle       String? // marketing headline on the generated cards (staff-entered; falls back to title)
   postersStale    Boolean       @default(false) // generated images out of date vs listing/area data
   featured        Boolean       @default(false) // promoted on the storefront (manual)
+  views           Int           @default(0) // public detail-page views (both sites)
   priceNote       String?
   // Plot consolidation & partnerships (تجميع الملاك والشراكات) — owner opts the
   // listing into partnering; type + free-text note (expected share / terms).
@@ -581,6 +586,7 @@ model Listing {
   buildingConditions ListingBuildingCondition[]
   amenityPlacements  AmenityPlacement[]
   negotiations       Negotiation[]
+  viewDays           ListingViewDay[]
 
   @@index([status, propertyTypeId])
   @@index([sellerId, status])
@@ -675,8 +681,37 @@ model Owner {
   listings Listing[]
   lands    Land[]
   codes    OwnerCode[] // allocated 2-digit ad-number codes (US 00–09, Company/Broker 10–79)
+  portalUser        User?                  @relation("OwnerPortalUser") // the partner-portal login (admin-created)
+  allowedCategories OwnerAllowedCategory[] // Type options this partner may post in (explicit grants)
 
   @@index([type])
+}
+
+/// Daily public-view rollup per listing (both sites) — powers the partner analytics
+/// trends; Listing.views keeps the all-time total.
+model ListingViewDay {
+  id        String   @id @default(cuid())
+  listingId String
+  date      DateTime @db.Date
+  count     Int      @default(0)
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, date])
+}
+
+/// A Type option the partner (owner) is allowed to create listings in — explicit
+/// grants only: an owner with no rows cannot create listings from the partner portal.
+model OwnerAllowedCategory {
+  id       String @id @default(cuid())
+  ownerId  String
+  optionId String // ClassifierOption (Type)
+
+  owner  Owner            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  option ClassifierOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, optionId])
+  @@index([optionId])
 }
 
 /// A 2-digit ad-number code allocated to a coded owner (Company/Broker 10–79, Us 00–09).

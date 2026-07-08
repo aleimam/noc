@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma, Prisma } from '@noc/db';
-import { requirePermission } from '@noc/auth';
+import { requirePermission, hashPassword } from '@noc/auth';
 import { isValidPhone } from '@noc/config';
 import { ensureAdNumber } from '../../../../lib/adNumber';
 import { regenerateListingImages } from '../../../../lib/poster/generate';
@@ -166,6 +166,63 @@ export async function deleteSection(id: string): Promise<Result> {
   await requirePermission('marketplace', 'DELETE');
   try {
     await prisma.attributeSection.delete({ where: { id } });
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ──────────────────────────── Partner portal (owner logins) ────────────────────────────
+
+export type PartnerAccountInput = {
+  username: string;
+  email: string;
+  phone: string;
+  password: string; // '' = keep the current one
+  isActive: boolean;
+};
+
+/** Create/update the partner-portal login attached to an Owner. Any of username/email/
+ *  phone works as the login identifier — at least one is required. */
+export async function savePartnerAccount(ownerId: string, input: PartnerAccountInput): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  const username = input.username.trim().toLowerCase() || null;
+  const email = input.email.trim().toLowerCase() || null;
+  const phone = input.phone.trim() || null;
+  if (!username && !email && !phone) return { ok: false, error: 'identifier_required' };
+  if (phone && !isValidPhone(phone)) return { ok: false, error: 'invalid_phone' };
+  try {
+    const owner = await prisma.owner.findUnique({ where: { id: ownerId }, select: { name: true } });
+    if (!owner) return { ok: false, error: 'failed' };
+    const passPatch = input.password.trim() ? { passwordHash: await hashPassword(input.password.trim()) } : {};
+    const existing = await prisma.user.findUnique({ where: { ownerId } });
+    if (existing) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: { username, email, phone, isActive: input.isActive, name: owner.name, ...passPatch },
+      });
+    } else {
+      await prisma.user.create({
+        data: { type: 'PARTNER', ownerId, username, email, phone, isActive: input.isActive, name: owner.name, ...passPatch },
+      });
+    }
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Replace the Type categories this partner may create listings in (explicit grants). */
+export async function setOwnerAllowedCategories(ownerId: string, optionIds: string[]): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    const ids = [...new Set(optionIds)];
+    await prisma.$transaction([
+      prisma.ownerAllowedCategory.deleteMany({ where: { ownerId } }),
+      ...(ids.length ? [prisma.ownerAllowedCategory.createMany({ data: ids.map((optionId) => ({ ownerId, optionId })) })] : []),
+    ]);
     revalidate();
     return { ok: true };
   } catch (e) {

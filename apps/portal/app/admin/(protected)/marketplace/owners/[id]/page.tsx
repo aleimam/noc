@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { currency } from '@noc/i18n';
+import { PartnerPortalPanel } from './PartnerPortalPanel';
 
 export const dynamic = 'force-dynamic';
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -21,10 +22,17 @@ export default async function OwnerDetailPage({ params }: { params: Promise<{ id
         orderBy: { updatedAt: 'desc' },
         select: { id: true, title: true, status: true, price: true, adNumber: true, showOnBrokerage: true },
       },
+      portalUser: { select: { username: true, email: true, phone: true, isActive: true, passwordHash: true } },
+      allowedCategories: { select: { optionId: true } },
       _count: { select: { lands: true } },
     },
   });
   if (!owner) notFound();
+  const typeOptions = await prisma.classifierOption.findMany({
+    where: { isActive: true, classifier: { key: 'type' } },
+    orderBy: { order: 'asc' },
+    select: { id: true, nameAr: true, nameEn: true },
+  });
 
   const phones = [
     owner.phone1 && `${owner.phone1}${owner.phone1Whatsapp ? ' (WA)' : ''}`,
@@ -49,6 +57,24 @@ export default async function OwnerDetailPage({ params }: { params: Promise<{ id
         {phones.length > 0 && <div dir="ltr" className="opacity-80">{phones.join('  ·  ')}</div>}
         {owner.details && <p className="opacity-70">{owner.details}</p>}
       </div>
+
+      {/* Partner-portal access: login account + allowed posting categories (not for US). */}
+      {owner.type !== 'US' && (
+        <PartnerPortalPanel
+          ownerId={owner.id}
+          account={{
+            exists: !!owner.portalUser,
+            username: owner.portalUser?.username ?? '',
+            email: owner.portalUser?.email ?? '',
+            phone: owner.portalUser?.phone ?? owner.phone1 ?? '',
+            isActive: owner.portalUser?.isActive ?? true,
+            hasPassword: !!owner.portalUser?.passwordHash,
+          }}
+          typeOptions={typeOptions}
+          granted={owner.allowedCategories.map((c) => c.optionId)}
+          locale={locale}
+        />
+      )}
 
       {/* Listings */}
       <section className="space-y-2">
