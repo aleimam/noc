@@ -85,9 +85,16 @@ async function gather(listingId: string): Promise<Gathered | null> {
     ad: headAd,
   });
   const cards: CardData[] = nonArea.filter((s) => !cardOff.has(s.id)).map(toCard);
-  const posterCards: CardData[] = posterOn.size
-    ? nonArea.filter((s) => posterOn.has(s.id)).map(toCard)
-    : nonArea.slice(0, 3).map(toCard);
+  // The Area group (first section) is special by owner decision: it ALWAYS opens the
+  // poster and never gets its own small card — its marks are not configurable.
+  const areaGroup = ordered[0];
+  const areaCard: CardData | null = areaGroup && areaGroup.rows.length
+    ? { name: areaGroup.name, rows: areaGroup.rows.slice(0, 5), icon: isPosterIcon(areaGroup.icon) ? areaGroup.icon : 'ruler', title: headTitle, ad: headAd }
+    : null;
+  const posterCards: CardData[] = [
+    ...(areaCard ? [areaCard] : []),
+    ...(posterOn.size ? nonArea.filter((s) => posterOn.has(s.id)) : nonArea.slice(0, 3)).map(toCard),
+  ];
 
   const nbMap = await prisma.areaMap.findFirst({ where: { level: 'listing', areaId: listingId, kind: 'location' }, select: { cleanPath: true } });
   let cityMap: { cleanPath: string } | null = null;

@@ -152,8 +152,13 @@ export function MapAnnotator({
     try {
       const exportScale = Math.min(img.naturalWidth, MAX_EXPORT) / display.w;
       const dataUrl = stage.toDataURL({ pixelRatio: exportScale, mimeType: 'image/png' });
-      const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], 'map.png', { type: 'image/png' });
+      // Decode the data URL manually — `fetch(dataUrl)` is governed by the CSP
+      // connect-src (which deliberately excludes data:) and gets blocked.
+      const b64 = dataUrl.split(',')[1] ?? '';
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const file = new File([bytes], 'map.png', { type: 'image/png' });
       const fd = new FormData();
       fd.append('file', file);
       const res = await fetch('/api/upload', { method: 'POST', body: fd });

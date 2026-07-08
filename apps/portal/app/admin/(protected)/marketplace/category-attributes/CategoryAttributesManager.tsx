@@ -61,9 +61,10 @@ export function CategoryAttributesManager({
       const r = await setOptionAttributes(optionId, [...checked]);
       let ok = r.ok;
       if (ok && isTypeOption) {
+        // Skip the Area group (first) — it is always on the poster, never a card.
         const r2 = await setCategorySectionRender(
           optionId,
-          sections.map((s) => ({ sectionId: s.id, ...markOf(s.id) })),
+          sections.slice(1).map((s) => ({ sectionId: s.id, ...markOf(s.id) })),
         );
         ok = r2.ok;
       }
@@ -94,15 +95,19 @@ export function CategoryAttributesManager({
       {isTypeOption && <p className="text-xs opacity-60">🃏 {t('markHint')}</p>}
 
       <div className="space-y-4">
-        {sections.map((sec) => {
+        {sections.map((sec, secIdx) => {
           const all = sec.attributes.length > 0 && sec.attributes.every((a) => checked.has(a.id));
           const mk = markOf(sec.id);
+          const isAreaGroup = secIdx === 0; // first group = Area: always on the poster, never a card
           return (
             <div key={sec.id} className="rounded-lg border border-graphite/15 p-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-semibold text-primary">{sec.name}</h3>
                 <div className="flex items-center gap-3">
-                  {isTypeOption && (
+                  {isTypeOption && isAreaGroup && (
+                    <span className="rounded-full bg-navy-800 px-3 py-0.5 text-xs font-semibold text-white">📄 {t('areaAlwaysPoster')}</span>
+                  )}
+                  {isTypeOption && !isAreaGroup && (
                     <>
                       <label className="flex items-center gap-1 rounded-full border border-gold-300/60 bg-gold/10 px-2 py-0.5 text-xs font-semibold">
                         <input type="checkbox" checked={mk.makeCard} onChange={(e) => setMark(sec.id, { makeCard: e.target.checked })} />

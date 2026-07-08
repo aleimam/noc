@@ -312,6 +312,7 @@
     "new": "New",
     "none": "None",
     "manage": "Manage the property catalog: types, sections, and attributes",
+    "areaAlwaysPoster": "Always on the poster",
     "markCard": "Small card",
     "markPoster": "On poster",
     "markHint": "Per group: generate its own small card, and/or include it on the big poster. With no poster picks, the first 3 groups are used.",
