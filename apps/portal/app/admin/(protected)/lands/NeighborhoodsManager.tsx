@@ -42,17 +42,19 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
     return d ? L(d.nameAr, d.nameEn) : '—';
   };
 
-  const blank: Draft = { districtId: districts[0]?.id ?? '', nameAr: '', nameEn: '', hasBlocks: false, assortedAreas: false, areas: [], buildingTypes: [], mainRoads: [], order: neighborhoods.length, isActive: true };
+  const blank: Draft = { districtId: districts[0]?.id ?? '', nameAr: '', nameEn: '', hasBlocks: false, assortedAreas: false, areas: [], buildingTypes: [], mainRoads: [], order: 0, isActive: true };
 
   const [q, setQ] = useState('');
   const [districtFilter, setDistrictFilter] = useState('');
-  const [sortKey, setSortKey] = useState<'district' | 'neighborhood' | 'blocks'>('neighborhood');
+  // Default sort = ترتيب (order): neighborhoods are numbered (مجاورة 1، 2، 3…) and lists
+  // must follow that number, not the alphabetic name (where 10 sorts before 2).
+  const [sortKey, setSortKey] = useState<'order' | 'district' | 'neighborhood' | 'blocks'>('order');
   const [dir, setDir] = useState<'asc' | 'desc'>('asc');
-  function toggleSort(k: 'district' | 'neighborhood' | 'blocks') {
+  function toggleSort(k: 'order' | 'district' | 'neighborhood' | 'blocks') {
     if (sortKey === k) setDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     else { setSortKey(k); setDir('asc'); }
   }
-  const arrow = (k: 'district' | 'neighborhood' | 'blocks') => (sortKey === k ? (dir === 'asc' ? ' ▲' : ' ▼') : '');
+  const arrow = (k: 'order' | 'district' | 'neighborhood' | 'blocks') => (sortKey === k ? (dir === 'asc' ? ' ▲' : ' ▼') : '');
   const view = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const rows = neighborhoods.filter(
@@ -60,7 +62,8 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
     );
     rows.sort((a, b) => {
       let r = 0;
-      if (sortKey === 'district') r = dName(a.districtId).localeCompare(dName(b.districtId), 'ar');
+      if (sortKey === 'order') r = a.order - b.order || L(a.nameAr, a.nameEn).localeCompare(L(b.nameAr, b.nameEn), 'ar');
+      else if (sortKey === 'district') r = dName(a.districtId).localeCompare(dName(b.districtId), 'ar');
       else if (sortKey === 'blocks') r = (a.hasBlocks ? a.blockCount : 0) - (b.hasBlocks ? b.blockCount : 0);
       else r = L(a.nameAr, a.nameEn).localeCompare(L(b.nameAr, b.nameEn), 'ar');
       return dir === 'asc' ? r : -r;
@@ -72,8 +75,12 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
   function save() {
     if (!draft) return;
     setError('');
+    // New neighborhood with the order left at 0: derive it from the number in the
+    // name (مجاورة 12 → 12) so lists sort naturally without manual bookkeeping.
+    const num = /([0-9]+)/.exec(`${draft.nameAr} ${draft.nameEn}`)?.[1];
+    const toSave = !draft.id && !draft.order && num ? { ...draft, order: Number(num) } : draft;
     start(async () => {
-      const r = await upsertNeighborhood(draft);
+      const r = await upsertNeighborhood(toSave);
       if (r.ok) {
         setDraft(null);
         router.refresh();

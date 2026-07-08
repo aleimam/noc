@@ -30,6 +30,8 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
   const nbMasterplan = await masterplanClean('neighborhood', listing.neighborhoodId);
   const lmaps = await loadAreaMaps('listing', id);
   const posters = await listListingPosters(id);
+  // All neighborhoods' masterplans — the in-form annotator follows the picked neighborhood.
+  const nbMaps = await prisma.areaMap.findMany({ where: { level: 'neighborhood', kind: 'masterplan' }, select: { areaId: true, cleanPath: true } });
 
   return (
     <div className="space-y-4">
@@ -46,6 +48,9 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
         locale={locale}
         standardAreas={standardAreas}
         buildingConditions={buildingConditions}
+        nbMasterplans={Object.fromEntries(nbMaps.map((m) => [m.areaId, m.cleanPath]))}
+        locationAnnotation={lmaps.locationAnnotation}
+        savedNeighborhoodId={listing.neighborhoodId}
         initial={{
           id: listing.id,
           typeOptionId: listing.typeOptionId ?? '',

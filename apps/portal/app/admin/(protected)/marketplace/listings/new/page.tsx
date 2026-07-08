@@ -9,7 +9,7 @@ export default async function StaffNewListing() {
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();
-  const [owners, settings, defOpts] = await Promise.all([
+  const [owners, settings, defOpts, nbMaps] = await Promise.all([
     prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } }),
     prisma.setting.findMany({ where: { key: { in: ['alswarey_phone', 'alswarey_whatsapp'] } } }),
     // Default classifiers for a new Al Sawarey listing (staff can still change them).
@@ -17,6 +17,8 @@ export default async function StaffNewListing() {
       where: { key: { in: ['land_allocated', 'housing_building', 'utility_ongoing'] }, classifier: { key: { in: ['type', 'purpose', 'condition'] } } },
       select: { id: true, key: true, classifier: { select: { key: true } } },
     }),
+    // Neighborhood masterplans feed the in-form location-map annotator.
+    prisma.areaMap.findMany({ where: { level: 'neighborhood', kind: 'masterplan' }, select: { areaId: true, cleanPath: true } }),
   ]);
   const sett = Object.fromEntries(settings.map((s) => [s.key, s.value]));
   const defOpt = (ck: string, ok: string) => defOpts.find((o) => o.classifier.key === ck && o.key === ok)?.id ?? '';
@@ -38,6 +40,7 @@ export default async function StaffNewListing() {
         locale={locale}
         standardAreas={standardAreas}
         buildingConditions={buildingConditions}
+        nbMasterplans={Object.fromEntries(nbMaps.map((m) => [m.areaId, m.cleanPath]))}
         initial={{
           typeOptionId: defOpt('type', 'land_allocated'),
           purposeOptionId: defOpt('purpose', 'housing_building'),

@@ -1,13 +1,19 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ImageAttachment, Lightbox, type UploadedAttachment } from '@noc/ui';
 import { localizeUnit } from '@noc/i18n';
 import { roundToStandardArea, formatMoneyThousands, formatMoneyEgp, formatArea, isValidPhone } from '@noc/config';
 import { RichEditor } from '../../admin/(protected)/pages/RichEditor';
+import { setAreaMap } from '../../admin/(protected)/lands/actions';
+import type { Shape } from '../../admin/(protected)/lands/MapAnnotator';
 import { saveListing, type ListingInput, type ValueInput } from './actions';
+
+// react-konva touches the DOM/canvas at import — load the annotator client-only.
+const MapAnnotator = dynamic(() => import('../../admin/(protected)/lands/MapAnnotator').then((m) => m.MapAnnotator), { ssr: false });
 
 type AttrType =
   | 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS'
@@ -63,6 +69,9 @@ export function ListingForm({
   standardAreas = [],
   buildingConditions = [],
   returnTo,
+  nbMasterplans = {},
+  locationAnnotation = null,
+  savedNeighborhoodId = null,
 }: {
   classifiers: Classifier[];
   sections: Section[];
@@ -74,6 +83,11 @@ export function ListingForm({
   standardAreas?: number[];
   buildingConditions?: { id: string; unitLabelAr: string; unitLabelEn: string }[];
   returnTo?: string;
+  /** neighborhoodId → masterplan cleanPath, for the in-form location-map annotator (staff). */
+  nbMasterplans?: Record<string, string>;
+  /** Saved location-map shapes (edit page), reused when the same neighborhood stays selected. */
+  locationAnnotation?: Shape[] | null;
+  savedNeighborhoodId?: string | null;
 }) {
   const t = useTranslations('mp');
   const tc = useTranslations('common');
@@ -122,6 +136,15 @@ export function ListingForm({
   const [photos, setPhotos] = useState<UploadedAttachment[]>(initial.photos);
   const [attachs, setAttachs] = useState<Record<string, UploadedAttachment[]>>(initial.attachs);
   const [condIds, setCondIds] = useState<string[]>(initial.buildingConditionIds ?? []);
+
+  // ── In-form location map (staff): annotate the selected neighborhood's masterplan;
+  //    the result is stored with the listing on save (works on create, before an id exists).
+  const nbAttr = useMemo(() => attributes.find((a) => a.type === 'NEIGHBORHOOD'), [attributes]);
+  const nbId = nbAttr && typeof vals[nbAttr.id] === 'string' ? (vals[nbAttr.id] as string) : '';
+  const nbMasterplan = nbId ? nbMasterplans[nbId] ?? null : null;
+  const [annotating, setAnnotating] = useState(false);
+  const [pendingMap, setPendingMap] = useState<{ attachmentId: string; shapes: Shape[]; src: string; nbId: string } | null>(null);
+  const pendingValid = !!pendingMap && pendingMap.nbId === nbId; // discard if the neighborhood changed after drawing
 
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const setVal = (id: string, v: string | boolean | string[]) => setVals((p) => ({ ...p, [id]: v }));
@@ -266,8 +289,17 @@ export function ListingForm({
     };
     start(async () => {
       const r = await saveListing(input);
-      if (r.ok) router.push(returnTo ?? (staffMode ? '/admin/marketplace/listings' : '/account/listings'));
-      else setError(r.error === 'invalid_phone' ? tc('phoneInvalid') : tc('saveFailed'));
+      if (r.ok) {
+        // Persist the location map drawn in-form now that the listing id exists.
+        if (staffMode && pendingMap && pendingMap.nbId === nbId) {
+          try {
+            await setAreaMap({ level: 'listing', targetId: r.id, kind: 'location', attachmentId: pendingMap.attachmentId, annotation: pendingMap.shapes, sourcePath: pendingMap.src });
+          } catch {
+            /* the listing itself saved; the map can be redone from the edit page */
+          }
+        }
+        router.push(returnTo ?? (staffMode ? '/admin/marketplace/listings' : '/account/listings'));
+      } else setError(r.error === 'invalid_phone' ? tc('phoneInvalid') : tc('saveFailed'));
     });
   }
 
@@ -635,6 +667,47 @@ export function ListingForm({
           <p className="rounded-lg border border-dashed border-graphite/25 p-4 text-sm opacity-60">{t('pickClassifiers')}</p>
         )}
       </section>
+
+      {/* ── Listing location map: annotate the selected neighborhood's masterplan (staff) ── */}
+      {staffMode && nbId && (
+        <section className="space-y-2 rounded-lg border border-graphite/15 p-4">
+          <h3 className="font-bold text-primary">{t('listingLocationMap')}</h3>
+          {nbMasterplan ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setAnnotating(true)}
+                className="rounded-lg border border-accent/40 px-3 py-1.5 text-sm text-accent hover:bg-accent/5"
+              >
+                ✎ {t('genFromNbMasterplan')}
+              </button>
+              {pendingValid && <p className="text-sm text-green">✓ {t('locationMapReady')}</p>}
+              {!pendingValid && savedNeighborhoodId && nbId === savedNeighborhoodId && locationAnnotation && (
+                <p className="text-xs opacity-60">{t('locationMapHasSaved')}</p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm opacity-60">{t('nbNoMasterplan')}</p>
+          )}
+          {annotating && nbMasterplan && (
+            <MapAnnotator
+              src={nbMasterplan}
+              initialShapes={
+                pendingValid
+                  ? pendingMap!.shapes
+                  : nbId === savedNeighborhoodId
+                    ? locationAnnotation ?? undefined
+                    : undefined
+              }
+              onClose={() => setAnnotating(false)}
+              onSaved={(attachmentId, shapes) => {
+                setAnnotating(false);
+                setPendingMap({ attachmentId, shapes, src: nbMasterplan, nbId });
+              }}
+            />
+          )}
+        </section>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm">{t('contactPhone')}<input type="tel" dir="ltr" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inp} /></label>
