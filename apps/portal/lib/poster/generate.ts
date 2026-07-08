@@ -4,14 +4,14 @@
 import { prisma } from '@noc/db';
 import {
   renderPoster, renderCard, renderAdvantages, savePng,
-  type PosterData, type PosterBrand, type PosterGroup, type CardData, type AdvGroup,
+  type PosterData, type PosterBrand, type CardData, type AdvGroup,
 } from './render';
 import { advantagesForNeighborhood } from '../advantages';
-import { isPosterIcon } from './icons';
+import { isPosterIcon, type PosterIconKey } from './icons';
 
 const POSTER_BRANDS: PosterBrand[] = ['newobour', 'alsawarey', 'unbranded'];
 const CARD_BRANDS = ['newobour', 'alsawarey'] as const;
-const ICONS: PosterGroup['icon'][] = ['pin', 'bld', 'doc']; // fallback cycle when no admin-assigned icon
+const ICONS: PosterIconKey[] = ['pin', 'bld', 'doc']; // fallback cycle when no admin-assigned icon
 
 export type GenImage = { kind: 'poster' | 'card' | 'adv'; brand: string; path: string };
 
@@ -26,21 +26,6 @@ function valStr(v: {
   if (v.number != null) return `${String(v.number)}${v.attribute.unit ? ` ${v.attribute.unit}` : ''}`;
   if (v.text) return v.text.trim() || null;
   return null;
-}
-
-function toLines(items: string[], maxLen = 40, maxLines = 3): string[] {
-  const lines: string[] = [];
-  let cur = '';
-  for (const it of items) {
-    const next = cur ? `${cur} · ${it}` : it;
-    if (next.length > maxLen && cur) {
-      lines.push(cur);
-      cur = it;
-      if (lines.length >= maxLines) return lines.slice(0, maxLines);
-    } else cur = next;
-  }
-  if (cur && lines.length < maxLines) lines.push(cur);
-  return lines.slice(0, maxLines);
 }
 
 type Gathered = { poster: PosterData; cards: CardData[]; advantages: AdvGroup[]; headTitle: string; headAd: string };
@@ -99,14 +84,10 @@ async function gather(listingId: string): Promise<Gathered | null> {
   }
 
   const poster: PosterData = {
-    adNumber: headAd,
-    title: l.title,
-    areaText: l.area != null ? `المساحة الفعلية · ${String(l.area)} م²` : '',
-    // The poster's mini-cards keep the approved compact style: joined values, two lines.
-    groups: cards.slice(0, 3).map((c) => {
-      const lines = toLines(c.rows.map((r) => r.value));
-      return { name: c.name, l1: lines[0] ?? '', l2: lines[1] ?? '', icon: c.icon };
-    }),
+    ad: headAd,
+    title: headTitle,
+    // Consolidated Layout A: the first 3 non-Area groups render as compact tables.
+    groups: cards.slice(0, 3).map((c) => ({ name: c.name, icon: c.icon, rows: c.rows })),
     neighborhoodMap: nbMap?.cleanPath ?? null,
     cityMap: cityMap?.cleanPath ?? null,
   };

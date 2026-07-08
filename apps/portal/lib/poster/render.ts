@@ -5,17 +5,21 @@ import sharp from 'sharp';
 import { uploadRoot } from '../uploads';
 import { POSTER_ICONS, type PosterIconKey } from './icons';
 
-// Server-side listing-poster renderer (Layout A) in the approved navy/gold/cream identity.
-// Built as an SVG (frame, corner brackets, gold divider, cards, footer) → sharp → PNG, with
-// the two maps + the brand logo composited on top (robust; no SVG image-embedding). Requires
-// the Tajawal font installed on the host (prod: /usr/share/fonts/tajawal).
+// Server-side listing-image renderer in the approved navy/gold/cream identity, Almarai.
+// Built as an SVG (frame, corner brackets, header band, tables, seal footer) → sharp → PNG,
+// with the maps + the brand logo composited on top (robust; no SVG image-embedding).
+// Requires the Almarai + Tajawal fonts installed on the host (prod: /usr/share/fonts/).
+//
+// Poster = consolidated Layout A (owner-approved 2026-07-08): header band (Card Title +
+// ad pill), big listing location map, then a 2×2 grid of the city map + the first 3
+// group tables (compact, no logo/contacts/ad inside), seal footer. Unbranded version
+// drops the logo + contacts.
 
-export type PosterGroup = { name: string; l1: string; l2: string; icon: PosterIconKey };
+export type PosterCardGroup = { name: string; icon: PosterIconKey; rows: CardRow[] };
 export type PosterData = {
-  adNumber: string;
-  title: string;
-  areaText: string; // e.g. "المساحة الفعلية · 450 م²"
-  groups: PosterGroup[]; // up to 3 (the main non-Area groups)
+  ad: string; // '#YYMM…' or '' before publish
+  title: string; // staff Card Title (upstream falls back to the listing title)
+  groups: PosterCardGroup[]; // first 3 non-Area groups
   neighborhoodMap: string | null; // public /uploads path (the annotated location map)
   cityMap: string | null; // public /uploads path (city masterplan)
 };
@@ -50,61 +54,107 @@ const dvd = (cx: number, y: number, half: number) =>
 // Icon shapes live in ./icons (shared with the admin picker); GLYPH keeps the old name.
 const GLYPH = POSTER_ICONS;
 
-function cardSvg(x: number, y: number, w: number, h: number, g: PosterGroup) {
-  const cx = x + w / 2, icx = x + w - 58, icy = y + 52;
-  return (
-    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="16" fill="#ffffff" stroke="${GOLD}" stroke-width="3"/>` +
-    `<circle cx="${icx}" cy="${icy}" r="30" fill="${NAVY}"/><g transform="translate(${icx} ${icy})">${GLYPH[g.icon]}</g>` +
-    T(x + w - 104, y + 63, g.name, { s: 34, w: 800, fill: NAVY, anchor: 'end' }) +
-    dvd(cx, y + 100, w / 2 - 40) +
-    T(cx, y + 152, g.l1, { s: 25, w: 500, fill: INK }) +
-    T(cx, y + 192, g.l2, { s: 25, w: 500, fill: INK })
-  );
-}
-const mapFrame = (x: number, y: number, w: number, h: number, lbl: string, lblRight: boolean) =>
-  `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="16" fill="#f2ece0" stroke="${GOLD}" stroke-width="3"/>` +
-  `<rect x="${lblRight ? x + w - 246 : x + 12}" y="${y + 14}" width="234" height="40" rx="10" fill="${NAVY}"/>` +
-  T(lblRight ? x + w - 129 : x + 129, y + 42, lbl, { s: 22, w: 700, fill: '#fff' });
+const clipText = (s: string, max: number) => (s.length > max ? `${s.slice(0, max - 1)}…` : s);
 
-function baseSvg(d: PosterData, brand: PosterBrand, cfg: BrandCfg): string {
-  const cards = d.groups.slice(0, 3);
-  const cellPos = [[550, 672], [40, 962], [550, 962]] as const; // Card1 (top-right), Card2, Card3
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-<rect width="${W}" height="${H}" fill="${CREAM}"/>
-<rect x="18" y="18" width="${W - 36}" height="${H - 36}" rx="30" fill="none" stroke="${GOLD}" stroke-width="6"/>
-<rect x="4" y="4" width="46" height="46" rx="14" fill="${NAVY}"/><rect x="${W - 50}" y="4" width="46" height="46" rx="14" fill="${NAVY}"/>
-<rect x="4" y="${H - 50}" width="46" height="46" rx="14" fill="${NAVY}"/><rect x="${W - 50}" y="${H - 50}" width="46" height="46" rx="14" fill="${NAVY}"/>
-<rect x="40" y="70" width="185" height="58" rx="13" fill="${NAVY}"/>${d.adNumber ? T(132, 108, d.adNumber, { s: 27, w: 700, fill: '#fff', ltr: true }) : ''}
-<rect x="245" y="52" width="600" height="126" rx="16" fill="#ffffff" stroke="${GOLD}" stroke-width="3"/>
-${T(545, 100, d.title, { s: 38, w: 800, fill: NAVY })}
-<rect x="330" y="120" width="430" height="48" rx="24" fill="${GOLD}"/>${T(545, 153, d.areaText, { s: 30, w: 800, fill: NAVY })}
-${mapFrame(40, 210, 1000, 445, 'مخطط المجاورة', true)}
-${mapFrame(40, 672, 490, 280, 'مخطط المدينة', false)}
-${cards.map((g, i) => cardSvg(cellPos[i]![0], cellPos[i]![1], 490, 280, g)).join('')}
-<rect x="40" y="1256" width="${W - 80}" height="64" rx="18" fill="${NAVY}"/>
-${brand === 'unbranded' ? '' : T(W / 2, 1297, `${cfg.domain}   ·   ${cfg.phone}`, { s: 30, w: 700, fill: GOLD, ltr: true })}
-</svg>`;
+/** Compact group table used inside the poster: navy header strip (name + icon) +
+ *  up to 5 tight rows — no logo, contacts or ad number. `stretchH` grows the frame
+ *  to align with its grid partner. */
+function compactCard(x: number, y: number, w: number, g: PosterCardGroup, stretchH?: number): { svg: string; h: number } {
+  const headH = 46, rowH = 40;
+  const rows = g.rows.slice(0, 5);
+  const natural = headH + rows.length * rowH + 10;
+  const h = Math.max(natural, stretchH ?? 0);
+  const parts: string[] = [
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="14" fill="#ffffff" stroke="${GOLD}" stroke-width="2"/>`,
+    `<path d="M ${x} ${y + 14} a14 14 0 0 1 14 -14 h ${w - 28} a14 14 0 0 1 14 14 v ${headH - 14} h ${-w} Z" fill="${NAVY}"/>`,
+    `<circle cx="${x + w - 26}" cy="${y + headH / 2}" r="13" fill="${GOLD}" opacity="0.18"/>`,
+    `<g transform="translate(${x + w - 26} ${y + headH / 2}) scale(0.58)">${GLYPH[g.icon]}</g>`,
+    T(x + w - 48, y + headH / 2 + 8, g.name, { s: 22, w: 800, fill: '#ffffff', anchor: 'end', font: CARD_FONT }),
+  ];
+  rows.forEach((r, i) => {
+    const ry = y + headH + i * rowH;
+    parts.push(
+      `<rect x="${x + 6}" y="${ry + 3}" width="${w - 12}" height="${rowH - 6}" rx="8" fill="${i % 2 ? '#ffffff' : TINT}"/>`,
+      T(x + w - 20, ry + rowH / 2 + 7, r.label, { s: 20, w: 700, fill: NAVY, anchor: 'end', font: CARD_FONT }),
+      T(x + 18, ry + rowH / 2 + 7, clipText(r.value, 24), { s: 20, w: 400, fill: INK, anchor: 'start', font: CARD_FONT }),
+    );
+  });
+  return { svg: parts.join(''), h };
 }
 
-/** Render one poster PNG (with maps + logo composited) for a brand. */
+/** Render one consolidated poster PNG (Layout A) for a brand. Maps carry no title
+ *  pills (owner request); the annotation is already part of the location-map image. */
 export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: BrandCfg): Promise<Buffer> {
-  const base = await sharp(Buffer.from(baseSvg(d, brand, cfg))).png().toBuffer();
+  const w = W;
+  const branded = brand !== 'unbranded';
+  const mapW = w - 80, mapH = 400, colW = (mapW - 18) / 2;
+  const parts: string[] = [];
+  const mapY = 164;
+  let y = mapY;
+  if (d.neighborhoodMap) {
+    parts.push(`<rect x="40" y="${mapY}" width="${mapW}" height="${mapH}" rx="14" fill="#f2ece0" stroke="${GOLD}" stroke-width="2"/>`);
+    y = mapY + mapH + 18;
+  }
+
+  // 2-column grid: [group1 | city map] then remaining groups pairwise.
+  type Cell = { kind: 'card'; g: PosterCardGroup } | { kind: 'city' };
+  const groups = d.groups.slice(0, 3);
+  const cells: Cell[] = [];
+  if (groups[0]) cells.push({ kind: 'card', g: groups[0] });
+  if (d.cityMap) cells.push({ kind: 'city' });
+  for (const g of groups.slice(1)) cells.push({ kind: 'card', g });
+
+  const cardH = (g: PosterCardGroup) => 46 + Math.min(g.rows.length, 5) * 40 + 10;
+  let cityBox: { top: number; left: number; w: number; h: number } | null = null;
+  for (let i = 0; i < cells.length; i += 2) {
+    const row = [cells[i]!, cells[i + 1]].filter(Boolean) as Cell[];
+    const rowH = Math.max(...row.map((c) => (c.kind === 'card' ? cardH(c.g) : 0)), 256);
+    for (let j = 0; j < row.length; j++) {
+      const c = row[j]!;
+      const x = j === 0 ? 40 : 40 + colW + 18;
+      if (c.kind === 'card') {
+        parts.push(compactCard(x, y, colW, c.g, rowH).svg);
+      } else {
+        parts.push(`<rect x="${x}" y="${y}" width="${colW}" height="${rowH}" rx="14" fill="#eef0f4" stroke="${GOLD}" stroke-width="2"/>`);
+        cityBox = { top: y + 4, left: Math.round(x) + 4, w: Math.round(colW) - 8, h: rowH - 8 };
+      }
+    }
+    y += rowH + 14;
+  }
+  const bottom = y - 14;
+
+  // Footer: branded = seal (badge + contacts); unbranded = slim navy strip only.
+  let footSvg = '', h = 0, logoBox: { top: number; left: number } | null = null, badge: { fill: string; logo: Buffer | null } = { fill: NAVY, logo: null };
+  if (branded) {
+    badge = await badgeLogo(cfg);
+    const foot = sealFooter(w, bottom + 8, cfg, badge.fill);
+    footSvg = foot.svg;
+    h = foot.h;
+    logoBox = { top: foot.logoBox.top, left: foot.logoBox.left };
+  } else {
+    const fy = bottom + 8;
+    footSvg = `<line x1="40" y1="${fy + 22}" x2="${w - 40}" y2="${fy + 22}" stroke="${GOLD}" stroke-width="3"/>` +
+      `<rect x="40" y="${fy + 26}" width="${w - 80}" height="34" rx="12" fill="${NAVY}"/>`;
+    h = fy + 26 + 34 + 40;
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+${cardChrome(w, h, d.title, d.ad)}
+${parts.join('')}
+${footSvg}
+</svg>`;
   const layers: sharp.OverlayOptions[] = [];
   if (d.neighborhoodMap) {
-    try { layers.push({ input: await sharp(absU(d.neighborhoodMap)).resize(990, 435, { fit: 'cover' }).png().toBuffer(), top: 215, left: 45 }); } catch { /* skip */ }
+    try { layers.push({ input: await sharp(absU(d.neighborhoodMap)).resize(mapW - 8, mapH - 8, { fit: 'cover' }).png().toBuffer(), top: mapY + 4, left: 44 }); } catch { /* skip */ }
   }
-  if (d.cityMap) {
-    try { layers.push({ input: await sharp(absU(d.cityMap)).resize(480, 270, { fit: 'cover' }).png().toBuffer(), top: 677, left: 45 }); } catch { /* skip */ }
+  if (d.cityMap && cityBox) {
+    try { layers.push({ input: await sharp(absU(d.cityMap)).resize(cityBox.w, cityBox.h, { fit: 'cover' }).png().toBuffer(), top: cityBox.top, left: cityBox.left }); } catch { /* skip */ }
   }
-  if (brand !== 'unbranded' && cfg.logoPath) {
-    try {
-      const sq = brand === 'alsawarey';
-      const logo = await sharp(await readFile(absU(cfg.logoPath))).resize(sq ? 150 : 240, sq ? 150 : 130, { fit: 'inside' }).png().toBuffer();
-      const m = await sharp(logo).metadata();
-      layers.push({ input: logo, top: 48, left: W - 48 - (m.width || 150) });
-    } catch { /* skip logo */ }
+  let buf = await sharp(Buffer.from(svg)).png().composite(layers).toBuffer();
+  if (branded && badge.logo && logoBox) {
+    buf = await sharp(buf).composite([{ input: badge.logo, top: logoBox.top, left: logoBox.left }]).png().toBuffer();
   }
-  return sharp(base).composite(layers).png().toBuffer();
+  return buf;
 }
 
 const brackets = (w: number, h: number) =>
@@ -183,7 +233,7 @@ async function badgeLogo(cfg: BrandCfg): Promise<{ fill: string; logo: Buffer | 
 // ── Per-group card: navy header band + group badge + 5-row table (one attribute per
 //    row, label right / value left, long values wrap) + seal footer. Branded only. ──
 export type CardRow = { label: string; value: string };
-export type CardData = { name: string; icon: PosterGroup['icon']; rows: CardRow[]; title: string; ad: string };
+export type CardData = { name: string; icon: PosterIconKey; rows: CardRow[]; title: string; ad: string };
 
 export async function renderCard(d: CardData, brand: Exclude<PosterBrand, 'unbranded'>, cfg: BrandCfg): Promise<Buffer> {
   const w = W;
