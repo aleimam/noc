@@ -131,15 +131,17 @@ chip on cards + info box on the listing detail; account-dashboard promo card dee
 to `/account/listings/new?partnership=1`. Values validated server-side and cleared when
 the flag is off. Deployed + verified in prod.
 
-## 6. Broker sub-accounts & moderation (حسابات السماسرة المعتمدين)
-**Note:** we deliberately chose **staff-managed owners** (companies/brokers are `Owner`
-entries; the Partners login section was retired). This feature would *reverse* that —
-revisit with the user before building.
-**If pursued:** restore PARTNER login accounts (OTP), a `/broker/register` commercial
-signup (license number, business name), self-service listing CRUD scoped to the broker,
-and broker listings entering the existing moderation queue as `PENDING`. The public
-broker showroom already exists at `/owner/[id]`.
-**Effort:** L. **Decision required first.**
+## 6. ✅ Partner portal (بوابة الشركاء) — SHIPPED 2026-07-08
+**The owner made the call and reversed the staff-managed-only decision.** Delivered in
+4 deployed phases (commits `51fb75f` → `88bfe2a`): admin-created partner accounts on the
+Owner page (username/email/phone ≥1, password optional, active toggle) + explicit
+per-owner **category grants**; `/partner` portal with password or SMS-OTP login,
+dashboard (portfolio stats + listings), **instant fast-edit** (price + متاح/تم البيع/إخفاء),
+listing CRUD restricted to granted categories entering the existing PENDING moderation
+queue, self-service account page, and **analytics** (real view counter on both sites,
+30-day trend, per-listing views/contacts/saves/negotiations).
+**Deferred:** email OTP awaits an outbound-mail deliverability check (postfix exists;
+SPF/DKIM unverified); view counting is naive (no bot dedupe).
 
 ---
 
