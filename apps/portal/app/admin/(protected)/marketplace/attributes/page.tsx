@@ -60,6 +60,8 @@ export default async function AttributesPage() {
                     <td className="p-2 text-xs">{a.filterable ? '🔍' : ''}</td>
                     <td className="p-2 text-xs opacity-60">
                       {(() => { const n = catCountOf(a); return <span className={n === 0 ? 'text-red-600' : n === totalCats ? 'text-green' : ''}><span dir="ltr">{n}/{totalCats}</span> {t('catCount')}</span>; })()}
+                      {/* No links in ANY classifier → the attribute never appears on listing forms. */}
+                      {a.classifierLinks.length === 0 && <span className="text-red-600"> · {t('notLinkedHidden')}</span>}
                       {a._count.options ? ` · ${a._count.options} ${t('optionCount')}` : ''}
                     </td>
                     <td className="p-2 text-end">

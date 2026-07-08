@@ -89,6 +89,37 @@ export async function saveListing(input: ListingInput): Promise<Result> {
     if (opts.length < 2 || opts.some((o) => !o.allowedOnAlsawarey)) return { ok: false, error: 'alsawarey_not_allowed' };
   }
 
+  // Applicability guard (server-side mirror of the form's rule): keep only values whose
+  // attribute is explicitly linked to the chosen classifier options — unlinked attributes
+  // are hidden from forms and must not be saved; this also drops stale values when an
+  // edited listing's category changes.
+  {
+    const attrIds = [...new Set(input.values.map((v) => v.attributeId))];
+    if (attrIds.length) {
+      const attrs = await prisma.attribute.findMany({
+        where: { id: { in: attrIds } },
+        select: { id: true, classifierLinks: { select: { optionId: true, option: { select: { classifierId: true } } } } },
+      });
+      const chosen = new Set([input.typeOptionId, input.purposeOptionId, input.conditionOptionId]);
+      const applicable = new Set<string>();
+      for (const a of attrs) {
+        if (a.classifierLinks.length === 0) continue; // not curated → hidden everywhere
+        const byCls = new Map<string, string[]>();
+        for (const l of a.classifierLinks) {
+          const arr = byCls.get(l.option.classifierId) ?? [];
+          arr.push(l.optionId);
+          byCls.set(l.option.classifierId, arr);
+        }
+        let ok = byCls.size > 0;
+        for (const allowed of byCls.values()) {
+          if (!allowed.some((oid) => chosen.has(oid))) { ok = false; break; }
+        }
+        if (ok) applicable.add(a.id);
+      }
+      input = { ...input, values: input.values.filter((v) => applicable.has(v.attributeId)) };
+    }
+  }
+
   // Keep the structural geo link in sync with the NEIGHBORHOOD detail (powers the
   // district/neighborhood pages' listing sections + inherited maps/amenities).
   let neighborhoodId: string | null = null;

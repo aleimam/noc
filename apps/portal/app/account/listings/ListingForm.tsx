@@ -160,8 +160,12 @@ export function ListingForm({
 
   const allChosen = classifiers.length > 0 && classifiers.every((c) => selected[c.id]);
 
-  // An attribute applies when, for every classifier it constrains, the chosen option is allowed.
+  // An attribute applies ONLY when explicitly linked: it must be linked to at least one
+  // classifier option, and for every classifier it constrains, the chosen option must be
+  // among its links. An attribute with no links is hidden everywhere (not yet curated) —
+  // "no links = show for all" made every attribute appear on every category.
   function applies(a: Attr): boolean {
+    if (a.optionIds.length === 0) return false;
     const byCls = new Map<string, string[]>();
     for (const oid of a.optionIds) {
       const cid = optCls.get(oid);
@@ -170,6 +174,7 @@ export function ListingForm({
       arr.push(oid);
       byCls.set(cid, arr);
     }
+    if (byCls.size === 0) return false; // links point at deleted/unknown options
     for (const [cid, allowed] of byCls) {
       const sel = selected[cid];
       if (!sel || !allowed.includes(sel)) return false;
@@ -562,6 +567,17 @@ export function ListingForm({
       {/* ── Extra details (category-gated attribute pool) ── */}
       <section className="space-y-4">
         <h3 className="font-bold text-primary">{t('extraDetails')}</h3>
+        {allChosen && grouped.length === 0 && (
+          <p className="rounded-lg border border-graphite/15 p-4 text-sm opacity-70">
+            {t('noAttrsForCategory')}
+            {staffMode && (
+              <>
+                {' '}{t('noAttrsForCategoryStaff')}{' '}
+                <a href="/admin/marketplace/category-attributes" className="text-accent underline">{t('categoryAttrs')}</a>
+              </>
+            )}
+          </p>
+        )}
         {allChosen ? (
           grouped.map((g) => (
             <div key={g.section.id} className="space-y-3 rounded-lg border border-graphite/15 p-4">
