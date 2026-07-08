@@ -66,6 +66,7 @@ export function ListingForm({
   initial,
   locale,
   staffMode = false,
+  partnerMode = false,
   owners = [],
   standardAreas = [],
   buildingConditions = [],
@@ -80,6 +81,7 @@ export function ListingForm({
   initial: ListingFormInitial;
   locale: 'ar' | 'en';
   staffMode?: boolean;
+  partnerMode?: boolean; // owner fixed to the partner's own record; staff-only fields hidden
   owners?: OwnerOpt[];
   standardAreas?: number[];
   buildingConditions?: { id: string; unitLabelAr: string; unitLabelEn: string }[];
@@ -301,7 +303,7 @@ export function ListingForm({
             /* the listing itself saved; the map can be redone from the edit page */
           }
         }
-        router.push(returnTo ?? (staffMode ? '/admin/marketplace/listings' : '/account/listings'));
+        router.push(returnTo ?? (staffMode ? '/admin/marketplace/listings' : partnerMode ? '/partner' : '/account/listings'));
       } else setError(r.error === 'invalid_phone' ? tc('phoneInvalid') : tc('saveFailed'));
     });
   }
@@ -600,8 +602,8 @@ export function ListingForm({
           )}
         </div>
 
-        {/* Owner */}
-        {staffMode ? (
+        {/* Owner — partner listings are always owned by the partner's own Owner record. */}
+        {partnerMode ? null : staffMode ? (
           <label className="block text-sm">
             {t('owner')}
             <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)} className={inp}>
@@ -729,7 +731,7 @@ export function ListingForm({
       <div className="flex flex-wrap gap-3">
         <button disabled={pending} onClick={() => submit('PENDING')} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{t('submitOffer')}</button>
         <button disabled={pending} onClick={() => submit('DRAFT')} className="rounded-md border border-graphite/25 px-4 py-2 text-sm">{t('saveDraft')}</button>
-        <a href={returnTo ?? (staffMode ? '/admin/marketplace/listings' : '/account/listings')} className="px-4 py-2 text-sm opacity-70">{t('cancel')}</a>
+        <a href={returnTo ?? (staffMode ? '/admin/marketplace/listings' : partnerMode ? '/partner' : '/account/listings')} className="px-4 py-2 text-sm opacity-70">{t('cancel')}</a>
       </div>
 
       {zoom && <Lightbox src={zoom} onClose={() => setZoom(null)} />}

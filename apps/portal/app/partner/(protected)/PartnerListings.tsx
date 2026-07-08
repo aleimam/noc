@@ -91,6 +91,9 @@ export function PartnerListings({ rows, locale }: { rows: PartnerRow[]; locale: 
               <div className="flex items-center gap-2">
                 <span className="text-xs text-ink-400">👁 {r.views}</span>
                 {statusBadge(r.status)}
+                <a href={`/partner/listings/${r.id}/edit`} className="rounded-md border border-graphite/25 px-3 py-1 text-xs font-semibold hover:bg-graphite/10">
+                  ✎ {L('تعديل', 'Edit')}
+                </a>
               </div>
             </div>
 

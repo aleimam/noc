@@ -2,9 +2,29 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
-import { requirePartner } from '@noc/auth';
+import { requirePartner, hashPassword } from '@noc/auth';
+import { isValidPhone } from '@noc/config';
 
 type Result = { ok: true } | { ok: false; error: string };
+
+/** Partner self-service: update own login identifiers + password (owner decision). */
+export async function partnerUpdateAccount(input: { username: string; email: string; phone: string; password: string }): Promise<Result> {
+  const { userId } = await requirePartner();
+  const username = input.username.trim().toLowerCase() || null;
+  const email = input.email.trim().toLowerCase() || null;
+  const phone = input.phone.trim() || null;
+  if (!username && !email && !phone) return { ok: false, error: 'identifier_required' };
+  if (phone && !isValidPhone(phone)) return { ok: false, error: 'invalid_phone' };
+  try {
+    const passPatch = input.password.trim() ? { passwordHash: await hashPassword(input.password.trim()) } : {};
+    await prisma.user.update({ where: { id: userId }, data: { username, email, phone, ...passPatch } });
+    revalidatePath('/partner/account');
+    return { ok: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: msg.includes('Unique constraint') || msg.includes('P2002') ? 'duplicate_key' : 'failed' };
+  }
+}
 
 // Fast edits are instant (owner decision: structural changes need approval, price and
 // availability do not). Partners may only touch these statuses — never the moderation

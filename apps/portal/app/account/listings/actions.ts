@@ -84,6 +84,17 @@ export async function saveListing(input: ListingInput): Promise<Result> {
   }
   if (!isValidPhone(input.contactPhone)) return { ok: false, error: 'invalid_phone' };
   const isStaff = user.type === 'STAFF';
+  const isPartner = user.type === 'PARTNER' && !!user.ownerId;
+  if (user.type === 'PARTNER' && !user.ownerId) return { ok: false, error: 'forbidden' };
+
+  // Partners may only post in the Type categories the admin granted their Owner.
+  if (isPartner) {
+    const grant = await prisma.ownerAllowedCategory.findFirst({
+      where: { ownerId: user.ownerId!, optionId: input.typeOptionId },
+      select: { id: true },
+    });
+    if (!grant) return { ok: false, error: 'category_not_allowed' };
+  }
 
   // Al-Sawarey channel is staff-only and limited to allowed Types/Purposes (backstop; the
   // form already hides disallowed options).
@@ -173,17 +184,19 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         contactWhatsapp: input.contactWhatsapp,
         status: input.status,
         // Channel + owner: staff manage our inventory (link to Owner, brokerage toggle);
-        // sellers define the owner inline and never publish to the brokerage.
+        // partners are always their own Owner; customer sellers define the owner inline.
         showOnBrokerage: publishAlsawarey,
-        ownerId: isStaff ? input.ownerId || null : null,
-        ownerName: !isStaff ? input.ownerName?.trim() || null : null,
-        ownerType: !isStaff ? input.ownerType ?? null : null,
+        ownerId: isStaff ? input.ownerId || null : isPartner ? user.ownerId! : null,
+        ownerName: isStaff || isPartner ? null : input.ownerName?.trim() || null,
+        ownerType: isStaff || isPartner ? null : input.ownerType ?? null,
       };
 
       let listingId: string;
       if (input.id) {
         const existing = await tx.listing.findUnique({ where: { id: input.id } });
-        if (!existing || (existing.sellerId !== user.id && !isStaff)) throw new Error('forbidden');
+        // Edit rights: the original seller, staff, or the partner whose Owner holds the listing.
+        const partnerOwns = isPartner && existing?.ownerId === user.ownerId;
+        if (!existing || (existing.sellerId !== user.id && !isStaff && !partnerOwns)) throw new Error('forbidden');
         await tx.listing.update({
           where: { id: input.id },
           data: { ...base, rejectionReason: null, postersStale: true }, // data changed → generated images out of date

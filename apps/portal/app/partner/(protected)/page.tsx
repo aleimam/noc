@@ -11,11 +11,14 @@ export default async function PartnerDashboard() {
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
-  const listings = await prisma.listing.findMany({
-    where: { ownerId },
-    orderBy: { updatedAt: 'desc' },
-    select: { id: true, title: true, adNumber: true, status: true, price: true, soldPrice: true, views: true },
-  });
+  const [listings, grantCount] = await Promise.all([
+    prisma.listing.findMany({
+      where: { ownerId },
+      orderBy: { updatedAt: 'desc' },
+      select: { id: true, title: true, adNumber: true, status: true, price: true, soldPrice: true, views: true },
+    }),
+    prisma.ownerAllowedCategory.count({ where: { ownerId } }),
+  ]);
 
   const count = (s: string) => listings.filter((l) => l.status === s).length;
   const soldValue = listings
@@ -54,6 +57,11 @@ export default async function PartnerDashboard() {
 
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-black text-navy-800">{L('إعلاناتي', 'My listings')}</h1>
+        {grantCount > 0 && (
+          <a href="/partner/listings/new" className="rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-soft">
+            + {L('إضافة إعلان', 'Add listing')}
+          </a>
+        )}
       </div>
       <PartnerListings rows={rows} locale={locale} />
     </div>
