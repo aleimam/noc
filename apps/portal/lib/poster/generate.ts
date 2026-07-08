@@ -43,13 +43,13 @@ function toLines(items: string[], maxLen = 40, maxLines = 3): string[] {
   return lines.slice(0, maxLines);
 }
 
-type Gathered = { poster: PosterData; cards: CardData[]; advantages: AdvGroup[] };
+type Gathered = { poster: PosterData; cards: CardData[]; advantages: AdvGroup[]; headTitle: string; headAd: string };
 
 async function gather(listingId: string): Promise<Gathered | null> {
   const l = await prisma.listing.findUnique({
     where: { id: listingId },
     select: {
-      title: true, adNumber: true, area: true, neighborhoodId: true,
+      title: true, cardTitle: true, adNumber: true, area: true, neighborhoodId: true,
       values: {
         select: {
           number: true, bool: true, text: true,
@@ -62,25 +62,32 @@ async function gather(listingId: string): Promise<Gathered | null> {
   });
   if (!l) return null;
 
-  const bySec = new Map<string, { name: string; order: number; icon: string | null; items: string[] }>();
+  // Rows keep label + value (one attribute = one table row); PHOTOS/DOCUMENTS carry
+  // file markers, not display values, so they never appear on cards.
+  const bySec = new Map<string, { name: string; order: number; icon: string | null; rows: { label: string; value: string }[] }>();
   for (const v of l.values) {
     const sec = v.attribute.section;
-    if (!sec) continue;
+    if (!sec || v.attribute.type === 'PHOTOS' || v.attribute.type === 'DOCUMENTS') continue;
     const s = valStr(v);
     if (!s) continue;
-    const g = bySec.get(sec.id) ?? { name: sec.nameAr, order: sec.order, icon: sec.icon, items: [] };
-    g.items.push(s);
+    const g = bySec.get(sec.id) ?? { name: sec.nameAr, order: sec.order, icon: sec.icon, rows: [] };
+    // MULTI_SELECT stores one row per choice — merge repeats into one table row.
+    const prev = g.rows.find((r) => r.label === v.attribute.labelAr);
+    if (prev) prev.value = `${prev.value} · ${s}`;
+    else g.rows.push({ label: v.attribute.labelAr, value: s });
     bySec.set(sec.id, g);
   }
   const ordered = [...bySec.values()].sort((a, b) => a.order - b.order);
   const nonArea = ordered.slice(1); // drop Area (first section)
-  const areaShort = l.area != null ? `${String(l.area)} م²` : '';
+  const headTitle = l.cardTitle?.trim() || l.title; // staff Card Title, falling back to the listing title
+  const headAd = l.adNumber ? `#${l.adNumber}` : '';
   // Admin-assigned icon on the section wins; otherwise fall back to the fixed cycle.
   const cards: CardData[] = nonArea.map((s, i) => ({
     name: s.name,
-    lines: toLines(s.items),
+    rows: s.rows.slice(0, 5),
     icon: isPosterIcon(s.icon) ? s.icon : ICONS[i % ICONS.length]!,
-    areaShort,
+    title: headTitle,
+    ad: headAd,
   }));
 
   const nbMap = await prisma.areaMap.findFirst({ where: { level: 'listing', areaId: listingId, kind: 'location' }, select: { cleanPath: true } });
@@ -92,15 +99,19 @@ async function gather(listingId: string): Promise<Gathered | null> {
   }
 
   const poster: PosterData = {
-    adNumber: l.adNumber ? `#${l.adNumber}` : '',
+    adNumber: headAd,
     title: l.title,
     areaText: l.area != null ? `المساحة الفعلية · ${String(l.area)} م²` : '',
-    groups: cards.slice(0, 3).map((c) => ({ name: c.name, l1: c.lines[0] ?? '', l2: c.lines[1] ?? '', icon: c.icon })),
+    // The poster's mini-cards keep the approved compact style: joined values, two lines.
+    groups: cards.slice(0, 3).map((c) => {
+      const lines = toLines(c.rows.map((r) => r.value));
+      return { name: c.name, l1: lines[0] ?? '', l2: lines[1] ?? '', icon: c.icon };
+    }),
     neighborhoodMap: nbMap?.cleanPath ?? null,
     cityMap: cityMap?.cleanPath ?? null,
   };
   const advantages = await advantagesForNeighborhood(l.neighborhoodId, 'ar');
-  return { poster, cards, advantages };
+  return { poster, cards, advantages, headTitle, headAd };
 }
 
 /** (Re)generate the full image set for a listing. Throws on failure. No permission check. */
@@ -124,7 +135,7 @@ export async function regenerateListingImages(listingId: string): Promise<void> 
   for (const brand of POSTER_BRANDS) await save(await renderPoster(g.poster, brand, cfg(brand)), `poster:${brand}`, `poster-${brand}.png`);
   for (const brand of CARD_BRANDS) {
     for (let i = 0; i < g.cards.length; i++) await save(await renderCard(g.cards[i]!, brand, cfg(brand)), `card:${brand}:${i}`, `card-${i}-${brand}.png`);
-    if (g.advantages.length) await save(await renderAdvantages(g.advantages, 'مميزات المنطقة', brand, cfg(brand)), `adv:${brand}`, `advantages-${brand}.png`);
+    if (g.advantages.length) await save(await renderAdvantages(g.advantages, 'مميزات المنطقة', brand, cfg(brand), { title: g.headTitle, ad: g.headAd }), `adv:${brand}`, `advantages-${brand}.png`);
   }
   await prisma.listing.update({ where: { id: listingId }, data: { postersStale: false } });
 }

@@ -32,6 +32,7 @@ export type ListingInput = {
   isPartnership?: boolean;
   partnershipType?: string | null; // PartnershipType key, validated server-side
   partnershipNote?: string;
+  cardTitle?: string; // staff marketing headline for the generated cards
   contactPhone: string;
   contactWhatsapp: boolean;
   ownerId?: string | null;
@@ -166,6 +167,8 @@ export async function saveListing(input: ListingInput): Promise<Result> {
             ? (input.partnershipType as PartnershipTypeKey)
             : null,
         partnershipNote: input.isPartnership ? input.partnershipNote?.trim().slice(0, 190) || null : null,
+        // Card Title is staff-managed; seller edits must not wipe it.
+        ...(isStaff ? { cardTitle: input.cardTitle?.trim().slice(0, 120) || null } : {}),
         contactPhone: input.contactPhone.trim(),
         contactWhatsapp: input.contactWhatsapp,
         status: input.status,

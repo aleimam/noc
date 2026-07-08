@@ -44,6 +44,7 @@ export type ListingFormInitial = {
   isPartnership?: boolean;
   partnershipType?: string;
   partnershipNote?: string;
+  cardTitle?: string;
   contactPhone: string;
   contactWhatsapp: boolean;
   ownerId: string;
@@ -123,6 +124,7 @@ export function ListingForm({
   const [priceUnit, setPriceUnit] = useState(initial.priceUnit);
   const [priceNegotiable, setPriceNegotiable] = useState(initial.priceNegotiable);
   const [priceNote, setPriceNote] = useState(initial.priceNote);
+  const [cardTitle, setCardTitle] = useState(initial.cardTitle ?? '');
   const [isPartnership, setIsPartnership] = useState(initial.isPartnership ?? false);
   const [partnershipType, setPartnershipType] = useState(initial.partnershipType ?? '');
   const [partnershipNote, setPartnershipNote] = useState(initial.partnershipNote ?? '');
@@ -276,6 +278,7 @@ export function ListingForm({
       isPartnership,
       partnershipType: isPartnership ? partnershipType || null : null,
       partnershipNote: isPartnership ? partnershipNote : '',
+      cardTitle,
       contactPhone,
       contactWhatsapp,
       ownerId: ownerId || null,
@@ -536,6 +539,15 @@ export function ListingForm({
           </div>
           <input value={title} onChange={(e) => setTitle(e.target.value)} className={inp} />
         </div>
+
+        {/* Card Title — marketing headline on the generated images (staff-entered). */}
+        {staffMode && (
+          <div>
+            <span className="mb-1 block text-sm">{t('cardTitleField')}</span>
+            <input value={cardTitle} onChange={(e) => setCardTitle(e.target.value)} maxLength={120} placeholder={t('cardTitlePh')} className={inp} />
+            <p className="mt-1 text-xs opacity-60">{t('cardTitleHint')}</p>
+          </div>
+        )}
 
         {/* Price + price-per + negotiable */}
         <div className="grid gap-4 sm:grid-cols-3">

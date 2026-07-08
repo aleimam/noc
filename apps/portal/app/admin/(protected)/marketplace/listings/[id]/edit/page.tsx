@@ -66,6 +66,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
           isPartnership: listing.isPartnership,
           partnershipType: listing.partnershipType ?? '',
           partnershipNote: listing.partnershipNote ?? '',
+          cardTitle: listing.cardTitle ?? '',
           contactPhone: listing.contactPhone,
           contactWhatsapp: listing.contactWhatsapp,
           ownerId: listing.ownerId ?? '',
