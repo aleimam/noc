@@ -8,6 +8,7 @@ declare module 'next-auth' {
   interface User {
     type?: UserType;
     perms?: string[];
+    ownerId?: string | null; // PARTNER logins: the Owner this account belongs to
   }
   interface Session {
     user: {
@@ -17,6 +18,7 @@ declare module 'next-auth' {
       email?: string | null;
       image?: string | null;
       perms: string[];
+      ownerId?: string | null;
     };
   }
 }

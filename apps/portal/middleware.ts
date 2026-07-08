@@ -17,6 +17,9 @@ export default auth((req) => {
   if (pathname.startsWith('/account') && pathname !== '/account/login' && !user) {
     return NextResponse.redirect(new URL('/account/login', origin));
   }
+  if (pathname.startsWith('/partner') && pathname !== '/partner/login' && user?.type !== 'PARTNER') {
+    return NextResponse.redirect(new URL('/partner/login', origin));
+  }
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-pathname', pathname);
@@ -38,5 +41,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ['/admin/:path*', '/account/:path*', '/rationing/:path*'],
+  matcher: ['/admin/:path*', '/account/:path*', '/partner/:path*', '/rationing/:path*'],
 };

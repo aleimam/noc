@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@noc/db';
 import { authConfig } from './config.base';
 import { verifyPassword } from './password';
-import { verifyOtp } from './otp';
+import { verifyOtp, normalizePhone } from './otp';
 import { getEffectivePermissions, hasPermission } from './rbac';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -46,8 +46,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return { id: user.id, type: user.type, name: user.name, perms: [] };
       },
     }),
+    // Partner (owner portal): identifier (username / email / phone) + password OR a
+    // phone-OTP code. Accounts are admin-created and linked to an Owner.
+    Credentials({
+      id: 'partner',
+      name: 'Partner',
+      credentials: { identifier: {}, password: {}, code: {} },
+      async authorize(creds) {
+        const ident = String(creds?.identifier ?? '').trim();
+        if (!ident) return null;
+        const lower = ident.toLowerCase();
+        const user = await prisma.user.findFirst({
+          where: {
+            type: 'PARTNER',
+            isActive: true,
+            ownerId: { not: null },
+            OR: [{ username: lower }, { email: lower }, { phone: ident }, { phone: normalizePhone(ident) }],
+          },
+        });
+        if (!user) return null;
+        const password = String(creds?.password ?? '');
+        const code = String(creds?.code ?? '');
+        if (password) {
+          if (!user.passwordHash || !(await verifyPassword(password, user.passwordHash))) return null;
+        } else if (code) {
+          if (!user.phone) return null;
+          const res = await verifyOtp(user.phone, code);
+          if (!res.ok) return null;
+        } else {
+          return null;
+        }
+        return { id: user.id, type: user.type, name: user.name, perms: [], ownerId: user.ownerId };
+      },
+    }),
   ],
 });
+
+/** Server guard for the partner portal: PARTNER session with a linked Owner. */
+export async function requirePartner() {
+  const session = await auth();
+  const user = session?.user;
+  if (!user || user.type !== 'PARTNER' || !user.ownerId) redirect('/partner/login');
+  return { userId: user.id, ownerId: user.ownerId, name: user.name ?? null };
+}
 
 /**
  * Server guard for admin sections. Redirects to the staff login when the caller
