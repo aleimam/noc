@@ -4,12 +4,14 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
 import { requirePartner, hashPassword } from '@noc/auth';
 import { isValidPhone } from '@noc/config';
+import { rateLimit } from '@/lib/rateLimit';
 
 type Result = { ok: true } | { ok: false; error: string };
 
 /** Partner self-service: update own login identifiers + password (owner decision). */
 export async function partnerUpdateAccount(input: { username: string; email: string; phone: string; password: string }): Promise<Result> {
   const { userId } = await requirePartner();
+  if (!rateLimit(`pacct:${userId}`, 5, 10 * 60 * 1000)) return { ok: false, error: 'rate_limited' };
   const username = input.username.trim().toLowerCase() || null;
   const email = input.email.trim().toLowerCase() || null;
   const phone = input.phone.trim() || null;
@@ -40,7 +42,8 @@ async function ownListing(listingId: string, ownerId: string) {
 
 /** Instant price update on the partner's own listing. */
 export async function partnerUpdatePrice(listingId: string, price: number | null): Promise<Result> {
-  const { ownerId } = await requirePartner();
+  const { ownerId, userId } = await requirePartner();
+  if (!rateLimit(`pfast:${userId}`, 30, 60 * 1000)) return { ok: false, error: 'rate_limited' };
   if (price != null && (!Number.isFinite(price) || price < 0)) return { ok: false, error: 'invalid' };
   const l = await ownListing(listingId, ownerId);
   if (!l) return { ok: false, error: 'forbidden' };
@@ -54,7 +57,8 @@ export async function partnerUpdatePrice(listingId: string, price: number | null
 
 /** Instant availability change (متاح / تم البيع / إخفاء) on the partner's own listing. */
 export async function partnerSetAvailability(listingId: string, status: FastStatus, soldPrice?: number | null): Promise<Result> {
-  const { ownerId } = await requirePartner();
+  const { ownerId, userId } = await requirePartner();
+  if (!rateLimit(`pfast:${userId}`, 30, 60 * 1000)) return { ok: false, error: 'rate_limited' };
   if (!FAST_STATUSES.includes(status)) return { ok: false, error: 'invalid' };
   const l = await ownListing(listingId, ownerId);
   if (!l) return { ok: false, error: 'forbidden' };

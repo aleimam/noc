@@ -10,6 +10,7 @@ import { StoreLandCard } from '../../_components/StoreLandCard';
 import { getLandDetail, similarLands } from '../../../lib/listings';
 import { getAdminViewer, ownerDetailFor } from '../../../lib/adminView';
 import { wishlistListingIds } from '../../../lib/wishlist';
+import { trackListingView } from '../../../lib/views';
 import { getStorefront } from '../../../lib/storefront';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../lib/seo';
 import { BuyButton } from './BuyButton';
@@ -40,6 +41,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const land = await getLandDetail(id, locale);
   if (!land) notFound();
+  await trackListingView(id); // partner analytics: count the public view
   const [wished, similar, store] = await Promise.all([wishlistListingIds(), similarLands(id, 4), getStorefront()]);
   const nb = await prisma.listing.findUnique({ where: { id }, select: { neighborhoodId: true } });
   const advGroups = await advantagesForNeighborhood(nb?.neighborhoodId, locale);

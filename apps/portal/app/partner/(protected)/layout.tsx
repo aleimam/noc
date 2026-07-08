@@ -13,6 +13,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
 
   const nav = [
     { href: '/partner', label: L('لوحتي', 'Dashboard') },
+    { href: '/partner/analytics', label: L('الإحصائيات', 'Analytics') },
     { href: '/partner/account', label: L('حسابي', 'My account') },
   ];
 

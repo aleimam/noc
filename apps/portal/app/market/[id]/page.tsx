@@ -9,6 +9,7 @@ import { auth } from '@noc/auth';
 import { getStandardAreas } from '../../../lib/marketplace';
 import { advantagesForNeighborhood } from '../../../lib/advantages';
 import { listListingImages } from '../../../lib/poster/generate';
+import { trackListingView } from '../../../lib/views';
 import { pageMeta, breadcrumbLd, ldJson, abs } from '../../../lib/seo';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -70,6 +71,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: true, buildingConditions: { include: { condition: true } }, neighborhood: { include: { district: true } } },
   });
   if (!listing || listing.status !== 'PUBLISHED') notFound();
+  await trackListingView(listing.id); // partner analytics: count the public view
 
   const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('mp');
