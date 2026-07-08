@@ -14,6 +14,7 @@ export default async function SettingsHub() {
     { href: '/admin/settings/security', label: 'الأمان والحماية', desc: 'مستوى حماية البيانات من النسخ' },
     { href: '/admin/settings/appearance', label: t('settingsAppearance'), desc: t('settingsAppearanceDesc') },
     { href: '/admin/settings/branding', label: 'الشعارات والهوية', desc: 'شعار وأيقونة كل موقع' },
+    { href: '/admin/settings/poster-identity', label: 'هوية الصور المولّدة', desc: 'ألوان وخط وشعار البوستر والبطاقات لكل علامة' },
     { href: '/admin/settings/modules', label: 'الخدمات الظاهرة', desc: 'تفعيل/إخفاء خدمات العبور الجديد' },
     { href: '/admin/settings/calculator', label: 'حساب التسوية', desc: 'أرقام ونسب حساب المساحة والتسوية' },
     { href: '/admin/settings/site', label: 'إعدادات الموقع العامة', desc: 'قائمة الجوال، حقوق النشر، واتساب المساعدة' },

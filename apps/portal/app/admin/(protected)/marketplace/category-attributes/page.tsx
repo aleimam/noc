@@ -11,7 +11,7 @@ export default async function CategoryAttributesPage() {
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);
 
-  const [classifiers, sections, links] = await Promise.all([
+  const [classifiers, sections, links, renders] = await Promise.all([
     prisma.classifier.findMany({
       orderBy: { order: 'asc' },
       include: { options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true } } },
@@ -22,10 +22,13 @@ export default async function CategoryAttributesPage() {
       include: { attributes: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, labelAr: true, labelEn: true } } },
     }),
     prisma.attributeClassifier.findMany({ select: { optionId: true, attributeId: true } }),
+    prisma.categorySectionRender.findMany({ select: { optionId: true, sectionId: true, makeCard: true, onPoster: true } }),
   ]);
 
   const linksByOption: Record<string, string[]> = {};
   for (const l of links) (linksByOption[l.optionId] ??= []).push(l.attributeId);
+  const marksByOption: Record<string, Record<string, { makeCard: boolean; onPoster: boolean }>> = {};
+  for (const r of renders) (marksByOption[r.optionId] ??= {})[r.sectionId] = { makeCard: r.makeCard, onPoster: r.onPoster };
 
   return (
     <div className="space-y-4">
@@ -37,6 +40,7 @@ export default async function CategoryAttributesPage() {
         classifiers={classifiers.map((c) => ({ key: c.key, name: `${c.nameAr} / ${c.nameEn}`, options: c.options.map((o) => ({ id: o.id, name: locale === 'en' ? o.nameEn : o.nameAr })) }))}
         sections={sections.map((s) => ({ id: s.id, name: L(s.nameAr, s.nameEn), attributes: s.attributes.map((a) => ({ id: a.id, label: L(a.labelAr, a.labelEn) })) }))}
         linksByOption={linksByOption}
+        marksByOption={marksByOption}
       />
     </div>
   );

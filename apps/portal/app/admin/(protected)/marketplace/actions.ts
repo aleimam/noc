@@ -173,6 +173,30 @@ export async function deleteSection(id: string): Promise<Result> {
   }
 }
 
+/** Save the generated-image marks for a Type option: which attribute groups get their
+ *  own small card and which appear on the big poster. Only non-default rows are stored
+ *  (default = card yes, poster no → the generator's first-3 fallback applies while no
+ *  poster rows exist for the option). */
+export async function setCategorySectionRender(
+  optionId: string,
+  marks: Array<{ sectionId: string; makeCard: boolean; onPoster: boolean }>,
+): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    const rows = marks
+      .filter((m) => !m.makeCard || m.onPoster)
+      .map((m) => ({ optionId, sectionId: m.sectionId, makeCard: m.makeCard, onPoster: m.onPoster }));
+    await prisma.$transaction([
+      prisma.categorySectionRender.deleteMany({ where: { optionId } }),
+      ...(rows.length ? [prisma.categorySectionRender.createMany({ data: rows })] : []),
+    ]);
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 /** Assign the generated-photos icon for a section (null = auto cycle). */
 export async function setSectionIcon(id: string, icon: string | null): Promise<Result> {
   await requirePermission('marketplace', 'UPDATE');
@@ -351,10 +375,16 @@ export async function deleteOptionList(id: string): Promise<Result> {
 
 /** Bulk: regenerate the poster/card/advantages images for every published listing
  *  (run after a design change). Best-effort per listing; returns how many succeeded. */
-export async function regenerateAllListingImages(): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+/** Regenerate images for all published listings — optionally only one category (Type option). */
+export async function regenerateAllListingImages(typeOptionId?: string): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
   await requirePermission('marketplace', 'UPDATE');
   try {
-    const ids = (await prisma.listing.findMany({ where: { status: 'PUBLISHED' }, select: { id: true } })).map((l) => l.id);
+    const ids = (
+      await prisma.listing.findMany({
+        where: { status: 'PUBLISHED', ...(typeOptionId ? { typeOptionId } : {}) },
+        select: { id: true },
+      })
+    ).map((l) => l.id);
     let count = 0;
     for (const id of ids) {
       try { await regenerateListingImages(id); count++; } catch (e) { console.error('regenerateAll failed for', id, e); }

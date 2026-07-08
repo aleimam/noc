@@ -17,6 +17,9 @@ export const POSTER_ICONS = {
 export type PosterIconKey = keyof typeof POSTER_ICONS;
 export const POSTER_ICON_KEYS = Object.keys(POSTER_ICONS) as PosterIconKey[];
 
+/** Fonts installed on the production host for the generated images (admin-selectable). */
+export const POSTER_FONTS = ['Almarai', 'Tajawal', 'Cairo', 'Changa'] as const;
+
 export function isPosterIcon(v: string | null | undefined): v is PosterIconKey {
   return !!v && v in POSTER_ICONS;
 }

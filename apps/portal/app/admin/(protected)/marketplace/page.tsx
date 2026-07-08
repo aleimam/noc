@@ -12,7 +12,7 @@ export default async function MarketplaceHub() {
   const locale = await getLocale();
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);
 
-  const [classifiers, sections, attributes, optionLists, owners, pendingListings, offers, settings] = await Promise.all([
+  const [classifiers, sections, attributes, optionLists, owners, pendingListings, offers, settings, typeOpts] = await Promise.all([
     prisma.classifier.count(),
     prisma.attributeSection.count(),
     prisma.attribute.count(),
@@ -21,6 +21,11 @@ export default async function MarketplaceHub() {
     prisma.listing.count({ where: { status: 'PENDING' } }),
     prisma.landOffer.count({ where: { status: { in: ['NEW', 'REVIEWING'] } } }),
     prisma.setting.findMany({ where: { key: { in: ['alswarey_phone', 'alswarey_whatsapp'] } } }),
+    prisma.classifierOption.findMany({
+      where: { isActive: true, classifier: { key: 'type' } },
+      orderBy: { order: 'asc' },
+      select: { id: true, nameAr: true, nameEn: true },
+    }),
   ]);
   const sett = Object.fromEntries(settings.map((s) => [s.key, s.value]));
 
@@ -63,7 +68,7 @@ export default async function MarketplaceHub() {
           <h1 className="text-2xl font-bold text-primary">{L('إدارة متجر الصواري', 'Al Sawarey store')}</h1>
           <p className="text-sm opacity-70">{L('العروض والملاك، وإعداد واجهة المتجر وتصنيفاته.', 'Listings & owners, plus storefront design and taxonomy.')}</p>
         </div>
-        <RegenAllButton locale={locale as 'ar' | 'en'} />
+        <RegenAllButton locale={locale as 'ar' | 'en'} types={typeOpts} />
       </div>
       <Grid title={L('العمليات', 'Operations')} cards={ops} />
       <Grid title={L('الإعداد', 'Setup')} cards={setup} />

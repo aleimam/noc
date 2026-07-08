@@ -34,7 +34,7 @@ async function gather(listingId: string): Promise<Gathered | null> {
   const l = await prisma.listing.findUnique({
     where: { id: listingId },
     select: {
-      title: true, cardTitle: true, adNumber: true, area: true, neighborhoodId: true,
+      title: true, cardTitle: true, adNumber: true, area: true, neighborhoodId: true, typeOptionId: true,
       values: {
         select: {
           number: true, bool: true, text: true,
@@ -49,13 +49,13 @@ async function gather(listingId: string): Promise<Gathered | null> {
 
   // Rows keep label + value (one attribute = one table row); PHOTOS/DOCUMENTS carry
   // file markers, not display values, so they never appear on cards.
-  const bySec = new Map<string, { name: string; order: number; icon: string | null; rows: { label: string; value: string }[] }>();
+  const bySec = new Map<string, { id: string; name: string; order: number; icon: string | null; rows: { label: string; value: string }[] }>();
   for (const v of l.values) {
     const sec = v.attribute.section;
     if (!sec || v.attribute.type === 'PHOTOS' || v.attribute.type === 'DOCUMENTS') continue;
     const s = valStr(v);
     if (!s) continue;
-    const g = bySec.get(sec.id) ?? { name: sec.nameAr, order: sec.order, icon: sec.icon, rows: [] };
+    const g = bySec.get(sec.id) ?? { id: sec.id, name: sec.nameAr, order: sec.order, icon: sec.icon, rows: [] };
     // MULTI_SELECT stores one row per choice — merge repeats into one table row.
     const prev = g.rows.find((r) => r.label === v.attribute.labelAr);
     if (prev) prev.value = `${prev.value} · ${s}`;
@@ -66,14 +66,28 @@ async function gather(listingId: string): Promise<Gathered | null> {
   const nonArea = ordered.slice(1); // drop Area (first section)
   const headTitle = l.cardTitle?.trim() || l.title; // staff Card Title, falling back to the listing title
   const headAd = l.adNumber ? `#${l.adNumber}` : '';
+
+  // Per-category render marks (Type option × group): a makeCard=false row hides that
+  // group's small card (default = shown); onPoster rows define the poster set — when
+  // the option has none, the first 3 groups appear (legacy fallback).
+  const renderMarks = l.typeOptionId
+    ? await prisma.categorySectionRender.findMany({ where: { optionId: l.typeOptionId }, select: { sectionId: true, makeCard: true, onPoster: true } })
+    : [];
+  const cardOff = new Set(renderMarks.filter((m) => !m.makeCard).map((m) => m.sectionId));
+  const posterOn = new Set(renderMarks.filter((m) => m.onPoster).map((m) => m.sectionId));
+
   // Admin-assigned icon on the section wins; otherwise fall back to the fixed cycle.
-  const cards: CardData[] = nonArea.map((s, i) => ({
+  const toCard = (s: (typeof nonArea)[number], i: number): CardData => ({
     name: s.name,
     rows: s.rows.slice(0, 5),
     icon: isPosterIcon(s.icon) ? s.icon : ICONS[i % ICONS.length]!,
     title: headTitle,
     ad: headAd,
-  }));
+  });
+  const cards: CardData[] = nonArea.filter((s) => !cardOff.has(s.id)).map(toCard);
+  const posterCards: CardData[] = posterOn.size
+    ? nonArea.filter((s) => posterOn.has(s.id)).map(toCard)
+    : nonArea.slice(0, 3).map(toCard);
 
   const nbMap = await prisma.areaMap.findFirst({ where: { level: 'listing', areaId: listingId, kind: 'location' }, select: { cleanPath: true } });
   let cityMap: { cleanPath: string } | null = null;
@@ -86,8 +100,9 @@ async function gather(listingId: string): Promise<Gathered | null> {
   const poster: PosterData = {
     ad: headAd,
     title: headTitle,
-    // Consolidated Layout A: the first 3 non-Area groups render as compact tables.
-    groups: cards.slice(0, 3).map((c) => ({ name: c.name, icon: c.icon, rows: c.rows })),
+    // Consolidated Layout A: admin-marked groups (or the first-3 fallback); the grid
+    // grows row by row when more than 3 are marked.
+    groups: posterCards.map((c) => ({ name: c.name, icon: c.icon, rows: c.rows })),
     neighborhoodMap: nbMap?.cleanPath ?? null,
     cityMap: cityMap?.cleanPath ?? null,
   };
@@ -99,13 +114,37 @@ async function gather(listingId: string): Promise<Gathered | null> {
 export async function regenerateListingImages(listingId: string): Promise<void> {
   const g = await gather(listingId);
   if (!g) return;
-  const s = await prisma.setting.findMany({ where: { key: { in: ['brand_newobour_logo', 'brand_alsawarey_logo', 'alswarey_phone'] } } });
+  const s = await prisma.setting.findMany({
+    where: { key: { in: ['brand_newobour_logo', 'brand_alsawarey_logo', 'alswarey_phone', 'posterTheme.newobour', 'posterTheme.alsawarey'] } },
+  });
   const m = Object.fromEntries(s.map((x) => [x.key, x.value]));
   const phone = m['alswarey_phone'] || '010 408 10000';
-  const cfg = (brand: PosterBrand) =>
-    brand === 'alsawarey'
-      ? { logoPath: m['brand_alsawarey_logo'] ?? null, domain: 'alsawarey.com', phone }
-      : { logoPath: m['brand_newobour_logo'] ?? null, domain: 'newobour.com', phone };
+  // Admin poster identity (Setting posterTheme.<brand>): colors/font + optional
+  // logo/phone/domain overrides — separate from the websites' theming.
+  const themeOf = (key: string): Record<string, string> => {
+    try { return JSON.parse(m[key] ?? '') as Record<string, string>; } catch { return {}; }
+  };
+  const cfg = (brand: PosterBrand) => {
+    const base =
+      brand === 'alsawarey'
+        ? { logoPath: m['brand_alsawarey_logo'] ?? null, domain: 'alsawarey.com', phone }
+        : { logoPath: m['brand_newobour_logo'] ?? null, domain: 'newobour.com', phone };
+    const t = themeOf(brand === 'alsawarey' ? 'posterTheme.alsawarey' : 'posterTheme.newobour');
+    const pick = (k: string) => (typeof t[k] === 'string' && t[k] ? t[k] : undefined);
+    return {
+      logoPath: pick('logoPath') ?? base.logoPath,
+      domain: pick('domain') ?? base.domain,
+      phone: pick('phone') ?? base.phone,
+      theme: {
+        ...(pick('navy') ? { navy: t.navy } : {}),
+        ...(pick('gold') ? { gold: t.gold } : {}),
+        ...(pick('cream') ? { cream: t.cream } : {}),
+        ...(pick('tint') ? { tint: t.tint } : {}),
+        ...(pick('ink') ? { ink: t.ink } : {}),
+        ...(pick('font') ? { font: t.font } : {}),
+      },
+    };
+  };
 
   const save = async (buf: Buffer, cat: string, name: string) => {
     const f = await savePng(buf);

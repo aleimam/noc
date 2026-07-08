@@ -4,20 +4,23 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
-import { setOptionAttributes } from '../actions';
+import { setOptionAttributes, setCategorySectionRender } from '../actions';
 
 type Opt = { id: string; name: string };
 type ClassifierGroup = { key: string; name: string; options: Opt[] };
 type Section = { id: string; name: string; attributes: { id: string; label: string }[] };
+type Mark = { makeCard: boolean; onPoster: boolean };
 
 export function CategoryAttributesManager({
   classifiers,
   sections,
   linksByOption,
+  marksByOption = {},
 }: {
   classifiers: ClassifierGroup[];
   sections: Section[];
   linksByOption: Record<string, string[]>;
+  marksByOption?: Record<string, Record<string, Mark>>;
 }) {
   const t = useTranslations('mp');
   const router = useRouter();
@@ -25,11 +28,18 @@ export function CategoryAttributesManager({
   const firstOption = classifiers.find((c) => c.options.length)?.options[0]?.id ?? '';
   const [optionId, setOptionId] = useState(firstOption);
   const [checked, setChecked] = useState<Set<string>>(new Set(linksByOption[firstOption] ?? []));
+  // Generated-image marks per group — meaningful for Type options only.
+  const [marks, setMarks] = useState<Record<string, Mark>>(marksByOption[firstOption] ?? {});
+  const isTypeOption = classifiers.find((c) => c.key === 'type')?.options.some((o) => o.id === optionId) ?? false;
+  const markOf = (secId: string): Mark => marks[secId] ?? { makeCard: true, onPoster: false };
+  const setMark = (secId: string, patch: Partial<Mark>) =>
+    setMarks((m) => ({ ...m, [secId]: { ...(m[secId] ?? { makeCard: true, onPoster: false }), ...patch } }));
 
   // Reset the checklist whenever the selected category (or server data) changes.
   useEffect(() => {
     setChecked(new Set(linksByOption[optionId] ?? []));
-  }, [optionId, linksByOption]);
+    setMarks(marksByOption[optionId] ?? {});
+  }, [optionId, linksByOption, marksByOption]);
 
   const toggle = (id: string) =>
     setChecked((s) => {
@@ -49,7 +59,15 @@ export function CategoryAttributesManager({
     if (!optionId) return;
     start(async () => {
       const r = await setOptionAttributes(optionId, [...checked]);
-      if (r.ok) { toast(t('savedOk')); router.refresh(); }
+      let ok = r.ok;
+      if (ok && isTypeOption) {
+        const r2 = await setCategorySectionRender(
+          optionId,
+          sections.map((s) => ({ sectionId: s.id, ...markOf(s.id) })),
+        );
+        ok = r2.ok;
+      }
+      if (ok) { toast(t('savedOk')); router.refresh(); }
       else toast(t('none'), 'error');
     });
   }
@@ -73,17 +91,33 @@ export function CategoryAttributesManager({
       </div>
 
       <p className="text-xs opacity-60">{t('categoryAttrsHint')}</p>
+      {isTypeOption && <p className="text-xs opacity-60">🃏 {t('markHint')}</p>}
 
       <div className="space-y-4">
         {sections.map((sec) => {
           const all = sec.attributes.length > 0 && sec.attributes.every((a) => checked.has(a.id));
+          const mk = markOf(sec.id);
           return (
             <div key={sec.id} className="rounded-lg border border-graphite/15 p-3">
-              <div className="mb-2 flex items-center justify-between">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-semibold text-primary">{sec.name}</h3>
-                <button type="button" onClick={() => setSection(sec, !all)} className="rounded border border-graphite/25 px-2 py-0.5 text-xs">
-                  {all ? t('clear') : t('selectAll')}
-                </button>
+                <div className="flex items-center gap-3">
+                  {isTypeOption && (
+                    <>
+                      <label className="flex items-center gap-1 rounded-full border border-gold-300/60 bg-gold/10 px-2 py-0.5 text-xs font-semibold">
+                        <input type="checkbox" checked={mk.makeCard} onChange={(e) => setMark(sec.id, { makeCard: e.target.checked })} />
+                        🃏 {t('markCard')}
+                      </label>
+                      <label className="flex items-center gap-1 rounded-full border border-gold-300/60 bg-gold/10 px-2 py-0.5 text-xs font-semibold">
+                        <input type="checkbox" checked={mk.onPoster} onChange={(e) => setMark(sec.id, { onPoster: e.target.checked })} />
+                        📄 {t('markPoster')}
+                      </label>
+                    </>
+                  )}
+                  <button type="button" onClick={() => setSection(sec, !all)} className="rounded border border-graphite/25 px-2 py-0.5 text-xs">
+                    {all ? t('clear') : t('selectAll')}
+                  </button>
+                </div>
               </div>
               <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
                 {sec.attributes.map((a) => (

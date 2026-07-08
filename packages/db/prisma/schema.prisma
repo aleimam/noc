@@ -330,6 +330,7 @@ model ClassifierOption {
   parentLinks       ClassifierOptionParent[] @relation("COPChild")
   childLinks        ClassifierOptionParent[] @relation("COPParent")
   attrLinks         AttributeClassifier[]
+  sectionRenders    CategorySectionRender[]
   typeListings      Listing[]             @relation("ListingType")
   purposeListings   Listing[]             @relation("ListingPurpose")
   conditionListings Listing[]             @relation("ListingCondition")
@@ -399,9 +400,27 @@ model AttributeSection {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  attributes Attribute[]
+  attributes     Attribute[]
+  categoryRenders CategorySectionRender[]
 
   @@index([isActive, order])
+}
+
+/// Per-Type-option rendering marks for an attribute group (generated images):
+/// makeCard=false hides the group's small card (default = shown); onPoster=true adds
+/// the group to the big poster (no onPoster rows for an option = first-3 fallback).
+model CategorySectionRender {
+  id        String  @id @default(cuid())
+  optionId  String // ClassifierOption (Type)
+  sectionId String // AttributeSection (attribute group)
+  makeCard  Boolean @default(true)
+  onPoster  Boolean @default(false)
+
+  option  ClassifierOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  section AttributeSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([optionId, sectionId])
+  @@index([sectionId])
 }
 
 /// A single configurable characteristic. Bilingual label + optional unit.
