@@ -46,13 +46,18 @@ npm run dev             # portal → http://localhost:3001 , brokerage → http:
 | `npm run db:migrate` / `db:seed` / `db:studio` | Prisma migrate / seed / Studio |
 
 ## Notes / gotchas
-- **Windows/ARM64:** Prisma has no native ARM64 Windows engine, so the schema uses
-  `engineType = "binary"` (an x64 query‑engine child process under emulation). Works on
-  Linux too; see DEPLOY.md to optionally switch to the native engine there.
+- **Prisma 7 (Rust‑free client):** the generated client lives at
+  `packages/db/generated/prisma/` (git‑ignored; rebuilt by `db:generate`/build) and DB
+  access goes through the pure‑JS `@prisma/adapter-mariadb` driver — no query‑engine
+  binary, so it runs natively on Windows ARM64 and Linux alike. The connection URL is
+  read in `packages/db/prisma.config.ts` (not the schema). Seeds run via `tsx`.
 - **Local DB** is a portable MariaDB under `.devdb/` (git‑ignored). If `:3306` is down,
   run `npm run db:start`.
-- **OTP codes** print to the dev terminal until a real SMS provider is configured.
-- **Uploads** land in `uploads/yyyy/mm/` and are served by a dev route (`/uploads/*`);
-  in production Apache serves them — see **[DEPLOY.md](DEPLOY.md)**.
-- Single shared color palette (navy `#0B1B33` / gold `#C9983E` / green `#2E7749`) lives in
-  `packages/ui/src/styles/theme.css`.
+- **OTP codes** print to the dev terminal until a real SMS provider is configured
+  (production uses SMS Misr).
+- **Uploads** land in `uploads/yyyy/mm/` and are served by the portal's own
+  `/uploads/*` route in dev **and** production (the brokerage proxies `/uploads` to the
+  portal) — see **[DEPLOY.md](DEPLOY.md)**.
+- Single shared color palette (navy `#0B1B33` / gold `#C9983E` accent / green `#2F9E7D`
+  status‑only) lives in `packages/ui/src/styles/theme.css`.
+- Server operations (backups, hardening, Cloudflare) live in **[ops/](ops/README.md)**.

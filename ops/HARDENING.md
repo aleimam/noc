@@ -1,5 +1,21 @@
 # Server hardening runbook (newobour.com / alsawarey.com)
 
+> ## ✅ STATUS (2026-07-08) — mostly DONE; this doc is kept as the reference procedure
+> - **SSH is key-only**: `PasswordAuthentication no` + `PermitRootLogin prohibit-password`
+>   via `/etc/ssh/sshd_config.d/00-hardening.conf`, plus a fallback key file
+>   `/etc/ssh/root_keys` and `chattr +i` on `authorized_keys` (defends against CWP
+>   wiping `/root/.ssh` — it did once; recovery = CWP panel web Terminal).
+> - **Limits tightened** via `10-noc-tighten.conf`: MaxAuthTries 3, LoginGraceTime 20,
+>   X11Forwarding off.
+> - **Port stays 22 by deliberate choice** — with passwords off + LFD banning, the
+>   brute-force noise is harmless; Phase 2 below is optional if that ever changes.
+> - **CSF v15 + LFD active** (TESTING=0, LF_SSHD=5) — no fail2ban needed.
+> - **dnf-automatic ON** (security-only, auto-apply). Kernel updates still need a manual
+>   reboot — check with `needs-restarting -r`.
+> - **MariaDB bound to 127.0.0.1** (`/etc/my.cnf.d/zz-noc-bind.cnf`).
+> - **Backups live**: nightly 02:30 cron (`ops/backup.sh` → `/root/backups`, 14-day
+>   rotation, test-restore verified). Off-site copy still pending owner's server creds.
+
 AlmaLinux 9 + CWP, `root@77.42.66.76`. Goal: stop the SSH root brute-forcing and
 shrink the attack surface, **without ever locking ourselves out.**
 

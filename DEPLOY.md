@@ -1,15 +1,14 @@
 # Deploying NOC (newobour.com + alsawarey.com)
 
-Two Next.js apps from one monorepo, sharing one MySQL/MariaDB backend, served behind
-Apache as two subdomains. **Port 3000 is already used on the server — use other ports
-(3001 / 3002).** Verify they're free first: `ss -tlnp | grep -E ':(3001|3002)'`.
+Two Next.js apps from one monorepo sharing one MariaDB backend, served behind **Nginx**
+as two domains. This documents the live production setup (CWP / AlmaLinux 9 VPS).
+**Port 3000 is taken on the server — the apps use 3001 (portal) / 3002 (brokerage).**
 
 ## Server prerequisites
 - Node.js 20+ and npm, **PM2** (`npm i -g pm2`)
-- MySQL/MariaDB with a `noc` database and a dedicated user
-- Apache with `mod_proxy`, `mod_proxy_http`, `mod_headers` enabled
-- Allow native install scripts during `npm install` so Prisma's engine builds:
-  `npm install` then `npm rebuild` if your npm gates lifecycle scripts.
+- MariaDB with a `noc` database and a dedicated user
+- Nginx owning :80/:443 (on CWP, Apache may be present but unused)
+- Allow native install scripts during `npm install` (sharp needs its prebuilt binaries)
 
 ## 1. Code + dependencies
 ```bash
@@ -21,72 +20,76 @@ npm install
 ```ini
 DATABASE_URL="mysql://noc_user:STRONG_PW@127.0.0.1:3306/noc"
 AUTH_SECRET="<openssl rand -base64 32>"
-SMS_PROVIDER="smsmisr"          # or victorylink / twilio — plus that provider's keys
-UPLOAD_DIR="/home/USER/noc/uploads"   # ABSOLUTE in production (served by Apache below)
+SMS_PROVIDER="smsmisr"                # + that provider's keys (sender TOKEN, not name)
+UPLOAD_DIR="/root/noc/uploads"        # ABSOLUTE in production
 SUPERADMIN_EMAIL="admin@newobour.com"
 SUPERADMIN_PASSWORD="<change>"
-PORTAL_URL="https://newobour.com"
+PORTAL_URL="https://newobour.com"     # also pins AUTH_URL behind the proxy
 BROKERAGE_URL="https://alsawarey.com"
 ```
 
-## 3. Database + build
+## 3. Database + build (first install)
 ```bash
 npm run db:generate
 npm run db:migrate:deploy   # applies committed migrations (no dev prompts)
-npm run db:seed:all         # permissions + SUPER_ADMIN + staff, marketplace catalog, districts
+npm run db:seed:all         # permissions + SUPER_ADMIN + marketplace catalog + districts
 npm run build
 ```
-> `db:seed:all` = base seed + marketplace catalog (property types/attributes) + the 13
-> New Obour districts. Add sample rationing rows with `npm run db:seed:rationing` (test data;
-> skip in production). Re-running any seed is idempotent.
-> Prisma uses `engineType = "binary"` (required for the Windows/ARM64 dev machine; works
-> on Linux too). For a small perf gain on a Linux-only server you may drop that line in
-> `packages/db/prisma/schema.prisma` and re-`db:generate` to use the native library engine.
+> Prisma 7 uses the Rust-free client + `@prisma/adapter-mariadb`; the client is generated
+> into `packages/db/generated/prisma/` by `db:generate`/build. Re-running seeds is
+> idempotent, and the marketplace seed does **not** touch attribute-applicability links
+> unless `SEED_ATTR_LINKS=1` (admins own those in the UI).
 
 ## 4. Run both apps with PM2 (ports 3001 / 3002)
-`ecosystem.config.js` is committed at the repo root (both apps, `NODE_ENV=production`;
-the `start` scripts already pin `-p 3001` / `-p 3002`).
+`ecosystem.config.js` is committed at the repo root.
 ```bash
 pm2 start ecosystem.config.js && pm2 save && pm2 startup
-pm2 reload all   # after a new release
 ```
 
-## 5. Apache virtual hosts (reverse proxy + uploads)
-Each subdomain proxies to its Node port; both serve `/uploads/*` straight from disk.
-```apache
-<VirtualHost *:80>
-  ServerName newobour.com
-  ServerAlias www.newobour.com
+## 5. Nginx reverse proxy
+Live config: `/etc/nginx/conf.d/noc.conf` — one HTTP→HTTPS redirect block + one SSL
+block per domain, proxying to the app port.
 
-  Alias /uploads /home/USER/noc/uploads
-  <Directory /home/USER/noc/uploads>
-    Require all granted
-    Options -Indexes
-  </Directory>
+**CWP gotcha:** CWP's default-SSL vhost listens on wildcard `0.0.0.0:443 default_server`
+and hijacks any block using a bare `listen 443 ssl`. Bind the **specific server IP**
+instead: `listen 77.42.66.76:443 ssl;` (and `listen 77.42.66.76:80;`).
 
-  ProxyPreserveHost On
-  ProxyPass        /uploads !
-  ProxyPass        /  http://127.0.0.1:3001/
-  ProxyPassReverse /  http://127.0.0.1:3001/
-</VirtualHost>
+Key lines inside each SSL block (TLS = one Let's Encrypt SAN cert for both domains):
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3001;          # 3002 for alsawarey.com
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;  # Auth.js needs this over TLS
+}
+client_max_body_size 35m;                        # uploads
 ```
-Repeat for **alsawarey.com** → `http://127.0.0.1:3002/` (same `/uploads` Alias — media is shared).
-Then add TLS (Let's Encrypt / `certbot`) and reload Apache.
+**Uploads** are served by the portal's own `/uploads/*` route (UPLOAD_DIR under /root
+isn't readable by the web-server user); the brokerage adds
+`location /uploads { proxy_pass http://127.0.0.1:3001; }`.
 
 ## Updating a release
 ```bash
-git pull && npm install && npm run db:release && npm run build && pm2 reload all
+cd /root/noc && git pull && npm install && npm run db:release && npm run build && pm2 reload all
 ```
-`db:release` runs migrate-deploy → **generate** → seed-marketplace **in that order**. The
-generate step is essential: the seed uses the generated Prisma client, so it must be
-regenerated *before* seeding (otherwise new models like `classifier` are `undefined`).
-It does NOT run the base seed, so the admin password is never reset.
+`db:release` = migrate-deploy → **generate** → seed-marketplace, **in that order** (the
+seed uses the generated client, so generate must come first). It never runs the base
+seed, so the admin password is never reset. Skip `npm install`/`db:release` for
+code-only changes (`git pull && npm run build && pm2 reload all`).
+
+Recovery if a deploy fails mid-way:
+```bash
+npm run db:generate && npm run db:seed:marketplace && npm run build && pm2 reload all
+```
 
 ## Notes
-- **SMS:** `SMS_PROVIDER=console` only logs codes (dev). Production needs a real Egyptian
-  gateway (SMSMisr / VictoryLink) or Twilio, with an approved sender ID, and a provider
-  adapter implemented in `packages/sms/src/index.ts`.
-- **Uploads** live outside the build (`UPLOAD_DIR`) and are git-ignored; back them up
-  separately. Apache serves them so Node isn't in the static-file path.
-- **Secrets:** never commit `.env`; rotate `AUTH_SECRET` only during a maintenance window
-  (it invalidates existing sessions).
+- **Migrations are written on Windows but run on case-SENSITIVE Linux MySQL** — table
+  names in hand-written SQL must be PascalCase (`Listing`, not `listing`).
+- **SMS:** production uses SMS Misr — the API `sender` parameter is the **sender TOKEN**
+  (hash), not the display name; language=1 for pure-ASCII, 2 for Arabic.
+- **Ops:** backups, restore drills, hardening and the Cloudflare runbook live in
+  [ops/](ops/README.md). Nightly DB+uploads backups run at 02:30 via `/etc/cron.d/noc-backup`.
+- **Secrets:** never commit `.env`; rotate `AUTH_SECRET` only in a maintenance window
+  (it invalidates sessions).
