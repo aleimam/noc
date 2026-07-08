@@ -5,9 +5,16 @@ import { prisma } from '@noc/db';
 import { ListingForm } from '../ListingForm';
 import { loadCatalog } from '../catalog';
 
-export default async function NewListing() {
+export default async function NewListing({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await auth();
   if (!session?.user) redirect('/account/login');
+  // The account dashboard's partnership card deep-links here with the toggle pre-set.
+  const sp = await searchParams;
+  const presetPartnership = sp.partnership === '1';
 
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
@@ -41,6 +48,7 @@ export default async function NewListing() {
           priceUnit: 'TOTAL',
           priceNegotiable: false,
           priceNote: '',
+          isPartnership: presetPartnership,
           contactPhone: dbUser?.phone ?? '',
           contactWhatsapp: true,
           ownerId: '',

@@ -47,6 +47,18 @@ export default async function CustomerHome() {
         </span>
       </div>
 
+      {/* Plot consolidation & partnerships opt-in — aimed at small-plot owners. */}
+      <Link
+        href="/account/listings/new?partnership=1"
+        className="block rounded-2xl border border-gold-300/60 bg-gold/10 p-5 transition-shadow hover:shadow-md"
+      >
+        <div className="text-lg font-bold text-primary">🤝 {tm('partnershipCardTitle')}</div>
+        <p className="mt-1 text-sm text-ink-600">{tm('partnershipCardDesc')}</p>
+        <span className="mt-3 inline-block rounded-full bg-primary px-4 py-2 text-sm font-bold text-soft">
+          {tm('partnershipCardCta')}
+        </span>
+      </Link>
+
       <div className="grid gap-3 sm:grid-cols-2">
         {cards.map((c) => (
           <Link

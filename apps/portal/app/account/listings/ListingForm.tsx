@@ -35,6 +35,9 @@ export type ListingFormInitial = {
   priceUnit: 'TOTAL' | 'UNIT' | 'SQM';
   priceNegotiable: boolean;
   priceNote: string;
+  isPartnership?: boolean;
+  partnershipType?: string;
+  partnershipNote?: string;
   contactPhone: string;
   contactWhatsapp: boolean;
   ownerId: string;
@@ -106,6 +109,9 @@ export function ListingForm({
   const [priceUnit, setPriceUnit] = useState(initial.priceUnit);
   const [priceNegotiable, setPriceNegotiable] = useState(initial.priceNegotiable);
   const [priceNote, setPriceNote] = useState(initial.priceNote);
+  const [isPartnership, setIsPartnership] = useState(initial.isPartnership ?? false);
+  const [partnershipType, setPartnershipType] = useState(initial.partnershipType ?? '');
+  const [partnershipNote, setPartnershipNote] = useState(initial.partnershipNote ?? '');
   const [contactPhone, setContactPhone] = useState(initial.contactPhone);
   const [contactWhatsapp, setContactWhatsapp] = useState(initial.contactWhatsapp);
   const [ownerId, setOwnerId] = useState(initial.ownerId);
@@ -244,6 +250,9 @@ export function ListingForm({
       priceUnit,
       priceNegotiable,
       priceNote,
+      isPartnership,
+      partnershipType: isPartnership ? partnershipType || null : null,
+      partnershipNote: isPartnership ? partnershipNote : '',
       contactPhone,
       contactWhatsapp,
       ownerId: ownerId || null,
@@ -516,6 +525,36 @@ export function ListingForm({
           </div>
         </div>
         <label className="block text-sm">{t('priceNote')}<input value={priceNote} onChange={(e) => setPriceNote(e.target.value)} className={inp} /></label>
+
+        {/* ── Plot consolidation & partnerships (تجميع الملاك والشراكات) opt-in ── */}
+        <div className="space-y-3 rounded-lg border border-gold-300/50 bg-gold/10 p-4">
+          <div className="text-sm font-bold text-primary">🤝 {t('partnershipQ')}</div>
+          <p className="text-xs opacity-70">{t('partnershipHint')}</p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setIsPartnership(true)} className={`flex-1 rounded-lg px-3 py-2 font-semibold ${isPartnership ? 'bg-primary text-soft' : 'border border-graphite/25'}`}>{t('yes')}</button>
+            <button type="button" onClick={() => setIsPartnership(false)} className={`flex-1 rounded-lg px-3 py-2 font-semibold ${!isPartnership ? 'bg-primary text-soft' : 'border border-graphite/25'}`}>{t('no')}</button>
+          </div>
+          {isPartnership && (
+            <>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {(['CONSOLIDATION', 'JOINT_BUILD', 'SHARE_SALE'] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setPartnershipType((cur) => (cur === k ? '' : k))}
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold ${partnershipType === k ? 'bg-primary text-soft' : 'border border-graphite/25 hover:bg-graphite/10'}`}
+                  >
+                    {t(`pt_${k}`)}
+                  </button>
+                ))}
+              </div>
+              <label className="block text-sm">
+                {t('partnershipNote')}
+                <input value={partnershipNote} onChange={(e) => setPartnershipNote(e.target.value)} maxLength={190} placeholder={t('partnershipNotePh')} className={inp} />
+              </label>
+            </>
+          )}
+        </div>
 
         {/* Owner */}
         {staffMode ? (

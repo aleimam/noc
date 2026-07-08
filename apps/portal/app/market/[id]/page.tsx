@@ -276,6 +276,18 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         <span className="font-medium">{weAreContact ? t('listedByUs') : ownerName || '—'}</span>
       </div>
 
+      {/* Plot consolidation & partnerships: the owner opted this plot in. */}
+      {listing.isPartnership && (
+        <div className="rounded-lg border border-gold-300/50 bg-gold/10 p-4">
+          <div className="font-bold text-primary">🤝 {t('partnershipTitle')}</div>
+          <p className="mt-1 text-sm opacity-80">
+            {listing.partnershipType ? t(`pt_${listing.partnershipType}`) : t('partnershipBadge')}
+            {listing.partnershipNote ? ` — ${listing.partnershipNote}` : ''}
+          </p>
+          <p className="mt-1 text-xs opacity-60">{t('partnershipContactHint')}</p>
+        </div>
+      )}
+
       {listing.neighborhood && (
         <div className="text-sm">
           <span className="opacity-70">{L('المنطقة', 'Location')}: </span>

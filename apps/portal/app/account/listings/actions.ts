@@ -29,6 +29,9 @@ export type ListingInput = {
   priceUnit?: 'TOTAL' | 'UNIT' | 'SQM';
   priceNegotiable?: boolean;
   priceNote?: string;
+  isPartnership?: boolean;
+  partnershipType?: string | null; // PartnershipType key, validated server-side
+  partnershipNote?: string;
   contactPhone: string;
   contactWhatsapp: boolean;
   ownerId?: string | null;
@@ -42,6 +45,9 @@ export type ListingInput = {
 };
 
 type Result = { ok: true; id: string } | { ok: false; error: string };
+
+const PARTNERSHIP_TYPES = ['CONSOLIDATION', 'JOINT_BUILD', 'SHARE_SALE'] as const;
+type PartnershipTypeKey = (typeof PARTNERSHIP_TYPES)[number];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function writeValues(tx: any, listingId: string, values: ValueInput[]) {
@@ -153,6 +159,13 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         priceUnit: input.priceUnit ?? 'TOTAL',
         priceNegotiable: input.priceNegotiable ?? false,
         priceNote: input.priceNote?.trim() || null,
+        // Partnership opt-in: type/note only persist while the flag is on.
+        isPartnership: !!input.isPartnership,
+        partnershipType:
+          input.isPartnership && PARTNERSHIP_TYPES.includes(input.partnershipType as PartnershipTypeKey)
+            ? (input.partnershipType as PartnershipTypeKey)
+            : null,
+        partnershipNote: input.isPartnership ? input.partnershipNote?.trim().slice(0, 190) || null : null,
         contactPhone: input.contactPhone.trim(),
         contactWhatsapp: input.contactWhatsapp,
         status: input.status,

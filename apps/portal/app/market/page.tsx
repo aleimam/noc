@@ -49,6 +49,8 @@ export default async function MarketPage({
 
   const and: Prisma.ListingWhereInput[] = [{ status: 'PUBLISHED' }];
   if (selectedType) and.push({ typeOptionId: selectedType.id });
+  // Plot consolidation & partnerships: "partnerships only" toggle (persistent URL param).
+  if (get('partnership') === '1') and.push({ isPartnership: true });
   for (const a of filterAttrs) {
     if (a.type === 'NUMBER') {
       const numCond: Prisma.DecimalNullableFilter = {};
@@ -113,6 +115,9 @@ export default async function MarketPage({
             price={l.price != null ? String(l.price) : null}
             currency={currency(locale)}
             badge={<MarketCardActions listingId={l.id} initialSaved={wished.has(l.id)} compareLabel={t('compare')} />}
+            meta={l.isPartnership ? (
+              <span className="inline-block rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-bold text-navy-800">🤝 {t('partnershipBadge')}</span>
+            ) : undefined}
           />
         ))}
       </div>

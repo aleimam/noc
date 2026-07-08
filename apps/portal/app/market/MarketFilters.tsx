@@ -30,9 +30,15 @@ export function MarketFilters({
     router.push(`/market?${p.toString()}`);
   }
   function setType(k: string) {
-    router.push(k ? `/market?type=${k}` : '/market');
+    // Type change resets attribute filters but keeps the partnership toggle (persistent).
+    const p = new URLSearchParams();
+    if (k) p.set('type', k);
+    if (sp.get('partnership') === '1') p.set('partnership', '1');
+    const qs = p.toString();
+    router.push(qs ? `/market?${qs}` : '/market');
   }
   const csv = (k: string) => (sp.get(k) ? sp.get(k)!.split(',').filter(Boolean) : []);
+  const partnershipOn = sp.get('partnership') === '1';
 
   return (
     <div className="space-y-4 rounded-lg border border-graphite/15 p-4">
@@ -41,6 +47,13 @@ export function MarketFilters({
           <option value="">{t('allTypes')}</option>
           {types.map((x) => (<option key={x.key} value={x.key}>{L(x.nameAr, x.nameEn)}</option>))}
         </select>
+        <button
+          type="button"
+          onClick={() => pushParams((p) => (p.get('partnership') === '1' ? p.delete('partnership') : p.set('partnership', '1')))}
+          className={`rounded-full px-4 py-2 text-sm font-bold ${partnershipOn ? 'bg-primary text-soft' : 'border border-gold-300/60 bg-gold/10 hover:bg-gold/20'}`}
+        >
+          🤝 {t('partnershipOnly')}
+        </button>
         {sp.toString() && <a href="/market" className="text-sm text-accent">{t('reset')}</a>}
       </div>
 

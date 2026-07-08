@@ -502,6 +502,13 @@ model PropertyTypeAttribute {
 }
 
 /// A seller's offer. Free text is Arabic; structured values live in ListingValue.
+/// How a small-plot owner is willing to partner (تجميع الملاك والشراكات).
+enum PartnershipType {
+  CONSOLIDATION // ضم قطع متجاورة — merge adjacent plots into one buildable block
+  JOINT_BUILD // بناء مشترك — build together, split the units
+  SHARE_SALE // بيع حصة — sell a share of the plot
+}
+
 model Listing {
   id              String        @id @default(cuid())
   sellerId        String
@@ -521,6 +528,11 @@ model Listing {
   postersStale    Boolean       @default(false) // generated images out of date vs listing/area data
   featured        Boolean       @default(false) // promoted on the storefront (manual)
   priceNote       String?
+  // Plot consolidation & partnerships (تجميع الملاك والشراكات) — owner opts the
+  // listing into partnering; type + free-text note (expected share / terms).
+  isPartnership   Boolean          @default(false)
+  partnershipType PartnershipType?
+  partnershipNote String?
   contactPhone    String
   contactWhatsapp Boolean       @default(true)
   showOnBrokerage Boolean       @default(false)
@@ -553,6 +565,7 @@ model Listing {
   @@index([status, propertyTypeId])
   @@index([sellerId, status])
   @@index([showOnBrokerage, status])
+  @@index([isPartnership, status])
   @@index([neighborhoodId])
   @@index([publishedAt])
 }
