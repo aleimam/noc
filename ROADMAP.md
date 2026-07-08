@@ -122,12 +122,14 @@ admin authorization the listing flips to verified (a gold "موثّق" badge, al
 DS PropertyCard). Treat the payment integration as its own task.
 **Effort:** M–L (payment gateway is the long pole).
 
-## 5. Plot Consolidation & Partnerships (تجميع الملاك والشراكات)
-**Where:** marketplace filter + `/app` dashboard opt-in.
-**Build:** add a `partnership` JSON/columns to `Listing` (isPartnership, partnershipType,
-expectedShare). A persistent "partnership only" toggle in `MarketFilters`. A dashboard
-card for small-plot owners (e.g. 209 m²) to opt in.
-**Effort:** S (mostly a Listing field + a filter + a form).
+## 5. ✅ Plot Consolidation & Partnerships (تجميع الملاك والشراكات) — SHIPPED 2026-07-08
+**Delivered (commit `99e88ce`, migration `20260708150000_listing_partnership`):**
+`Listing.isPartnership` + `partnershipType` (CONSOLIDATION / JOINT_BUILD / SHARE_SALE)
++ `partnershipNote`; gold opt-in block in the shared listing form (staff + seller);
+persistent "شراكات فقط" toggle in `/market` filters (survives type changes); partnership
+chip on cards + info box on the listing detail; account-dashboard promo card deep-linking
+to `/account/listings/new?partnership=1`. Values validated server-side and cleared when
+the flag is off. Deployed + verified in prod.
 
 ## 6. Broker sub-accounts & moderation (حسابات السماسرة المعتمدين)
 **Note:** we deliberately chose **staff-managed owners** (companies/brokers are `Owner`
