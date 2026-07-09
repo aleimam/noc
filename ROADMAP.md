@@ -145,6 +145,17 @@ SPF/DKIM unverified); view counting is naive (no bot dedupe).
 
 ---
 
+## 7. ✅ SEO-friendly listing URLs — SHIPPED 2026-07-09
+Human-readable `/market/<type>-<area>m-<adNumber>` URLs on **New Obour** (commit `44777c3`),
+matching Al Sawarey's `/listings/<slug>-<adNumber>` (shipped earlier). The detail page
+resolves either the SEO slug or a legacy cuid and **308-redirects** old cuids / mismatched
+slugs to the canonical URL — the ad number (trailing digits) is the stable lookup key.
+Canonical tag, sitemap, and every browse surface (market grid, home, owner profile, explore,
+similar) emit the pretty href. Verified live with multiple listings (distinct slugs, 308s,
+sitemap). Secondary logged-in links (wishlist/offers/compare) keep cuids and rely on the 308.
+
+---
+
 ## Suggested order
 1. **Plot Partnerships** (#5) — smallest, pure marketplace.
 2. **Build-It-For-Me** (#1) — high conversion value, self-contained.
