@@ -15,7 +15,8 @@ SMS gateway, and next-intl ar/en.
 
 **Recently shipped & deployed:** partner portal + full-site chrome + public "become a partner"
 apply flow (#6), **SEO-friendly listing URLs** on both apps (#7), first-party visitor analytics
-(Phase 1), the watermark/stamp **brand-split + managed contacts footer + per-listing-category
+(**Phases 1 & 2** — sessions + events + funnel + search intelligence), the watermark/stamp
+**brand-split + managed contacts footer + per-listing-category
 rules**, official-papers on listings, and **login hardening** (bilingual errors + 5-try
 lockout, partner login tabs). Earlier: the City-geo / map-inheritance / area-advantages /
 generated-photos feature (both phases) and the **ALSWARY → "Al Sawarey"** rename.
@@ -31,9 +32,11 @@ generated-photos feature (both phases) and the **ALSWARY → "Al Sawarey"** rena
 - **`/code-review ultra`** — owner-triggered when wanted.
 - **Partner OTP-by-email** — deferred until outbound-mail deliverability (SPF/DKIM) is
   verified; partner OTP stays SMS-only until then.
-- **Web analytics Phase 2 → 3** — Phase 1 shipped. Phase 2 = event tracking + conversion
-  funnels + search intelligence (zero-result searches); Phase 3 = frustration signals +
-  Core Web Vitals + daily rollups & retention prune + saved views. Build on request.
+- **Web analytics Phase 3** — Phases 1 (visitor/session/pageview tracking + dashboard) and 2
+  (event tracking + engagement funnel + search intelligence incl. zero-result searches)
+  **SHIPPED 2026-07-09**. Remaining Phase 3 = frustration signals (rage/dead clicks, form
+  abandonment) + Core Web Vitals + daily rollups & **retention prune** + cohorts + saved views
+  + scheduled reports. Build on request.
 
 ---
 
