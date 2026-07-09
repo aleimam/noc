@@ -8,8 +8,13 @@ domains is on **Cloudflare** (`zita/bart.ns.cloudflare.com`).
 - **DNS auth records: already correct** — SPF, DKIM (`default._domainkey`), and DMARC (`p=none`)
   are published and resolving for `newobour.com` and `alsawarey.com`.
 - **DKIM signing: now ACTIVE + verified** (fixed 2026-07-09, server-side — see below).
-- **Actual delivery is still BLOCKED**: Hetzner blocks **outbound port 25**, so the server
-  can't deliver direct-to-MX. Owner must pick one path (relay recommended) — see "Remaining".
+- **Outbound delivery: now WORKING via Brevo relay (2026-07-09).** Postfix authenticates to
+  `smtp-relay.brevo.com:587` (SASL PLAIN + TLS) and hands off — test messages from both
+  `noc@newobour.com` (OpenDKIM-signed) and the Brevo account sender returned `status=sent
+  (250 OK: queued)`. Needed one more package fix: `dnf install cyrus-sasl-plain` (else "No
+  worthy mechs found"). Hetzner's port-25 block is bypassed because the relay uses 587.
+- **Remaining to fully finish:** confirm the Brevo account's domains are authenticated (their
+  DNS in Cloudflare) for best inbox placement, and build the app's mail-sending code.
 
 ## Current DNS (published in Cloudflare — verified resolving)
 

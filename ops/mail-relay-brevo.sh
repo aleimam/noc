@@ -17,6 +17,9 @@ CMD="${1:-}"
 case "$CMD" in
   apply)
     LOGIN="${2:?brevo SMTP login required}"; KEY="${3:?brevo SMTP key required}"
+    # Postfix needs the SASL PLAIN/LOGIN client mechanism to authenticate to the relay,
+    # else: "SASL authentication failure: No worthy mechs found".
+    rpm -q cyrus-sasl-plain >/dev/null 2>&1 || dnf install -y cyrus-sasl-plain
     postconf -e "relayhost = [$HOST]:$PORT"
     postconf -e "smtp_sasl_auth_enable = yes"
     postconf -e "smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd"
