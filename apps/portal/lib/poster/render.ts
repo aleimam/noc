@@ -331,8 +331,9 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
   const hb = await headerLogoBg(hasLogo ? cfg.headerLogoPath! : null, th);
   parts.push(`<rect x="${M}" y="${headY}" width="${w - 2 * M}" height="${headH}" rx="18" fill="${hb.bar}"/>`);
   const plate = { x: M + 16, y: cy - 50, w: 210, h: 100 };
-  if (!hasLogo) {
-    // pre-upload state only: a white plate with a dashed "logo" placeholder
+  if (branded && !hasLogo) {
+    // branded, pre-upload state only: a white plate with a dashed "logo" placeholder.
+    // (Unbranded posters are intentionally logo-free — no placeholder.)
     parts.push(
       `<rect x="${plate.x}" y="${plate.y}" width="${plate.w}" height="${plate.h}" rx="12" fill="#ffffff"/>`,
       `<rect x="${plate.x + 8}" y="${plate.y + 8}" width="${plate.w - 16}" height="${plate.h - 16}" rx="8" fill="none" stroke="#b9c0cc" stroke-width="2" stroke-dasharray="7 6"/>`,
