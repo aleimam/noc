@@ -23,7 +23,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
   // Brand-first structure: New Obour services · Al Sawarey (store ops + setup) · shared
   // Content · People & access · System. URLs are unchanged — this only regroups the nav.
   const groups: { title?: string; items: NavItem[] }[] = [
-    { items: [{ href: '/admin', label: t('dashboard') }] },
+    { items: [{ href: '/admin', label: t('dashboard') }, { href: '/admin/analytics', label: L('تحليلات الزوّار', 'Visitor analytics'), section: 'settings' }] },
     {
       title: L('العبور الجديد — الخدمات', 'New Obour — services'),
       items: [

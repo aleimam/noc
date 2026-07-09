@@ -48,7 +48,10 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   // Shared workspace packages are TS source and must be transpiled by Next.
-  transpilePackages: ['@noc/ui', '@noc/i18n', '@noc/auth', '@noc/db', '@noc/sms', '@noc/config'],
+  transpilePackages: ['@noc/ui', '@noc/i18n', '@noc/auth', '@noc/db', '@noc/sms', '@noc/config', '@noc/analytics'],
+  // geoip-lite reads its .dat database via fs at runtime — keep it external so the bundler
+  // doesn't break its __dirname-relative paths.
+  serverExternalPackages: ['geoip-lite'],
   // Lint is run separately (`npm run lint`); keep production builds focused on compile + types.
   eslint: { ignoreDuringBuilds: true },
   async headers() {

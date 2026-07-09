@@ -1500,3 +1500,111 @@ model UserLand {
 
   @@index([userId])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// First-party web analytics (both sites). Anonymous, always-on; the client beacon
+// posts pageviews/leaves/events to /api/collect, which enriches (geo/device via
+// offline libs) and sessionizes. IP is stored HASHED only. `site` = 'newobour' |
+// 'alsawarey'. Raw rows are pruned on a retention window; see ops/analytics-prune.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A stable anonymous visitor (first-party id from the client), scoped per site.
+model Visitor {
+  id            String   @id @default(cuid())
+  anonId        String // client-generated first-party id (localStorage)
+  site          String // 'newobour' | 'alsawarey'
+  userId        String? // linked customer/partner when known (same-origin only)
+  firstSeen     DateTime @default(now())
+  lastSeen      DateTime @default(now())
+  sessionsCount Int      @default(0)
+  pageviews     Int      @default(0)
+  // Latest-known enrichment, denormalized for fast segmenting.
+  country       String?
+  region        String?
+  city          String?
+  device        String? // mobile | desktop | tablet | bot
+  os            String?
+  browser       String?
+  sessions      VisitSession[]
+
+  @@unique([site, anonId])
+  @@index([site, lastSeen])
+  @@index([userId])
+}
+
+/// One visit (30-min inactivity window). Carries the source + device + geo enrichment.
+model VisitSession {
+  id          String   @id @default(cuid())
+  clientSid   String // client-generated session id
+  visitorId   String
+  site        String
+  userId      String?
+  startedAt   DateTime @default(now())
+  lastEventAt DateTime @default(now())
+  durationSec Int      @default(0)
+  pageviews   Int      @default(0)
+  isBounce    Boolean  @default(true)
+  entryPath   String?  @db.VarChar(512)
+  exitPath    String?  @db.VarChar(512)
+  referrer    String?  @db.Text
+  source      String? // direct | organic | social | referral | campaign
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  device      String?
+  os          String?
+  browser     String?
+  screen      String?
+  language    String?
+  country     String?
+  region      String?
+  city        String?
+  ipHash      String?  @db.VarChar(64)
+
+  visitor Visitor          @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  views   PageView[]
+  events  AnalyticsEvent[]
+
+  @@unique([site, clientSid])
+  @@index([site, startedAt])
+  @@index([visitorId])
+  @@index([userId])
+}
+
+/// A single page view; time-on-page + scroll depth arrive on the leave beacon.
+model PageView {
+  id          String   @id @default(cuid())
+  sessionId   String
+  site        String
+  path        String   @db.VarChar(512)
+  title       String?  @db.Text
+  ts          DateTime @default(now())
+  durationSec Int? // filled by the leave beacon
+  scrollPct   Int? // max scroll depth 0–100
+  loadMs      Int? // navigation load time
+
+  session VisitSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([site, ts])
+  @@index([sessionId])
+  @@index([path(length: 180)])
+}
+
+/// A discrete interaction on a page (contact click, search, filter, download…).
+/// Populated more heavily in Phase 2; the table ships now so no migration is needed then.
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  sessionId String
+  site      String
+  type      String // 'contact_whatsapp' | 'search' | 'wishlist' | 'download' | …
+  path      String?  @db.VarChar(512)
+  label     String?  @db.Text
+  value     Float?
+  meta      Json?
+  ts        DateTime @default(now())
+
+  session VisitSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([site, type, ts])
+  @@index([sessionId])
+}

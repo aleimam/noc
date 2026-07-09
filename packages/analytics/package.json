@@ -1,0 +1,24 @@
+{
+  "name": "@noc/analytics",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@noc/db": "*",
+    "geoip-lite": "^1.4.10",
+    "ua-parser-js": "^1.0.40"
+  },
+  "devDependencies": {
+    "@types/geoip-lite": "^1.4.4",
+    "@types/ua-parser-js": "^0.7.39",
+    "typescript": "^5.7.3"
+  }
+}

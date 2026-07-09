@@ -3,7 +3,7 @@ import { Tajawal, Playfair_Display, Cairo, Almarai } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { dirForLocale, type Locale } from '@noc/i18n';
-import { ThemeScript, Analytics, ConsentBanner, EnterToSubmit } from '@noc/ui';
+import { ThemeScript, Analytics, ConsentBanner, EnterToSubmit, Tracker } from '@noc/ui';
 import { buildThemeCss } from '@noc/config';
 import { prisma } from '@noc/db';
 import { getBrandTheme } from '../lib/theme';
@@ -56,6 +56,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-screen font-sans antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
+          <Tracker site="newobour" />
           <Analytics ga4Id={s.ga4_newobour} pixelId={s.pixel_newobour} />
           <ConsentBanner />
           <EnterToSubmit />

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@noc/analytics": "*",
     "@noc/auth": "*",
     "@noc/config": "*",
     "@noc/db": "*",

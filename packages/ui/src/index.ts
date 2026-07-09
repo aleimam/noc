@@ -2,6 +2,7 @@ export * from './lib/cn';
 export { compressImage } from './lib/compress';
 export { track, getConsent, setConsent } from './lib/track';
 export { Analytics, ConsentBanner } from './components/Analytics';
+export { Tracker } from './components/Tracker';
 export { LanguageSwitcher } from './components/LanguageSwitcher';
 export { TrackView, RecentlyViewed, type ViewedItem } from './components/RecentlyViewed';
 export { ThemeToggle } from './components/ThemeToggle';
