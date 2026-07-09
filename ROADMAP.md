@@ -32,11 +32,12 @@ generated-photos feature (both phases) and the **ALSWARY → "Al Sawarey"** rena
 - **`/code-review ultra`** — owner-triggered when wanted.
 - **Partner OTP-by-email** — deferred until outbound-mail deliverability (SPF/DKIM) is
   verified; partner OTP stays SMS-only until then.
-- **Web analytics Phase 3** — Phases 1 (visitor/session/pageview tracking + dashboard) and 2
-  (event tracking + engagement funnel + search intelligence incl. zero-result searches)
-  **SHIPPED 2026-07-09**. Remaining Phase 3 = frustration signals (rage/dead clicks, form
-  abandonment) + Core Web Vitals + daily rollups & **retention prune** + cohorts + saved views
-  + scheduled reports. Build on request.
+- **Web analytics Phase 3 (part 2)** — Phases 1 (visitor/session/pageview tracking +
+  dashboard), 2 (event tracking + engagement funnel + search intelligence), and **Phase 3
+  part 1** (rage clicks, Core Web Vitals LCP/CLS, nightly **retention prune** cron) all
+  **SHIPPED 2026-07-09**. Remaining = dead clicks + form abandonment, `AnalyticsDaily`
+  rollups (pairs with the prune), cohorts/retention, saved views + Excel + scheduled reports.
+  Build on request.
 
 ---
 
