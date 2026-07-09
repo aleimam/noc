@@ -1,6 +1,6 @@
 import { getLocale } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
-import { parseRange, getOverview, getRecentSessions, getEventStats, type SiteFilter } from '../../../../lib/analytics';
+import { parseRange, getOverview, getRecentSessions, getEventStats, getDailyRollups, type SiteFilter } from '../../../../lib/analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +13,7 @@ export default async function VisitorAnalyticsPage({ searchParams }: { searchPar
   const range = parseRange(sp);
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
-  const [ov, recent, ev] = await Promise.all([getOverview(range), getRecentSessions(range, 100), getEventStats(range)]);
+  const [ov, recent, ev, roll] = await Promise.all([getOverview(range), getRecentSessions(range, 100), getEventStats(range), getDailyRollups(range)]);
 
   const qs = (patch: Record<string, string | number>) => {
     const p = new URLSearchParams({ days: String(range.days), site: range.site, ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, String(v)])) });
@@ -137,6 +137,32 @@ export default async function VisitorAnalyticsPage({ searchParams }: { searchPar
           ))}
         </div>
         <p className="mt-2 text-xs opacity-50">{L('من الجلسات التي شاهدت إعلانًا — كم أضاف للمفضلة ثم تواصل.', 'Of sessions that viewed a listing — how many saved, then contacted.')}</p>
+      </div>
+
+      {/* ── Phase 3: visitor cohorts (new vs returning) ── */}
+      <div className="rounded-lg border border-graphite/15 p-4">
+        <div className="mb-3 flex items-baseline justify-between">
+          <h3 className="text-sm font-bold text-primary">{L('الزوّار الجدد والعائدون', 'New vs returning')}</h3>
+          <span className="text-xs opacity-60">{L('نسبة العودة', 'Returning rate')} <span className="font-num font-bold text-gold-700">{ov.cohorts.returningRate}%</span></span>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: L('زوّار جدد', 'New'), value: ov.cohorts.newVisitors },
+            { label: L('زوّار عائدون', 'Returning'), value: ov.cohorts.returningVisitors },
+            { label: L('عادوا أكثر من مرة', 'Repeat (≥2 visits)'), value: ov.cohorts.repeatVisitors },
+          ].map((c) => (
+            <div key={c.label} className="rounded-lg border border-graphite/10 p-3 text-center">
+              <div className="font-num text-2xl font-black text-primary">{c.value}</div>
+              <div className="mt-0.5 text-xs opacity-70">{c.label}</div>
+            </div>
+          ))}
+        </div>
+        {ov.cohorts.newVisitors + ov.cohorts.returningVisitors > 0 && (
+          <div className="mt-3 flex h-2.5 overflow-hidden rounded bg-graphite/10">
+            <div className="h-full bg-gold" style={{ width: `${Math.round((ov.cohorts.newVisitors / (ov.cohorts.newVisitors + ov.cohorts.returningVisitors)) * 100)}%` }} title={L('جدد', 'New')} />
+            <div className="h-full bg-primary/60" style={{ flex: 1 }} title={L('عائدون', 'Returning')} />
+          </div>
+        )}
       </div>
 
       {/* ── Phase 2: events + search intelligence ── */}
@@ -264,6 +290,32 @@ export default async function VisitorAnalyticsPage({ searchParams }: { searchPar
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* ── Phase 3: long-term trend from daily rollups (survives the retention prune) ── */}
+      <div className="rounded-lg border border-graphite/15 p-4">
+        <div className="mb-2 flex items-baseline justify-between">
+          <h3 className="text-sm font-bold text-primary">{L('الاتجاه طويل المدى', 'Long-term trend')}</h3>
+          <span className="text-xs opacity-60">
+            {roll.days} {L('يوم', 'days')} · {roll.totals.sessions} {L('جلسة', 'sessions')} · {roll.totals.pageviews} {L('مشاهدة', 'pageviews')}
+          </span>
+        </div>
+        {roll.series.length === 0 ? (
+          <p className="text-xs opacity-50">{L('يُبنى الملخّص اليومي ليلًا؛ لا توجد بيانات ملخّصة بعد.', 'Daily rollups are built nightly; no summarized data yet.')}</p>
+        ) : (
+          <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="none" role="img">
+            <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} stroke="currentColor" strokeOpacity="0.15" />
+            {(() => {
+              const rmax = Math.max(1, ...roll.series.map((d) => d.pageviews));
+              const rbw = (W - 2 * PAD) / roll.series.length;
+              return roll.series.map((d, i) => {
+                const h = Math.round(((H - 2 * PAD) * d.pageviews) / rmax);
+                return <rect key={d.day} x={PAD + i * rbw + rbw * 0.15} y={H - PAD - h} width={Math.max(1, rbw * 0.7)} height={h} rx="2" className="fill-primary/60" />;
+              });
+            })()}
+          </svg>
+        )}
+        <p className="mt-1 text-[10px] opacity-50">{L('مشاهدات الصفحات يوميًا من الملخّص المُجمَّع — يبقى محفوظًا بعد حذف البيانات الخام.', 'Pageviews/day from aggregated rollups — retained after raw data is pruned.')}</p>
       </div>
 
       <p className="text-xs opacity-50">

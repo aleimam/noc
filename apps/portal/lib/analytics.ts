@@ -50,6 +50,18 @@ export async function getOverview({ from, to, site }: Range) {
   const bounceRate = sessionCount ? Math.round((sessions.filter((s) => s.isBounce).length / sessionCount) * 100) : 0;
   const loggedIn = sessions.filter((s) => s.userId).length;
 
+  // Cohorts — new vs returning, and how many came back more than once in the window.
+  const perVisitor = new Map<string, number>();
+  for (const s of sessions) perVisitor.set(s.visitorId, (perVisitor.get(s.visitorId) ?? 0) + 1);
+  const repeatVisitors = [...perVisitor.values()].filter((n) => n >= 2).length;
+  const returningVisitors = Math.max(0, visitors - newVisitors);
+  const cohorts = {
+    newVisitors,
+    returningVisitors,
+    repeatVisitors,
+    returningRate: visitors ? Math.round((returningVisitors / visitors) * 100) : 0,
+  };
+
   const days: string[] = [];
   for (let t = from.getTime(); t <= to.getTime(); t += DAY) days.push(dayKey(new Date(t)));
   const pv = new Map<string, number>(days.map((d) => [d, 0]));
@@ -79,6 +91,7 @@ export async function getOverview({ from, to, site }: Range) {
       pagesPerSession: sessionCount ? Number((pvCount / sessionCount).toFixed(1)) : 0,
     },
     series,
+    cohorts,
     devices: topBy(sessions, (s) => s.device),
     browsers: topBy(sessions, (s) => s.browser),
     oses: topBy(sessions, (s) => s.os),
@@ -100,6 +113,27 @@ export async function getRecentSessions({ from, to, site }: Range, take = 100) {
       country: true, region: true, city: true, source: true, entryPath: true, exitPath: true, userId: true, referrer: true,
     },
   });
+}
+
+/** Phase 3: long-term daily trend from AnalyticsDaily rollups — retained beyond the raw-data
+ *  prune. Independent of the selected range; merges both sites when site='all'. */
+export async function getDailyRollups({ site }: { site: SiteFilter }, days = 365) {
+  const from = new Date(Date.now() - days * DAY);
+  const rows = await prisma.analyticsDaily.findMany({
+    where: { day: { gte: from }, ...siteWhere(site) },
+    orderBy: { day: 'asc' },
+    select: { day: true, visitors: true, sessions: true, pageviews: true },
+  });
+  const m = new Map<string, { day: string; visitors: number; sessions: number; pageviews: number }>();
+  for (const r of rows) {
+    const k = r.day.toISOString().slice(0, 10);
+    const e = m.get(k) ?? { day: k, visitors: 0, sessions: 0, pageviews: 0 };
+    e.visitors += r.visitors; e.sessions += r.sessions; e.pageviews += r.pageviews;
+    m.set(k, e);
+  }
+  const series = [...m.values()];
+  const totals = series.reduce((a, s) => ({ sessions: a.sessions + s.sessions, pageviews: a.pageviews + s.pageviews }), { sessions: 0, pageviews: 0 });
+  return { series, totals, days: series.length };
 }
 
 /** Phase 2: interaction events → an engagement funnel + search intelligence. Bots excluded. */

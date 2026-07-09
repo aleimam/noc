@@ -1609,6 +1609,26 @@ model AnalyticsEvent {
   @@index([sessionId])
 }
 
+/// One pre-aggregated row per (site, calendar day). Written nightly by ops/analytics-rollup.ts
+/// so long-term trends survive the raw-data retention prune (raw keeps ~90 days; rollups stay).
+model AnalyticsDaily {
+  id          String   @id @default(cuid())
+  site        String
+  day         DateTime @db.Date
+  visitors    Int      @default(0)
+  newVisitors Int      @default(0)
+  sessions    Int      @default(0)
+  pageviews   Int      @default(0)
+  events      Int      @default(0)
+  avgDuration Int      @default(0) // seconds
+  bounces     Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([site, day])
+  @@index([site, day])
+}
+
 enum PartnerApplicationStatus {
   PENDING
   REVIEWING

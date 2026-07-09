@@ -43,6 +43,8 @@ export function Tracker({ site, url = '/api/collect' }: { site: 'newobour' | 'al
     if (pathname?.startsWith('/admin')) return; // don't track the staff backend
 
     const state = { id: uid(), start: Date.now(), maxScroll: 0, sent: false };
+    // POST forms the visitor typed into — used to detect abandonment on leave.
+    const engaged = new Map<HTMLFormElement, { label: string; submitted: boolean }>();
 
     function send(payload: Record<string, unknown>) {
       try {
@@ -77,6 +79,8 @@ export function Tracker({ site, url = '/api/collect' }: { site: 'newobour' | 'al
       if (state.sent) return;
       state.sent = true;
       send({ type: 'pageleave', pvId: state.id, durationSec: Math.round((Date.now() - state.start) / 1000), scrollPct: state.maxScroll });
+      // Form abandonment — engaged a POST form but left without submitting it.
+      for (const [, r] of engaged) if (!r.submitted) send({ type: 'event', eventType: 'form_abandon', path: location.pathname, label: r.label });
     }
 
     send({
@@ -96,7 +100,20 @@ export function Tracker({ site, url = '/api/collect' }: { site: 'newobour' | 'al
     window.addEventListener('scroll', onScroll, { passive: true });
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('pagehide', leave);
-    // Rage clicks (frustration signal): ≥3 clicks within 700ms in a ~40px radius.
+    // Does an element (or a near ancestor) look clickable? Used to spot dead clicks.
+    const looksClickable = (el: Element | null) => {
+      for (let n: Element | null = el, i = 0; n && i < 4; n = n.parentElement, i++) {
+        const tag = n.tagName;
+        if (tag === 'A' || tag === 'BUTTON' || tag === 'SUMMARY') return true;
+        const role = n.getAttribute('role');
+        if (role === 'button' || role === 'link') return true;
+        if (n.hasAttribute('onclick')) return true;
+        try { if (getComputedStyle(n).cursor === 'pointer') return true; } catch { /* */ }
+      }
+      return false;
+    };
+    // Rage clicks (≥3 within 700ms in a ~40px radius) + dead clicks (looked clickable but
+    // nothing reacted: no DOM mutation and no navigation within 700ms).
     const recent: { t: number; x: number; y: number }[] = [];
     const onClick = (e: MouseEvent) => {
       const now = Date.now();
@@ -106,8 +123,34 @@ export function Tracker({ site, url = '/api/collect' }: { site: 'newobour' | 'al
         recent.length = 0;
         send({ type: 'event', eventType: 'rage_click', path: location.pathname });
       }
+      const el = e.target as Element | null;
+      if (!el || el.closest('input,textarea,select,label') || !looksClickable(el)) return; // field focus / plain content isn't dead
+      const url = location.href;
+      let changed = false;
+      let mo: MutationObserver | null = null;
+      try {
+        mo = new MutationObserver(() => { changed = true; mo?.disconnect(); });
+        mo.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
+      } catch { /* */ }
+      window.setTimeout(() => {
+        try { mo?.disconnect(); } catch { /* */ }
+        if (changed || location.href !== url || String(window.getSelection?.() || '')) return; // it reacted, or was a text selection
+        const label = el.getAttribute('aria-label') || el.textContent?.trim().slice(0, 40) || el.tagName.toLowerCase();
+        send({ type: 'event', eventType: 'dead_click', path: location.pathname, label });
+      }, 700);
     };
     window.addEventListener('click', onClick, true);
+    // Form abandonment: remember POST forms the visitor typed into; clear on submit.
+    const onFormInput = (e: Event) => {
+      const f = (e.target as Element)?.closest?.('form') as HTMLFormElement | null;
+      if (f && f.method?.toLowerCase() === 'post' && !engaged.has(f)) {
+        const label = f.getAttribute('name') || f.id || f.getAttribute('aria-label') || f.querySelector('h1,h2,h3,legend')?.textContent?.trim().slice(0, 40) || 'form';
+        engaged.set(f, { label, submitted: false });
+      }
+    };
+    const onSubmit = (e: Event) => { const r = engaged.get(e.target as HTMLFormElement); if (r) r.submitted = true; };
+    document.addEventListener('input', onFormInput, true);
+    document.addEventListener('submit', onSubmit, true);
     // Manual event API: window.nocTrack('contact_whatsapp', label?, value?, meta?)
     (window as unknown as { nocTrack?: unknown }).nocTrack = (type: string, label?: string, value?: number, meta?: unknown) =>
       send({ type: 'event', eventType: type, path: location.pathname, label, value, meta });
@@ -118,6 +161,8 @@ export function Tracker({ site, url = '/api/collect' }: { site: 'newobour' | 'al
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('pagehide', leave);
       window.removeEventListener('click', onClick, true);
+      document.removeEventListener('input', onFormInput, true);
+      document.removeEventListener('submit', onSubmit, true);
     };
   }, [pathname, site, url]);
 
