@@ -14,6 +14,8 @@ import { trackListingView } from '../../../lib/views';
 import { getStorefront } from '../../../lib/storefront';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../lib/seo';
 import { BuyButton } from './BuyButton';
+import { HeroGallery } from './HeroGallery';
+import { ShareButtons } from './ShareButtons';
 import { WishlistButton } from '../../_components/WishlistButton';
 
 export const dynamic = 'force-dynamic';
@@ -54,9 +56,12 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   const ownerTypeLabel: Record<string, string> = { PERSONAL: L('فرد', 'Personal'), COMPANY: L('شركة', 'Company'), BROKER: L('سمسار', 'Broker'), US: L('نحن', 'Us') };
 
   const sold = land.status === 'SOLD';
+  const listingUrl = `${BASE}/listings/${land.id}`;
+  const adRef = land.adNumber ? L(` رقم ${land.adNumber}`, ` #${land.adNumber}`) : '';
+  // WhatsApp message carries the ad number + a link back to the listing on the site.
   const waText = L(
-    `مرحباً، أريد شراء الأرض: ${land.title}`,
-    `Hello, I'm interested in buying: ${land.title}`,
+    `مرحباً، أستفسر عن الأرض${adRef}:\n${land.title}\n${listingUrl}`,
+    `Hello, I'm interested in this land${adRef}:\n${land.title}\n${listingUrl}`,
   );
 
   // Group specs into their detail-group (section), preserving section then attribute order.
@@ -103,11 +108,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
 
         <div className="mt-3 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div>
-            {land.gallery.length > 0 ? (
-              <PhotoGallery photos={land.gallery} />
-            ) : (
-              <div className="flex aspect-[16/10] items-center justify-center rounded-2xl bg-navy-100 text-4xl text-navy-300" aria-hidden>🏞</div>
-            )}
+            <HeroGallery photos={land.gallery} alt={land.title} />
           </div>
 
           <aside className="space-y-4">
@@ -147,10 +148,15 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
 
               {!sold && (
                 <div className="mt-4">
-                  <BuyButton listingId={land.id} waText={waText} whatsapp={store.contact.whatsapp} label={L('أريد شراءها', 'I want to buy it')} sentLabel={L('تم الإرسال ✓', 'Sent ✓')} />
+                  <BuyButton listingId={land.id} waText={waText} whatsapp={store.contact.whatsapp} label={L('تواصل معنا بخصوص هذه الأرض', 'Contact us about this land')} sentLabel={L('تم الإرسال ✓', 'Sent ✓')} />
                   <p className="mt-2 text-center text-xs text-ink-500">{L('سيتم تحويلك إلى واتساب لإتمام الطلب', 'You will be taken to WhatsApp to continue')}</p>
                 </div>
               )}
+
+              <div className="mt-4 border-t border-ink-100 pt-3">
+                <span className="text-xs text-ink-500">{L('شارك هذا الإعلان', 'Share this listing')}</span>
+                <ShareButtons url={listingUrl} title={land.title} whatsapp={store.contact.whatsapp} />
+              </div>
             </div>
 
             {owner && (
@@ -169,6 +175,14 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
             )}
           </aside>
         </div>
+
+        {land.locationMap && (
+          <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
+            <h2 className="mb-3 text-lg font-bold text-navy-800">{L('الموقع على الخريطة', 'Location on the map')}</h2>
+            <HeroGallery photos={[land.locationMap]} alt={L('موقع القطعة على المخطط', 'Plot location on the masterplan')} />
+            <p className="mt-2 text-center text-sm text-ink-500">{L('خريطة المجاورة موضّح عليها موقع القطعة', 'Neighborhood masterplan with the plot marked')}</p>
+          </section>
+        )}
 
         {advGroups.length > 0 && (
           <div className="mt-6 rounded-2xl bg-white p-5 shadow-md">
@@ -262,7 +276,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
         <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-ink-200 bg-white p-3 shadow-lg lg:hidden">
           <div className="min-w-0 flex-1 truncate font-num text-lg font-black text-navy-800">{priceShort}</div>
           <div className="w-40 flex-none">
-            <BuyButton listingId={land.id} waText={waText} whatsapp={store.contact.whatsapp} label={L('أريد شراءها', 'I want to buy it')} sentLabel={L('تم الإرسال ✓', 'Sent ✓')} />
+            <BuyButton listingId={land.id} waText={waText} whatsapp={store.contact.whatsapp} label={L('تواصل معنا بخصوص هذه الأرض', 'Contact us about this land')} sentLabel={L('تم الإرسال ✓', 'Sent ✓')} />
           </div>
         </div>
       )}

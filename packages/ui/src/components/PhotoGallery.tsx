@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Lightbox } from './Lightbox';
 
 export function PhotoGallery({ photos }: { photos: string[] }) {
-  const [zoom, setZoom] = useState<string | null>(null);
+  const [idx, setIdx] = useState<number | null>(null);
   if (!photos.length) return <div className="h-56 w-full rounded-lg bg-graphite/10" />;
   return (
     <div>
@@ -15,7 +15,7 @@ export function PhotoGallery({ photos }: { photos: string[] }) {
             key={i}
             src={p}
             alt=""
-            onClick={() => setZoom(p)}
+            onClick={() => setIdx(i)}
             // First image is likely the LCP element → load it eagerly with high priority;
             // defer the rest to cut initial payload (Core Web Vitals).
             loading={i === 0 ? 'eager' : 'lazy'}
@@ -25,7 +25,7 @@ export function PhotoGallery({ photos }: { photos: string[] }) {
           />
         ))}
       </div>
-      {zoom && <Lightbox src={zoom} onClose={() => setZoom(null)} />}
+      {idx !== null && <Lightbox photos={photos} index={idx} onClose={() => setIdx(null)} />}
     </div>
   );
 }

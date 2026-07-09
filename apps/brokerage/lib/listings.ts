@@ -176,6 +176,7 @@ export type LandDetail = {
   priceNote: string | null;
   status: string;
   typeAr: string | null;
+  locationMap: string | null; // the listing's OWN annotated location map (plot marked)
   gallery: string[];
   specs: { label: string; value: string; link?: 'url' | 'tel'; sectionAr: string; sectionEn: string; sectionOrder: number; attrOrder: number }[]; // public attributes, localized
   amenities: { type: string; title: string; details: string | null; photos: string[] }[]; // inherited from the neighborhood
@@ -221,6 +222,15 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
       select: { path: true },
     })
   ).map((a) => a.path);
+
+  // The listing's OWN annotated location map (the plot marked on the masterplan) — the
+  // accurate map for this land. Show it first in the gallery and in its own section.
+  const locMap = await prisma.areaMap.findFirst({
+    where: { level: 'listing', areaId: id, kind: 'location' },
+    select: { alswareyPath: true, cleanPath: true },
+  });
+  const locationMap = locMap ? locMap.alswareyPath || locMap.cleanPath : null;
+  if (locationMap) gallery.unshift(locationMap);
 
   // Append the Al Sawarey-stamped location + masterplan maps of the land's neighborhood
   // and its district (after the land's own photos).
@@ -334,6 +344,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
     priceNote: l.priceNote,
     status: l.status,
     typeAr: locale === 'ar' ? l.typeOption?.nameAr ?? null : l.typeOption?.nameEn ?? null,
+    locationMap,
     gallery,
     specs,
     amenities,
