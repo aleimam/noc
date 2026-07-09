@@ -98,12 +98,25 @@ const cardSelect = {
 async function coversFor(ids: string[]): Promise<Map<string, string>> {
   const cover = new Map<string, string>();
   if (!ids.length) return cover;
-  const rows = await prisma.attachment.findMany({
-    where: { ownerType: 'Listing', ownerId: { in: ids }, attributeId: null },
-    orderBy: { createdAt: 'asc' },
-    select: { ownerId: true, path: true },
+  // Catalogue cover = the listing's own annotated location map (plot marked).
+  const maps = await prisma.areaMap.findMany({
+    where: { level: 'listing', areaId: { in: ids }, kind: 'location' },
+    select: { areaId: true, alswareyPath: true, cleanPath: true },
   });
-  for (const r of rows) if (r.ownerId && !cover.has(r.ownerId)) cover.set(r.ownerId, r.path);
+  for (const m of maps) {
+    const p = m.alswareyPath || m.cleanPath;
+    if (m.areaId && p && !cover.has(m.areaId)) cover.set(m.areaId, p);
+  }
+  // Fall back to the first uploaded photo for any listing without a location map.
+  const missing = ids.filter((id) => !cover.has(id));
+  if (missing.length) {
+    const rows = await prisma.attachment.findMany({
+      where: { ownerType: 'Listing', ownerId: { in: missing }, attributeId: null },
+      orderBy: { createdAt: 'asc' },
+      select: { ownerId: true, path: true },
+    });
+    for (const r of rows) if (r.ownerId && !cover.has(r.ownerId)) cover.set(r.ownerId, r.path);
+  }
   return cover;
 }
 
@@ -231,20 +244,8 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
   });
   const locationMap = locMap ? locMap.alswareyPath || locMap.cleanPath : null;
   if (locationMap) gallery.unshift(locationMap);
-
-  // Append the Al Sawarey-stamped location + masterplan maps of the land's neighborhood
-  // and its district (after the land's own photos).
-  if (l.neighborhoodId) {
-    const nb = await prisma.neighborhood.findUnique({ where: { id: l.neighborhoodId }, select: { id: true, districtId: true } });
-    const areaIds = [nb?.id, nb?.districtId].filter((x): x is string => !!x);
-    if (areaIds.length) {
-      const maps = await prisma.areaMap.findMany({ where: { areaId: { in: areaIds } }, orderBy: { kind: 'asc' } });
-      for (const m of maps) {
-        const p = m.alswareyPath || m.cleanPath;
-        if (p && !gallery.includes(p)) gallery.push(p);
-      }
-    }
-  }
+  // Only the listing's own annotated location map is shown — the raw neighborhood/district
+  // masterplans are deliberately NOT added to the gallery (owner request 2026-07-09).
 
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const standardAreas = await getStandardAreas();
