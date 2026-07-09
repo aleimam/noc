@@ -76,6 +76,27 @@ Postmark — most have a free/cheap tier). Then either:
 **Needs from owner:** provider account + SMTP credentials, and (Cloudflare) the SPF include +
 any provider DKIM CNAMEs.
 
+#### Chosen provider: Brevo (free tier, 300 emails/day) — setup
+
+Owner does steps 1–3 (account + DNS); then hand the SMTP key over and the wiring/testing is done
+for you via `ops/mail-relay-brevo.sh`.
+
+1. **Create the account** at `https://www.brevo.com` (free "Starter" plan; email + phone verify).
+2. **Authenticate the domain** in Brevo → *Senders, Domains & Dedicated IPs > Domains > Add a
+   domain* → `newobour.com` (repeat for `alsawarey.com`). Brevo shows 3–4 DNS records — add each
+   in **Cloudflare** exactly as shown, **DNS-only (grey cloud)**:
+   - a Brevo DKIM record (e.g. `brevo1._domainkey` / `mail._domainkey`),
+   - a `brevo-code` domain-verification TXT,
+   - **edit the existing SPF** (don't add a second) to include Brevo:
+     `v=spf1 +a +mx +ip4:77.42.66.76 include:spf.brevo.com ~all`.
+3. **Get the SMTP key**: *SMTP & API > SMTP* → copy the **SMTP server** (`smtp-relay.brevo.com`),
+   **port** (587), **login** (looks like `9abc12@smtp-brevo.com`), and **Generate a new SMTP key**.
+   Send the **login + key** over (treat the key like a password).
+4. **Wire + test** (run for you): `bash ops/mail-relay-brevo.sh apply '<login>' '<key>'` then
+   `bash ops/mail-relay-brevo.sh test noc@newobour.com <your-inbox>` → confirm the delivered
+   message shows `dkim=pass` and `spf=pass`. Local OpenDKIM keeps signing `d=newobour.com` for
+   DMARC alignment; Brevo adds their signature too.
+
 ### Path B — ask Hetzner to unblock outbound 25
 
 File a support request from the hosting account to lift the port-25 block, then Postfix can
