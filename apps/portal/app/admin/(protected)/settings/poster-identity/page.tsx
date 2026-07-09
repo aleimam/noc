@@ -27,6 +27,7 @@ export default async function PosterIdentityPage() {
       ink: saved.ink ?? DEFAULT_POSTER_THEME.ink,
       font: saved.font ?? DEFAULT_POSTER_THEME.font,
       logoPath: saved.logoPath ?? '',
+      headerLogo: saved.headerLogo ?? '',
       phone: saved.phone ?? '',
       domain: saved.domain ?? '',
     };

@@ -72,10 +72,17 @@ export function PosterIdentityForm({
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="text-sm">
-          <span className="mb-1 block">{L('الشعار (اختياري — الافتراضي شعار الموقع)', 'Logo (optional — defaults to the site logo)')}</span>
+          <span className="mb-1 block">{L('شعار الختم (دائري — أسفل الكارت)', 'Seal logo (round — card footer)')}</span>
           <ImageAttachment
             value={f.logoPath ? { id: '', path: f.logoPath, originalName: '' } : defaultLogo ? { id: '', path: defaultLogo, originalName: '' } : null}
             onChange={(a: UploadedAttachment | null) => set({ logoPath: a?.path ?? '' })}
+          />
+        </div>
+        <div className="text-sm">
+          <span className="mb-1 block">{L('شعار رأس البوستر (أفقي)', 'Poster header logo (horizontal)')}</span>
+          <ImageAttachment
+            value={f.headerLogo ? { id: '', path: f.headerLogo, originalName: '' } : null}
+            onChange={(a: UploadedAttachment | null) => set({ headerLogo: a?.path ?? '' })}
           />
         </div>
         <label className="text-sm">
