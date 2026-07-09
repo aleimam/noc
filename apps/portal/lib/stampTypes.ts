@@ -23,7 +23,14 @@ export const STAMP_CATEGORIES: StampCategory[] = ['listing', 'map', 'amenity', '
 // 'rationing-scan' uses a live view overlay — both handled separately, not baked here.
 export const BAKED_CATEGORIES: StampCategory[] = ['listing', 'amenity', 'area-update', 'other'];
 
-export type StampSettings = { global: boolean; categories: Record<StampCategory, StampConfig> };
+// Optional per-listing-category overrides: keyed by the listing Type option id, each a full
+// StampConfig that replaces the base 'listing' config for listings of that Type. Applied by
+// re-stamping a listing's photos when it is saved (the Type isn't known at upload time).
+export type StampSettings = {
+  global: boolean;
+  categories: Record<StampCategory, StampConfig>;
+  listingTypeOverrides: Record<string, StampConfig>;
+};
 
 export const DEFAULT_CONFIG: StampConfig = {
   enabled: false,
@@ -40,4 +47,5 @@ export const DEFAULT_CONFIG: StampConfig = {
 export const DEFAULT_SETTINGS: StampSettings = {
   global: false,
   categories: Object.fromEntries(STAMP_CATEGORIES.map((c) => [c, { ...DEFAULT_CONFIG }])) as Record<StampCategory, StampConfig>,
+  listingTypeOverrides: {},
 };

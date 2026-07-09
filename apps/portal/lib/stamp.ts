@@ -2,7 +2,8 @@
 // on/off + format; a global master switch overrides all. Stamps are always derived from
 // the pure original, so turning off / changing format / re-stamping never loses data.
 import path from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { prisma } from '@noc/db';
 import { uploadRoot } from './uploads';
 import { brandForCategory, getBrandContacts, type BrandContactItem } from './contacts';
@@ -31,7 +32,9 @@ export async function getStampSettings(): Promise<StampSettings> {
     const categories = Object.fromEntries(
       STAMP_CATEGORIES.map((c) => [c, { ...DEFAULT_CONFIG, ...(p.categories?.[c] ?? {}) }]),
     ) as Record<StampCategory, StampConfig>;
-    return { global: !!p.global, categories };
+    const listingTypeOverrides: Record<string, StampConfig> = {};
+    for (const [k, v] of Object.entries(p.listingTypeOverrides ?? {})) listingTypeOverrides[k] = { ...DEFAULT_CONFIG, ...(v ?? {}) };
+    return { global: !!p.global, categories, listingTypeOverrides };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -210,4 +213,60 @@ export async function stampForCategory(buffer: Buffer, cat: StampCategory): Prom
   const logo = await logoForCategory(cat, cfg);
   const contacts = cfg.footerEnabled ? await getBrandContacts(brandForCategory(cat)) : [];
   return stampImage(buffer, cfg, logo, contacts);
+}
+
+/** The stamp config for a listing's photos: a per-Type override if configured, else the base
+ *  'listing' config. Lets admins watermark land listings differently from apartments, etc. */
+export function effectiveListingConfig(s: StampSettings, typeOptionId: string | null): StampConfig {
+  return (typeOptionId && s.listingTypeOverrides[typeOptionId]) || s.categories.listing;
+}
+
+async function saveStampBuffer(buf: Buffer, ext: string): Promise<string> {
+  const now = new Date();
+  const rel = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const name = `${randomUUID()}.${ext}`;
+  await mkdir(path.join(uploadRoot(), rel), { recursive: true });
+  await writeFile(path.join(uploadRoot(), rel, name), buf);
+  return `/uploads/${rel}/${name}`;
+}
+
+/** Re-stamp ONE listing's gallery photos from their pure originals using the config for the
+ *  listing's Type (the per-listing-category rule). Idempotent; reverts to originals when off.
+ *  Best-effort — the caller should not fail if this throws. Returns the photo count touched. */
+export async function restampListingPhotos(listingId: string): Promise<number> {
+  const s = await getStampSettings();
+  const listing = await prisma.listing.findUnique({ where: { id: listingId }, select: { typeOptionId: true } });
+  const cfg = effectiveListingConfig(s, listing?.typeOptionId ?? null);
+  const active = s.global && !!cfg.enabled && (cfg.logoEnabled || cfg.footerEnabled);
+  const logo = active ? await logoForCategory('listing', cfg) : null;
+  const contacts = active && cfg.footerEnabled ? await getBrandContacts(brandForCategory('listing')) : [];
+  const rows = await prisma.attachment.findMany({
+    where: { ownerType: 'Listing', ownerId: listingId, stampCategory: 'listing', originalPath: { not: null } },
+    select: { id: true, originalPath: true, path: true },
+  });
+  let count = 0;
+  for (const r of rows) {
+    if (!r.originalPath) continue;
+    try {
+      if (!active) {
+        // Stamping off for this listing → show the pure original (no image I/O).
+        if (r.path !== r.originalPath) await prisma.attachment.update({ where: { id: r.id }, data: { path: r.originalPath } });
+        count++;
+        continue;
+      }
+      const orig = await readFile(abs(r.originalPath));
+      const out = await stampImage(orig, cfg, logo, contacts);
+      if (!out.equals(orig)) {
+        const ext = (r.originalPath.split('.').pop() || 'jpg').toLowerCase();
+        const newPath = await saveStampBuffer(out, ext);
+        await prisma.attachment.update({ where: { id: r.id }, data: { path: newPath, size: out.length } });
+      } else if (r.path !== r.originalPath) {
+        await prisma.attachment.update({ where: { id: r.id }, data: { path: r.originalPath, size: orig.length } });
+      }
+      count++;
+    } catch {
+      /* skip a bad file */
+    }
+  }
+  return count;
 }

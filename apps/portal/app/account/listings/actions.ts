@@ -6,6 +6,7 @@ import { auth } from '@noc/auth';
 import { isValidPhone } from '@noc/config';
 
 import { sanitizeRichHtml } from '../../../lib/sanitize';
+import { restampListingPhotos } from '../../../lib/stamp';
 
 export type ValueInput = {
   attributeId: string;
@@ -300,6 +301,14 @@ export async function saveListing(input: ListingInput): Promise<Result> {
 
       return listingId;
     });
+
+    // Re-stamp the listing's gallery photos per its category rule (base 'listing' config or a
+    // per-Type override). Best-effort — stamping must never break saving a listing.
+    try {
+      await restampListingPhotos(id);
+    } catch {
+      /* non-critical */
+    }
 
     revalidatePath('/account/listings');
     revalidatePath('/admin/marketplace/listings', 'page');

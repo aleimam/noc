@@ -13,6 +13,7 @@ import {
   stampImage,
   logoForCategory,
   categoryActive,
+  restampListingPhotos,
   BAKED_CATEGORIES,
   type StampSettings,
   type StampCategory,
@@ -57,6 +58,25 @@ export async function saveStamp(s: StampSettings): Promise<Result> {
 export async function restampCategory(cat: StampCategory): Promise<CountResult> {
   await requirePermission('marketplace', 'UPDATE');
   if (cat === 'map') return restampMaps();
+  // Listing photos re-stamp PER LISTING so each picks up its category's (Type) rule.
+  if (cat === 'listing') {
+    try {
+      const rows = await prisma.attachment.findMany({
+        where: { ownerType: 'Listing', stampCategory: 'listing', originalPath: { not: null } },
+        select: { ownerId: true },
+        distinct: ['ownerId'],
+      });
+      let count = 0;
+      for (const r of rows) {
+        if (!r.ownerId) continue;
+        try { count += await restampListingPhotos(r.ownerId); } catch { /* skip */ }
+      }
+      return { ok: true, count };
+    } catch (e) {
+      console.error('restamp listings failed', e);
+      return { ok: false, error: 'failed' };
+    }
+  }
   if (!BAKED_CATEGORIES.includes(cat)) return { ok: false, error: 'not_bakeable' };
   try {
     const s = await getStampSettings();
