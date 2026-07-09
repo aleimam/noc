@@ -1,6 +1,7 @@
 import { getLocale } from 'next-intl/server';
 import { requirePartner } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { partnerCanBrowseListings } from '../../../lib/partner';
 import { SignOutButton } from '../../_components/SignOutButton';
 
 /** Partner-portal shell: navy top bar with the owner name + simple nav. The
@@ -10,9 +11,11 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const owner = await prisma.owner.findUnique({ where: { id: ownerId }, select: { name: true } });
+  const canBrowse = await partnerCanBrowseListings(ownerId);
 
   const nav = [
     { href: '/partner', label: L('لوحتي', 'Dashboard') },
+    ...(canBrowse ? [{ href: '/partner/browse', label: L('تصفّح العروض', 'Browse offers') }] : []),
     { href: '/partner/analytics', label: L('الإحصائيات', 'Analytics') },
     { href: '/partner/account', label: L('حسابي', 'My account') },
   ];

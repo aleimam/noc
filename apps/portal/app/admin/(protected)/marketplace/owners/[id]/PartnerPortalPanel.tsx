@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@noc/ui';
-import { savePartnerAccount, setOwnerAllowedCategories, type PartnerAccountInput } from '../../actions';
+import { savePartnerAccount, setOwnerAllowedCategories, setOwnerBrowseListings, type PartnerAccountInput } from '../../actions';
 
 type TypeOpt = { id: string; nameAr: string; nameEn: string };
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
@@ -15,12 +15,14 @@ export function PartnerPortalPanel({
   account,
   typeOptions,
   granted,
+  canBrowse,
   locale,
 }: {
   ownerId: string;
   account: { exists: boolean; username: string; email: string; phone: string; isActive: boolean; hasPassword: boolean };
   typeOptions: TypeOpt[];
   granted: string[];
+  canBrowse: boolean;
   locale: 'ar' | 'en';
 }) {
   const router = useRouter();
@@ -34,6 +36,16 @@ export function PartnerPortalPanel({
     isActive: account.isActive,
   });
   const [cats, setCats] = useState<Set<string>>(new Set(granted));
+  const [browse, setBrowse] = useState(canBrowse);
+
+  function toggleBrowse(next: boolean) {
+    setBrowse(next);
+    start(async () => {
+      const r = await setOwnerBrowseListings(ownerId, next);
+      if (r.ok) { toast(L('تم الحفظ', 'Saved')); router.refresh(); }
+      else { setBrowse(!next); toast(L('تعذّر الحفظ', 'Save failed'), 'error'); }
+    });
+  }
 
   function saveAccount() {
     start(async () => {
@@ -132,6 +144,16 @@ export function PartnerPortalPanel({
         <button onClick={saveCats} disabled={pending} className="rounded-md border border-graphite/25 px-4 py-1.5 text-sm font-semibold hover:bg-graphite/10 disabled:opacity-50">
           {L('حفظ الفئات', 'Save categories')} ({cats.size})
         </button>
+      </div>
+
+      <div className="space-y-1 border-t border-gold-300/40 pt-3">
+        <label className="flex items-center gap-2 text-sm font-semibold text-primary">
+          <input type="checkbox" checked={browse} disabled={pending} onChange={(e) => toggleBrowse(e.target.checked)} />
+          {L('يمكنه تصفّح جميع العروض (للاطّلاع فقط)', 'Can browse all offers (view only)')}
+        </label>
+        <p className="text-xs opacity-70">
+          {L('يظهر فقط إذا كان الخيار العام مفعّلاً من صفحة الملاك.', 'Only takes effect when the global switch on the Owners page is on.')}
+        </p>
       </div>
     </section>
   );

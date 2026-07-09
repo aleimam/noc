@@ -675,6 +675,9 @@ model Owner {
   phone2         String?
   phone2Whatsapp Boolean   @default(false)
   details        String?   @db.Text
+  // Partner-portal: may this partner browse (view-only) all our published sell offers?
+  // Effective only when the global setting `partner.browseListings` is on too.
+  canBrowseListings Boolean @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

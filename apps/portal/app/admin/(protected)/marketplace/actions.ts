@@ -214,6 +214,35 @@ export async function savePartnerAccount(ownerId: string, input: PartnerAccountI
   }
 }
 
+/** Global master switch: may partners browse (view-only) all our published sell offers? */
+export async function setPartnerBrowseGlobal(enabled: boolean): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    await prisma.setting.upsert({
+      where: { key: 'partner.browseListings' },
+      update: { value: enabled ? 'true' : 'false' },
+      create: { key: 'partner.browseListings', value: enabled ? 'true' : 'false' },
+    });
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Per-partner: may this partner browse all sell offers (effective only when the global
+ *  switch above is on too). */
+export async function setOwnerBrowseListings(ownerId: string, canBrowse: boolean): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    await prisma.owner.update({ where: { id: ownerId }, data: { canBrowseListings: canBrowse } });
+    revalidatePath('/admin/marketplace/owners', 'page');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 /** Replace the Type categories this partner may create listings in (explicit grants). */
 export async function setOwnerAllowedCategories(ownerId: string, optionIds: string[]): Promise<Result> {
   await requirePermission('marketplace', 'UPDATE');
