@@ -403,7 +403,9 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
     const rowH = Math.max(...row.map((c) => (c.kind === 'card' ? cardH(c.g) : 0)), hasCity ? CITY_H : 256);
     for (let j = 0; j < row.length; j++) {
       const c = row[j]!;
-      const x = j === 0 ? M : M + colW + gap;
+      // RTL: the FIRST cell of each pair sits in the right column, the second on the left
+      // (owner request 2026-07-09 — swap paired card/group positions).
+      const x = j === 0 ? M + colW + gap : M;
       if (c.kind === 'card') parts.push(compactCard(x, y, colW, c.g, rowH).svg);
       else {
         parts.push(`<rect x="${x}" y="${y}" width="${colW}" height="${rowH}" rx="14" fill="#eef0f4" stroke="${th.gold}" stroke-width="2"/>`);

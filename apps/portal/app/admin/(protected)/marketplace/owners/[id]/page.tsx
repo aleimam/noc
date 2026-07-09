@@ -4,9 +4,9 @@ import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { currency } from '@noc/i18n';
 import { PartnerPortalPanel } from './PartnerPortalPanel';
+import { OwnerEditor } from './OwnerEditor';
 
 export const dynamic = 'force-dynamic';
-const pad = (n: number) => String(n).padStart(2, '0');
 
 export default async function OwnerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission('marketplace', 'VIEW');
@@ -33,11 +33,8 @@ export default async function OwnerDetailPage({ params }: { params: Promise<{ id
     orderBy: { order: 'asc' },
     select: { id: true, nameAr: true, nameEn: true },
   });
-
-  const phones = [
-    owner.phone1 && `${owner.phone1}${owner.phone1Whatsapp ? ' (WA)' : ''}`,
-    owner.phone2 && `${owner.phone2}${owner.phone2Whatsapp ? ' (WA)' : ''}`,
-  ].filter(Boolean);
+  // Codes taken by any OTHER owner — the editor greys these out in the code picker.
+  const takenCodes = (await prisma.ownerCode.findMany({ where: { ownerId: { not: id } }, select: { code: true } })).map((c) => c.code);
 
   return (
     <div className="space-y-5">
@@ -46,17 +43,21 @@ export default async function OwnerDetailPage({ params }: { params: Promise<{ id
         <a href="/admin/marketplace/owners" className="text-sm text-accent">← {t('backToOwners')}</a>
       </div>
 
-      {/* Owner info */}
-      <div className="space-y-2 rounded-lg border border-graphite/15 p-4 text-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{t(`type${owner.type}`)}</span>
-          {owner.codes.length > 0 && (
-            <span className="rounded bg-gold/20 px-2 py-0.5 font-num text-xs" dir="ltr">{owner.codes.map((c) => pad(c.code)).join(' · ')}</span>
-          )}
-        </div>
-        {phones.length > 0 && <div dir="ltr" className="opacity-80">{phones.join('  ·  ')}</div>}
-        {owner.details && <p className="opacity-70">{owner.details}</p>}
-      </div>
+      {/* Owner info — full editor (merged here from the owners list). */}
+      <OwnerEditor
+        takenCodes={takenCodes}
+        initial={{
+          id: owner.id,
+          name: owner.name,
+          type: owner.type as 'PERSONAL' | 'COMPANY' | 'BROKER' | 'US',
+          codes: owner.codes.map((c) => c.code),
+          phone1: owner.phone1 ?? '',
+          phone1Whatsapp: owner.phone1Whatsapp,
+          phone2: owner.phone2 ?? '',
+          phone2Whatsapp: owner.phone2Whatsapp,
+          details: owner.details ?? '',
+        }}
+      />
 
       {/* Partner-portal access: login account + allowed posting categories (not for US). */}
       {owner.type !== 'US' && (
