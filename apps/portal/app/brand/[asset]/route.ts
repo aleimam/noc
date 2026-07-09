@@ -53,5 +53,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ asse
     }
   }
 
-  return NextResponse.redirect(new URL('/logo.png', req.url), 307);
+  // Behind the reverse proxy req.url is localhost — redirect via the public origin.
+  return NextResponse.redirect(new URL('/logo.png', process.env.PORTAL_URL || req.url), 307);
 }
