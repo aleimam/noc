@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { ListingForm } from '@/app/account/listings/ListingForm';
-import { loadCatalog, buildVals, loadListingAttachments } from '@/app/account/listings/catalog';
+import { loadCatalog, buildVals, loadListingAttachments, loadListingPapers } from '@/app/account/listings/catalog';
 import { AreaMapEditor } from '../../../../lands/GeoContentEditors';
 import { loadAreaMaps, masterplanClean } from '../../../../lands/geo';
 import { PosterPanel } from '../PosterPanel';
@@ -23,6 +23,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
     loadListingAttachments(id),
   ]);
   const { photos, attachs } = attachData;
+  const papers = await loadListingPapers(id);
   const vals = buildVals(listing.values, new Map(attributes.map((a) => [a.id, a.type])));
 
   // Location map: annotate the listing's neighborhood masterplan (embedded in the poster).
@@ -66,6 +67,12 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
           isPartnership: listing.isPartnership,
           partnershipType: listing.partnershipType ?? '',
           partnershipNote: listing.partnershipNote ?? '',
+          hasAllocationLetter: listing.hasAllocationLetter,
+          allocationLetterDate: listing.allocationLetterDate ?? '',
+          allocationPhoto: papers.allocation,
+          hasSaleMandate: listing.hasSaleMandate,
+          saleMandateDate: listing.saleMandateDate ?? '',
+          saleMandatePhoto: papers.mandate,
           cardTitle: listing.cardTitle ?? '',
           contactPhone: listing.contactPhone,
           contactWhatsapp: listing.contactWhatsapp,

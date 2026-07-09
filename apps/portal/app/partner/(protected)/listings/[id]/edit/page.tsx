@@ -65,6 +65,9 @@ export default async function PartnerEditListing({ params }: { params: Promise<{
           isPartnership: listing.isPartnership,
           partnershipType: listing.partnershipType ?? '',
           partnershipNote: listing.partnershipNote ?? '',
+          // Read-only paper switches (partner sees status only).
+          hasAllocationLetter: listing.hasAllocationLetter,
+          hasSaleMandate: listing.hasSaleMandate,
           contactPhone: listing.contactPhone,
           contactWhatsapp: listing.contactWhatsapp,
           ownerId: '',

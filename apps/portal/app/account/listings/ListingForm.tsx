@@ -44,6 +44,13 @@ export type ListingFormInitial = {
   isPartnership?: boolean;
   partnershipType?: string;
   partnershipNote?: string;
+  // Official papers (internal) — staff edit; partners see only the two booleans.
+  hasAllocationLetter?: boolean;
+  allocationLetterDate?: string;
+  allocationPhoto?: UploadedAttachment | null;
+  hasSaleMandate?: boolean;
+  saleMandateDate?: string;
+  saleMandatePhoto?: UploadedAttachment | null;
   cardTitle?: string;
   contactPhone: string;
   contactWhatsapp: boolean;
@@ -133,6 +140,13 @@ export function ListingForm({
   const [isPartnership, setIsPartnership] = useState(initial.isPartnership ?? false);
   const [partnershipType, setPartnershipType] = useState(initial.partnershipType ?? '');
   const [partnershipNote, setPartnershipNote] = useState(initial.partnershipNote ?? '');
+  // Official papers (internal) — جواب التحصيص + توكيل بيع.
+  const [hasAllocation, setHasAllocation] = useState(initial.hasAllocationLetter ?? false);
+  const [allocationDate, setAllocationDate] = useState(initial.allocationLetterDate ?? '');
+  const [allocationPhoto, setAllocationPhoto] = useState<UploadedAttachment | null>(initial.allocationPhoto ?? null);
+  const [hasMandate, setHasMandate] = useState(initial.hasSaleMandate ?? false);
+  const [mandateDate, setMandateDate] = useState(initial.saleMandateDate ?? '');
+  const [mandatePhoto, setMandatePhoto] = useState<UploadedAttachment | null>(initial.saleMandatePhoto ?? null);
   const [contactPhone, setContactPhone] = useState(initial.contactPhone);
   const [contactWhatsapp, setContactWhatsapp] = useState(initial.contactWhatsapp);
   const [ownerId, setOwnerId] = useState(initial.ownerId);
@@ -283,6 +297,13 @@ export function ListingForm({
       isPartnership,
       partnershipType: isPartnership ? partnershipType || null : null,
       partnershipNote: isPartnership ? partnershipNote : '',
+      // Official papers (internal) — only staff writes persist server-side.
+      hasAllocationLetter: hasAllocation,
+      allocationLetterDate: hasAllocation ? allocationDate || null : null,
+      allocationPhotoId: hasAllocation ? allocationPhoto?.id ?? null : null,
+      hasSaleMandate: hasMandate,
+      saleMandateDate: hasMandate ? mandateDate || null : null,
+      saleMandatePhotoId: hasMandate ? mandatePhoto?.id ?? null : null,
       cardTitle,
       contactPhone,
       contactWhatsapp,
@@ -480,6 +501,45 @@ export function ListingForm({
     }
     return <input value={(v as string) ?? ''} onChange={(e) => setVal(a.id, e.target.value)} className={inp} />;
   }
+
+  // Official-papers editor row (staff): a have/not-yet switch + a date + a single photo.
+  const paperRow = (
+    label: string,
+    has: boolean, setHas: (v: boolean) => void,
+    date: string, setDate: (v: string) => void,
+    photo: UploadedAttachment | null, setPhoto: (a: UploadedAttachment | null) => void,
+  ) => (
+    <div className="space-y-2 rounded-lg border border-graphite/15 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-semibold">{label}</span>
+        <div className="flex gap-1.5">
+          <button type="button" onClick={() => setHas(true)} className={`rounded-lg px-3 py-1 text-sm font-semibold ${has ? 'bg-green text-white' : 'border border-graphite/25'}`}>{L('متوفر', 'Have it')}</button>
+          <button type="button" onClick={() => setHas(false)} className={`rounded-lg px-3 py-1 text-sm font-semibold ${!has ? 'bg-primary text-soft' : 'border border-graphite/25'}`}>{L('غير متوفر', 'Not yet')}</button>
+        </div>
+      </div>
+      {has && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm">
+            <span className="mb-1 block opacity-80">{L('تاريخ الحصول عليه', 'Date obtained')}</span>
+            <input type="date" dir="ltr" value={date} onChange={(e) => setDate(e.target.value)} className={inp} />
+          </label>
+          <div className="text-sm">
+            <span className="mb-1 block opacity-80">{L('صورة المستند', 'Document photo')}</span>
+            <ImageAttachment stampCategory="listing" value={photo} onChange={(a) => setPhoto(a)} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+  // Read-only status badge (partner view).
+  const paperBadge = (label: string, has: boolean) => (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-graphite/15 px-3 py-2">
+      <span className="text-sm font-semibold">{label}</span>
+      <span className={`rounded-full px-3 py-0.5 text-xs font-bold ${has ? 'bg-green/15 text-green' : 'bg-graphite/10 text-graphite/60'}`}>
+        {has ? L('متوفر', 'Available') : L('غير متوفر', 'Not available')}
+      </span>
+    </div>
+  );
 
   return (
     <div className="max-w-3xl space-y-5">
@@ -686,6 +746,31 @@ export function ListingForm({
           <p className="rounded-lg border border-dashed border-graphite/25 p-4 text-sm opacity-60">{t('pickClassifiers')}</p>
         )}
       </section>
+
+      {/* ── Official papers (internal): staff edit; partners see the two switches only ── */}
+      {(staffMode || partnerMode) && (
+        <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
+          <div>
+            <h3 className="font-bold text-primary">🗂️ {L('الأوراق الرسمية (داخلي)', 'Official papers (internal)')}</h3>
+            <p className="text-xs opacity-60">
+              {staffMode
+                ? L('لا تظهر هذه الأوراق للعملاء. الشركاء يرون حالة كل ورقة فقط.', "Not shown to customers. Partners see only each paper's status.")
+                : L('يديرها فريقنا — تظهر لك حالة كل ورقة فقط.', "Managed by our team — you see each paper's status only.")}
+            </p>
+          </div>
+          {staffMode ? (
+            <>
+              {paperRow(L('جواب التحصيص', 'Allocation letter'), hasAllocation, setHasAllocation, allocationDate, setAllocationDate, allocationPhoto, setAllocationPhoto)}
+              {paperRow(L('توكيل بيع', 'Sale mandate'), hasMandate, setHasMandate, mandateDate, setMandateDate, mandatePhoto, setMandatePhoto)}
+            </>
+          ) : (
+            <div className="space-y-2">
+              {paperBadge(L('جواب التحصيص', 'Allocation letter'), initial.hasAllocationLetter ?? false)}
+              {paperBadge(L('توكيل بيع', 'Sale mandate'), initial.hasSaleMandate ?? false)}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── Listing location map: annotate the selected neighborhood's masterplan (staff) ── */}
       {staffMode && nbId && (

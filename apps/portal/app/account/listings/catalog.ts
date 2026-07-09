@@ -112,6 +112,20 @@ export async function loadCatalog() {
   };
 }
 
+/** The two official-paper photos (internal) for a listing, keyed by stampCategory. */
+export async function loadListingPapers(listingId: string) {
+  const rows = await prisma.attachment.findMany({
+    where: { ownerType: 'ListingPaper', ownerId: listingId },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, path: true, originalName: true, stampCategory: true },
+  });
+  const pick = (cat: string) => {
+    const r = rows.find((x) => x.stampCategory === cat);
+    return r ? { id: r.id, path: r.path, originalName: r.originalName } : null;
+  };
+  return { allocation: pick('allocation_letter'), mandate: pick('sale_mandate') };
+}
+
 /** Splits a listing's attachments into the main gallery (no attribute) and per-property files. */
 export async function loadListingAttachments(listingId: string) {
   const rows = await prisma.attachment.findMany({

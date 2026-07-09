@@ -21,6 +21,7 @@ export default async function PartnerListingDetail({ params }: { params: Promise
     where: { id, status: 'PUBLISHED' },
     select: {
       id: true, title: true, adNumber: true, area: true, price: true, priceUnit: true,
+      hasAllocationLetter: true, hasSaleMandate: true,
       typeOption: { select: { nameAr: true, nameEn: true } },
       neighborhood: { select: { nameAr: true, nameEn: true, district: { select: { nameAr: true, nameEn: true } } } },
     },
@@ -63,6 +64,21 @@ export default async function PartnerListingDetail({ params }: { params: Promise
           {listing.price != null
             ? `${formatMoneyEgp(Number(listing.price), locale)}${perLabel ? ` / ${perLabel}` : ''}`
             : L('السعر عند الطلب', 'Price on request')}
+        </div>
+
+        {/* Official papers — partners see the status of each paper only. */}
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-ink-100 pt-3">
+          {[
+            { label: L('جواب التحصيص', 'Allocation letter'), has: listing.hasAllocationLetter },
+            { label: L('توكيل بيع', 'Sale mandate'), has: listing.hasSaleMandate },
+          ].map((p, i) => (
+            <span key={i} className="inline-flex items-center gap-1.5 rounded-full border border-ink-100 px-3 py-1 text-xs">
+              <span className="font-semibold text-ink-600">{p.label}</span>
+              <span className={`rounded-full px-2 py-0.5 font-bold ${p.has ? 'bg-success/15 text-success' : 'bg-ink-100 text-ink-500'}`}>
+                {p.has ? L('متوفر', 'Available') : L('غير متوفر', 'Not available')}
+              </span>
+            </span>
+          ))}
         </div>
       </div>
 

@@ -109,6 +109,14 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
 
   const partnershipsOn = await partnershipsEnabled();
 
+  // Official papers (internal): the full block is shown only to a logged-in STAFF member
+  // browsing the site; the public never sees it.
+  const isStaffViewer = session?.user?.type === 'STAFF';
+  const paperRows = isStaffViewer
+    ? await prisma.attachment.findMany({ where: { ownerType: 'ListingPaper', ownerId: id }, select: { path: true, stampCategory: true } })
+    : [];
+  const paperPhoto = (cat: string) => paperRows.find((p) => p.stampCategory === cat)?.path ?? null;
+
   // Gallery images. When the listing has no uploaded photos (e.g. land plots), fall back to
   // its annotated location map so the gallery is never an empty gray box.
   let galleryPaths = photos.map((p) => p.path);
@@ -290,6 +298,35 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         <span className="opacity-70">{t('owner')}: </span>
         <span className="font-medium">{weAreContact ? t('listedByUs') : ownerName || '—'}</span>
       </div>
+
+      {/* Official papers (internal) — staff-only on the frontend; hidden from the public. */}
+      {isStaffViewer && (
+        <div className="rounded-lg border-2 border-dashed border-accent/40 bg-accent/5 p-4">
+          <div className="mb-2 text-sm font-bold text-accent">🗂️ {L('الأوراق الرسمية (للإدارة فقط)', 'Official papers (staff only)')}</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              { label: L('جواب التحصيص', 'Allocation letter'), has: listing.hasAllocationLetter, date: listing.allocationLetterDate, photo: paperPhoto('allocation_letter') },
+              { label: L('توكيل بيع', 'Sale mandate'), has: listing.hasSaleMandate, date: listing.saleMandateDate, photo: paperPhoto('sale_mandate') },
+            ].map((p, i) => (
+              <div key={i} className="rounded-lg border border-graphite/15 bg-white/70 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold">{p.label}</span>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${p.has ? 'bg-green/15 text-green' : 'bg-graphite/10 text-graphite/60'}`}>
+                    {p.has ? L('متوفر', 'Available') : L('غير متوفر', 'Not available')}
+                  </span>
+                </div>
+                {p.has && p.date && <div className="mt-1 text-xs opacity-70" dir="ltr">{p.date}</div>}
+                {p.has && p.photo && (
+                  <a href={p.photo} target="_blank" rel="noreferrer" className="mt-2 block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.photo} alt="" className="h-28 w-full rounded object-cover ring-1 ring-graphite/20" />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Plot consolidation & partnerships: the owner opted this plot in. */}
       {listing.isPartnership && partnershipsOn && (

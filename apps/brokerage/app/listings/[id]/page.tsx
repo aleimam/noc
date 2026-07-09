@@ -68,14 +68,26 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   if (decodeURIComponent(param) !== land.canonicalPath.slice('/listings/'.length)) permanentRedirect(land.canonicalPath);
   await trackListingView(listingId); // partner analytics: count the public view
   const [wished, similar, store] = await Promise.all([wishlistListingIds(), similarLands(listingId, 4), getStorefront()]);
-  const nb = await prisma.listing.findUnique({ where: { id: listingId }, select: { neighborhoodId: true } });
+  const nb = await prisma.listing.findUnique({
+    where: { id: listingId },
+    select: { neighborhoodId: true, hasAllocationLetter: true, allocationLetterDate: true, hasSaleMandate: true, saleMandateDate: true },
+  });
   const advGroups = await advantagesForNeighborhood(nb?.neighborhoodId, locale);
   const genRows = await prisma.attachment.findMany({
     where: { ownerType: 'ListingPoster', ownerId: listingId, stampCategory: { contains: 'alsawarey' } },
     orderBy: { stampCategory: 'asc' },
     select: { path: true },
   });
-  const owner = (await getAdminViewer()) ? await ownerDetailFor(listingId) : null;
+  const isAdminViewer = !!(await getAdminViewer());
+  const owner = isAdminViewer ? await ownerDetailFor(listingId) : null;
+  // Official papers (internal): staff-only on the frontend; the public never sees them.
+  const paperPhotos: Record<string, string> = isAdminViewer
+    ? Object.fromEntries(
+        (await prisma.attachment.findMany({ where: { ownerType: 'ListingPaper', ownerId: listingId }, select: { path: true, stampCategory: true } }))
+          .filter((a) => a.stampCategory)
+          .map((a) => [a.stampCategory as string, a.path]),
+      )
+    : {};
 
   const sold = land.status === 'SOLD';
   const listingUrl = `${BASE}${land.canonicalPath}`;
@@ -200,6 +212,35 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
               </dl>
             </div>
             {owner.details && <p className="mt-2 border-t border-amber-200 pt-2 text-sm text-navy-700">{owner.details}</p>}
+          </section>
+        )}
+
+        {/* Official papers (internal) — staff only; hidden from the public. */}
+        {isAdminViewer && nb && (
+          <section className="mt-6 rounded-2xl border-2 border-amber-400 bg-amber-50 px-5 py-4 text-navy-800">
+            <div className="mb-3 flex items-center gap-1.5 font-bold text-amber-800">🗂️ {L('الأوراق الرسمية (للإدارة فقط)', 'Official papers (staff only)')}</div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                { label: L('جواب التحصيص', 'Allocation letter'), has: nb.hasAllocationLetter, date: nb.allocationLetterDate, photo: paperPhotos['allocation_letter'] },
+                { label: L('توكيل بيع', 'Sale mandate'), has: nb.hasSaleMandate, date: nb.saleMandateDate, photo: paperPhotos['sale_mandate'] },
+              ].map((p, i) => (
+                <div key={i} className="rounded-xl border border-amber-200 bg-white/70 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold">{p.label}</span>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${p.has ? 'bg-success/15 text-success' : 'bg-ink-100 text-ink-500'}`}>
+                      {p.has ? L('متوفر', 'Available') : L('غير متوفر', 'Not available')}
+                    </span>
+                  </div>
+                  {p.has && p.date && <div className="mt-1 font-num text-xs text-ink-500" dir="ltr">{p.date}</div>}
+                  {p.has && p.photo && (
+                    <a href={p.photo} target="_blank" rel="noreferrer" className="mt-2 block">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.photo} alt="" className="h-28 w-full rounded-lg object-cover ring-1 ring-ink-100" />
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
           </section>
         )}
 

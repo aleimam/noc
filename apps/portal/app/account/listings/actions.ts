@@ -32,6 +32,13 @@ export type ListingInput = {
   isPartnership?: boolean;
   partnershipType?: string | null; // PartnershipType key, validated server-side
   partnershipNote?: string;
+  // Official papers (internal) — persisted only for STAFF writers.
+  hasAllocationLetter?: boolean;
+  allocationLetterDate?: string | null;
+  allocationPhotoId?: string | null;
+  hasSaleMandate?: boolean;
+  saleMandateDate?: string | null;
+  saleMandatePhotoId?: string | null;
   cardTitle?: string; // staff marketing headline for the generated cards
   contactPhone: string;
   contactWhatsapp: boolean;
@@ -180,6 +187,15 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         partnershipNote: input.isPartnership ? input.partnershipNote?.trim().slice(0, 190) || null : null,
         // Card Title is staff-managed; seller edits must not wipe it.
         ...(isStaff ? { cardTitle: input.cardTitle?.trim().slice(0, 120) || null } : {}),
+        // Official papers (internal) are staff-managed; partner/seller edits never touch them.
+        ...(isStaff
+          ? {
+              hasAllocationLetter: !!input.hasAllocationLetter,
+              allocationLetterDate: input.hasAllocationLetter ? input.allocationLetterDate?.trim() || null : null,
+              hasSaleMandate: !!input.hasSaleMandate,
+              saleMandateDate: input.hasSaleMandate ? input.saleMandateDate?.trim() || null : null,
+            }
+          : {}),
         contactPhone: input.contactPhone.trim(),
         contactWhatsapp: input.contactWhatsapp,
         status: input.status,
@@ -249,6 +265,28 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         },
         data: { ownerType: null, ownerId: null, attributeId: null },
       });
+
+      // ── Official-paper photos (internal): ownerType='ListingPaper', one per category.
+      //    Staff-only — partner/seller saves leave existing paper photos untouched. ──
+      if (isStaff) {
+        const papers: Array<[string, string | null]> = [
+          ['allocation_letter', input.hasAllocationLetter ? input.allocationPhotoId ?? null : null],
+          ['sale_mandate', input.hasSaleMandate ? input.saleMandatePhotoId ?? null : null],
+        ];
+        for (const [cat, keepId] of papers) {
+          if (keepId) {
+            await tx.attachment.updateMany({
+              where: { id: keepId, uploaderId: user.id },
+              data: { ownerType: 'ListingPaper', ownerId: listingId, stampCategory: cat, attributeId: null },
+            });
+          }
+          // Replace/clear: drop any other paper photo of this category for this listing.
+          await tx.attachment.updateMany({
+            where: { ownerType: 'ListingPaper', ownerId: listingId, stampCategory: cat, ...(keepId ? { id: { not: keepId } } : {}) },
+            data: { ownerType: null, ownerId: null },
+          });
+        }
+      }
 
       // ── Attached building-conditions pages (manual, optional) ──
       const condIds = [...new Set(input.buildingConditionIds ?? [])];

@@ -558,6 +558,13 @@ model Listing {
   isPartnership   Boolean          @default(false)
   partnershipType PartnershipType?
   partnershipNote String?
+  // Official papers (internal, admin-managed): whether WE hold each document, the date we
+  // got it, and a photo (stored as Attachment ownerType='ListingPaper', stampCategory=
+  // 'allocation_letter'/'sale_mandate'). Partners see only the booleans; public sees none.
+  hasAllocationLetter  Boolean @default(false) // جواب التحصيص
+  allocationLetterDate String? // "YYYY-MM-DD", the date we obtained it
+  hasSaleMandate       Boolean @default(false) // توكيل بيع
+  saleMandateDate      String? // "YYYY-MM-DD"
   contactPhone    String
   contactWhatsapp Boolean       @default(true)
   showOnBrokerage Boolean       @default(false)
