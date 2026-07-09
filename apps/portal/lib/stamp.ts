@@ -96,16 +96,29 @@ function contactIcon(type: string, cx: number, cy: number, r: number): string {
   }
 }
 
-/** Footer bar built from the brand's managed contacts (icon + value), centered in one row. */
+/** Footer bar built from the brand's managed contacts (icon + value), centered in one row
+ *  and shrunk to fit the image width when there are many/long contacts. */
 function contactsFooterSvg(W: number, fh: number, contacts: BrandContactItem[]): string {
-  const fs = Math.round(fh * 0.3);
-  const iconR = Math.round(fh * 0.15);
-  const gapIT = Math.round(iconR * 0.8);
-  const gapItems = Math.round(fh * 0.55);
   const items = contacts.slice(0, 5);
-  const widths = items.map((cc) => iconR * 2 + gapIT + Math.ceil(cc.value.length * fs * 0.56));
-  const totalW = widths.reduce((a, b) => a + b, 0) + gapItems * Math.max(0, items.length - 1);
-  let x = Math.max(16, (W - totalW) / 2);
+  let fs = Math.round(fh * 0.3);
+  let iconR = Math.round(fh * 0.15);
+  let gapIT = Math.round(iconR * 0.8);
+  let gapItems = Math.round(fh * 0.55);
+  const measure = () => {
+    const w = items.map((cc) => iconR * 2 + gapIT + Math.ceil(cc.value.length * fs * 0.56));
+    return { w, total: w.reduce((a, b) => a + b, 0) + gapItems * Math.max(0, items.length - 1) };
+  };
+  let { w: widths, total } = measure();
+  const availW = W - 32;
+  if (total > availW && total > 0) {
+    const ratio = availW / total;
+    fs = Math.max(11, Math.round(fs * ratio));
+    iconR = Math.max(7, Math.round(iconR * ratio));
+    gapIT = Math.round(gapIT * ratio);
+    gapItems = Math.round(gapItems * ratio);
+    ({ w: widths, total } = measure());
+  }
+  let x = Math.max(12, (W - total) / 2);
   const cy = fh / 2 + 1;
   let out = `<rect width="${W}" height="${fh}" fill="${FOOTER_NAVY}"/><rect width="${W}" height="3" fill="${FOOTER_GOLD}"/>`;
   items.forEach((cc, i) => {
