@@ -301,17 +301,21 @@ const ATTRS = [
 ];
 
 async function main() {
+  // NOTE: every `update: {}` below is deliberate. This seed is CREATE-ONLY for the catalog —
+  // it only inserts records that don't exist yet and NEVER overwrites existing ones, because
+  // admins reorganize groups, rename attributes and reorder them in the UI. A re-run (or a
+  // deploy) must not undo those edits. Do not add fields to these `update` clauses.
   for (const [i, s] of SECTIONS.entries()) {
     await prisma.attributeSection.upsert({
       where: { key: s.key },
-      update: { nameAr: s.ar, nameEn: s.en, order: i },
+      update: {},
       create: { key: s.key, nameAr: s.ar, nameEn: s.en, order: i },
     });
   }
   for (const [i, t] of TYPES.entries()) {
     await prisma.propertyType.upsert({
       where: { key: t.key },
-      update: { nameAr: t.ar, nameEn: t.en, order: i },
+      update: {},
       create: { key: t.key, nameAr: t.ar, nameEn: t.en, order: i },
     });
   }
@@ -327,13 +331,13 @@ async function main() {
   for (const [ci, c] of CLASSIFIERS.entries()) {
     const cls = await prisma.classifier.upsert({
       where: { key: c.key },
-      update: { nameAr: c.ar, nameEn: c.en, order: ci },
+      update: {},
       create: { key: c.key, nameAr: c.ar, nameEn: c.en, order: ci },
     });
     for (const [oi, o] of c.opts.entries()) {
       const opt = await prisma.classifierOption.upsert({
         where: { classifierId_key: { classifierId: cls.id, key: o.key } },
-        update: { nameAr: o.ar, nameEn: o.en, order: oi },
+        update: {},
         create: { classifierId: cls.id, key: o.key, nameAr: o.ar, nameEn: o.en, order: oi },
       });
       optionId[`${c.key}:${o.key}`] = opt.id;
@@ -347,13 +351,13 @@ async function main() {
   for (const [i, a] of ATTRS.entries()) {
     const attr = await prisma.attribute.upsert({
       where: { key: a.key },
-      update: { sectionId: sectionId[a.s], labelAr: a.ar, labelEn: a.en, type: a.type, unit: a.unit ?? null, filterable: !!a.filt, order: i },
+      update: {}, // never re-group/rename/reorder an existing attribute (admin owns this)
       create: { key: a.key, sectionId: sectionId[a.s], labelAr: a.ar, labelEn: a.en, type: a.type, unit: a.unit ?? null, filterable: !!a.filt, order: i },
     });
     for (const [j, o] of (a.opts ?? []).entries()) {
       await prisma.attributeOption.upsert({
         where: { attributeId_key: { attributeId: attr.id, key: o.key } },
-        update: { labelAr: o.ar, labelEn: o.en, order: j },
+        update: {},
         create: { attributeId: attr.id, key: o.key, labelAr: o.ar, labelEn: o.en, order: j },
       });
     }
@@ -386,8 +390,7 @@ async function main() {
     if (oid) await prisma.listing.update({ where: { id: l.id }, data: { typeOptionId: oid } });
   }
 
-  // Central Al Sawarey contact (editable in admin) + drop the redundant seller_role
-  // attribute (now folded into Owner.type).
+  // Central Al Sawarey contact (create-only; admin edits these afterwards).
   const SETTINGS = [
     { key: 'alswarey_phone', value: '01040810000' },
     { key: 'alswarey_whatsapp', value: '01040810000' },
@@ -395,7 +398,7 @@ async function main() {
   for (const s of SETTINGS) {
     await prisma.setting.upsert({ where: { key: s.key }, update: {}, create: s });
   }
-  await prisma.attribute.deleteMany({ where: { key: 'seller_role' } });
+  // (No destructive deletes here — the catalog is admin-managed after the first seed.)
 
   console.log(`✓ Marketplace catalog: 3 classifiers, ${optionCount} options, ${SECTIONS.length} sections, ${ATTRS.length} attributes, ${mappings} applicability links.`);
 }

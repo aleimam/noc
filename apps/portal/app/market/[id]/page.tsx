@@ -11,6 +11,7 @@ import { advantagesForNeighborhood } from '../../../lib/advantages';
 import { listListingImages } from '../../../lib/poster/generate';
 import { trackListingView } from '../../../lib/views';
 import { partnershipsEnabled } from '../../../lib/modules';
+import { SiteShell } from '../../_components/SiteShell';
 import { pageMeta, breadcrumbLd, ldJson, abs } from '../../../lib/seo';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -254,7 +255,8 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   ]);
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6 pb-24">
+    <SiteShell active="market">
+      <main className="mx-auto max-w-3xl space-y-6 p-6 pb-24">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([listingLd, crumbsLd]) }} />
       <TrackView item={{ id: listing.id, title: listing.title, cover: galleryPaths[0] ?? null, price: listing.price != null ? String(listing.price) : null, href: `/market/${listing.id}` }} />
       <div className="flex justify-end"><MarketCardActions listingId={listing.id} initialSaved={saved} compareLabel={t('compare')} /></div>
@@ -408,6 +410,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
           {t('callNow')}
         </a>
       </div>
-    </main>
+      </main>
+    </SiteShell>
   );
 }
