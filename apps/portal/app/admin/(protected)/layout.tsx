@@ -79,6 +79,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
         { href: '/admin/settings/theme', label: L('المظهر والألوان', 'Theme & colors'), section: 'settings' },
         { href: '/admin/settings/appearance', label: L('اللغة', 'Language') },
         { href: '/admin/settings/watermark', label: L('العلامة المائية', 'Watermark'), section: 'marketplace' },
+        { href: '/admin/settings/poster-identity', label: L('هوية صور الإعلانات (البوستر)', 'Listing images (poster)'), section: 'settings' },
         { href: '/admin/settings/apis', label: L('الرسائل والواجهات', 'SMS & APIs'), section: 'settings' },
         { href: '/admin/settings/security', label: L('الأمان والحماية', 'Security'), section: 'settings' },
         { href: '/admin/settings/analytics', label: L('التحليلات والتتبّع', 'Analytics'), section: 'settings' },
