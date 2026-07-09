@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { track } from '@noc/ui';
+import { track, nocEvent } from '@noc/ui';
 import { toggleWishlist } from '../account/actions';
 
 export function WishlistButton({ listingId, initialSaved, size = 'sm' }: { listingId: string; initialSaved: boolean; size?: 'sm' | 'lg' }) {
@@ -15,7 +15,7 @@ export function WishlistButton({ listingId, initialSaved, size = 'sm' }: { listi
       const r = await toggleWishlist(listingId);
       if (r.ok) {
         setSaved(r.saved);
-        if (r.saved) track('wishlist_add', { listingId });
+        if (r.saved) { track('wishlist_add', { listingId }); nocEvent('wishlist', listingId); }
       }
     });
   }

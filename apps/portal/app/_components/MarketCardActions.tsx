@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import { nocEvent } from '@noc/ui';
 import { getCompare, toggleCompare, COMPARE_EVENT } from './compare';
 import { toggleWishlist } from '../account/wishlist/actions';
 
@@ -29,7 +30,7 @@ export function MarketCardActions({ listingId, initialSaved, compareLabel }: { l
           e.stopPropagation();
           start(async () => {
             const r = await toggleWishlist(listingId);
-            if (r.ok) setSaved(r.saved);
+            if (r.ok) { setSaved(r.saved); if (r.saved) nocEvent('wishlist', listingId); }
           });
         }}
         className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-lg shadow-md transition hover:bg-white disabled:opacity-60"

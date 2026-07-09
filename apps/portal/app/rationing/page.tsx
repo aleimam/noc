@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
+import { TrackEvent } from '@noc/ui';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { consumeRationingQuota } from '../../lib/rationing/quota';
@@ -164,6 +165,7 @@ export default async function RationingSearch({
           <div className="rounded-2xl border-2 border-gold/60 bg-gold-50 p-5 text-center text-xl font-bold text-navy-800">{t('searchFullName')}</div>
         ) : searched ? (
           <>
+            {page <= 1 && <TrackEvent type="search" label={q} value={total} />}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="text-base text-ink-500">
                 {t('resultsN', { n: total })}

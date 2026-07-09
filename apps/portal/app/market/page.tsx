@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma, Prisma } from '@noc/db';
-import { ListingCard, RecentlyViewed } from '@noc/ui';
+import { ListingCard, RecentlyViewed, TrackEvent } from '@noc/ui';
 import { SiteShell } from '../_components/SiteShell';
 import { currency } from '@noc/i18n';
 import { MarketFilters } from './MarketFilters';
@@ -107,6 +107,7 @@ export default async function MarketPage({
         locale={locale}
       />
 
+      {Object.keys(sp).length > 0 && <TrackEvent type="market_search" label={typeKey || 'all'} value={listings.length} />}
       {listings.length === 0 && <p className="py-12 text-center opacity-60">{t('noResults')}</p>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {listings.map((l) => (

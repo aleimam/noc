@@ -110,3 +110,28 @@ export function Tracker({ site, url = '/api/collect' }: { site: 'newobour' | 'al
 
   return null;
 }
+
+/** Fire a first-party interaction event from a client handler (contact, wishlist, …). */
+export function nocEvent(type: string, label?: string, value?: number, meta?: unknown): void {
+  if (typeof window === 'undefined') return;
+  try {
+    (window as unknown as { nocTrack?: (t: string, l?: string, v?: number, m?: unknown) => void }).nocTrack?.(type, label, value, meta);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Server-rendered event that fires once on mount (e.g. a search result + its count). Polls
+ *  briefly for the tracker to be ready so it isn't lost in the effect mount-order race. */
+export function TrackEvent({ type, label, value }: { type: string; label?: string; value?: number }) {
+  useEffect(() => {
+    let tries = 0;
+    const fire = () => {
+      const fn = (window as unknown as { nocTrack?: (t: string, l?: string, v?: number) => void }).nocTrack;
+      if (fn) return void fn(type, label, value);
+      if (tries++ < 20) window.setTimeout(fire, 100);
+    };
+    fire();
+  }, [type, label, value]);
+  return null;
+}

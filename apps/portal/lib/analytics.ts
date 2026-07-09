@@ -101,3 +101,36 @@ export async function getRecentSessions({ from, to, site }: Range, take = 100) {
     },
   });
 }
+
+/** Phase 2: interaction events → an engagement funnel + search intelligence. Bots excluded. */
+export async function getEventStats({ from, to, site }: Range) {
+  const sw = siteWhere(site);
+  const [events, listingViews] = await Promise.all([
+    prisma.analyticsEvent.findMany({
+      where: { ts: { gte: from, lte: to }, session: { device: { not: 'bot' } }, ...sw },
+      take: 100000,
+      select: { type: true, label: true, value: true, sessionId: true },
+    }),
+    prisma.pageView.findMany({
+      where: { ts: { gte: from, lte: to }, session: { device: { not: 'bot' } }, ...sw, OR: [{ path: { contains: '/market/' } }, { path: { contains: '/listings/' } }] },
+      take: 100000,
+      select: { sessionId: true },
+    }),
+  ]);
+
+  const byType = topBy(events, (e) => e.type, 12);
+
+  // Search intelligence — top queries + those that returned zero results (unmet demand).
+  const searches = events.filter((e) => e.type === 'search' || e.type === 'market_search');
+  const topSearches = topBy(searches, (e) => e.label, 12);
+  const zeroResults = topBy(searches.filter((e) => e.value === 0), (e) => e.label, 12);
+
+  // Engagement funnel (of sessions that viewed a listing): → saved → contacted.
+  const viewSids = new Set(listingViews.map((v) => v.sessionId));
+  const saveSids = new Set(events.filter((e) => e.type === 'wishlist').map((e) => e.sessionId));
+  const contactSids = new Set(events.filter((e) => e.type.startsWith('contact')).map((e) => e.sessionId));
+  const inView = (ids: Set<string>) => [...ids].filter((id) => viewSids.has(id)).length;
+  const funnel = { views: viewSids.size, saved: inView(saveSids), contacted: inView(contactSids) };
+
+  return { totalEvents: events.length, byType, topSearches, zeroResults, funnel };
+}

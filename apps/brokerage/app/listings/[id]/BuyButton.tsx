@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { track } from '@noc/ui';
+import { track, nocEvent } from '@noc/ui';
 import { createContactRequest } from './actions';
 import { waLink } from '../../../lib/store';
 
@@ -13,6 +13,7 @@ export function BuyButton({ listingId, waText, whatsapp, label, labelShort, sent
     // open WhatsApp immediately (user gesture), record the lead in the background
     window.open(waLink(waText, whatsapp), '_blank', 'noopener');
     track('lead_buy', { listingId });
+    nocEvent('contact_whatsapp', listingId);
     start(async () => {
       await createContactRequest({ listingId, message: waText });
       setSent(true);

@@ -1,6 +1,6 @@
 import { getLocale } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
-import { parseRange, getOverview, getRecentSessions, type SiteFilter } from '../../../../lib/analytics';
+import { parseRange, getOverview, getRecentSessions, getEventStats, type SiteFilter } from '../../../../lib/analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +13,7 @@ export default async function VisitorAnalyticsPage({ searchParams }: { searchPar
   const range = parseRange(sp);
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
-  const [ov, recent] = await Promise.all([getOverview(range), getRecentSessions(range, 100)]);
+  const [ov, recent, ev] = await Promise.all([getOverview(range), getRecentSessions(range, 100), getEventStats(range)]);
 
   const qs = (patch: Record<string, string | number>) => {
     const p = new URLSearchParams({ days: String(range.days), site: range.site, ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, String(v)])) });
@@ -118,6 +118,46 @@ export default async function VisitorAnalyticsPage({ searchParams }: { searchPar
         <Table title={L('الدول', 'Countries')} rows={ov.countries} />
         <Table title={L('المتصفحات', 'Browsers')} rows={ov.browsers} />
         <Table title={L('أنظمة التشغيل', 'Operating systems')} rows={ov.oses} />
+      </div>
+
+      {/* ── Phase 2: engagement funnel ── */}
+      <div className="rounded-lg border border-graphite/15 p-4">
+        <h3 className="mb-3 text-sm font-bold text-primary">{L('مسار التحويل', 'Engagement funnel')}</h3>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: L('شاهدوا إعلانًا', 'Viewed a listing'), value: ev.funnel.views, pct: 100 },
+            { label: L('أضافوا للمفضلة', 'Saved'), value: ev.funnel.saved, pct: ev.funnel.views ? Math.round((ev.funnel.saved / ev.funnel.views) * 100) : 0 },
+            { label: L('تواصلوا', 'Contacted'), value: ev.funnel.contacted, pct: ev.funnel.views ? Math.round((ev.funnel.contacted / ev.funnel.views) * 100) : 0 },
+          ].map((s, i) => (
+            <div key={i} className="rounded-lg border border-graphite/10 p-3 text-center">
+              <div className="font-num text-2xl font-black text-primary">{s.value}</div>
+              <div className="mt-0.5 text-xs opacity-70">{s.label}</div>
+              {i > 0 && <div className="mt-1 text-xs font-bold text-gold-700">{s.pct}%</div>}
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs opacity-50">{L('من الجلسات التي شاهدت إعلانًا — كم أضاف للمفضلة ثم تواصل.', 'Of sessions that viewed a listing — how many saved, then contacted.')}</p>
+      </div>
+
+      {/* ── Phase 2: events + search intelligence ── */}
+      <div className="grid gap-3 lg:grid-cols-3">
+        <Table title={L('التفاعلات', 'Events')} rows={ev.byType} />
+        <Table title={L('أكثر عمليات البحث', 'Top searches')} rows={ev.topSearches} />
+        <div className="rounded-lg border border-red-200 bg-red-50/40 p-4">
+          <h3 className="mb-2 text-sm font-bold text-red-700">{L('بحث بلا نتائج', 'Zero-result searches')}</h3>
+          {ev.zeroResults.length === 0 ? (
+            <p className="text-xs opacity-50">{L('لا يوجد', 'None')}</p>
+          ) : (
+            <div className="space-y-1.5">
+              {ev.zeroResults.map((r) => (
+                <div key={r.label} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate">{r.label}</span>
+                  <span className="font-num shrink-0 font-bold text-red-700">{r.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Top pages */}
