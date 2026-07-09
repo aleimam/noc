@@ -1,6 +1,7 @@
 import { prisma, type Prisma } from '@noc/db';
+import { marketHref } from './listings';
 
-export type AreaListingCard = { id: string; title: string; price: string | null; typeAr: string; typeEn: string; cover: string | null };
+export type AreaListingCard = { id: string; href: string; title: string; price: string | null; typeAr: string; typeEn: string; cover: string | null };
 
 /** Published New Obour listings within a district/neighborhood, shaped for ListingCard. */
 export async function areaListings(where: Prisma.ListingWhereInput): Promise<AreaListingCard[]> {
@@ -8,7 +9,7 @@ export async function areaListings(where: Prisma.ListingWhereInput): Promise<Are
     where: { status: 'PUBLISHED', ...where },
     orderBy: { publishedAt: 'desc' },
     take: 24,
-    select: { id: true, title: true, price: true, typeOption: { select: { nameAr: true, nameEn: true } } },
+    select: { id: true, title: true, price: true, adNumber: true, area: true, typeOption: { select: { nameAr: true, nameEn: true } } },
   });
   const ids = listings.map((l) => l.id);
   const covers = ids.length
@@ -18,6 +19,7 @@ export async function areaListings(where: Prisma.ListingWhereInput): Promise<Are
   for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
   return listings.map((l) => ({
     id: l.id,
+    href: marketHref({ id: l.id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null }),
     title: l.title,
     price: l.price != null ? String(l.price) : null,
     typeAr: l.typeOption?.nameAr ?? '',

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { prisma } from '@noc/db';
 import { getModuleVisibility } from '../lib/modules';
+import { marketHref } from '../lib/listings';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +11,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getModuleVisibility(),
     prisma.news.findMany({ where: { publishedAt: { not: null } }, select: { id: true, updatedAt: true }, take: 500 }),
     prisma.page.findMany({ where: { brand: 'newobour', published: true }, select: { slug: true, updatedAt: true } }),
-    prisma.listing.findMany({ where: { status: 'PUBLISHED' }, select: { id: true, updatedAt: true }, take: 2000 }),
+    prisma.listing.findMany({ where: { status: 'PUBLISHED' }, select: { id: true, updatedAt: true, adNumber: true, area: true, typeOption: { select: { nameEn: true } } }, take: 2000 }),
     prisma.district.findMany({ where: { isActive: true }, select: { id: true, updatedAt: true } }),
     prisma.neighborhood.findMany({ where: { isActive: true }, select: { id: true, updatedAt: true } }),
     prisma.buildingCondition.findMany({ where: { published: true }, select: { slug: true, updatedAt: true } }),
@@ -25,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const [key, path] of modulePaths) if (on(key)) entries.push({ url: `${base}${path}`, changeFrequency: 'weekly', priority: 0.8 });
 
   // Individual market listings
-  if (on('market')) for (const l of listings) entries.push({ url: `${base}/market/${l.id}`, lastModified: l.updatedAt, changeFrequency: 'weekly', priority: 0.7 });
+  if (on('market')) for (const l of listings) entries.push({ url: `${base}${marketHref({ id: l.id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null })}`, lastModified: l.updatedAt, changeFrequency: 'weekly', priority: 0.7 });
   // Explore: districts + neighborhoods
   if (on('explore')) {
     for (const d of districts) entries.push({ url: `${base}/explore/district/${d.id}`, lastModified: d.updatedAt, changeFrequency: 'weekly', priority: 0.6 });

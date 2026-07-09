@@ -10,6 +10,7 @@ import { CompareBar } from '../_components/CompareBar';
 import { wishedSet } from '../../lib/wishlist';
 import { pageMeta } from '../../lib/seo';
 import { partnershipsEnabled } from '../../lib/modules';
+import { marketHref } from '../../lib/listings';
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
@@ -111,7 +112,7 @@ export default async function MarketPage({
         {listings.map((l) => (
           <ListingCard
             key={l.id}
-            href={`/market/${l.id}`}
+            href={marketHref({ id: l.id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null })}
             cover={cover.get(l.id) ?? null}
             title={l.title}
             subtitle={L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}

@@ -4,6 +4,7 @@ import { ListingCard } from '@noc/ui';
 import { currency } from '@noc/i18n';
 import { getModuleVisibility } from '../lib/modules';
 import { SiteShell } from './_components/SiteShell';
+import { marketHref } from '../lib/listings';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,7 +88,7 @@ export default async function Home() {
             {listings.map((l) => (
               <ListingCard
                 key={l.id}
-                href={`/market/${l.id}`}
+                href={marketHref({ id: l.id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null })}
                 cover={cover.get(l.id) ?? null}
                 title={l.title}
                 subtitle={L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}

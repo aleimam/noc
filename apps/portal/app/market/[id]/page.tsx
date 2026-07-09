@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
+import { marketHref, resolveMarketListingId } from '../../../lib/listings';
 import { PhotoGallery, TrackView, ListingCard, AreaAdvantages } from '@noc/ui';
 import { localizeUnit, currency } from '@noc/i18n';
 import { formatDetailValue, type DetailConfig } from '@noc/config';
@@ -15,13 +16,16 @@ import { SiteShell } from '../../_components/SiteShell';
 import { pageMeta, breadcrumbLd, ldJson, abs } from '../../../lib/seo';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
+  const { id: param } = await params;
   const locale = (await getLocale()) as 'ar' | 'en';
-  const l = await prisma.listing.findUnique({
-    where: { id },
-    select: { title: true, status: true, price: true, area: true, description: true, typeOption: { select: { nameAr: true, nameEn: true } } },
-  });
-  if (!l || l.status !== 'PUBLISHED') return { title: locale === 'en' ? 'Listing — New Obour' : 'إعلان — العبور الجديد' };
+  const id = await resolveMarketListingId(param);
+  const l = id
+    ? await prisma.listing.findUnique({
+        where: { id },
+        select: { title: true, status: true, price: true, area: true, adNumber: true, description: true, typeOption: { select: { nameAr: true, nameEn: true } } },
+      })
+    : null;
+  if (!id || !l || l.status !== 'PUBLISHED') return { title: locale === 'en' ? 'Listing — New Obour' : 'إعلان — العبور الجديد' };
   const cover = await prisma.attachment.findFirst({
     where: { ownerType: 'Listing', ownerId: id, attributeId: null },
     orderBy: { createdAt: 'asc' },
@@ -36,7 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return pageMeta({
     title: `${l.title} — ${locale === 'en' ? 'New Obour' : 'العبور الجديد'}`,
     description: desc,
-    path: `/market/${id}`,
+    path: marketHref({ id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null }),
     images: cover ? [cover.path] : [],
     locale,
   });
@@ -67,13 +71,20 @@ function safeUrl(v: string): string {
 }
 
 export default async function ListingDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const listing = await prisma.listing.findUnique({
-    where: { id },
-    include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: true, buildingConditions: { include: { condition: true } }, neighborhood: { include: { district: true } } },
-  });
+  const { id: param } = await params;
+  const resolvedId = await resolveMarketListingId(param);
+  const listing = resolvedId
+    ? await prisma.listing.findUnique({
+        where: { id: resolvedId },
+        include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: true, buildingConditions: { include: { condition: true } }, neighborhood: { include: { district: true } } },
+      })
+    : null;
   if (!listing || listing.status !== 'PUBLISHED') notFound();
-  await trackListingView(listing.id); // partner analytics: count the public view
+  const id = listing.id;
+  // Canonicalize: permanently redirect legacy cuids / mismatched slugs to the SEO URL (308).
+  const canonicalPath = marketHref({ id, adNumber: listing.adNumber, typeEn: listing.typeOption?.nameEn ?? null, area: listing.area != null ? Number(listing.area) : null });
+  if (decodeURIComponent(param) !== canonicalPath.slice('/market/'.length)) permanentRedirect(canonicalPath);
+  await trackListingView(id); // partner analytics: count the public view
 
   const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('mp');
@@ -140,7 +151,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         where: { status: 'PUBLISHED', typeOptionId: listing.typeOptionId, id: { not: listing.id } },
         orderBy: { publishedAt: 'desc' },
         take: 6,
-        select: { id: true, title: true, price: true, typeOption: { select: { nameAr: true, nameEn: true } } },
+        select: { id: true, title: true, price: true, adNumber: true, area: true, typeOption: { select: { nameAr: true, nameEn: true } } },
       })
     : [];
   const simCovers = new Map<string, string>();
@@ -241,7 +252,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     listing.priceUnit === 'UNIT' ? (locale === 'ar' ? 'للوحدة' : 'per unit') : listing.priceUnit === 'SQM' ? (locale === 'ar' ? 'للمتر' : 'per m²') : '';
 
   // Structured data: a land listing (Product/RealEstateListing + Offer) and its breadcrumb trail.
-  const canonicalPath = `/market/${listing.id}`;
+  // canonicalPath (the SEO URL) is computed at the top of the component.
   const plainDesc = (listing.description ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   const listingLd = {
     '@context': 'https://schema.org',
@@ -266,7 +277,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     <SiteShell active="market">
       <main className="mx-auto max-w-3xl space-y-6 p-6 pb-24">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([listingLd, crumbsLd]) }} />
-      <TrackView item={{ id: listing.id, title: listing.title, cover: galleryPaths[0] ?? null, price: listing.price != null ? String(listing.price) : null, href: `/market/${listing.id}` }} />
+      <TrackView item={{ id: listing.id, title: listing.title, cover: galleryPaths[0] ?? null, price: listing.price != null ? String(listing.price) : null, href: canonicalPath }} />
       <div className="flex justify-end"><MarketCardActions listingId={listing.id} initialSaved={saved} compareLabel={t('compare')} /></div>
       <a href="/market" className="text-sm text-accent">← {t('title')}</a>
       <PhotoGallery photos={galleryPaths} />
@@ -414,7 +425,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
           <h2 className="text-lg font-bold text-navy-800 dark:text-soft">{t('similarListings')}</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {similar.map((s) => (
-              <ListingCard key={s.id} href={`/market/${s.id}`} cover={simCovers.get(s.id) ?? null} title={s.title} subtitle={L(s.typeOption?.nameAr ?? '', s.typeOption?.nameEn ?? '')} price={s.price != null ? Number(s.price).toLocaleString('en-US') : null} currency={currency(locale)} />
+              <ListingCard key={s.id} href={marketHref({ id: s.id, adNumber: s.adNumber, typeEn: s.typeOption?.nameEn ?? null, area: s.area != null ? Number(s.area) : null })} cover={simCovers.get(s.id) ?? null} title={s.title} subtitle={L(s.typeOption?.nameAr ?? '', s.typeOption?.nameEn ?? '')} price={s.price != null ? Number(s.price).toLocaleString('en-US') : null} currency={currency(locale)} />
             ))}
           </div>
         </section>
@@ -433,7 +444,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       )}
       {!viewerId && (
         <div className="mb-24 rounded-2xl border border-ink-200 bg-white p-4 text-center text-sm">
-          <a href={`/account/login?next=/market/${listing.id}`} className="font-bold text-accent">{t('negoLoginToOffer')}</a>
+          <a href={`/account/login?next=${canonicalPath}`} className="font-bold text-accent">{t('negoLoginToOffer')}</a>
         </div>
       )}
 

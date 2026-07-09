@@ -4,6 +4,7 @@ import { prisma } from '@noc/db';
 import { ListingCard, Badge } from '@noc/ui';
 import { SiteShell } from '../../_components/SiteShell';
 import { currency } from '@noc/i18n';
+import { marketHref } from '../../../lib/listings';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +51,7 @@ export default async function OwnerProfile({ params }: { params: Promise<{ id: s
             {listings.map((l) => (
               <ListingCard
                 key={l.id}
-                href={`/market/${l.id}`}
+                href={marketHref({ id: l.id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null })}
                 cover={cover.get(l.id) ?? null}
                 title={l.title}
                 subtitle={L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
