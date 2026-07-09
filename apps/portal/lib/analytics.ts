@@ -132,5 +132,14 @@ export async function getEventStats({ from, to, site }: Range) {
   const inView = (ids: Set<string>) => [...ids].filter((id) => viewSids.has(id)).length;
   const funnel = { views: viewSids.size, saved: inView(saveSids), contacted: inView(contactSids) };
 
-  return { totalEvents: events.length, byType, topSearches, zeroResults, funnel };
+  // Experience health — Core Web Vitals (avg) + frustration signals (rage clicks).
+  const avgVital = (name: string) => {
+    const vs = events.filter((e) => e.type === 'web_vital' && e.label === name && e.value != null).map((e) => e.value as number);
+    return vs.length ? { avg: Math.round((vs.reduce((a, b) => a + b, 0) / vs.length) * 1000) / 1000, samples: vs.length } : null;
+  };
+  const webVitals = { lcp: avgVital('LCP'), cls: avgVital('CLS') };
+  const rageClicks = events.filter((e) => e.type === 'rage_click').length;
+  const ragePages = topBy(events.filter((e) => e.type === 'rage_click'), (e) => e.label, 8);
+
+  return { totalEvents: events.length, byType, topSearches, zeroResults, funnel, webVitals, rageClicks, ragePages };
 }

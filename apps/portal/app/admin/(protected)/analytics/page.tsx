@@ -160,6 +160,52 @@ export default async function VisitorAnalyticsPage({ searchParams }: { searchPar
         </div>
       </div>
 
+      {/* ── Phase 3: experience health — Core Web Vitals + frustration ── */}
+      <div className="grid gap-3 lg:grid-cols-3">
+        {(() => {
+          // Google thresholds: LCP good<2.5s / poor>4s; CLS good<0.1 / poor>0.25.
+          type Rating = 'good' | 'ni' | 'poor';
+          const rate = (v: number, good: number, poor: number): Rating => (v <= good ? 'good' : v < poor ? 'ni' : 'poor');
+          const tone: Record<Rating, string> = { good: 'text-emerald-600', ni: 'text-amber-600', poor: 'text-red-600' };
+          const cards = [
+            ev.webVitals.lcp
+              ? { label: 'LCP', sub: L('أكبر عنصر مرئي', 'Largest paint'), text: `${(ev.webVitals.lcp.avg / 1000).toFixed(2)}s`, n: ev.webVitals.lcp.samples, r: rate(ev.webVitals.lcp.avg, 2500, 4000) }
+              : { label: 'LCP', sub: L('أكبر عنصر مرئي', 'Largest paint'), text: '—', n: 0, r: null },
+            ev.webVitals.cls
+              ? { label: 'CLS', sub: L('ثبات التخطيط', 'Layout shift'), text: ev.webVitals.cls.avg.toFixed(3), n: ev.webVitals.cls.samples, r: rate(ev.webVitals.cls.avg, 0.1, 0.25) }
+              : { label: 'CLS', sub: L('ثبات التخطيط', 'Layout shift'), text: '—', n: 0, r: null },
+          ] as const;
+          return (
+            <>
+              {cards.map((c) => (
+                <div key={c.label} className="rounded-lg border border-graphite/15 p-4">
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="text-sm font-bold text-primary">{c.label}</h3>
+                    <span className="text-[10px] opacity-50">{c.sub}</span>
+                  </div>
+                  <div className={`mt-1 font-num text-3xl font-black ${c.r ? tone[c.r] : 'opacity-40'}`}>{c.text}</div>
+                  <div className="mt-0.5 text-[11px] opacity-50">{c.n} {L('عيّنة', 'samples')}</div>
+                </div>
+              ))}
+              <div className="rounded-lg border border-graphite/15 p-4">
+                <div className="flex items-baseline justify-between">
+                  <h3 className="text-sm font-bold text-primary">{L('نقرات الإحباط', 'Rage clicks')}</h3>
+                  <span className="text-[10px] opacity-50">{L('نقر متكرر سريع', 'Rapid repeat clicks')}</span>
+                </div>
+                <div className={`mt-1 font-num text-3xl font-black ${ev.rageClicks > 0 ? 'text-red-600' : 'opacity-40'}`}>{ev.rageClicks}</div>
+                {ev.ragePages.length > 0 && (
+                  <div className="mt-1 space-y-0.5 text-[11px] opacity-70">
+                    {ev.ragePages.slice(0, 3).map((p) => (
+                      <div key={p.label} className="flex justify-between gap-2"><span className="truncate" dir="ltr">{p.label}</span><span className="font-num shrink-0">{p.count}</span></div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          );
+        })()}
+      </div>
+
       {/* Top pages */}
       <div className="overflow-x-auto rounded-lg border border-graphite/15">
         <div className="border-b border-graphite/15 p-3 text-sm font-bold text-primary">{L('أكثر الصفحات زيارة', 'Top pages')}</div>

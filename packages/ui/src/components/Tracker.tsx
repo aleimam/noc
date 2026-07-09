@@ -96,6 +96,18 @@ export function Tracker({ site, url = '/api/collect' }: { site: 'newobour' | 'al
     window.addEventListener('scroll', onScroll, { passive: true });
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('pagehide', leave);
+    // Rage clicks (frustration signal): ≥3 clicks within 700ms in a ~40px radius.
+    const recent: { t: number; x: number; y: number }[] = [];
+    const onClick = (e: MouseEvent) => {
+      const now = Date.now();
+      recent.push({ t: now, x: e.clientX, y: e.clientY });
+      while (recent.length && now - recent[0]!.t > 700) recent.shift();
+      if (recent.length >= 3 && recent.every((c) => Math.abs(c.x - e.clientX) < 40 && Math.abs(c.y - e.clientY) < 40)) {
+        recent.length = 0;
+        send({ type: 'event', eventType: 'rage_click', path: location.pathname });
+      }
+    };
+    window.addEventListener('click', onClick, true);
     // Manual event API: window.nocTrack('contact_whatsapp', label?, value?, meta?)
     (window as unknown as { nocTrack?: unknown }).nocTrack = (type: string, label?: string, value?: number, meta?: unknown) =>
       send({ type: 'event', eventType: type, path: location.pathname, label, value, meta });
@@ -105,8 +117,45 @@ export function Tracker({ site, url = '/api/collect' }: { site: 'newobour' | 'al
       window.removeEventListener('scroll', onScroll);
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('pagehide', leave);
+      window.removeEventListener('click', onClick, true);
     };
   }, [pathname, site, url]);
+
+  // Core Web Vitals (LCP + CLS), reported once on the first page-hide.
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof PerformanceObserver === 'undefined') return;
+    let lcp = 0, cls = 0, reported = false;
+    const obs: PerformanceObserver[] = [];
+    const observe = (type: string, cb: (e: PerformanceEntry) => void) => {
+      try {
+        const po = new PerformanceObserver((l) => l.getEntries().forEach(cb));
+        po.observe({ type, buffered: true } as PerformanceObserverInit);
+        obs.push(po);
+      } catch { /* metric unsupported in this browser */ }
+    };
+    observe('largest-contentful-paint', (e) => {
+      const t = (e as unknown as { renderTime?: number; loadTime?: number });
+      lcp = Math.max(lcp, t.renderTime || t.loadTime || e.startTime);
+    });
+    observe('layout-shift', (e) => {
+      const s = e as unknown as { value: number; hadRecentInput: boolean };
+      if (!s.hadRecentInput) cls += s.value;
+    });
+    const report = () => {
+      if (reported) return;
+      reported = true;
+      if (lcp > 0) nocEvent('web_vital', 'LCP', Math.round(lcp));
+      nocEvent('web_vital', 'CLS', Math.round(cls * 1000) / 1000);
+    };
+    const onHide = () => { if (document.visibilityState === 'hidden') report(); };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', report);
+    return () => {
+      obs.forEach((o) => o.disconnect());
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', report);
+    };
+  }, []);
 
   return null;
 }
