@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { PhotoGallery, TrackView, AreaAdvantages } from '@noc/ui';
@@ -64,8 +64,8 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   if (!listingId) notFound();
   const land = await getLandDetail(listingId, locale);
   if (!land) notFound();
-  // Canonicalize: redirect legacy cuids / mismatched slugs to the SEO URL (301).
-  if (decodeURIComponent(param) !== land.canonicalPath.slice('/listings/'.length)) redirect(land.canonicalPath);
+  // Canonicalize: permanently redirect legacy cuids / mismatched slugs to the SEO URL (308).
+  if (decodeURIComponent(param) !== land.canonicalPath.slice('/listings/'.length)) permanentRedirect(land.canonicalPath);
   await trackListingView(listingId); // partner analytics: count the public view
   const [wished, similar, store] = await Promise.all([wishlistListingIds(), similarLands(listingId, 4), getStorefront()]);
   const nb = await prisma.listing.findUnique({ where: { id: listingId }, select: { neighborhoodId: true } });
