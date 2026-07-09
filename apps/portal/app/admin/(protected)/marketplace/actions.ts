@@ -499,6 +499,46 @@ export async function rejectListing(id: string, reason: string): Promise<Result>
   }
 }
 
+/** Deactivate (archive) or reactivate a listing. Archiving hides it from the public
+ *  market + storefront without deleting anything; reactivating republishes it (and
+ *  assigns the public ad number if it never had one). */
+export async function setListingArchived(id: string, archived: boolean): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    await prisma.listing.update({
+      where: { id },
+      data: archived
+        ? { status: 'ARCHIVED', showOnBrokerage: false }
+        : { status: 'PUBLISHED', publishedAt: new Date(), rejectionReason: null },
+    });
+    if (!archived) await ensureAdNumber(id);
+    revalidatePath('/admin/marketplace/listings', 'page');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Permanently delete a listing. Its EAV values, contact requests, wishlist items, view
+ *  days and building conditions cascade at the DB; negotiations + a source Land row are
+ *  SetNull. The loose polymorphic references (uploaded photos/documents + generated
+ *  poster/card images as Attachment rows, and the listing location map as an AreaMap)
+ *  carry no FK, so clear them explicitly first. */
+export async function deleteListing(id: string): Promise<Result> {
+  await requirePermission('marketplace', 'DELETE');
+  try {
+    await prisma.$transaction([
+      prisma.attachment.deleteMany({ where: { ownerId: id, ownerType: { in: ['Listing', 'ListingPoster'] } } }),
+      prisma.areaMap.deleteMany({ where: { level: 'listing', areaId: id } }),
+      prisma.listing.delete({ where: { id } }),
+    ]);
+    revalidatePath('/admin/marketplace/listings', 'page');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 // ────────────────────────── Owners + Settings ──────────────────────────
 
 type OwnerTypeKey = 'PERSONAL' | 'COMPANY' | 'BROKER' | 'US';

@@ -24,7 +24,8 @@ export type PosterCardGroup = { name: string; icon: PosterIconKey; rows: CardRow
 export type PosterData = {
   ad: string; // '#YYMM…' or '' before publish
   title: string; // staff Card Title (upstream falls back to the listing title)
-  groups: PosterCardGroup[]; // admin-marked groups (or the first-3 fallback)
+  areas: string | null; // the Area group as a pre-formatted title-bar strip ("label: value · …")
+  groups: PosterCardGroup[]; // admin-marked groups (or the first-3 fallback), Area excluded
   neighborhoodMap: string | null; // public /uploads path (the annotated location map)
   cityMap: string | null; // public /uploads path (city masterplan)
 };
@@ -179,32 +180,37 @@ async function badgeLogo(cfg: BrandCfg, th: PosterTheme): Promise<{ fill: string
   }
 }
 
-// ── Per-group card: navy header band + group badge + 5-row table (one attribute per
-//    row, label right / value left, long values wrap) + seal footer. Branded only. ──
+// ── Per-group card (owner-approved "Card A", 2026-07-09): frameless. A navy header
+//    band carries the GROUP NAME + an icon disc (right) and the ad-number pill (left) —
+//    no listing title, no outer frame/corner brackets. Rows sit straight on the cream
+//    background (alternating tint/white, gold diamond marker), then the seal footer.
+//    Branded only. ──
 export async function renderCard(d: CardData, brand: Exclude<PosterBrand, 'unbranded'>, cfg: BrandCfg): Promise<Buffer> {
   const th = resolveTheme(cfg);
-  const { T, dvd, glyph, cardChrome, sealFooter, tableRow } = helpers(th);
+  const { T, glyph, sealFooter } = helpers(th);
   const w = W;
-  let y = 268;
+  let y = 176;
   const parts: string[] = [];
   for (let i = 0; i < Math.min(d.rows.length, 5); i++) {
     const { label, value } = d.rows[i]!;
     const lines = wrapValue(value);
-    const rh = lines.length > 1 ? 104 : 70;
+    const rh = lines.length > 1 ? 96 : 70;
     parts.push(
-      tableRow(60, y, w - 120, i, rh),
-      T(w - 112, y + (lines.length > 1 ? rh / 2 + 9 : 45), label, { s: 27, w: 700, fill: th.navy, anchor: 'end' }),
+      `<rect x="50" y="${y}" width="${w - 100}" height="${rh}" rx="14" fill="${i % 2 ? '#ffffff' : th.tint}"/>`,
+      `<rect x="${w - 76}" y="${y + rh / 2 - 6}" width="12" height="12" fill="${th.gold}" transform="rotate(45 ${w - 70} ${y + rh / 2})"/>`,
+      T(w - 102, y + (lines.length > 1 ? rh / 2 + 9 : 45), label, { s: 27, w: 700, fill: th.navy, anchor: 'end' }),
     );
-    lines.forEach((ln, li) => parts.push(T(w - 470, y + (lines.length > 1 ? 44 + li * 38 : 45), ln, { s: 26, w: 400, anchor: 'end' })));
+    lines.forEach((ln, li) => parts.push(T(w / 2 - 100, y + (lines.length > 1 ? 40 + li * 36 : 45), ln, { s: 26, w: 400 })));
     y += rh + 12;
   }
   const badge = await badgeLogo(cfg, th);
-  const foot = sealFooter(w, y + 14, cfg, badge.fill);
+  const foot = sealFooter(w, y + 10, cfg, badge.fill);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${foot.h}" viewBox="0 0 ${w} ${foot.h}">
-${cardChrome(w, foot.h, d.title, d.ad)}
-<circle cx="${w - 92}" cy="196" r="30" fill="${th.navy}"/><g transform="translate(${w - 92} 196) scale(1.1)">${glyph(d.icon)}</g>
-${T(w - 140, 208, d.name, { s: 34, w: 800, fill: th.navy, anchor: 'end' })}
-${dvd(430, 196, 330)}
+<rect width="${w}" height="${foot.h}" fill="${th.cream}"/>
+<rect x="36" y="40" width="${w - 72}" height="100" rx="20" fill="${th.navy}"/>
+${d.ad ? `<rect x="62" y="66" width="170" height="48" rx="12" fill="none" stroke="${th.gold}" stroke-width="2.5"/>${T(147, 98, d.ad, { s: 25, w: 700, fill: th.gold, ltr: true })}` : ''}
+<circle cx="${w - 104}" cy="90" r="30" fill="${th.gold}" opacity="0.2"/><g transform="translate(${w - 104} 90) scale(1.05)">${glyph(d.icon)}</g>
+${T(w - 152, 104, d.name, { s: 38, w: 800, fill: '#ffffff', anchor: 'end' })}
 ${parts.join('')}
 ${foot.svg}
 </svg>`;
@@ -267,20 +273,28 @@ ${foot.svg}
  *  pills; the annotation is already part of the location-map image. */
 export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: BrandCfg): Promise<Buffer> {
   const th = resolveTheme(cfg);
-  const { cardChrome, sealFooter, plainFooter, compactCard } = helpers(th);
+  const { T, sealFooter, plainFooter, compactCard } = helpers(th);
   const w = W;
   const branded = brand !== 'unbranded';
   const mapW = w - 80, mapH = 400, colW = (mapW - 18) / 2;
   const parts: string[] = [];
-  const mapY = 164;
+
+  // Header band: ad pill + title, plus — when the listing has an Area group — a gold
+  // strip below carrying its two attributes ("المساحة الفعلية: … · المساحة بالكشف: …"),
+  // so the Area never needs a card of its own (owner request 2026-07-09).
+  const headY = 40;
+  const headH = d.areas ? 132 : 92;
+  const mapY = headY + headH + 18;
+
   let y = mapY;
   if (d.neighborhoodMap) {
     parts.push(`<rect x="40" y="${mapY}" width="${mapW}" height="${mapH}" rx="14" fill="#f2ece0" stroke="${th.gold}" stroke-width="2"/>`);
     y = mapY + mapH + 18;
   }
 
-  // 2-column grid: [group1 | city map] then remaining groups pairwise. The grid grows
-  // row by row when more than 3 groups are marked for the poster.
+  // 2-column grid: [group1 | city map] then remaining groups pairwise. The row holding
+  // the city map is taller than the attribute cards (owner request 2026-07-09); the grid
+  // grows row by row when more than 3 groups are marked for the poster.
   type Cell = { kind: 'card'; g: PosterCardGroup } | { kind: 'city' };
   const groups = d.groups;
   const cells: Cell[] = [];
@@ -289,10 +303,12 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
   for (const g of groups.slice(1)) cells.push({ kind: 'card', g });
 
   const cardH = (g: PosterCardGroup) => 46 + Math.min(g.rows.length, 5) * 40 + 10;
+  const CITY_H = 330;
   let cityBox: { top: number; left: number; w: number; h: number } | null = null;
   for (let i = 0; i < cells.length; i += 2) {
     const row = [cells[i]!, cells[i + 1]].filter(Boolean) as Cell[];
-    const rowH = Math.max(...row.map((c) => (c.kind === 'card' ? cardH(c.g) : 0)), 256);
+    const hasCity = row.some((c) => c.kind === 'city');
+    const rowH = Math.max(...row.map((c) => (c.kind === 'card' ? cardH(c.g) : 0)), hasCity ? CITY_H : 256);
     for (let j = 0; j < row.length; j++) {
       const c = row[j]!;
       const x = j === 0 ? 40 : 40 + colW + 18;
@@ -321,8 +337,17 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
     h = foot.h;
   }
 
+  const chrome = `<rect width="${w}" height="${h}" fill="${th.cream}"/>
+<rect x="18" y="18" width="${w - 36}" height="${h - 36}" rx="30" fill="none" stroke="${th.gold}" stroke-width="6"/>
+<rect x="4" y="4" width="46" height="46" rx="14" fill="${th.navy}"/><rect x="${w - 50}" y="4" width="46" height="46" rx="14" fill="${th.navy}"/>
+<rect x="4" y="${h - 50}" width="46" height="46" rx="14" fill="${th.navy}"/><rect x="${w - 50}" y="${h - 50}" width="46" height="46" rx="14" fill="${th.navy}"/>
+<rect x="40" y="${headY}" width="${w - 80}" height="${headH}" rx="20" fill="${th.navy}"/>
+${d.ad ? `<rect x="64" y="${headY + 22}" width="170" height="48" rx="12" fill="none" stroke="${th.gold}" stroke-width="2.5"/>${T(149, headY + 54, d.ad, { s: 25, w: 700, fill: th.gold, ltr: true })}` : ''}
+${T(w - 72, d.areas ? headY + 60 : headY + 64, d.title, { s: 34, w: 800, fill: '#ffffff', anchor: 'end' })}
+${d.areas ? `<rect x="200" y="${headY + 78}" width="${w - 400}" height="40" rx="20" fill="${th.gold}"/>${T(w / 2, headY + 106, d.areas, { s: 22, w: 800, fill: th.navy })}` : ''}`;
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-${cardChrome(w, h, d.title, d.ad)}
+${chrome}
 ${parts.join('')}
 ${footSvg}
 </svg>`;
