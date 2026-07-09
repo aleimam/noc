@@ -5,6 +5,7 @@ import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { prisma } from '@noc/db';
 import { uploadRoot } from './uploads';
+import { brandForCategory, getBrandContacts, type BrandContactItem } from './contacts';
 import {
   STAMP_CATEGORIES,
   BAKED_CATEGORIES,
@@ -61,10 +62,74 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/** Bake the configured logo + footer into an image buffer. Returns original on no-op/failure. */
-export async function stampImage(buffer: Buffer, cfg: StampConfig, logoPath: string | null): Promise<Buffer> {
+// ── Footer bar renderers (baked into the image) ─────────────────────────────
+const FOOTER_NAVY = '#0b1b33';
+const FOOTER_GOLD = '#c9983e';
+
+/** A recognizable gold icon per contact type, centered at (cx,cy) with radius r. */
+function contactIcon(type: string, cx: number, cy: number, r: number): string {
+  const c = FOOTER_GOLD;
+  const sw = Math.max(1.4, r * 0.16);
+  switch (type) {
+    case 'phone':
+      return `<path d="M ${cx - r * 0.5} ${cy - r * 0.7} q -${r * 0.15} ${r * 1.3} ${r * 1.15} ${r * 1.4} l ${r * 0.35} -${r * 0.45} l -${r * 0.55} -${r * 0.3} l -${r * 0.2} ${r * 0.2} q -${r * 0.4} -${r * 0.25} -${r * 0.5} -${r * 0.55} l ${r * 0.2} -${r * 0.2} l -${r * 0.3} -${r * 0.55} Z" fill="${c}"/>`;
+    case 'whatsapp':
+      return `<circle cx="${cx}" cy="${cy}" r="${r * 0.95}" fill="none" stroke="${c}" stroke-width="${sw}"/>` +
+        `<path d="M ${cx - r * 0.35} ${cy - r * 0.45} q -${r * 0.1} ${r * 0.9} ${r * 0.8} ${r * 0.95} l ${r * 0.22} -${r * 0.3} l -${r * 0.38} -${r * 0.2} l -${r * 0.13} ${r * 0.13} q -${r * 0.28} -${r * 0.17} -${r * 0.35} -${r * 0.38} l ${r * 0.13} -${r * 0.13} l -${r * 0.2} -${r * 0.38} Z" fill="${c}"/>`;
+    case 'email':
+      return `<rect x="${cx - r}" y="${cy - r * 0.7}" width="${r * 2}" height="${r * 1.4}" rx="${r * 0.15}" fill="none" stroke="${c}" stroke-width="${sw}"/>` +
+        `<path d="M ${cx - r} ${cy - r * 0.6} L ${cx} ${cy + r * 0.15} L ${cx + r} ${cy - r * 0.6}" fill="none" stroke="${c}" stroke-width="${sw}"/>`;
+    case 'website':
+      return `<circle cx="${cx}" cy="${cy}" r="${r * 0.95}" fill="none" stroke="${c}" stroke-width="${sw}"/>` +
+        `<line x1="${cx - r * 0.95}" y1="${cy}" x2="${cx + r * 0.95}" y2="${cy}" stroke="${c}" stroke-width="${sw * 0.8}"/>` +
+        `<ellipse cx="${cx}" cy="${cy}" rx="${r * 0.45}" ry="${r * 0.95}" fill="none" stroke="${c}" stroke-width="${sw * 0.8}"/>`;
+    case 'address':
+      return `<path d="M ${cx} ${cy + r} C ${cx - r * 1.1} ${cy - r * 0.2} ${cx - r * 0.7} ${cy - r} ${cx} ${cy - r} C ${cx + r * 0.7} ${cy - r} ${cx + r * 1.1} ${cy - r * 0.2} ${cx} ${cy + r} Z" fill="none" stroke="${c}" stroke-width="${sw}"/><circle cx="${cx}" cy="${cy - r * 0.3}" r="${r * 0.28}" fill="${c}"/>`;
+    case 'facebook':
+      return `<rect x="${cx - r}" y="${cy - r}" width="${r * 2}" height="${r * 2}" rx="${r * 0.3}" fill="none" stroke="${c}" stroke-width="${sw}"/>` +
+        `<text x="${cx}" y="${cy}" fill="${c}" font-family="Arial,sans-serif" font-weight="bold" font-size="${r * 1.5}" text-anchor="middle" dominant-baseline="central">f</text>`;
+    case 'instagram':
+      return `<rect x="${cx - r}" y="${cy - r}" width="${r * 2}" height="${r * 2}" rx="${r * 0.5}" fill="none" stroke="${c}" stroke-width="${sw}"/>` +
+        `<circle cx="${cx}" cy="${cy}" r="${r * 0.45}" fill="none" stroke="${c}" stroke-width="${sw}"/><circle cx="${cx + r * 0.5}" cy="${cy - r * 0.5}" r="${r * 0.12}" fill="${c}"/>`;
+    default:
+      return `<circle cx="${cx}" cy="${cy}" r="${r * 0.5}" fill="${c}"/>`;
+  }
+}
+
+/** Footer bar built from the brand's managed contacts (icon + value), centered in one row. */
+function contactsFooterSvg(W: number, fh: number, contacts: BrandContactItem[]): string {
+  const fs = Math.round(fh * 0.3);
+  const iconR = Math.round(fh * 0.15);
+  const gapIT = Math.round(iconR * 0.8);
+  const gapItems = Math.round(fh * 0.55);
+  const items = contacts.slice(0, 5);
+  const widths = items.map((cc) => iconR * 2 + gapIT + Math.ceil(cc.value.length * fs * 0.56));
+  const totalW = widths.reduce((a, b) => a + b, 0) + gapItems * Math.max(0, items.length - 1);
+  let x = Math.max(16, (W - totalW) / 2);
+  const cy = fh / 2 + 1;
+  let out = `<rect width="${W}" height="${fh}" fill="${FOOTER_NAVY}"/><rect width="${W}" height="3" fill="${FOOTER_GOLD}"/>`;
+  items.forEach((cc, i) => {
+    out += contactIcon(cc.type, x + iconR, cy, iconR);
+    out += `<text x="${x + iconR * 2 + gapIT}" y="${cy}" fill="#ffffff" font-family="Arial,sans-serif" font-weight="bold" font-size="${fs}" text-anchor="start" dominant-baseline="middle" direction="ltr">${esc(cc.value)}</text>`;
+    x += widths[i]! + gapItems;
+  });
+  return out;
+}
+
+/** Legacy free-text footer (fallback when a brand has no managed contacts). */
+function legacyFooterSvg(W: number, fh: number, line1: string, line2: string): string {
+  const l1 = esc(line1 || ''), l2 = esc(line2 || '');
+  const f1 = Math.round(fh * 0.36), f2 = Math.round(fh * 0.28), y1 = l2 ? fh * 0.42 : fh * 0.6;
+  return `<rect width="${W}" height="${fh}" fill="${FOOTER_NAVY}"/><rect width="${W}" height="3" fill="${FOOTER_GOLD}"/>` +
+    (l1 ? `<text x="${W / 2}" y="${y1}" fill="#ffffff" font-family="Arial,sans-serif" font-weight="bold" font-size="${f1}" text-anchor="middle" dominant-baseline="middle">${l1}</text>` : '') +
+    (l2 ? `<text x="${W / 2}" y="${fh * 0.78}" fill="#cdd6e4" font-family="Arial,sans-serif" font-size="${f2}" text-anchor="middle" dominant-baseline="middle">${l2}</text>` : '');
+}
+
+/** Bake the configured logo + footer into an image buffer. The footer prefers the brand's
+ *  managed `contacts` (icon + value), falling back to the free-text lines. No-op safe. */
+export async function stampImage(buffer: Buffer, cfg: StampConfig, logoPath: string | null, contacts: BrandContactItem[] = []): Promise<Buffer> {
   const wantsLogo = cfg.logoEnabled && !!logoPath;
-  const wantsFooter = cfg.footerEnabled && !!(cfg.footerLine1 || cfg.footerLine2);
+  const wantsFooter = cfg.footerEnabled && (contacts.length > 0 || !!(cfg.footerLine1 || cfg.footerLine2));
   if (!wantsLogo && !wantsFooter) return buffer;
   try {
     const sharp = (await import('sharp')).default;
@@ -87,17 +152,8 @@ export async function stampImage(buffer: Buffer, cfg: StampConfig, logoPath: str
     }
     if (wantsFooter) {
       const fh = Math.max(46, Math.round(W * 0.08));
-      const l1 = esc(cfg.footerLine1 || '');
-      const l2 = esc(cfg.footerLine2 || '');
-      const f1 = Math.round(fh * 0.36);
-      const f2 = Math.round(fh * 0.28);
-      const y1 = l2 ? fh * 0.42 : fh * 0.6;
-      const svg =
-        `<svg width="${W}" height="${fh}" xmlns="http://www.w3.org/2000/svg">` +
-        `<rect width="${W}" height="${fh}" fill="#0b1b33"/><rect width="${W}" height="3" fill="#c9983e"/>` +
-        (l1 ? `<text x="${W / 2}" y="${y1}" fill="#ffffff" font-family="Arial,sans-serif" font-weight="bold" font-size="${f1}" text-anchor="middle" dominant-baseline="middle">${l1}</text>` : '') +
-        (l2 ? `<text x="${W / 2}" y="${fh * 0.78}" fill="#cdd6e4" font-family="Arial,sans-serif" font-size="${f2}" text-anchor="middle" dominant-baseline="middle">${l2}</text>` : '') +
-        `</svg>`;
+      const inner = contacts.length > 0 ? contactsFooterSvg(W, fh, contacts) : legacyFooterSvg(W, fh, cfg.footerLine1, cfg.footerLine2);
+      const svg = `<svg width="${W}" height="${fh}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
       composites.push({ input: Buffer.from(svg), top: Math.max(0, H - fh), left: 0 });
     }
     if (!composites.length) return buffer;
@@ -132,11 +188,13 @@ export async function rationingScanOverlay(): Promise<{ enabled: boolean; logoPa
   return { enabled: true, logoPath, position: cfg.position, opacity: cfg.opacity, scale: cfg.scale };
 }
 
-/** Stamp a pure buffer for a category if that category is active; else return it unchanged. */
+/** Stamp a pure buffer for a category if that category is active; else return it unchanged.
+ *  The footer bar uses the category's brand contacts (listing/map → Al Sawarey, else New Obour). */
 export async function stampForCategory(buffer: Buffer, cat: StampCategory): Promise<Buffer> {
   const s = await getStampSettings();
   if (!categoryActive(s, cat)) return buffer;
   const cfg = s.categories[cat];
   const logo = await logoForCategory(cat, cfg);
-  return stampImage(buffer, cfg, logo);
+  const contacts = cfg.footerEnabled ? await getBrandContacts(brandForCategory(cat)) : [];
+  return stampImage(buffer, cfg, logo, contacts);
 }

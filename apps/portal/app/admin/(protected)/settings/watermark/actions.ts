@@ -17,6 +17,7 @@ import {
   type StampSettings,
   type StampCategory,
 } from '../../../../../lib/stamp';
+import { getBrandContacts, brandForCategory } from '../../../../../lib/contacts';
 import { stampMapCopy } from '../../../../../lib/mapStamp';
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -62,6 +63,7 @@ export async function restampCategory(cat: StampCategory): Promise<CountResult> 
     const active = categoryActive(s, cat);
     const cfg = s.categories[cat];
     const logo = active ? await logoForCategory(cat, cfg) : null;
+    const contacts = active && cfg.footerEnabled ? await getBrandContacts(brandForCategory(cat)) : [];
     const rows = await prisma.attachment.findMany({
       where: { stampCategory: cat, originalPath: { not: null } },
       select: { id: true, originalPath: true },
@@ -72,7 +74,7 @@ export async function restampCategory(cat: StampCategory): Promise<CountResult> 
       try {
         const origBuf = await readFile(abs(r.originalPath));
         if (active) {
-          const out = await stampImage(origBuf, cfg, logo);
+          const out = await stampImage(origBuf, cfg, logo, contacts);
           if (!out.equals(origBuf)) {
             const ext = r.originalPath.split('.').pop() || 'jpg';
             const newPath = await saveBuffer(out, ext);
@@ -143,6 +145,39 @@ export async function restampMaps(): Promise<CountResult> {
     return { ok: true, count };
   } catch (e) {
     console.error('restampMaps failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
+// ── Brand contacts (feed the photo-stamp footer bar) ─────────────────────────
+export type ContactInput = { id?: string; brand: string; type: string; value: string; isActive?: boolean };
+
+export async function saveBrandContact(input: ContactInput): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  const brand = input.brand === 'alsawarey' ? 'alsawarey' : 'newobour';
+  const value = (input.value ?? '').trim().slice(0, 190);
+  if (!value) return { ok: false, error: 'empty' };
+  try {
+    if (input.id) {
+      await prisma.brandContact.update({ where: { id: input.id }, data: { brand, type: input.type, value, isActive: input.isActive ?? true } });
+    } else {
+      const max = await prisma.brandContact.aggregate({ where: { brand }, _max: { order: true } });
+      await prisma.brandContact.create({ data: { brand, type: input.type, value, order: (max._max.order ?? 0) + 1, isActive: input.isActive ?? true } });
+    }
+    revalidatePath('/admin/settings/watermark');
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'failed' };
+  }
+}
+
+export async function deleteBrandContact(id: string): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    await prisma.brandContact.delete({ where: { id } });
+    revalidatePath('/admin/settings/watermark');
+    return { ok: true };
+  } catch {
     return { ok: false, error: 'failed' };
   }
 }

@@ -1635,3 +1635,17 @@ model PartnerApplication {
 
   @@index([status, createdAt])
 }
+
+/// A brand contact (phone / whatsapp / email / website / address / social) shown in the
+/// photo-stamp footer bar and reusable elsewhere. Managed by admins per brand.
+model BrandContact {
+  id        String   @id @default(cuid())
+  brand     String // 'newobour' | 'alsawarey'
+  type      String // 'phone' | 'whatsapp' | 'email' | 'website' | 'address' | 'facebook' | 'instagram'
+  value     String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([brand, order])
+}
