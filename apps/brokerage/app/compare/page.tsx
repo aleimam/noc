@@ -40,7 +40,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
                   <th className="p-3"></th>
                   {lands.map((l) => (
                     <th key={l.id} className="p-3 text-start align-top">
-                      <Link href={`/listings/${l.id}`} className="block font-bold text-navy-800 hover:text-gold-700 dark:text-soft">
+                      <Link href={l.href} className="block font-bold text-navy-800 hover:text-gold-700 dark:text-soft">
                         {l.cover && (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={l.cover} alt="" className="mb-2 h-24 w-full rounded-lg object-cover" />

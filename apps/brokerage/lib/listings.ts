@@ -20,8 +20,22 @@ async function getStandardAreas(): Promise<number[]> {
   return [...AREA_PRESETS];
 }
 
+/** ASCII slug from English text (keywords for SEO-friendly URLs). */
+export function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-+|-+$)/g, '').slice(0, 60);
+}
+
+/** SEO-friendly listing path: /listings/<english-slug>-<adNumber>. The ad number (trailing
+ *  digits) is the stable lookup key; falls back to the cuid for listings with no ad number. */
+export function listingHref(l: { id: string; adNumber: string | null; typeEn: string | null; area: number | null }): string {
+  if (!l.adNumber) return `/listings/${l.id}`;
+  const slug = slugify([l.typeEn || 'land', l.area ? `${l.area}m` : ''].filter(Boolean).join(' ')) || 'land';
+  return `/listings/${slug}-${l.adNumber}`;
+}
+
 export type LandCard = {
   id: string;
+  href: string; // canonical SEO path
   title: string;
   typeAr: string | null;
   typeEn: string | null;
@@ -82,6 +96,7 @@ const cardSelect = {
   soldPrice: true,
   status: true,
   adNumber: true,
+  area: true, // Listing.area column — used for the canonical slug (matches the detail page)
   featured: true,
   typeOption: { select: { nameAr: true, nameEn: true } },
   values: {
@@ -124,6 +139,7 @@ function toCard(l: Prisma.ListingGetPayload<{ select: typeof cardSelect }>, cove
   const r = resolve(l.values as ValueRow[]);
   return {
     id: l.id,
+    href: listingHref({ id: l.id, adNumber: l.adNumber ?? null, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null }),
     title: l.title,
     typeAr: l.typeOption?.nameAr ?? null,
     typeEn: l.typeOption?.nameEn ?? null,
@@ -178,6 +194,7 @@ export async function featuredLands(take = 8): Promise<LandCard[]> {
 
 export type LandDetail = {
   id: string;
+  canonicalPath: string; // SEO-friendly /listings/<slug>-<adNumber>
   adNumber: string | null;
   title: string;
   description: string | null;
@@ -195,6 +212,16 @@ export type LandDetail = {
   amenities: { type: string; title: string; details: string | null; photos: string[] }[]; // inherited from the neighborhood
   conditions: { slug: string; title: string; body: string }[]; // attached building-conditions pages
 };
+
+/** Resolve a /listings/<param> segment to a listing id — the param is either the SEO slug
+ *  ending in the ad number (…-2607002) or a legacy cuid. */
+export async function resolveListingId(param: string): Promise<string | null> {
+  const dec = decodeURIComponent(param).trim();
+  const tail = dec.split('-').pop() ?? '';
+  const where = /^\d+$/.test(tail) ? { adNumber: tail } : { id: dec };
+  const found = await prisma.listing.findFirst({ where: { ...where, ...STOREFRONT_STATUS }, select: { id: true } });
+  return found?.id ?? null;
+}
 
 export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<LandDetail | null> {
   const l = await prisma.listing.findFirst({
@@ -334,6 +361,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
 
   return {
     id: l.id,
+    canonicalPath: listingHref({ id: l.id, adNumber: l.adNumber ?? null, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null }),
     adNumber: l.adNumber ?? null,
     title: l.title,
     description: l.description,

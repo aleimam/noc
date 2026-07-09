@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { PhotoGallery, TrackView, AreaAdvantages } from '@noc/ui';
 import { StoreShell } from '../../_components/StoreShell';
 import { advantagesForNeighborhood } from '../../../lib/advantages';
 import { StoreLandCard } from '../../_components/StoreLandCard';
-import { getLandDetail, similarLands } from '../../../lib/listings';
+import { getLandDetail, resolveListingId, similarLands } from '../../../lib/listings';
 import { getAdminViewer, ownerDetailFor } from '../../../lib/adminView';
 import { wishlistListingIds } from '../../../lib/wishlist';
 import { trackListingView } from '../../../lib/views';
@@ -43,37 +43,42 @@ function OwnerPhone({ num, wa }: { num: string | null; wa: boolean }) {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const locale = (await getLocale()) as 'ar' | 'en';
-  const land = await getLandDetail(id, locale);
+  const listingId = await resolveListingId(id);
+  const land = listingId ? await getLandDetail(listingId, locale) : null;
   if (!land) return { title: locale === 'en' ? 'Al Sawarey' : 'الصواري' };
   const desc = [land.typeAr, ...land.specs.slice(0, 4).map((s) => `${s.label}: ${s.value}`)].filter(Boolean).join(' · ').slice(0, 160);
   return pageMeta({
     title: `${land.title} — ${locale === 'en' ? 'Al Sawarey' : 'الصواري'}`,
     description: desc,
-    path: `/listings/${id}`,
+    path: land.canonicalPath,
     images: land.gallery.slice(0, 1),
     locale,
   });
 }
 
 export default async function LandDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+  const { id: param } = await params;
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
-  const land = await getLandDetail(id, locale);
+  const listingId = await resolveListingId(param);
+  if (!listingId) notFound();
+  const land = await getLandDetail(listingId, locale);
   if (!land) notFound();
-  await trackListingView(id); // partner analytics: count the public view
-  const [wished, similar, store] = await Promise.all([wishlistListingIds(), similarLands(id, 4), getStorefront()]);
-  const nb = await prisma.listing.findUnique({ where: { id }, select: { neighborhoodId: true } });
+  // Canonicalize: redirect legacy cuids / mismatched slugs to the SEO URL (301).
+  if (decodeURIComponent(param) !== land.canonicalPath.slice('/listings/'.length)) redirect(land.canonicalPath);
+  await trackListingView(listingId); // partner analytics: count the public view
+  const [wished, similar, store] = await Promise.all([wishlistListingIds(), similarLands(listingId, 4), getStorefront()]);
+  const nb = await prisma.listing.findUnique({ where: { id: listingId }, select: { neighborhoodId: true } });
   const advGroups = await advantagesForNeighborhood(nb?.neighborhoodId, locale);
   const genRows = await prisma.attachment.findMany({
-    where: { ownerType: 'ListingPoster', ownerId: id, stampCategory: { contains: 'alsawarey' } },
+    where: { ownerType: 'ListingPoster', ownerId: listingId, stampCategory: { contains: 'alsawarey' } },
     orderBy: { stampCategory: 'asc' },
     select: { path: true },
   });
-  const owner = (await getAdminViewer()) ? await ownerDetailFor(id) : null;
+  const owner = (await getAdminViewer()) ? await ownerDetailFor(listingId) : null;
 
   const sold = land.status === 'SOLD';
-  const listingUrl = `${BASE}/listings/${land.id}`;
+  const listingUrl = `${BASE}${land.canonicalPath}`;
   const adRef = land.adNumber ? L(` رقم ${land.adNumber}`, ` #${land.adNumber}`) : '';
   // WhatsApp message carries the ad number + a link back to the listing on the site.
   const waText = L(
@@ -106,20 +111,20 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
       priceCurrency: 'EGP',
       price: land.price ?? undefined,
       availability: land.status === 'SOLD' ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
-      url: `${BASE}/listings/${land.id}`,
+      url: `${BASE}${land.canonicalPath}`,
     },
   };
   const crumbsLd = breadcrumbLd([
     { name: L('الرئيسية', 'Home'), path: '/' },
     { name: L('كل الأراضي', 'All lands'), path: '/listings' },
-    { name: land.title, path: `/listings/${land.id}` },
+    { name: land.title, path: land.canonicalPath },
   ]);
 
   return (
     <StoreShell>
       {/* Escape "<" so seller-authored fields (name/description) can't break out of the script tag. */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([jsonLd, crumbsLd]) }} />
-      <TrackView item={{ id: land.id, title: land.title, cover: land.gallery[0] ?? null, price: land.price != null ? String(land.price) : null, href: `/listings/${land.id}` }} />
+      <TrackView item={{ id: land.id, title: land.title, cover: land.gallery[0] ?? null, price: land.price != null ? String(land.price) : null, href: land.canonicalPath }} />
       <div className="mx-auto max-w-5xl px-4 pt-6 pb-24 lg:pb-6">
         <Link href="/listings" className="text-sm text-navy-600">‹ {L('كل الأراضي', 'All lands')}</Link>
 

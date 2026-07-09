@@ -20,7 +20,7 @@ export function StoreLandCard({ land, locale, wishlisted = false, owner }: { lan
         <WishlistButton listingId={land.id} initialSaved={wishlisted} />
         <CompareToggle id={land.id} label={L('قارن', 'Compare')} />
       </div>
-      <Link href={`/listings/${land.id}`} className="flex flex-1 flex-col">
+      <Link href={land.href} className="flex flex-1 flex-col">
         <div className="relative aspect-[16/10] overflow-hidden bg-navy-100">
           {land.cover ? (
             // eslint-disable-next-line @next/next/no-img-element

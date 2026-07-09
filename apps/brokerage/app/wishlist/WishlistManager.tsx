@@ -57,7 +57,7 @@ export function WishlistManager({ lists, locale }: { lists: List[]; locale: 'ar'
               {list.items.map(({ itemId, card }) => (
                 <div key={itemId} className="relative flex flex-col overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-sm dark:border-white/10 dark:bg-navy-800">
                   <button onClick={() => run(() => removeItem(itemId))} className="absolute end-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-ink-500 shadow" aria-label="remove">✕</button>
-                  <Link href={`/listings/${card.id}`} className="flex flex-1 flex-col">
+                  <Link href={card.href} className="flex flex-1 flex-col">
                     <div className="aspect-[16/10] bg-navy-100">
                       {card.cover ? (
                         // eslint-disable-next-line @next/next/no-img-element
