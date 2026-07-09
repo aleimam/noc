@@ -6,6 +6,7 @@ import { authConfig } from './config.base';
 import { verifyPassword } from './password';
 import { verifyOtp, normalizePhone } from './otp';
 import { getEffectivePermissions, hasPermission } from './rbac';
+import { loginKey, loginRetryAfter, recordLoginFail, resetLogin } from './loginGuard';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -21,11 +22,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .trim();
         const password = String(creds?.password ?? '');
         if (!email || !password) return null;
+        const key = loginKey('staff', email);
+        if (loginRetryAfter(key) > 0) return null; // locked out — too many attempts
         const user = await prisma.user.findFirst({
           where: { email, type: 'STAFF', isActive: true },
         });
-        if (!user?.passwordHash) return null;
-        if (!(await verifyPassword(password, user.passwordHash))) return null;
+        if (!user?.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
+          recordLoginFail(key);
+          return null;
+        }
+        resetLogin(key);
         const perms = await getEffectivePermissions(user.id);
         return { id: user.id, type: user.type, name: user.name, email: user.email, perms };
       },
@@ -36,8 +42,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       name: 'Phone OTP',
       credentials: { phone: {}, code: {} },
       async authorize(creds) {
+        const key = loginKey('customer', normalizePhone(String(creds?.phone ?? '')));
+        if (loginRetryAfter(key) > 0) return null; // locked out
         const res = await verifyOtp(String(creds?.phone ?? ''), String(creds?.code ?? ''));
-        if (!res.ok) return null;
+        if (!res.ok) {
+          recordLoginFail(key);
+          return null;
+        }
+        resetLogin(key);
         const user = await prisma.user.upsert({
           where: { phone: res.phone },
           update: { phoneVerifiedAt: new Date(), isActive: true },
@@ -55,6 +67,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(creds) {
         const ident = String(creds?.identifier ?? '').trim();
         if (!ident) return null;
+        const key = loginKey('partner', ident);
+        if (loginRetryAfter(key) > 0) return null; // locked out
         const lower = ident.toLowerCase();
         const user = await prisma.user.findFirst({
           where: {
@@ -64,18 +78,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             OR: [{ username: lower }, { email: lower }, { phone: ident }, { phone: normalizePhone(ident) }],
           },
         });
-        if (!user) return null;
         const password = String(creds?.password ?? '');
         const code = String(creds?.code ?? '');
-        if (password) {
-          if (!user.passwordHash || !(await verifyPassword(password, user.passwordHash))) return null;
-        } else if (code) {
-          if (!user.phone) return null;
-          const res = await verifyOtp(user.phone, code);
-          if (!res.ok) return null;
-        } else {
+        let ok = false;
+        if (user) {
+          if (password) ok = !!user.passwordHash && (await verifyPassword(password, user.passwordHash));
+          else if (code) ok = !!user.phone && (await verifyOtp(user.phone, code)).ok;
+        }
+        if (!ok || !user) {
+          recordLoginFail(key);
           return null;
         }
+        resetLogin(key);
         return { id: user.id, type: user.type, name: user.name, perms: [], ownerId: user.ownerId };
       },
     }),
@@ -106,3 +120,4 @@ export * from './password';
 export * from './rbac';
 export * from './otp';
 export * from './adminToken';
+export { loginKey, loginRetryAfter, LOGIN_MAX_FAILS } from './loginGuard';

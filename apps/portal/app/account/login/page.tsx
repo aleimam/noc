@@ -45,31 +45,53 @@ export default function CustomerLoginPage() {
     }
   }
 
+  /** Turn a failed sign-in into an invalid-code or lockout-cooldown message. */
+  async function failureMessage(): Promise<string> {
+    try {
+      const r = await fetch('/api/login-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: 'customer', identifier: phone }),
+      }).then((res) => res.json());
+      if (r?.retryAfter > 0) {
+        const m = Math.ceil(r.retryAfter / 60);
+        return locale === 'ar' ? `محاولات كثيرة. انتظر ${m} دقيقة ثم حاول مجددًا.` : `Too many attempts. Wait ${m} min and try again.`;
+      }
+    } catch { /* ignore */ }
+    return t('invalidCode');
+  }
+
   async function verify(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const res = await signIn('otp', { phone, code, redirect: false });
-    if (res?.ok) {
-      // Hydrate saved preferences from the account (cross-device).
-      try {
-        const p = await fetch('/api/preferences').then((r) => r.json());
-        if (p?.locale) {
-          document.cookie = `NEXT_LOCALE=${String(p.locale).toLowerCase()};path=/;max-age=31536000;samesite=lax`;
+    try {
+      // Auth.js v5 may resolve with { ok:false } OR throw on a bad code — handle both.
+      const res = await signIn('otp', { phone, code, redirect: false });
+      if (res?.ok && !res.error) {
+        // Hydrate saved preferences from the account (cross-device).
+        try {
+          const p = await fetch('/api/preferences').then((r) => r.json());
+          if (p?.locale) {
+            document.cookie = `NEXT_LOCALE=${String(p.locale).toLowerCase()};path=/;max-age=31536000;samesite=lax`;
+          }
+          if (p?.appearance && p.appearance !== 'SYSTEM') {
+            const th = String(p.appearance).toLowerCase();
+            document.cookie = `NOC_THEME=${th};path=/;max-age=31536000;samesite=lax`;
+            document.documentElement.classList.toggle('dark', th === 'dark');
+          }
+        } catch {
+          /* ignore */
         }
-        if (p?.appearance && p.appearance !== 'SYSTEM') {
-          const th = String(p.appearance).toLowerCase();
-          document.cookie = `NOC_THEME=${th};path=/;max-age=31536000;samesite=lax`;
-          document.documentElement.classList.toggle('dark', th === 'dark');
-        }
-      } catch {
-        /* ignore */
+        router.push(next);
+        return;
       }
-      router.push(next);
-      return;
+      setError(await failureMessage());
+    } catch {
+      setError(await failureMessage());
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    setError(t('invalidCode'));
   }
 
   return (

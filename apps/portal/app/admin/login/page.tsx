@@ -3,15 +3,31 @@
 import { useState, type FormEvent } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 
 export default function StaffLoginPage() {
   const t = useTranslations('auth');
+  const locale = useLocale();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  async function failureMessage(): Promise<string> {
+    try {
+      const r = await fetch('/api/login-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: 'staff', identifier: email }),
+      }).then((res) => res.json());
+      if (r?.retryAfter > 0) {
+        const m = Math.ceil(r.retryAfter / 60);
+        return locale === 'ar' ? `محاولات كثيرة. انتظر ${m} دقيقة ثم حاول مجددًا.` : `Too many attempts. Wait ${m} min and try again.`;
+      }
+    } catch { /* ignore */ }
+    return t('invalidCredentials');
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -26,9 +42,9 @@ export default function StaffLoginPage() {
         router.refresh();
         return;
       }
-      setError(t('invalidCredentials'));
+      setError(await failureMessage());
     } catch {
-      setError(t('invalidCredentials'));
+      setError(await failureMessage());
     } finally {
       setLoading(false);
     }
