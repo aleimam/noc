@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@noc/db';
 import { authConfig } from './config.base';
 import { verifyPassword } from './password';
-import { verifyOtp, normalizePhone } from './otp';
+import { verifyOtp, verifyEmailOtp, normalizePhone } from './otp';
 import { getEffectivePermissions, hasPermission } from './rbac';
 import { loginKey, loginRetryAfter, recordLoginFail, resetLogin } from './loginGuard';
 
@@ -83,7 +83,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         let ok = false;
         if (user) {
           if (password) ok = !!user.passwordHash && (await verifyPassword(password, user.passwordHash));
-          else if (code) ok = !!user.phone && (await verifyOtp(user.phone, code)).ok;
+          // A login code may have been sent to the phone (SMS) or the email — accept either.
+          else if (code)
+            ok =
+              (!!user.phone && (await verifyOtp(user.phone, code)).ok) ||
+              (!!user.email && (await verifyEmailOtp(user.email, code)).ok);
         }
         if (!ok || !user) {
           recordLoginFail(key);

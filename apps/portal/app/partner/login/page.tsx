@@ -64,8 +64,7 @@ export default function PartnerLoginPage() {
     await finishLogin({ password });
   }
 
-  async function sendCode(e: FormEvent) {
-    e.preventDefault();
+  async function send(channel: 'sms' | 'email') {
     if (!identifier.trim()) { setError(L('أدخل اسم المستخدم أو البريد أو الهاتف أولاً', 'Enter your username, email or phone first')); return; }
     // If they typed a phone number, enforce the 11-digit 01… format.
     if (looksNumeric(identifier) && !isValidPhone(identifier)) {
@@ -77,13 +76,15 @@ export default function PartnerLoginPage() {
     const res = await fetch('/api/partner/otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier }),
+      body: JSON.stringify({ identifier, channel }),
     });
     const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; sentTo?: string };
     setLoading(false);
     if (json.ok) { setSentTo(json.sentTo ?? ''); setStep('sent'); }
-    else if (json.error === 'no_phone') setError(L('هذا الحساب بلا هاتف — استخدم كلمة المرور', 'No phone on this account — use your password'));
+    else if (json.error === 'no_phone') setError(L('لا يوجد هاتف على هذا الحساب — جرّب البريد أو كلمة المرور', 'No phone on this account — try email or your password'));
+    else if (json.error === 'no_email') setError(L('لا يوجد بريد على هذا الحساب — جرّب الهاتف أو كلمة المرور', 'No email on this account — try phone or your password'));
     else if (json.error === 'not_found') setError(L('لم نجد هذا الحساب — تحقق من البيانات', 'Account not found — check the details'));
+    else if (json.error === 'rate_limited' || json.error === 'cooldown') setError(L('انتظر قليلاً قبل طلب رمز جديد', 'Wait a moment before requesting a new code'));
     else setError(L('تعذّر إرسال الرمز، حاول بعد قليل', 'Could not send the code, try again shortly'));
   }
 
@@ -136,13 +137,18 @@ export default function PartnerLoginPage() {
             </button>
           </form>
         ) : step === 'idle' ? (
-          <form onSubmit={sendCode} className="space-y-4">
-            <p className="text-xs text-ink-500">{L('نرسل رمزًا إلى هاتف الحساب (أو بريده).', "We'll send a code to the account's phone (or email).")}</p>
+          <div className="space-y-3">
+            <p className="text-xs text-ink-500">{L('اختر طريقة استلام رمز الدخول:', 'Choose how to get your login code:')}</p>
             {error && <p className="text-sm text-red-600">{error}</p>}
-            <button type="submit" disabled={loading} className="w-full rounded-lg bg-primary px-4 py-3 text-base font-bold text-soft disabled:opacity-50">
-              {L('أرسل رمز الدخول', 'Send login code')}
-            </button>
-          </form>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => send('sms')} disabled={loading} className="rounded-lg bg-primary px-3 py-3 text-sm font-bold text-soft disabled:opacity-50">
+                📲 {L('رسالة SMS', 'By SMS')}
+              </button>
+              <button type="button" onClick={() => send('email')} disabled={loading} className="rounded-lg border border-primary px-3 py-3 text-sm font-bold text-primary disabled:opacity-50">
+                ✉️ {L('بريد إلكتروني', 'By email')}
+              </button>
+            </div>
+          </div>
         ) : (
           <form onSubmit={verifyCode} className="space-y-4">
             <p className="text-sm text-ink-600">{L('أرسلنا رمز التحقق إلى', 'We sent a code to')} <strong dir="ltr">{sentTo}</strong></p>

@@ -125,6 +125,13 @@ export function isValidPhone(input: string | null | undefined): boolean {
   return PHONE_EG_LOCAL.test(p) || PHONE_INTL.test(p);
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Loose email check — one @, a dot in the domain, no spaces. Good enough for OTP routing. */
+export function isValidEmail(input: string | null | undefined): boolean {
+  return EMAIL_RE.test((input ?? '').trim());
+}
+
 /** RBAC section keys. Add a new key when a new module is introduced. */
 export const SECTIONS = [
   'homepage',
