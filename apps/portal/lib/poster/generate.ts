@@ -13,7 +13,22 @@ import { isPosterIcon, type PosterIconKey } from './icons';
 
 const POSTER_BRANDS: PosterBrand[] = ['newobour', 'alsawarey', 'unbranded'];
 const CARD_BRANDS = ['newobour', 'alsawarey'] as const;
-const ICONS: PosterIconKey[] = ['pin', 'bld', 'doc']; // fallback cycle when no admin-assigned icon
+const ICONS: PosterIconKey[] = ['pin', 'bld', 'doc']; // last-resort cycle
+
+// Pick a fitting icon for an attribute group from its (Arabic) name — used when the admin
+// hasn't assigned one, instead of a meaningless pin/bld/doc cycle.
+function iconForGroup(name: string, fallbackIndex: number): PosterIconKey {
+  const has = (...kw: string[]) => kw.some((k) => name.includes(k));
+  if (has('مميز', 'مواصفات', 'خدمات')) return 'star';
+  if (has('سعر', 'مستحق', 'قسط', 'دفع', 'مالي', 'تمويل', 'مقدم', 'ثمن')) return 'coin';
+  if (has('مساح', 'أبعاد', 'مقاس')) return 'ruler';
+  if (has('مرافق', 'كهرباء', 'مياه', 'غاز', 'صرف')) return 'bolt';
+  if (has('قانون', 'أوراق', 'مستند', 'تسجيل', 'ملكية', 'رخص', 'تخصيص', 'تقنين')) return 'doc';
+  if (has('بناء', 'مبنى', 'عقار', 'دور', 'وحد', 'اشتراط')) return 'bld';
+  if (has('تسليم', 'استلام', 'إتاح', 'حالة')) return 'key';
+  if (has('موقع', 'مكان', 'عنوان', 'حي', 'مجاور')) return 'pin';
+  return ICONS[fallbackIndex % ICONS.length]!;
+}
 
 export type GenImage = { kind: 'poster' | 'card' | 'adv'; brand: string; path: string };
 
@@ -123,22 +138,19 @@ async function gather(listingId: string): Promise<Gathered | null> {
   const cardOff = new Set(renderMarks.filter((m) => !m.makeCard).map((m) => m.sectionId));
   const posterOn = new Set(renderMarks.filter((m) => m.onPoster).map((m) => m.sectionId));
 
-  // Admin-assigned icon on the section wins; otherwise fall back to the fixed cycle.
+  // Admin-assigned icon on the section wins; otherwise a keyword-picked icon by group name.
   const toCard = (s: (typeof nonArea)[number], i: number): CardData => ({
     name: s.name,
     rows: s.rows.slice(0, 5),
-    icon: isPosterIcon(s.icon) ? s.icon : ICONS[i % ICONS.length]!,
+    icon: isPosterIcon(s.icon) ? s.icon : iconForGroup(s.name, i),
     title: headTitle,
     ad: headAd,
   });
   const cards: CardData[] = nonArea.filter((s) => !cardOff.has(s.id)).map(toCard);
-  // The Area group (first section) is special by owner decision: it ALWAYS opens the
-  // poster INSIDE THE TITLE BAR (never as a card) — its first two attributes become a
-  // "label: value · label: value" strip. Its marks are not configurable.
+  // The Area group (first section) opens the poster INSIDE THE HEADER TABLE (never a card):
+  // its attributes become table columns beside the ad number. Its marks aren't configurable.
   const areaGroup = ordered[0];
-  const areaStrip = areaGroup && areaGroup.rows.length
-    ? areaGroup.rows.slice(0, 2).map((r) => `${r.label}: ${r.value}`).join('   ·   ')
-    : null;
+  const areaRows = areaGroup ? areaGroup.rows.slice(0, 3) : [];
   const posterCards: CardData[] = (posterOn.size ? nonArea.filter((s) => posterOn.has(s.id)) : nonArea.slice(0, 3)).map(toCard);
 
   const nbMap = await prisma.areaMap.findFirst({ where: { level: 'listing', areaId: listingId, kind: 'location' }, select: { cleanPath: true } });
@@ -152,9 +164,9 @@ async function gather(listingId: string): Promise<Gathered | null> {
   const poster: PosterData = {
     ad: headAd,
     title: headTitle,
-    areas: areaStrip,
-    // Consolidated Layout A: admin-marked groups (or the first-3 fallback), Area excluded
-    // (it lives in the title bar); the grid grows row by row when more than 3 are marked.
+    areaRows,
+    // Admin-marked groups (or the first-3 fallback), Area excluded (it lives in the header
+    // table); the grid grows row by row when more than 3 are marked.
     groups: posterCards.map((c) => ({ name: c.name, icon: c.icon, rows: c.rows })),
     neighborhoodMap: nbMap?.cleanPath ?? null,
     cityMap: cityMap?.cleanPath ?? null,
@@ -186,6 +198,9 @@ export async function regenerateListingImages(listingId: string): Promise<void> 
     const pick = (k: string) => (typeof t[k] === 'string' && t[k] ? t[k] : undefined);
     return {
       logoPath: pick('logoPath') ?? base.logoPath,
+      // The poster header logo (horizontal). Uploaded via the poster identity settings
+      // (posterTheme.<brand>.headerLogo); until then the poster shows a placeholder.
+      headerLogoPath: pick('headerLogo') ?? null,
       domain: pick('domain') ?? base.domain,
       phone: pick('phone') ?? base.phone,
       theme: {

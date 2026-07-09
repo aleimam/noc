@@ -24,14 +24,14 @@ export type PosterCardGroup = { name: string; icon: PosterIconKey; rows: CardRow
 export type PosterData = {
   ad: string; // '#YYMM…' or '' before publish
   title: string; // staff Card Title (upstream falls back to the listing title)
-  areas: string | null; // the Area group as a pre-formatted title-bar strip ("label: value · …")
+  areaRows: CardRow[]; // the Area group attributes → header table columns (with the ad no.)
   groups: PosterCardGroup[]; // admin-marked groups (or the first-3 fallback), Area excluded
   neighborhoodMap: string | null; // public /uploads path (the annotated location map)
   cityMap: string | null; // public /uploads path (city masterplan)
 };
 export type PosterBrand = 'newobour' | 'alsawarey' | 'unbranded';
 export type PosterTheme = { navy: string; gold: string; cream: string; tint: string; ink: string; font: string };
-export type BrandCfg = { logoPath: string | null; domain: string; phone: string; theme?: Partial<PosterTheme> };
+export type BrandCfg = { logoPath: string | null; domain: string; phone: string; headerLogoPath?: string | null; theme?: Partial<PosterTheme> };
 export type CardRow = { label: string; value: string };
 export type CardData = { name: string; icon: PosterIconKey; rows: CardRow[]; title: string; ad: string };
 export type AdvGroup = { title: string; items: string[] };
@@ -75,6 +75,18 @@ function wrapValue(s: string, max = 30): string[] {
 
 const resolveTheme = (cfg: BrandCfg): PosterTheme => ({ ...DEFAULT_POSTER_THEME, ...(cfg.theme ?? {}) });
 
+/** Split a title into up to two balanced lines (for the poster header). */
+function splitTwoLines(s: string): string[] {
+  const words = s.trim().split(/\s+/).filter(Boolean);
+  if (words.length <= 2 || s.length <= 16) return [s];
+  let best = 1, bestDiff = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const diff = Math.abs(words.slice(0, i).join(' ').length - words.slice(i).join(' ').length);
+    if (diff < bestDiff) { bestDiff = diff; best = i; }
+  }
+  return [words.slice(0, best).join(' '), words.slice(best).join(' ')];
+}
+
 /** SVG building blocks closed over one theme — colors and the font come exclusively
  *  from here so the admin identity settings restyle every generated image. */
 function helpers(th: PosterTheme) {
@@ -92,6 +104,15 @@ function helpers(th: PosterTheme) {
     POSTER_ICONS[key].split(DEFAULT_POSTER_THEME.gold).join(th.gold).split(DEFAULT_POSTER_THEME.navy).join(th.navy);
   const phoneGlyph = (c: string) =>
     `<path d="M-11,-5 C-11,-8 -8,-11 -5,-11 L-3,-6 C-3,-4 -5,-3 -6,-2 C-5,1 -1,5 2,6 C3,5 4,3 6,3 L11,5 C11,8 8,11 5,11 C-3,10 -10,3 -11,-5 Z" fill="${c}"/>`;
+  const whatsappGlyph = (bubble: string, hand: string) =>
+    `<path d="M0,-12 A12,12 0 1 0 -10.4,6 L-12.2,12.2 L-5.4,10.2 A12,12 0 0 0 0,-12 Z" fill="${bubble}"/>` +
+    `<path d="M-4.5,-4.8 C-5.1,-4.7 -5.6,-4 -5.5,-3.1 C-5.1,0.7 -1.3,4.6 2.5,4.9 C3.4,5 4.1,4.4 4.2,3.7 L4.4,2.6 C4.5,2.1 4.2,1.6 3.6,1.5 L1.6,1.1 C1.1,1 0.7,1.2 0.5,1.6 L0,2.4 C-1.8,1.5 -3.2,0.1 -4,-1.7 L-3.2,-2.3 C-2.9,-2.5 -2.7,-2.9 -2.8,-3.4 L-3.2,-5.4 C-3.3,-6 -3.8,-6.3 -4.4,-6.1 Z" fill="${hand}"/>`;
+  const globeGlyph = (c: string) =>
+    `<circle cx="0" cy="0" r="11" fill="none" stroke="${c}" stroke-width="2"/>` +
+    `<line x1="-11" y1="0" x2="11" y2="0" stroke="${c}" stroke-width="1.5"/>` +
+    `<line x1="0" y1="-11" x2="0" y2="11" stroke="${c}" stroke-width="1.2"/>` +
+    `<ellipse cx="0" cy="0" rx="5.5" ry="11" fill="none" stroke="${c}" stroke-width="1.3"/>`;
+  const estTextW = (s: string, fs: number, ltr: boolean) => Math.ceil(s.length * fs * (ltr ? 0.58 : 0.5));
 
   /** Frame + navy header band (Card Title + ad pill) shared by every image type. */
   const cardChrome = (w: number, h: number, title: string, ad: string) => `<rect width="${w}" height="${h}" fill="${th.cream}"/>
@@ -138,7 +159,7 @@ ${T(w - 72, 104, title, { s: 34, w: 800, fill: '#ffffff', anchor: 'end' })}`;
    *  up to 5 tight rows — no logo, contacts or ad number. `stretchH` grows the frame
    *  to align with its grid partner. */
   const compactCard = (x: number, y: number, w: number, g: PosterCardGroup, stretchH?: number): { svg: string; h: number } => {
-    const headH = 46, rowH = 40;
+    const headH = 46, rowH = 42;
     const rows = g.rows.slice(0, 5);
     const natural = headH + rows.length * rowH + 10;
     const h = Math.max(natural, stretchH ?? 0);
@@ -153,14 +174,15 @@ ${T(w - 72, 104, title, { s: 34, w: 800, fill: '#ffffff', anchor: 'end' })}`;
       const ry = y + headH + i * rowH;
       parts.push(
         `<rect x="${x + 6}" y="${ry + 3}" width="${w - 12}" height="${rowH - 6}" rx="8" fill="${i % 2 ? '#ffffff' : th.tint}"/>`,
-        T(x + w - 20, ry + rowH / 2 + 7, r.label, { s: 20, w: 700, fill: th.navy, anchor: 'end' }),
-        T(x + 18, ry + rowH / 2 + 7, clipText(r.value, 24), { s: 20, w: 400, fill: th.ink, anchor: 'start' }),
+        // attribute name: normal weight; value: bold + bigger (owner request 2026-07-09)
+        T(x + w - 20, ry + rowH / 2 + 6, r.label, { s: 19, w: 400, fill: th.navy, anchor: 'end' }),
+        T(x + 18, ry + rowH / 2 + 8, clipText(r.value, 26), { s: 24, w: 800, fill: th.ink, anchor: 'start' }),
       );
     });
     return { svg: parts.join(''), h };
   };
 
-  return { T, dvd, glyph, cardChrome, sealFooter, plainFooter, tableRow, compactCard };
+  return { T, dvd, glyph, phoneGlyph, whatsappGlyph, globeGlyph, estTextW, cardChrome, sealFooter, plainFooter, tableRow, compactCard };
 }
 
 /** Load the brand logo circle-masked (no square corners) + the paint color for the badge:
@@ -269,41 +291,87 @@ ${foot.svg}
   return sharp(base).composite([{ input: badge.logo, top: foot.logoBox.top, left: foot.logoBox.left }]).png().toBuffer();
 }
 
-/** Render one consolidated poster PNG (Layout A) for a brand. Maps carry no title
- *  pills; the annotation is already part of the location-map image. */
+/** Render one consolidated poster PNG (owner-approved v11, 2026-07-09). No outer frame.
+ *  Header = horizontal logo (or a placeholder until one is uploaded) + a content-width
+ *  table (ad no. + Area attributes) + a 2-line title. The listing location map spans the
+ *  full width with its height following the map's own aspect ratio (so poster height
+ *  varies per listing). Then a 2-col grid of the city map (5:4) + group cards, and a
+ *  footer with phone + WhatsApp icons and a globe + domain (no seal badge). */
 export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: BrandCfg): Promise<Buffer> {
   const th = resolveTheme(cfg);
-  const { T, sealFooter, plainFooter, compactCard } = helpers(th);
-  const w = W;
+  const { T, phoneGlyph, whatsappGlyph, globeGlyph, estTextW, compactCard } = helpers(th);
+  const w = W, M = 24, gap = 18;
   const branded = brand !== 'unbranded';
-  const mapW = w - 80, mapH = 400, colW = (mapW - 18) / 2;
   const parts: string[] = [];
 
-  // Header band: ad pill + title, plus — when the listing has an Area group — a gold
-  // strip below carrying its two attributes ("المساحة الفعلية: … · المساحة بالكشف: …"),
-  // so the Area never needs a card of its own (owner request 2026-07-09).
-  const headY = 40;
-  const headH = d.areas ? 132 : 92;
-  const mapY = headY + headH + 18;
+  // ── Header band ──
+  const headY = M, headH = 130, cy = headY + headH / 2;
+  parts.push(`<rect x="${M}" y="${headY}" width="${w - 2 * M}" height="${headH}" rx="18" fill="${th.navy}"/>`);
+  const plate = { x: M + 16, y: cy - 50, w: 210, h: 100 };
+  const hasLogo = branded && !!cfg.headerLogoPath;
+  parts.push(`<rect x="${plate.x}" y="${plate.y}" width="${plate.w}" height="${plate.h}" rx="12" fill="#ffffff"/>`);
+  if (!hasLogo) {
+    parts.push(
+      `<rect x="${plate.x + 8}" y="${plate.y + 8}" width="${plate.w - 16}" height="${plate.h - 16}" rx="8" fill="none" stroke="#b9c0cc" stroke-width="2" stroke-dasharray="7 6"/>`,
+      T(plate.x + plate.w / 2, cy + 7, 'الشعار', { s: 20, w: 700, fill: '#9aa3b2' }),
+    );
+  }
+  const logoBox = { left: plate.x + 6, top: plate.y + 5, w: plate.w - 12, h: plate.h - 10 };
 
-  let y = mapY;
-  if (d.neighborhoodMap) {
-    parts.push(`<rect x="40" y="${mapY}" width="${mapW}" height="${mapH}" rx="14" fill="#f2ece0" stroke="${th.gold}" stroke-width="2"/>`);
-    y = mapY + mapH + 18;
+  // content-width table: ad number + Area attributes (bigger values)
+  const tableCols = [
+    ...(d.ad ? [{ title: 'رقم الإعلان', value: d.ad, ltr: true }] : []),
+    ...d.areaRows.slice(0, 3).map((r) => ({ title: r.label, value: r.value, ltr: false })),
+  ].map((c) => ({ ...c, cw: Math.max(Math.max(estTextW(c.title, 17, false), estTextW(c.value, 27, c.ltr)) + 30, 96) }));
+  const tabW = tableCols.reduce((a, c) => a + c.cw, 0);
+  const tabX = plate.x + plate.w + 24;
+  const r1H = 38, r2H = 52, tabY = cy - (r1H + r2H) / 2, r1Y = tabY, r2Y = tabY + r1H;
+  let cxp = tabX + tabW;
+  for (const c of tableCols) {
+    cxp -= c.cw;
+    const mid = cxp + c.cw / 2;
+    parts.push(
+      `<rect x="${cxp}" y="${r1Y}" width="${c.cw}" height="${r1H}" fill="${th.gold}" stroke="${th.navy}" stroke-width="1.5"/>`,
+      T(mid, r1Y + 26, c.title, { s: 17, w: 800, fill: th.navy }),
+      `<rect x="${cxp}" y="${r2Y}" width="${c.cw}" height="${r2H}" fill="${th.cream}" stroke="${th.navy}" stroke-width="1.5"/>`,
+      T(mid, r2Y + 35, c.value, { s: 27, w: 800, fill: th.navy, ltr: c.ltr }),
+    );
   }
 
-  // 2-column grid: [group1 | city map] then remaining groups pairwise. The row holding
-  // the city map is taller than the attribute cards (owner request 2026-07-09); the grid
-  // grows row by row when more than 3 groups are marked for the poster.
-  type Cell = { kind: 'card'; g: PosterCardGroup } | { kind: 'city' };
-  const groups = d.groups;
-  const cells: Cell[] = [];
-  if (groups[0]) cells.push({ kind: 'card', g: groups[0] });
-  if (d.cityMap) cells.push({ kind: 'city' });
-  for (const g of groups.slice(1)) cells.push({ kind: 'card', g });
+  // title on the right, up to two lines
+  const tl = splitTwoLines(d.title);
+  if (tl.length === 2) {
+    parts.push(T(w - M - 16, cy - 8, tl[0]!, { s: 33, w: 800, fill: '#ffffff', anchor: 'end' }));
+    parts.push(T(w - M - 16, cy + 32, tl[1]!, { s: 33, w: 800, fill: '#ffffff', anchor: 'end' }));
+  } else {
+    parts.push(T(w - M - 16, cy + 12, tl[0]!, { s: 33, w: 800, fill: '#ffffff', anchor: 'end' }));
+  }
 
-  const cardH = (g: PosterCardGroup) => 46 + Math.min(g.rows.length, 5) * 40 + 10;
-  const CITY_H = 330;
+  // ── Big listing location map: full width, height from the map's own aspect ratio ──
+  const bigW = w - 2 * M;
+  let bigH = Math.round(bigW * 0.72);
+  if (d.neighborhoodMap) {
+    try { const m = await sharp(absU(d.neighborhoodMap)).metadata(); if (m.width && m.height) bigH = Math.round(bigW * (m.height / m.width)); } catch { /* keep fallback */ }
+  }
+  const bigY = headY + headH + gap;
+  let y = bigY;
+  let bigBox: { top: number; left: number; w: number; h: number } | null = null;
+  if (d.neighborhoodMap) {
+    parts.push(`<rect x="${M}" y="${bigY}" width="${bigW}" height="${bigH}" rx="14" fill="#eef0f4" stroke="${th.gold}" stroke-width="2"/>`);
+    bigBox = { top: bigY, left: M, w: bigW, h: bigH };
+    y = bigY + bigH + gap;
+  }
+
+  // ── 2-col grid: [group0 | city map 5:4] then remaining groups pairwise ──
+  const colW = (bigW - gap) / 2;
+  type Cell = { kind: 'card'; g: PosterCardGroup } | { kind: 'city' };
+  const cells: Cell[] = [];
+  if (d.groups[0]) cells.push({ kind: 'card', g: d.groups[0] });
+  if (d.cityMap) cells.push({ kind: 'city' });
+  for (const g of d.groups.slice(1)) cells.push({ kind: 'card', g });
+
+  const cardH = (g: PosterCardGroup) => 46 + Math.min(g.rows.length, 5) * 42 + 10;
+  const CITY_H = Math.round(colW * 4 / 5);
   let cityBox: { top: number; left: number; w: number; h: number } | null = null;
   for (let i = 0; i < cells.length; i += 2) {
     const row = [cells[i]!, cells[i + 1]].filter(Boolean) as Cell[];
@@ -311,58 +379,54 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
     const rowH = Math.max(...row.map((c) => (c.kind === 'card' ? cardH(c.g) : 0)), hasCity ? CITY_H : 256);
     for (let j = 0; j < row.length; j++) {
       const c = row[j]!;
-      const x = j === 0 ? 40 : 40 + colW + 18;
-      if (c.kind === 'card') {
-        parts.push(compactCard(x, y, colW, c.g, rowH).svg);
-      } else {
+      const x = j === 0 ? M : M + colW + gap;
+      if (c.kind === 'card') parts.push(compactCard(x, y, colW, c.g, rowH).svg);
+      else {
         parts.push(`<rect x="${x}" y="${y}" width="${colW}" height="${rowH}" rx="14" fill="#eef0f4" stroke="${th.gold}" stroke-width="2"/>`);
         cityBox = { top: y + 4, left: Math.round(x) + 4, w: Math.round(colW) - 8, h: rowH - 8 };
       }
     }
-    y += rowH + 14;
+    y += rowH + gap;
   }
-  const bottom = y - 14;
+  const bottom = y - gap;
 
-  // Footer: branded = seal (badge + contacts); unbranded = slim navy strip only.
-  let footSvg = '', h = 0, logoBox: { top: number; left: number } | null = null, badge: { fill: string; logo: Buffer | null } = { fill: th.navy, logo: null };
+  // ── Footer: phone + WhatsApp icons (left), globe + domain (right); no seal badge ──
+  const fy = bottom + gap, stripH = 70, sy = fy + 10 + stripH / 2;
+  let footSvg: string;
   if (branded) {
-    badge = await badgeLogo(cfg, th);
-    const foot = sealFooter(w, bottom + 8, cfg, badge.fill);
-    footSvg = foot.svg;
-    h = foot.h;
-    logoBox = { top: foot.logoBox.top, left: foot.logoBox.left };
+    const domW = estTextW(cfg.domain, 26, true);
+    const domEnd = w - M - 32, domStart = domEnd - domW;
+    footSvg =
+      `<line x1="${M}" y1="${fy + 4}" x2="${w - M}" y2="${fy + 4}" stroke="${th.gold}" stroke-width="3"/>` +
+      `<rect x="${M}" y="${fy + 10}" width="${w - 2 * M}" height="${stripH}" rx="16" fill="${th.navy}"/>` +
+      `<g transform="translate(${M + 56} ${sy})">${phoneGlyph(th.gold)}</g>` +
+      `<g transform="translate(${M + 95} ${sy})">${whatsappGlyph(th.gold, th.navy)}</g>` +
+      T(M + 128, sy + 9, cfg.phone, { s: 26, w: 700, fill: th.gold, ltr: true, anchor: 'start' }) +
+      `<g transform="translate(${domStart - 22} ${sy})">${globeGlyph('#ffffff')}</g>` +
+      T(domEnd, sy + 9, cfg.domain, { s: 26, w: 700, fill: '#ffffff', ltr: true, anchor: 'end' });
   } else {
-    const foot = plainFooter(w, bottom + 8);
-    footSvg = foot.svg;
-    h = foot.h;
+    footSvg = `<line x1="${M}" y1="${fy + 4}" x2="${w - M}" y2="${fy + 4}" stroke="${th.gold}" stroke-width="3"/><rect x="${M}" y="${fy + 10}" width="${w - 2 * M}" height="34" rx="12" fill="${th.navy}"/>`;
   }
-
-  const chrome = `<rect width="${w}" height="${h}" fill="${th.cream}"/>
-<rect x="18" y="18" width="${w - 36}" height="${h - 36}" rx="30" fill="none" stroke="${th.gold}" stroke-width="6"/>
-<rect x="4" y="4" width="46" height="46" rx="14" fill="${th.navy}"/><rect x="${w - 50}" y="4" width="46" height="46" rx="14" fill="${th.navy}"/>
-<rect x="4" y="${h - 50}" width="46" height="46" rx="14" fill="${th.navy}"/><rect x="${w - 50}" y="${h - 50}" width="46" height="46" rx="14" fill="${th.navy}"/>
-<rect x="40" y="${headY}" width="${w - 80}" height="${headH}" rx="20" fill="${th.navy}"/>
-${d.ad ? `<rect x="64" y="${headY + 22}" width="170" height="48" rx="12" fill="none" stroke="${th.gold}" stroke-width="2.5"/>${T(149, headY + 54, d.ad, { s: 25, w: 700, fill: th.gold, ltr: true })}` : ''}
-${T(w - 72, d.areas ? headY + 60 : headY + 64, d.title, { s: 34, w: 800, fill: '#ffffff', anchor: 'end' })}
-${d.areas ? `<rect x="200" y="${headY + 78}" width="${w - 400}" height="40" rx="20" fill="${th.gold}"/>${T(w / 2, headY + 106, d.areas, { s: 22, w: 800, fill: th.navy })}` : ''}`;
+  const h = fy + 10 + (branded ? stripH : 34) + M;
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-${chrome}
+<rect width="${w}" height="${h}" fill="${th.cream}"/>
 ${parts.join('')}
 ${footSvg}
 </svg>`;
+
   const layers: sharp.OverlayOptions[] = [];
-  if (d.neighborhoodMap) {
-    try { layers.push({ input: await sharp(absU(d.neighborhoodMap)).resize(mapW - 8, mapH - 8, { fit: 'cover' }).png().toBuffer(), top: mapY + 4, left: 44 }); } catch { /* skip */ }
+  if (d.neighborhoodMap && bigBox) {
+    // box matches the map's ratio → fill shows it whole, no distortion
+    try { layers.push({ input: await sharp(absU(d.neighborhoodMap)).resize(bigBox.w, bigBox.h, { fit: 'fill' }).png().toBuffer(), top: bigBox.top, left: bigBox.left }); } catch { /* skip */ }
   }
   if (d.cityMap && cityBox) {
-    try { layers.push({ input: await sharp(absU(d.cityMap)).resize(cityBox.w, cityBox.h, { fit: 'cover' }).png().toBuffer(), top: cityBox.top, left: cityBox.left }); } catch { /* skip */ }
+    try { layers.push({ input: await sharp(absU(d.cityMap)).resize(cityBox.w, cityBox.h, { fit: 'contain', background: '#eef0f4' }).png().toBuffer(), top: cityBox.top, left: cityBox.left }); } catch { /* skip */ }
   }
-  let buf = await sharp(Buffer.from(svg)).png().composite(layers).toBuffer();
-  if (branded && badge.logo && logoBox) {
-    buf = await sharp(buf).composite([{ input: badge.logo, top: logoBox.top, left: logoBox.left }]).png().toBuffer();
+  if (hasLogo && cfg.headerLogoPath) {
+    try { layers.push({ input: await sharp(absU(cfg.headerLogoPath)).resize(logoBox.w, logoBox.h, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } }).png().toBuffer(), top: logoBox.top, left: logoBox.left }); } catch { /* skip */ }
   }
-  return buf;
+  return sharp(Buffer.from(svg)).png().composite(layers).toBuffer();
 }
 
 /** Persist a PNG buffer under /uploads/<yyyy>/<mm>/<uuid>.png. */
