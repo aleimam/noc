@@ -26,6 +26,16 @@ export default async function PartnerBrowsePage() {
     },
   });
 
+  // Unbranded poster thumbnails only (never the branded posters) as card covers.
+  const covers = listings.length
+    ? new Map(
+        (await prisma.attachment.findMany({
+          where: { ownerType: 'ListingPoster', ownerId: { in: listings.map((l) => l.id) }, stampCategory: 'poster:unbranded' },
+          select: { ownerId: true, path: true },
+        })).map((a) => [a.ownerId, a.path]),
+      )
+    : new Map<string, string>();
+
   const perLabel = (u: string) => (u === 'UNIT' ? L('للوحدة', 'per unit') : u === 'SQM' ? L('للمتر', 'per m²') : '');
 
   return (
@@ -41,8 +51,13 @@ export default async function PartnerBrowsePage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {listings.map((l) => {
             const loc = [l.neighborhood?.district?.[locale === 'ar' ? 'nameAr' : 'nameEn'], l.neighborhood?.[locale === 'ar' ? 'nameAr' : 'nameEn']].filter(Boolean).join(' — ');
+            const cover = covers.get(l.id);
             return (
-              <a key={l.id} href={`/market/${l.id}`} className="flex flex-col rounded-2xl border border-ink-100 bg-white p-4 shadow-sm transition hover:border-gold-400 hover:shadow-md">
+              <a key={l.id} href={`/partner/browse/${l.id}`} className="flex flex-col rounded-2xl border border-ink-100 bg-white p-4 shadow-sm transition hover:border-gold-400 hover:shadow-md">
+                {cover && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={cover} alt="" className="mb-3 h-40 w-full rounded-lg object-cover object-top" />
+                )}
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="font-bold text-navy-800">{l.title}</h2>
                   {l.adNumber && <span className="shrink-0 font-num text-xs text-ink-400" dir="ltr">#{l.adNumber}</span>}

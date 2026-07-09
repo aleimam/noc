@@ -4,9 +4,6 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
-import { OptionAttributesGrid } from './OptionAttributesGrid';
-
-type AttrSection = { id: string; name: string; attributes: { id: string; label: string }[] };
 
 type Result = { ok: true } | { ok: false; error: string };
 type ParentOpt = { id: string; nameAr: string; nameEn: string };
@@ -21,8 +18,6 @@ export function ClassifierOptionsEditor({
   parentOptions,
   parentLabel,
   showAlsawarey,
-  attrSections,
-  attrLinksByOption,
   upsert,
   remove,
   toggleFlag,
@@ -31,8 +26,6 @@ export function ClassifierOptionsEditor({
   parentOptions: ParentOpt[];
   parentLabel: string;
   showAlsawarey: boolean;
-  attrSections: AttrSection[];
-  attrLinksByOption: Record<string, string[]>;
   upsert: (input: Draft) => Promise<Result>;
   remove: (id: string) => Promise<Result>;
   toggleFlag: (id: string, flag: 'isActive' | 'allowedOnAlsawarey', value: boolean) => Promise<Result>;
@@ -111,10 +104,8 @@ export function ClassifierOptionsEditor({
           {showAlsawarey && (
             <label className="flex items-center gap-2 pt-1 text-sm sm:col-span-2"><input type="checkbox" checked={draft.allowedOnAlsawarey} onChange={(e) => setDraft({ ...draft, allowedOnAlsawarey: e.target.checked })} />{t('allowedOnAlsawarey')}</label>
           )}
-          {/* Applicable details — only for a saved option (needs an id to attach links). */}
-          {draft.id && attrSections.length > 0 && (
-            <OptionAttributesGrid key={draft.id} optionId={draft.id} sections={attrSections} initialAttrIds={attrLinksByOption[draft.id] ?? []} />
-          )}
+          {/* Attribute applicability is managed centrally in /admin/marketplace/category-attributes
+              (single source of truth) — removed the duplicate grid here (owner decision 2026-07-09). */}
           <div className="flex gap-2 sm:col-span-2">
             <button disabled={pending} onClick={save} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{t('save')}</button>
             <button onClick={() => setDraft(null)} className="px-4 py-2 text-sm opacity-70">{t('cancel')}</button>

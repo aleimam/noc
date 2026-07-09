@@ -185,6 +185,25 @@ ${T(w - 72, 104, title, { s: 34, w: 800, fill: '#ffffff', anchor: 'end' })}`;
   return { T, dvd, glyph, phoneGlyph, whatsappGlyph, globeGlyph, estTextW, cardChrome, sealFooter, plainFooter, tableRow, compactCard };
 }
 
+/** Sample the header logo's own background (top-left corner pixel) so the poster header
+ *  bar can BE that color — the logo then sits flush on the bar with no white plate
+ *  (owner request 2026-07-09). Returns the bar fill (logo bg when opaque, else theme
+ *  navy), a title text color that contrasts with it, and the letterbox background to
+ *  pad the logo onto the bar seamlessly. */
+async function headerLogoBg(logoPath: string | null, th: PosterTheme): Promise<{ bar: string; text: string; bg: sharp.Color }> {
+  const navy = { bar: th.navy, text: '#ffffff', bg: { r: 0, g: 0, b: 0, alpha: 0 } as sharp.Color };
+  if (!logoPath) return navy;
+  try {
+    const px = await sharp(await readFile(absU(logoPath))).ensureAlpha().extract({ left: 1, top: 1, width: 1, height: 1 }).raw().toBuffer();
+    if ((px[3] ?? 0) < 200) return navy; // transparent logo → keep the navy bar showing through
+    const [r, g, b] = [px[0]!, px[1]!, px[2]!];
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return { bar: `rgb(${r},${g},${b})`, text: lum > 0.6 ? th.navy : '#ffffff', bg: { r, g, b, alpha: 1 } };
+  } catch {
+    return navy;
+  }
+}
+
 /** Load the brand logo circle-masked (no square corners) + the paint color for the badge:
  *  the logo's own background color when opaque, otherwise the theme navy. */
 async function badgeLogo(cfg: BrandCfg, th: PosterTheme): Promise<{ fill: string; logo: Buffer | null }> {
@@ -220,9 +239,10 @@ export async function renderCard(d: CardData, brand: Exclude<PosterBrand, 'unbra
     parts.push(
       `<rect x="50" y="${y}" width="${w - 100}" height="${rh}" rx="14" fill="${i % 2 ? '#ffffff' : th.tint}"/>`,
       `<rect x="${w - 76}" y="${y + rh / 2 - 6}" width="12" height="12" fill="${th.gold}" transform="rotate(45 ${w - 70} ${y + rh / 2})"/>`,
-      T(w - 102, y + (lines.length > 1 ? rh / 2 + 9 : 45), label, { s: 27, w: 700, fill: th.navy, anchor: 'end' }),
+      // attribute name: normal weight; value: bold + bigger (owner request 2026-07-09)
+      T(w - 102, y + (lines.length > 1 ? rh / 2 + 8 : 44), label, { s: 22, w: 400, fill: th.navy, anchor: 'end' }),
     );
-    lines.forEach((ln, li) => parts.push(T(w / 2 - 100, y + (lines.length > 1 ? 40 + li * 36 : 45), ln, { s: 26, w: 400 })));
+    lines.forEach((ln, li) => parts.push(T(w / 2 - 100, y + (lines.length > 1 ? 42 + li * 38 : 46), ln, { s: 31, w: 800, fill: th.ink })));
     y += rh + 12;
   }
   const badge = await badgeLogo(cfg, th);
@@ -304,14 +324,17 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
   const branded = brand !== 'unbranded';
   const parts: string[] = [];
 
-  // ── Header band ──
+  // ── Header band: the bar takes the logo's OWN background color so the logo sits flush
+  //    on it (no white plate); the title text flips light/dark to stay legible. ──
   const headY = M, headH = 130, cy = headY + headH / 2;
-  parts.push(`<rect x="${M}" y="${headY}" width="${w - 2 * M}" height="${headH}" rx="18" fill="${th.navy}"/>`);
-  const plate = { x: M + 16, y: cy - 50, w: 210, h: 100 };
   const hasLogo = branded && !!cfg.headerLogoPath;
-  parts.push(`<rect x="${plate.x}" y="${plate.y}" width="${plate.w}" height="${plate.h}" rx="12" fill="#ffffff"/>`);
+  const hb = await headerLogoBg(hasLogo ? cfg.headerLogoPath! : null, th);
+  parts.push(`<rect x="${M}" y="${headY}" width="${w - 2 * M}" height="${headH}" rx="18" fill="${hb.bar}"/>`);
+  const plate = { x: M + 16, y: cy - 50, w: 210, h: 100 };
   if (!hasLogo) {
+    // pre-upload state only: a white plate with a dashed "logo" placeholder
     parts.push(
+      `<rect x="${plate.x}" y="${plate.y}" width="${plate.w}" height="${plate.h}" rx="12" fill="#ffffff"/>`,
       `<rect x="${plate.x + 8}" y="${plate.y + 8}" width="${plate.w - 16}" height="${plate.h - 16}" rx="8" fill="none" stroke="#b9c0cc" stroke-width="2" stroke-dasharray="7 6"/>`,
       T(plate.x + plate.w / 2, cy + 7, 'الشعار', { s: 20, w: 700, fill: '#9aa3b2' }),
     );
@@ -341,10 +364,10 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
   // title on the right, up to two lines
   const tl = splitTwoLines(d.title);
   if (tl.length === 2) {
-    parts.push(T(w - M - 16, cy - 8, tl[0]!, { s: 33, w: 800, fill: '#ffffff', anchor: 'end' }));
-    parts.push(T(w - M - 16, cy + 32, tl[1]!, { s: 33, w: 800, fill: '#ffffff', anchor: 'end' }));
+    parts.push(T(w - M - 16, cy - 8, tl[0]!, { s: 33, w: 800, fill: hb.text, anchor: 'end' }));
+    parts.push(T(w - M - 16, cy + 32, tl[1]!, { s: 33, w: 800, fill: hb.text, anchor: 'end' }));
   } else {
-    parts.push(T(w - M - 16, cy + 12, tl[0]!, { s: 33, w: 800, fill: '#ffffff', anchor: 'end' }));
+    parts.push(T(w - M - 16, cy + 12, tl[0]!, { s: 33, w: 800, fill: hb.text, anchor: 'end' }));
   }
 
   // ── Big listing location map: full width, height from the map's own aspect ratio ──
@@ -424,7 +447,8 @@ ${footSvg}
     try { layers.push({ input: await sharp(absU(d.cityMap)).resize(cityBox.w, cityBox.h, { fit: 'contain', background: '#eef0f4' }).png().toBuffer(), top: cityBox.top, left: cityBox.left }); } catch { /* skip */ }
   }
   if (hasLogo && cfg.headerLogoPath) {
-    try { layers.push({ input: await sharp(absU(cfg.headerLogoPath)).resize(logoBox.w, logoBox.h, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } }).png().toBuffer(), top: logoBox.top, left: logoBox.left }); } catch { /* skip */ }
+    // letterbox the logo with its own bg color so it blends into the same-colored bar
+    try { layers.push({ input: await sharp(absU(cfg.headerLogoPath)).resize(logoBox.w, logoBox.h, { fit: 'contain', background: hb.bg }).png().toBuffer(), top: logoBox.top, left: logoBox.left }); } catch { /* skip */ }
   }
   return sharp(Buffer.from(svg)).png().composite(layers).toBuffer();
 }

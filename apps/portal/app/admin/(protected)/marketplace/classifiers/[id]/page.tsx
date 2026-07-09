@@ -26,26 +26,6 @@ export default async function ClassifierOptionsPage({ params }: { params: Promis
     : [];
   const showAlsawarey = classifier.key === 'type' || classifier.key === 'purpose';
 
-  // All active details (attributes) grouped by section + this classifier's option→attribute
-  // links, so each option's edit can show an applicability grid.
-  const [attrSectionsRaw, attrLinks] = await Promise.all([
-    prisma.attributeSection.findMany({
-      where: { isActive: true },
-      orderBy: { order: 'asc' },
-      include: { attributes: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, labelAr: true, labelEn: true } } },
-    }),
-    prisma.attributeClassifier.findMany({ where: { option: { classifierId: id } }, select: { optionId: true, attributeId: true } }),
-  ]);
-  const attrSections = attrSectionsRaw
-    .map((s) => ({
-      id: s.id,
-      name: locale === 'en' ? s.nameEn || s.nameAr : s.nameAr,
-      attributes: s.attributes.map((a) => ({ id: a.id, label: locale === 'en' ? a.labelEn || a.labelAr : a.labelAr })),
-    }))
-    .filter((s) => s.attributes.length > 0);
-  const attrLinksByOption: Record<string, string[]> = {};
-  for (const l of attrLinks) (attrLinksByOption[l.optionId] ??= []).push(l.attributeId);
-
   const data = classifier.options.map((o) => ({
     id: o.id,
     key: o.key,
@@ -63,13 +43,20 @@ export default async function ClassifierOptionsPage({ params }: { params: Promis
         <h1 className="text-2xl font-bold text-primary">{classifier.nameAr} / {classifier.nameEn}</h1>
         <a href="/admin/marketplace/classifiers" className="text-sm text-accent">← {t('classifiers')}</a>
       </div>
+      <p className="rounded-lg border border-graphite/15 bg-graphite/5 px-3 py-2 text-xs opacity-80">
+        {locale === 'en'
+          ? 'Managing which attributes apply to each option now lives in one place: '
+          : 'إدارة الحقول التي تنطبق على كل تصنيف أصبحت في مكان واحد: '}
+        <a href="/admin/marketplace/category-attributes" className="text-accent underline">
+          {locale === 'en' ? 'Category attributes' : 'حقول التصنيفات'}
+        </a>
+        .
+      </p>
       <ClassifierOptionsEditor
         initial={data}
         parentOptions={parentOptions}
         parentLabel={parentKey === 'type' ? t('classifierType') : parentKey === 'purpose' ? t('classifierPurpose') : ''}
         showAlsawarey={showAlsawarey}
-        attrSections={attrSections}
-        attrLinksByOption={attrLinksByOption}
         upsert={upsertClassifierOption.bind(null, classifier.id)}
         remove={deleteClassifierOption}
         toggleFlag={toggleClassifierOptionFlag}
