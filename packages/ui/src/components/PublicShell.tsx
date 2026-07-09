@@ -29,6 +29,8 @@ export function PublicShell({
   mobileMenuMode = 'full',
   loggedIn = false,
   accountLabel = 'حسابي',
+  accountHref = '/account',
+  partners,
 }: {
   children: ReactNode;
   active?: string;
@@ -39,12 +41,14 @@ export function PublicShell({
   mobileMenuMode?: 'full' | 'compact';
   loggedIn?: boolean; // show an account button instead of "login"
   accountLabel?: string;
+  accountHref?: string; // where the account button points (customers → /account, partners → /partner)
+  partners?: { href: string; label: string }; // optional "Partners" entry (apply / sign in)
 }) {
   const t = useTranslations('nav');
-  // Logged-in customers get an account icon + label; visitors get the login button.
+  // Logged-in customers/partners get an account icon + label; visitors get the login button.
   const AccountLink = ({ big = false }: { big?: boolean }) =>
     loggedIn ? (
-      <a href="/account" className={big ? 'mt-2 flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-4 text-center text-2xl font-bold text-navy-900' : 'flex items-center gap-1.5 rounded-md bg-gold px-3.5 py-2 text-sm font-bold text-navy-900 shadow-gold transition hover:brightness-95'}>
+      <a href={accountHref} className={big ? 'mt-2 flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-4 text-center text-2xl font-bold text-navy-900' : 'flex items-center gap-1.5 rounded-md bg-gold px-3.5 py-2 text-sm font-bold text-navy-900 shadow-gold transition hover:brightness-95'}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
         {accountLabel}
       </a>
@@ -82,6 +86,7 @@ export function PublicShell({
           </nav>
 
           <div className="flex items-center gap-2">
+            {partners && <a href={partners.href} className="hidden rounded-md px-2.5 py-2 text-sm font-semibold text-soft/85 transition-colors hover:text-gold sm:block">{partners.label}</a>}
             <div className="hidden sm:block"><LanguageSwitcher /></div>
             <ThemeToggle />
             <AccountLink />
@@ -132,6 +137,7 @@ export function PublicShell({
                 {t(n.key)}
               </a>
             ))}
+            {partners && <a href={partners.href} onClick={() => setOpen(false)} className="rounded-xl px-5 py-4 text-2xl font-bold text-soft hover:bg-white/10">{partners.label}</a>}
             <div onClick={() => setOpen(false)}><AccountLink big /></div>
           </nav>
         </div>
@@ -156,6 +162,7 @@ export function PublicShell({
             {footerPages.map((p) => (
               <a key={p.href} href={p.href} className="hover:text-navy-800">{p.label}</a>
             ))}
+            {partners && <a href={partners.href} className="font-bold text-navy-800 hover:text-gold-700">{partners.label}</a>}
           </nav>
         </div>
         <div className="border-t border-ink-100 py-4 text-center text-xs text-ink-400">{copyright || t('copyright')}</div>

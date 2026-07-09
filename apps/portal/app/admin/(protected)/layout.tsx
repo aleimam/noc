@@ -40,6 +40,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
         { href: '/admin/marketplace/listings', label: L('الأراضي والعروض', 'Lands & listings'), section: 'marketplace' },
         { href: '/admin/marketplace/offers', label: L('عروض البيع (الوارد)', 'Sell offers'), section: 'marketplace' },
         { href: '/admin/marketplace/owners', label: L('الملاك وجهات الاتصال', 'Owners & contacts'), section: 'marketplace' },
+        { href: '/admin/marketplace/partner-applications', label: L('طلبات الشراكة', 'Partner applications'), section: 'marketplace' },
         { href: '/admin/marketplace/wishlists', label: L('قوائم المفضلة', 'Wishlists'), section: 'marketplace' },
       ],
     },

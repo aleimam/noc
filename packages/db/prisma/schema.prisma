@@ -1608,3 +1608,30 @@ model AnalyticsEvent {
   @@index([site, type, ts])
   @@index([sessionId])
 }
+
+enum PartnerApplicationStatus {
+  PENDING
+  REVIEWING
+  APPROVED
+  REJECTED
+}
+
+/// A public "become a partner" application (from /partners). Staff review it in the admin
+/// and, on approval, create the Owner + partner account via the existing owners flow.
+model PartnerApplication {
+  id           String                   @id @default(cuid())
+  name         String // contact person
+  businessName String?
+  phone        String
+  email        String?
+  businessType String? // broker / developer / individual / company …
+  areas        String? // areas or categories of interest (free text)
+  message      String?                  @db.Text
+  status       PartnerApplicationStatus @default(PENDING)
+  reviewNote   String?                  @db.Text
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime                 @default(now())
+
+  @@index([status, createdAt])
+}

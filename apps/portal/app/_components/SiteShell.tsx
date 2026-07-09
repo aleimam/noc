@@ -24,9 +24,16 @@ export async function SiteShell({ active, children }: { active?: string; childre
   if (active && (MODULE_KEYS as readonly string[]).includes(active) && vis[active as ModuleKey] === false) notFound();
   const hidden = MODULE_KEYS.filter((k) => vis[k] === false);
   const footerPages = pages.map((p) => ({ href: `/p/${p.slug}`, label: locale === 'en' ? p.titleEn || p.titleAr : p.titleAr }));
-  const loggedIn = session?.user?.type === 'CUSTOMER';
+  // Customers AND partners get an account button; partners point at their portal. Partners
+  // browse the full site like customers, with extra powers in their own section.
+  const type = session?.user?.type;
+  const isPartner = type === 'PARTNER';
+  const loggedIn = type === 'CUSTOMER' || isPartner;
+  const accountHref = isPartner ? '/partner' : '/account';
+  const accountLabel = isPartner ? (locale === 'en' ? 'Partner portal' : 'بوابة الشركاء') : locale === 'en' ? 'My account' : 'حسابي';
+  const partners = { href: '/partners', label: locale === 'en' ? 'Partners' : 'الشركاء' };
   return (
-    <PublicShell active={active} hiddenKeys={hidden} footerPages={footerPages} copyright={locale === 'en' ? site.copyrightEn : site.copyright} tagline={locale === 'en' ? site.sloganEn : site.slogan} mobileMenuMode={site.mobileMenuMode} loggedIn={loggedIn} accountLabel={locale === 'en' ? 'My account' : 'حسابي'}>
+    <PublicShell active={active} hiddenKeys={hidden} footerPages={footerPages} copyright={locale === 'en' ? site.copyrightEn : site.copyright} tagline={locale === 'en' ? site.sloganEn : site.slogan} mobileMenuMode={site.mobileMenuMode} loggedIn={loggedIn} accountLabel={accountLabel} accountHref={accountHref} partners={partners}>
       {children}
     </PublicShell>
   );
