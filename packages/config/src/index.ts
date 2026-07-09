@@ -204,10 +204,12 @@ export function formatDetailValue(opts: {
   const locale = opts.locale ?? 'ar';
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);
   switch (type) {
+    // A money attribute of exactly 0 means the fee is settled → show "مدفوع"/"Paid"
+    // (no amount, no currency) everywhere: both sites, cards, and the poster.
     case 'MONEY':
-      return number != null ? formatMoneyEgp(number, locale) : null;
+      return number != null ? (number === 0 ? L('مدفوع', 'Paid') : formatMoneyEgp(number, locale)) : null;
     case 'MONEY_THOUSANDS':
-      return number != null ? formatMoneyThousands(number, locale) : null;
+      return number != null ? (number === 0 ? L('مدفوع', 'Paid') : formatMoneyThousands(number, locale)) : null;
     case 'AREA_ORIGINAL':
       return number != null ? formatArea(number, locale) : null;
     case 'AREA_ALLOCATED':
