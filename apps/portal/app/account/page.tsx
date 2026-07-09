@@ -3,12 +3,14 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { partnershipsEnabled } from '../../lib/modules';
 
 export const dynamic = 'force-dynamic';
 
 export default async function CustomerHome() {
   const session = await auth();
   if (session?.user?.type !== 'CUSTOMER') redirect('/account/login');
+  const partnershipsOn = await partnershipsEnabled();
 
   const dbUser = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -48,6 +50,7 @@ export default async function CustomerHome() {
       </div>
 
       {/* Plot consolidation & partnerships opt-in — aimed at small-plot owners. */}
+      {partnershipsOn && (
       <Link
         href="/account/listings/new?partnership=1"
         className="block rounded-2xl border border-gold-300/60 bg-gold/10 p-5 transition-shadow hover:shadow-md"
@@ -58,6 +61,7 @@ export default async function CustomerHome() {
           {tm('partnershipCardCta')}
         </span>
       </Link>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         {cards.map((c) => (

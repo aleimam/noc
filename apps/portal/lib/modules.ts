@@ -2,8 +2,10 @@
 // (always shows its catalogue/sell/contact) — this is portal-only.
 import { prisma } from '@noc/db';
 
-// Keys must match the public-nav keys in PublicShell's NAV.
-export const MODULE_KEYS = ['market', 'explore', 'rationing', 'calculator', 'news', 'guide', 'priceIndex'] as const;
+// Nav keys must match the public-nav keys in PublicShell's NAV. `partnerships` is a
+// feature flag (not a nav item): when off, the plot-consolidation/partnership UI is hidden
+// everywhere (market filter/badge/section, account opt-in, and the listing form).
+export const MODULE_KEYS = ['market', 'explore', 'rationing', 'calculator', 'news', 'guide', 'priceIndex', 'partnerships'] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 export const MODULE_LABELS: Record<ModuleKey, string> = {
@@ -14,7 +16,13 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   news: 'الأخبار',
   guide: 'دليل البناء',
   priceIndex: 'مؤشر الأسعار',
+  partnerships: 'تجميع الملاك والشراكات',
 };
+
+/** Is the partnerships feature enabled? (default on) */
+export async function partnershipsEnabled(): Promise<boolean> {
+  return (await getModuleVisibility()).partnerships !== false;
+}
 
 const KEY = 'newobour.modules';
 

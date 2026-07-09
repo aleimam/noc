@@ -9,6 +9,7 @@ import { MarketCardActions } from '../_components/MarketCardActions';
 import { CompareBar } from '../_components/CompareBar';
 import { wishedSet } from '../../lib/wishlist';
 import { pageMeta } from '../../lib/seo';
+import { partnershipsEnabled } from '../../lib/modules';
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
@@ -30,6 +31,7 @@ export default async function MarketPage({
   const t = await getTranslations('mp');
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const get = (k: string) => (typeof sp[k] === 'string' ? (sp[k] as string) : '');
+  const partnershipsOn = await partnershipsEnabled();
 
   const typeCls = await prisma.classifier.findUnique({
     where: { key: 'type' },
@@ -50,7 +52,7 @@ export default async function MarketPage({
   const and: Prisma.ListingWhereInput[] = [{ status: 'PUBLISHED' }];
   if (selectedType) and.push({ typeOptionId: selectedType.id });
   // Plot consolidation & partnerships: "partnerships only" toggle (persistent URL param).
-  if (get('partnership') === '1') and.push({ isPartnership: true });
+  if (partnershipsOn && get('partnership') === '1') and.push({ isPartnership: true });
   for (const a of filterAttrs) {
     if (a.type === 'NUMBER') {
       const numCond: Prisma.DecimalNullableFilter = {};
@@ -94,6 +96,7 @@ export default async function MarketPage({
       <h1 className="text-2xl font-extrabold text-navy-800">{t('title')}</h1>
 
       <MarketFilters
+        partnershipsEnabled={partnershipsOn}
         types={types.map((x) => ({ key: x.key, nameAr: x.nameAr, nameEn: x.nameEn }))}
         filterAttrs={filterAttrs.map((a) => ({
           id: a.id, key: a.key, labelAr: a.labelAr, labelEn: a.labelEn, type: a.type, unit: a.unit,
@@ -115,7 +118,7 @@ export default async function MarketPage({
             price={l.price != null ? Number(l.price).toLocaleString('en-US') : null}
             currency={currency(locale)}
             badge={<MarketCardActions listingId={l.id} initialSaved={wished.has(l.id)} compareLabel={t('compare')} />}
-            meta={l.isPartnership ? (
+            meta={l.isPartnership && partnershipsOn ? (
               <span className="inline-block rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-bold text-navy-800">🤝 {t('partnershipBadge')}</span>
             ) : undefined}
           />

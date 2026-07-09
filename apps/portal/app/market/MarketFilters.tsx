@@ -13,11 +13,13 @@ export function MarketFilters({
   filterAttrs,
   typeKey,
   locale,
+  partnershipsEnabled = true,
 }: {
   types: PType[];
   filterAttrs: FAttr[];
   typeKey: string;
   locale: 'ar' | 'en';
+  partnershipsEnabled?: boolean;
 }) {
   const t = useTranslations('mp');
   const router = useRouter();
@@ -47,13 +49,15 @@ export function MarketFilters({
           <option value="">{t('allTypes')}</option>
           {types.map((x) => (<option key={x.key} value={x.key}>{L(x.nameAr, x.nameEn)}</option>))}
         </select>
-        <button
-          type="button"
-          onClick={() => pushParams((p) => (p.get('partnership') === '1' ? p.delete('partnership') : p.set('partnership', '1')))}
-          className={`rounded-full px-4 py-2 text-sm font-bold ${partnershipOn ? 'bg-primary text-soft' : 'border border-gold-300/60 bg-gold/10 hover:bg-gold/20'}`}
-        >
-          🤝 {t('partnershipOnly')}
-        </button>
+        {partnershipsEnabled && (
+          <button
+            type="button"
+            onClick={() => pushParams((p) => (p.get('partnership') === '1' ? p.delete('partnership') : p.set('partnership', '1')))}
+            className={`rounded-full px-4 py-2 text-sm font-bold ${partnershipOn ? 'bg-primary text-soft' : 'border border-gold-300/60 bg-gold/10 hover:bg-gold/20'}`}
+          >
+            🤝 {t('partnershipOnly')}
+          </button>
+        )}
         {sp.toString() && <a href="/market" className="text-sm text-accent">{t('reset')}</a>}
       </div>
 

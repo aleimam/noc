@@ -74,6 +74,7 @@ export function ListingForm({
   nbMasterplans = {},
   locationAnnotation = null,
   savedNeighborhoodId = null,
+  partnershipsEnabled = true,
 }: {
   classifiers: Classifier[];
   sections: Section[];
@@ -82,6 +83,7 @@ export function ListingForm({
   locale: 'ar' | 'en';
   staffMode?: boolean;
   partnerMode?: boolean; // owner fixed to the partner's own record; staff-only fields hidden
+  partnershipsEnabled?: boolean; // when false the partnership opt-in block is hidden
   owners?: OwnerOpt[];
   standardAreas?: number[];
   buildingConditions?: { id: string; unitLabelAr: string; unitLabelEn: string }[];
@@ -574,6 +576,7 @@ export function ListingForm({
         <label className="block text-sm">{t('priceNote')}<input value={priceNote} onChange={(e) => setPriceNote(e.target.value)} className={inp} /></label>
 
         {/* ── Plot consolidation & partnerships (تجميع الملاك والشراكات) opt-in ── */}
+        {partnershipsEnabled && (
         <div className="space-y-3 rounded-lg border border-gold-300/50 bg-gold/10 p-4">
           <div className="text-sm font-bold text-primary">🤝 {t('partnershipQ')}</div>
           <p className="text-xs opacity-70">{t('partnershipHint')}</p>
@@ -602,6 +605,7 @@ export function ListingForm({
             </>
           )}
         </div>
+        )}
 
         {/* Owner — partner listings are always owned by the partner's own Owner record. */}
         {partnerMode ? null : staffMode ? (

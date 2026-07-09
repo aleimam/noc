@@ -1,5 +1,6 @@
 import { prisma } from '@noc/db';
 import { getStandardAreas } from '../../../lib/marketplace';
+import { partnershipsEnabled } from '../../../lib/modules';
 
 export type CatalogAttrType =
   | 'TEXT'
@@ -107,6 +108,7 @@ export async function loadCatalog() {
     attributes,
     standardAreas,
     buildingConditions: conditionRows,
+    partnershipsOn: await partnershipsEnabled(),
   };
 }
 

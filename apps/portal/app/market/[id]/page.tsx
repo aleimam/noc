@@ -10,6 +10,7 @@ import { getStandardAreas } from '../../../lib/marketplace';
 import { advantagesForNeighborhood } from '../../../lib/advantages';
 import { listListingImages } from '../../../lib/poster/generate';
 import { trackListingView } from '../../../lib/views';
+import { partnershipsEnabled } from '../../../lib/modules';
 import { pageMeta, breadcrumbLd, ldJson, abs } from '../../../lib/seo';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -104,6 +105,8 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     arr.push(r.path);
     photosByAttr.set(r.attributeId, arr);
   }
+
+  const partnershipsOn = await partnershipsEnabled();
 
   // Gallery images. When the listing has no uploaded photos (e.g. land plots), fall back to
   // its annotated location map so the gallery is never an empty gray box.
@@ -287,7 +290,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       </div>
 
       {/* Plot consolidation & partnerships: the owner opted this plot in. */}
-      {listing.isPartnership && (
+      {listing.isPartnership && partnershipsOn && (
         <div className="rounded-lg border border-gold-300/50 bg-gold/10 p-4">
           <div className="font-bold text-primary">🤝 {t('partnershipTitle')}</div>
           <p className="mt-1 text-sm opacity-80">

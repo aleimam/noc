@@ -27,6 +27,12 @@ export default async function Home() {
     : [];
   const cover = new Map<string, string>();
   for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
+  // Fall back to each listing's annotated location map when it has no uploaded photo.
+  const missingCover = ids.filter((id) => !cover.has(id));
+  if (missingCover.length) {
+    const maps = await prisma.areaMap.findMany({ where: { level: 'listing', areaId: { in: missingCover }, kind: 'location' }, select: { areaId: true, cleanPath: true } });
+    for (const m of maps) if (m.areaId && m.cleanPath && !cover.has(m.areaId)) cover.set(m.areaId, m.cleanPath);
+  }
 
   const vis = await getModuleVisibility();
   const allServices = [
@@ -45,16 +51,16 @@ export default async function Home() {
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 text-soft">
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
-        <div className="relative mx-auto max-w-[1000px] px-6 py-20 text-center sm:py-24">
+        <div className="relative mx-auto max-w-[1000px] px-6 py-10 text-center sm:py-12">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo" alt="" className="mx-auto mb-6 h-20 w-auto" />
-          <h1 className="text-4xl font-black tracking-tight sm:text-5xl">{tn('brand')}</h1>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-soft/80">
+          <img src="/brand/logo" alt="" className="mx-auto mb-3 h-12 w-auto sm:h-14" />
+          <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{tn('brand')}</h1>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-soft/80 sm:text-base">
             {L('بوابتك الرسمية لخدمات وعقارات مدينة العبور الجديدة', 'Your official portal for New Obour City services & real estate')}
           </p>
           {/* Real search: submitting navigates to /rationing?q=… and shows results there.
               `required` means it won't leave the homepage until the user types a query. */}
-          <form action="/rationing" method="get" className="mx-auto mt-9 flex max-w-xl items-center gap-2 rounded-xl bg-white p-2 shadow-xl">
+          <form action="/rationing" method="get" className="mx-auto mt-5 flex max-w-xl items-center gap-2 rounded-xl bg-white p-2 shadow-xl">
             <span className="ps-2 text-ink-400" aria-hidden>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
             </span>
@@ -70,28 +76,11 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Services */}
-      <section className="mx-auto max-w-[1120px] px-6 py-16">
-        <h2 className="mb-1 text-2xl font-extrabold text-navy-800">{L('الخدمات', 'Services')}</h2>
-        <p className="mb-6 text-sm text-ink-500">{L('كل ما تحتاجه عن مدينتك في مكان واحد', 'Everything about your city in one place')}</p>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((s) => (
-            <a key={s.href} href={s.href} className="group rounded-lg border border-ink-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-gold hover:shadow-lg">
-              <span className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-navy-50 text-navy-700 transition-colors group-hover:bg-gold-100 group-hover:text-gold-700">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={s.icon} /></svg>
-              </span>
-              <div className="text-lg font-bold text-navy-800">{s.title}</div>
-              <div className="mt-1 text-sm text-ink-500">{s.desc}</div>
-            </a>
-          ))}
-        </div>
-      </section>
-
-      {/* Latest offers */}
+      {/* Recent listings — surfaced right below the hero */}
       {listings.length > 0 && (
-        <section className="mx-auto max-w-[1120px] px-6 pb-20">
-          <div className="mb-6 flex items-end justify-between">
-            <h2 className="text-2xl font-extrabold text-navy-800">{L('أحدث العروض', 'Latest offers')}</h2>
+        <section className="mx-auto max-w-[1120px] px-6 pt-10 pb-2">
+          <div className="mb-5 flex items-end justify-between">
+            <h2 className="text-2xl font-extrabold text-navy-800">{L('أحدث الإعلانات', 'Recent listings')}</h2>
             <a href="/market" className="text-sm font-bold text-accent hover:underline">{t('browse')} →</a>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -109,6 +98,24 @@ export default async function Home() {
           </div>
         </section>
       )}
+
+      {/* Services */}
+      <section className="mx-auto max-w-[1120px] px-6 py-14">
+        <h2 className="mb-1 text-2xl font-extrabold text-navy-800">{L('الخدمات', 'Services')}</h2>
+        <p className="mb-6 text-sm text-ink-500">{L('كل ما تحتاجه عن مدينتك في مكان واحد', 'Everything about your city in one place')}</p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {services.map((s) => (
+            <a key={s.href} href={s.href} className="group rounded-lg border border-ink-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-gold hover:shadow-lg">
+              <span className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-navy-50 text-navy-700 transition-colors group-hover:bg-gold-100 group-hover:text-gold-700">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={s.icon} /></svg>
+              </span>
+              <div className="text-lg font-bold text-navy-800">{s.title}</div>
+              <div className="mt-1 text-sm text-ink-500">{s.desc}</div>
+            </a>
+          ))}
+        </div>
+      </section>
+
     </SiteShell>
   );
 }
