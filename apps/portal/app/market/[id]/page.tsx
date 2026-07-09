@@ -27,8 +27,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   });
   const parts = [
     l.typeOption ? (locale === 'ar' ? l.typeOption.nameAr : l.typeOption.nameEn) : '',
-    l.area != null ? `${String(l.area)} ${locale === 'ar' ? 'م²' : 'm²'}` : '',
-    l.price != null ? `${String(l.price)} ${locale === 'ar' ? 'ج.م' : 'EGP'}` : '',
+    l.area != null ? `${Number(l.area).toLocaleString('en-US')} ${locale === 'ar' ? 'م²' : 'm²'}` : '',
+    l.price != null ? `${Number(l.price).toLocaleString('en-US')} ${locale === 'ar' ? 'ج.م' : 'EGP'}` : '',
   ].filter(Boolean);
   const desc = ((l.description ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || parts.join(' · ')).slice(0, 160);
   return pageMeta({
@@ -103,6 +103,14 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     const arr = photosByAttr.get(r.attributeId) ?? [];
     arr.push(r.path);
     photosByAttr.set(r.attributeId, arr);
+  }
+
+  // Gallery images. When the listing has no uploaded photos (e.g. land plots), fall back to
+  // its annotated location map so the gallery is never an empty gray box.
+  let galleryPaths = photos.map((p) => p.path);
+  if (galleryPaths.length === 0) {
+    const locMap = await prisma.areaMap.findFirst({ where: { level: 'listing', areaId: id, kind: 'location' }, select: { cleanPath: true } });
+    if (locMap?.cleanPath) galleryPaths = [locMap.cleanPath];
   }
 
   const attrIds = [...new Set(listing.values.map((v) => v.attributeId))];
@@ -227,7 +235,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     '@context': 'https://schema.org',
     '@type': ['Product', 'RealEstateListing'],
     name: listing.title,
-    image: photos.map((p) => abs(p.path)),
+    image: galleryPaths.map((p) => abs(p)),
     ...(plainDesc ? { description: plainDesc.slice(0, 500) } : {}),
     category: 'Real Estate Land',
     url: abs(canonicalPath),
@@ -245,10 +253,10 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6 pb-24">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([listingLd, crumbsLd]) }} />
-      <TrackView item={{ id: listing.id, title: listing.title, cover: photos[0]?.path ?? null, price: listing.price != null ? String(listing.price) : null, href: `/market/${listing.id}` }} />
+      <TrackView item={{ id: listing.id, title: listing.title, cover: galleryPaths[0] ?? null, price: listing.price != null ? String(listing.price) : null, href: `/market/${listing.id}` }} />
       <div className="flex justify-end"><MarketCardActions listingId={listing.id} initialSaved={saved} compareLabel={t('compare')} /></div>
       <a href="/market" className="text-sm text-accent">← {t('title')}</a>
-      <PhotoGallery photos={photos.map((p) => p.path)} />
+      <PhotoGallery photos={galleryPaths} />
 
       <div>
         <div className="flex flex-wrap gap-1">
@@ -259,12 +267,12 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         <h1 className="mt-2 text-2xl font-bold text-primary">{listing.title}</h1>
         {listing.area != null && (
           <div className="mt-1 text-lg font-semibold text-primary">
-            {locale === 'ar' ? 'المساحة الفعلية' : 'Actual area'}: {String(listing.area)} <span className="text-sm font-normal">{locale === 'ar' ? 'م²' : 'm²'}</span>
+            {locale === 'ar' ? 'المساحة الفعلية' : 'Actual area'}: {Number(listing.area).toLocaleString('en-US')} <span className="text-sm font-normal">{locale === 'ar' ? 'م²' : 'm²'}</span>
           </div>
         )}
         {listing.price != null && (
           <div className="mt-1 text-xl font-bold text-primary">
-            {String(listing.price)} <span className="text-sm font-normal">{currency(locale)}{perLabel ? ` / ${perLabel}` : ''}</span>
+            {Number(listing.price).toLocaleString('en-US')} <span className="text-sm font-normal">{currency(locale)}{perLabel ? ` / ${perLabel}` : ''}</span>
             {listing.priceNegotiable && (
               <span className="ms-2 rounded bg-gold/20 px-2 py-0.5 text-xs font-normal text-primary">{locale === 'ar' ? 'قابل للتفاوض' : 'Negotiable'}</span>
             )}
@@ -364,7 +372,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
           <h2 className="text-lg font-bold text-navy-800 dark:text-soft">{t('similarListings')}</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {similar.map((s) => (
-              <ListingCard key={s.id} href={`/market/${s.id}`} cover={simCovers.get(s.id) ?? null} title={s.title} subtitle={L(s.typeOption?.nameAr ?? '', s.typeOption?.nameEn ?? '')} price={s.price != null ? String(s.price) : null} currency={currency(locale)} />
+              <ListingCard key={s.id} href={`/market/${s.id}`} cover={simCovers.get(s.id) ?? null} title={s.title} subtitle={L(s.typeOption?.nameAr ?? '', s.typeOption?.nameEn ?? '')} price={s.price != null ? Number(s.price).toLocaleString('en-US') : null} currency={currency(locale)} />
             ))}
           </div>
         </section>

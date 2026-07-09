@@ -54,7 +54,7 @@ export default async function OwnerProfile({ params }: { params: Promise<{ id: s
                 cover={cover.get(l.id) ?? null}
                 title={l.title}
                 subtitle={L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
-                price={l.price != null ? String(l.price) : null}
+                price={l.price != null ? Number(l.price).toLocaleString('en-US') : null}
                 currency={currency(locale)}
               />
             ))}
