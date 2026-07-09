@@ -165,8 +165,8 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
 
               {!sold && (
                 <div className="mt-4">
-                  <BuyButton listingId={land.id} waText={waText} whatsapp={store.contact.whatsapp} label={L('تواصل معنا بخصوص هذه الأرض', 'Contact us about this land')} sentLabel={L('تم الإرسال ✓', 'Sent ✓')} />
-                  <p className="mt-2 text-center text-xs text-ink-500">{L('سيتم تحويلك إلى واتساب لإتمام الطلب', 'You will be taken to WhatsApp to continue')}</p>
+                  <BuyButton listingId={land.id} waText={waText} whatsapp={store.contact.whatsapp} label={L('تواصل معنا بخصوص هذه الأرض', 'Contact us about this land')} labelShort={L('تواصل معنا', 'Contact us')} sentLabel={L('تم الإرسال ✓', 'Sent ✓')} />
+                  <p className="mt-2 text-center text-xs text-ink-500">{L('سيتم تحويلك إلى واتساب للتحدث معنا', 'You will be taken to WhatsApp to talk to us')}</p>
                 </div>
               )}
 
@@ -178,22 +178,23 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
           </aside>
         </div>
 
-        {/* Owner details — staff only. Full-width band; fields size to their content so long
-            values (names) stay on one line (uneven columns via flex-wrap). Type removed;
-            the 2nd phone is hidden entirely when the owner has only one number. */}
+        {/* Owner details — staff only. Compact single-row band: the title sits inline with
+            the fields (which size to their content). Seller + Type dropped; the 2nd phone is
+            hidden when the owner has only one number. */}
         {owner && (
-          <section className="mt-6 rounded-2xl border-2 border-amber-400 bg-amber-50 p-5 text-navy-800">
-            <div className="mb-3 flex items-center gap-2 text-sm font-bold text-amber-800">🔒 {L('بيانات المالك (للمشرفين فقط)', 'Owner details (staff only)')}</div>
-            <dl className="flex flex-wrap gap-x-10 gap-y-3 text-sm">
-              <div><dt className="text-xs text-ink-500">{L('المالك', 'Owner')}</dt><dd className="whitespace-nowrap font-semibold">{owner.ownerName ?? '—'}</dd></div>
-              <div><dt className="text-xs text-ink-500">{L('هاتف ١', 'Phone 1')}</dt><dd className="whitespace-nowrap"><OwnerPhone num={owner.phone1} wa={owner.phone1Whatsapp} /></dd></div>
-              {owner.phone2 && (
-                <div><dt className="text-xs text-ink-500">{L('هاتف ٢', 'Phone 2')}</dt><dd className="whitespace-nowrap"><OwnerPhone num={owner.phone2} wa={owner.phone2Whatsapp} /></dd></div>
-              )}
-              <div><dt className="text-xs text-ink-500">{L('البائع', 'Seller')}</dt><dd className="whitespace-nowrap font-semibold">{owner.sellerName ?? '—'}</dd></div>
-              <div><dt className="text-xs text-ink-500">{L('أضافه', 'Added by')}</dt><dd className="whitespace-nowrap font-semibold">{owner.createdByName ?? '—'}</dd></div>
-            </dl>
-            {owner.details && <p className="mt-3 border-t border-amber-200 pt-3 text-sm text-navy-700">{owner.details}</p>}
+          <section className="mt-6 rounded-2xl border-2 border-amber-400 bg-amber-50 px-5 py-3 text-navy-800">
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
+              <span className="flex items-center gap-1.5 whitespace-nowrap font-bold text-amber-800">🔒 {L('بيانات المالك', 'Owner details')}</span>
+              <dl className="flex flex-wrap items-center gap-x-8 gap-y-2">
+                <div className="flex items-baseline gap-1.5"><dt className="text-xs text-ink-500">{L('المالك', 'Owner')}</dt><dd className="whitespace-nowrap font-semibold">{owner.ownerName ?? '—'}</dd></div>
+                <div className="flex items-center gap-1.5"><dt className="text-xs text-ink-500">{L('هاتف ١', 'Phone 1')}</dt><dd className="whitespace-nowrap"><OwnerPhone num={owner.phone1} wa={owner.phone1Whatsapp} /></dd></div>
+                {owner.phone2 && (
+                  <div className="flex items-center gap-1.5"><dt className="text-xs text-ink-500">{L('هاتف ٢', 'Phone 2')}</dt><dd className="whitespace-nowrap"><OwnerPhone num={owner.phone2} wa={owner.phone2Whatsapp} /></dd></div>
+                )}
+                <div className="flex items-baseline gap-1.5"><dt className="text-xs text-ink-500">{L('أضافه', 'Added by')}</dt><dd className="whitespace-nowrap font-semibold">{owner.createdByName ?? '—'}</dd></div>
+              </dl>
+            </div>
+            {owner.details && <p className="mt-2 border-t border-amber-200 pt-2 text-sm text-navy-700">{owner.details}</p>}
           </section>
         )}
 
@@ -297,7 +298,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
         <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-ink-200 bg-white p-3 shadow-lg lg:hidden">
           <div className="min-w-0 flex-1 truncate font-num text-lg font-black text-navy-800">{priceShort}</div>
           <div className="w-40 flex-none">
-            <BuyButton listingId={land.id} waText={waText} whatsapp={store.contact.whatsapp} label={L('تواصل معنا بخصوص هذه الأرض', 'Contact us about this land')} sentLabel={L('تم الإرسال ✓', 'Sent ✓')} />
+            <BuyButton listingId={land.id} waText={waText} whatsapp={store.contact.whatsapp} label={L('تواصل معنا', 'Contact us')} sentLabel={L('تم الإرسال ✓', 'Sent ✓')} />
           </div>
         </div>
       )}
