@@ -22,6 +22,24 @@ export const dynamic = 'force-dynamic';
 const fmt = (n: number) => n.toLocaleString('en');
 const BASE = (process.env.BROKERAGE_URL || 'https://alsawarey.com').replace(/\/$/, '');
 
+// Egyptian local number → wa.me international form (0100… → 20100…).
+const waPhone = (p: string) => p.replace(/\D/g, '').replace(/^0/, '20');
+
+/** Owner phone in the staff card: the number on desktop, plus tap-to-call and (when the
+ *  line has WhatsApp) tap-to-WhatsApp icons. On mobile only the icons show. */
+function OwnerPhone({ num, wa }: { num: string | null; wa: boolean }) {
+  if (!num) return <>—</>;
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="hidden font-num sm:inline" dir="ltr">{num}</span>
+      <a href={`tel:${num}`} aria-label="اتصال" title="اتصال" className="inline-grid h-8 w-8 place-items-center rounded-full bg-navy-100 text-navy-700 hover:bg-navy-200">📞</a>
+      {wa && (
+        <a href={`https://wa.me/${waPhone(num)}`} target="_blank" rel="noopener noreferrer" aria-label="واتساب" title="واتساب" className="inline-grid h-8 w-8 place-items-center rounded-full bg-success/15 text-success hover:bg-success/25">💬</a>
+      )}
+    </span>
+  );
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const locale = (await getLocale()) as 'ar' | 'en';
@@ -158,24 +176,23 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
                 <ShareButtons url={listingUrl} title={land.title} whatsapp={store.contact.whatsapp} />
               </div>
             </div>
+
+            {owner && (
+              <div className="rounded-2xl border-2 border-amber-400 bg-amber-50 p-5 text-navy-800">
+                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-800">🔒 {L('بيانات المالك (للمشرفين فقط)', 'Owner details (staff only)')}</div>
+                <dl className="space-y-1.5 text-sm">
+                  <div className="flex items-center justify-between gap-3"><dt className="text-ink-500">{L('المالك', 'Owner')}</dt><dd className="font-medium">{owner.ownerName ?? '—'}</dd></div>
+                  <div className="flex items-center justify-between gap-3"><dt className="text-ink-500">{L('النوع', 'Type')}</dt><dd className="font-medium">{owner.ownerType ? ownerTypeLabel[owner.ownerType] ?? owner.ownerType : '—'}</dd></div>
+                  <div className="flex items-center justify-between gap-3"><dt className="text-ink-500">{L('هاتف ١', 'Phone 1')}</dt><dd><OwnerPhone num={owner.phone1} wa={owner.phone1Whatsapp} /></dd></div>
+                  <div className="flex items-center justify-between gap-3"><dt className="text-ink-500">{L('هاتف ٢', 'Phone 2')}</dt><dd><OwnerPhone num={owner.phone2} wa={owner.phone2Whatsapp} /></dd></div>
+                  <div className="flex items-center justify-between gap-3"><dt className="text-ink-500">{L('البائع', 'Seller')}</dt><dd className="font-medium">{owner.sellerName ?? '—'}</dd></div>
+                  <div className="flex items-center justify-between gap-3"><dt className="text-ink-500">{L('أضافه', 'Added by')}</dt><dd className="font-medium">{owner.createdByName ?? '—'}</dd></div>
+                </dl>
+                {owner.details && <p className="mt-2 border-t border-amber-200 pt-2 text-sm text-navy-700">{owner.details}</p>}
+              </div>
+            )}
           </aside>
         </div>
-
-        {/* Owner details — staff only. Full-width horizontal band (label over value in a grid). */}
-        {owner && (
-          <section className="mt-6 rounded-2xl border-2 border-amber-400 bg-amber-50 p-5 text-navy-800">
-            <div className="mb-3 flex items-center gap-2 text-sm font-bold text-amber-800">🔒 {L('بيانات المالك (للمشرفين فقط)', 'Owner details (staff only)')}</div>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
-              <div><dt className="text-xs text-ink-500">{L('المالك', 'Owner')}</dt><dd className="font-semibold">{owner.ownerName ?? '—'}</dd></div>
-              <div><dt className="text-xs text-ink-500">{L('النوع', 'Type')}</dt><dd className="font-semibold">{owner.ownerType ? ownerTypeLabel[owner.ownerType] ?? owner.ownerType : '—'}</dd></div>
-              <div><dt className="text-xs text-ink-500">{L('هاتف ١', 'Phone 1')}</dt><dd className="font-num font-semibold" dir="ltr">{owner.phone1 ? `${owner.phone1}${owner.phone1Whatsapp ? ' (WA)' : ''}` : '—'}</dd></div>
-              <div><dt className="text-xs text-ink-500">{L('هاتف ٢', 'Phone 2')}</dt><dd className="font-num font-semibold" dir="ltr">{owner.phone2 ? `${owner.phone2}${owner.phone2Whatsapp ? ' (WA)' : ''}` : '—'}</dd></div>
-              <div><dt className="text-xs text-ink-500">{L('البائع', 'Seller')}</dt><dd className="font-semibold">{owner.sellerName ?? '—'}</dd></div>
-              <div><dt className="text-xs text-ink-500">{L('أضافه', 'Added by')}</dt><dd className="font-semibold">{owner.createdByName ?? '—'}</dd></div>
-            </dl>
-            {owner.details && <p className="mt-3 border-t border-amber-200 pt-3 text-sm text-navy-700">{owner.details}</p>}
-          </section>
-        )}
 
         {land.locationMap && (
           <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
