@@ -56,11 +56,16 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
     );
   }
 
+  // Number of applicants sharing the same original plot (for the plot link's CTA).
+  const plotCount = sheet.plotFullRef
+    ? await prisma.rationingSheet.count({ where: { plotFullRef: sheet.plotFullRef } })
+    : 0;
+
   // Public fields only — remarks + sourceFile are internal and never rendered here.
+  // "Attendance Day" (يوم الحضور) intentionally removed from the public detail (owner request).
   const facts: { label: string; value: string }[] = [
     { label: t('colOwner'), value: sheet.originalOwner ?? '—' },
     { label: t('colCity'), value: sheet.city?.name ?? '—' },
-    { label: t('attendanceDay'), value: sheet.attendanceDay ?? '—' },
     { label: t('attendanceDate'), value: fmtDate(sheet.attendanceDate, locale) },
     { label: t('colListDate'), value: fmtDate(sheet.listDate, locale) },
     { label: t('declarationRequired'), value: sheet.declarationRequired ? t('yes') : t('no') },
@@ -89,6 +94,23 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
           </div>
 
           <div className="p-5">
+            {/* Original plot — emphasized + clickable → the plot page with all its applicants. */}
+            {sheet.plotFullRef && (
+              <Link
+                href={`/rationing/plot?ref=${encodeURIComponent(sheet.plotFullRef)}`}
+                className="mb-4 flex items-center justify-between gap-3 rounded-xl border-2 border-gold bg-gold/10 p-4 transition hover:bg-gold/20"
+              >
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-gold-700">{locale === 'ar' ? '📍 القطعة الأصلية' : '📍 Original plot'}</div>
+                  <div className="mt-0.5 truncate font-num text-xl font-extrabold text-navy-800">{sheet.plotFullRef}</div>
+                  {sheet.originalOwner && <div className="truncate text-sm text-ink-500">{t('colOwner')}: {sheet.originalOwner}</div>}
+                </div>
+                <span className="flex-none whitespace-nowrap text-sm font-bold text-gold-700">
+                  {locale === 'ar' ? `كل المتقدمين (${plotCount}) ←` : `All ${plotCount} applicants ←`}
+                </span>
+              </Link>
+            )}
+
             {otherPeople.length > 0 && (
               <div className="mb-4 rounded-xl bg-navy-50 p-3.5">
                 <div className="text-sm font-semibold text-navy-700">{t('namesOnRecord')}</div>
