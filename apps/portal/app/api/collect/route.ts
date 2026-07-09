@@ -5,11 +5,14 @@ import { auth } from '@noc/auth';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** Best-effort client IP behind Nginx/Cloudflare. */
+/** Best-effort client IP behind Nginx/Cloudflare. Prefer X-Real-IP: nginx sets it to the real
+ *  connection IP (Cloudflare-aware via real_ip_header CF-Connecting-IP) and overwrites any
+ *  client-supplied value, so it can't be spoofed. Fall back to the first X-Forwarded-For hop. */
 function clientIp(req: NextRequest): string | null {
+  const real = req.headers.get('x-real-ip');
+  if (real) return real.trim() || null;
   const xff = req.headers.get('x-forwarded-for');
-  if (xff) return xff.split(',')[0]!.trim() || null;
-  return req.headers.get('x-real-ip');
+  return xff ? xff.split(',')[0]!.trim() || null : null;
 }
 
 /** First-party analytics collector for New Obour. Always returns 204 — the beacon must

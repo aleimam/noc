@@ -20,9 +20,11 @@ export function rateLimit(key: string, limit: number, windowMs: number): boolean
   return true;
 }
 
-/** Best-effort client IP behind Apache/Cloudflare. */
+/** Best-effort client IP behind Nginx/Cloudflare. Prefer X-Real-IP (nginx-set, non-spoofable,
+ *  Cloudflare-aware) over client-supplied X-Forwarded-For so rate limits can't be bypassed. */
 export function clientIp(h: Headers): string {
+  const real = h.get('x-real-ip');
+  if (real) return real.trim();
   const xff = h.get('x-forwarded-for');
-  if (xff) return xff.split(',')[0]!.trim();
-  return h.get('x-real-ip') || 'unknown';
+  return xff ? xff.split(',')[0]!.trim() : 'unknown';
 }

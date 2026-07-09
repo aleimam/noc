@@ -9,6 +9,15 @@ v6="$(curl -fsS https://www.cloudflare.com/ips-v6)"
 [ -n "$v4" ] || { echo "ERROR: could not fetch Cloudflare ranges"; exit 1; }
 
 # --- Nginx: restore the real visitor IP from CF-Connecting-IP ----------------
+# Some CWP boxes ship a hand-made /etc/nginx/cloudflare.inc that already declares
+# real_ip_header; two of those in one http{} block is a fatal "duplicate directive". This file
+# is the single source of truth, so neutralize any other real_ip_header include first.
+if grep -rlZE '^\s*real_ip_header' /etc/nginx/cloudflare.inc 2>/dev/null | grep -qz .; then
+  cp -n /etc/nginx/cloudflare.inc /etc/nginx/cloudflare.inc.bak 2>/dev/null || true
+  printf '# Superseded by /etc/nginx/conf.d/cloudflare-realip.conf (ops/cloudflare-realip.sh).\n' > /etc/nginx/cloudflare.inc
+  echo "neutralized a duplicate real_ip_header in /etc/nginx/cloudflare.inc (backup: .bak)"
+fi
+
 out=/etc/nginx/conf.d/cloudflare-realip.conf
 {
   echo "# Cloudflare ranges (generated $(date -u +%F) by ops/cloudflare-realip.sh - do not edit)"
