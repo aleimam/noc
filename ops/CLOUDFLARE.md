@@ -88,9 +88,11 @@ zero proxy/WAF/CDN. Part B (server real-IP + CSF trust) is **done and verified l
 This is the "flip it on" run.
 
 **Pre-flight — verified on the origin `77.42.66.76:443` (2026-07-10):**
-- The Let's Encrypt cert is a **SAN cert for `newobour.com` + `alsawarey.com`** (both
-  apexes) → **Full (strict) validates for both.** ⚠️ It does **NOT** include the `www.`
-  names — so do not orange-proxy `www` (see step 3), or strict returns **526**.
+- The Let's Encrypt cert is a **SAN cert for all four names** — `newobour.com`,
+  `www.newobour.com`, `alsawarey.com`, `www.alsawarey.com` → **Full (strict) validates
+  for every one** (incl. www). The origin also 301s `www.*` → apex with that cert.
+  Renewal was repaired: `authenticator = webroot` (the certbot *nginx* authenticator
+  is broken on this CWP box) + `renew_hook = systemctl reload nginx`.
 - Real-IP restore (`CF-Connecting-IP`, 22 ranges) + CSF trust (22 ranges) are live;
   `nginx -t` passes. LFD will not ban Cloudflare after the flip.
 
@@ -104,11 +106,9 @@ Do it **one zone at a time**, in **this order** (TLS mode BEFORE the DNS flip):
    `curl -sI https://newobour.com | grep -i cf-ray` → a `cf-ray:` header appears **and**
    the site loads + sign-in/OTP still work. Only if good, repeat the whole run for the
    **alsawarey** zone (`alsawarey.com A 77.42.66.76`).
-3. **www — do NOT orange-proxy it** (origin cert omits `www`). Either leave `www.*`
-   **DNS-only (grey)**, or add **Rules → Redirect Rules**: when hostname equals
-   `www.newobour.com` → dynamic redirect to `concat("https://newobour.com", http.request.uri.path)`
-   (301). Edge-only, needs no origin www cert. (To proxy www properly later: reissue the
-   LE cert with the `www` SANs, or install a Cloudflare **Origin Certificate**.)
+3. **www — now safe to orange-proxy** (the origin cert covers `www` and the origin 301s
+   `www.*` → apex). Flip the `www` CNAMEs to Proxied too if you want; they'll redirect to
+   the apex. (Or leave them grey / add an edge Redirect Rule — all three work now.)
 4. **SSL/TLS → Edge Certificates:** *Always Use HTTPS* ON, *HTTP/3* ON. (Our Nginx
    already 301s HTTP→HTTPS; enabling it at the edge too is fine. Always-Use-HTTPS keeps
    the built-in `/.well-known/acme-challenge/` exception, so cert renewal still works.)
