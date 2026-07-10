@@ -69,6 +69,9 @@ if [ "${1:-}" = "--test" ]; then
 fi
 
 # --- the push ---------------------------------------------------------------
+# Respect the enable toggle (set from Settings -> Backups). --test above is unaffected.
+[ "${OFFSITE_ENABLED:-1}" = "1" ] || { log "off-site disabled (OFFSITE_ENABLED=0) - skipping push."; exit 0; }
+
 $SSH "$remote" "mkdir -p '$OFFSITE_PATH'" || fail "cannot reach $remote (run --test to diagnose)"
 
 del=""; [ "$OFFSITE_DELETE" = "1" ] && del="--delete"

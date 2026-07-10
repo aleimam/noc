@@ -19,6 +19,7 @@ export default async function SettingsHub() {
     { href: '/admin/settings/calculator', label: 'حساب التسوية', desc: 'أرقام ونسب حساب المساحة والتسوية' },
     { href: '/admin/settings/site', label: 'إعدادات الموقع العامة', desc: 'قائمة الجوال، حقوق النشر، واتساب المساعدة' },
     { href: '/admin/settings/analytics', label: 'التحليلات والتتبّع', desc: 'GA4 و Meta Pixel و Search Console' },
+    { href: '/admin/settings/backups', label: 'النسخ الاحتياطي', desc: 'تحميل النسخ، نسخة فورية، ونسخة على خادم خارجي' },
   ];
   return (
     <div className="space-y-6">
