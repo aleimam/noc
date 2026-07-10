@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma, Prisma } from '@noc/db';
+import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { ListingCard, RecentlyViewed, TrackEvent } from '@noc/ui';
 import { SiteShell } from '../_components/SiteShell';
 import { currency } from '@noc/i18n';
@@ -50,7 +51,7 @@ export default async function MarketPage({
       })
     : [];
 
-  const and: Prisma.ListingWhereInput[] = [{ status: 'PUBLISHED' }];
+  const and: Prisma.ListingWhereInput[] = [{ status: 'PUBLISHED' }, newObourVisibility()];
   if (selectedType) and.push({ typeOptionId: selectedType.id });
   // Plot consolidation & partnerships: "partnerships only" toggle (persistent URL param).
   if (partnershipsOn && get('partnership') === '1') and.push({ isPartnership: true });

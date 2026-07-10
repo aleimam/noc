@@ -6,3 +6,4 @@ export * from './Dashboard';
 export * from './Account';
 export * from './Browse';
 export * from './Analytics';
+export * from './visibility';

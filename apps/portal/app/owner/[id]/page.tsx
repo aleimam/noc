@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
+import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { ListingCard, Badge } from '@noc/ui';
 import { SiteShell } from '../../_components/SiteShell';
 import { currency } from '@noc/i18n';
@@ -18,7 +19,7 @@ export default async function OwnerProfile({ params }: { params: Promise<{ id: s
   if (!owner) notFound();
 
   const listings = await prisma.listing.findMany({
-    where: { ownerId: id, status: 'PUBLISHED' },
+    where: { ownerId: id, status: 'PUBLISHED', ...newObourVisibility() },
     orderBy: { publishedAt: 'desc' },
     take: 60,
     include: { typeOption: true },

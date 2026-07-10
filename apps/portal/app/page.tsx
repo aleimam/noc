@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
+import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { ListingCard } from '@noc/ui';
 import { currency } from '@noc/i18n';
 import { getModuleVisibility } from '../lib/modules';
@@ -17,7 +18,7 @@ export default async function Home() {
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
   const listings = await prisma.listing.findMany({
-    where: { status: 'PUBLISHED' },
+    where: { status: 'PUBLISHED', ...newObourVisibility() },
     orderBy: { publishedAt: 'desc' },
     take: 4,
     include: { typeOption: true },

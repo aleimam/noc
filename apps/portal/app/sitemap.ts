@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { prisma } from '@noc/db';
+import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { getModuleVisibility } from '../lib/modules';
 import { marketHref } from '../lib/listings';
 
@@ -11,7 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getModuleVisibility(),
     prisma.news.findMany({ where: { publishedAt: { not: null } }, select: { id: true, updatedAt: true }, take: 500 }),
     prisma.page.findMany({ where: { brand: 'newobour', published: true }, select: { slug: true, updatedAt: true } }),
-    prisma.listing.findMany({ where: { status: 'PUBLISHED' }, select: { id: true, updatedAt: true, adNumber: true, area: true, typeOption: { select: { nameEn: true } } }, take: 2000 }),
+    prisma.listing.findMany({ where: { status: 'PUBLISHED', ...newObourVisibility() }, select: { id: true, updatedAt: true, adNumber: true, area: true, typeOption: { select: { nameEn: true } } }, take: 2000 }),
     prisma.district.findMany({ where: { isActive: true }, select: { id: true, updatedAt: true } }),
     prisma.neighborhood.findMany({ where: { isActive: true }, select: { id: true, updatedAt: true } }),
     prisma.buildingCondition.findMany({ where: { published: true }, select: { slug: true, updatedAt: true } }),

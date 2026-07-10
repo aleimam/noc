@@ -1,4 +1,5 @@
 import { prisma, type Prisma } from '@noc/db';
+import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { marketHref } from './listings';
 
 export type AreaListingCard = { id: string; href: string; title: string; price: string | null; typeAr: string; typeEn: string; cover: string | null };
@@ -6,7 +7,7 @@ export type AreaListingCard = { id: string; href: string; title: string; price: 
 /** Published New Obour listings within a district/neighborhood, shaped for ListingCard. */
 export async function areaListings(where: Prisma.ListingWhereInput): Promise<AreaListingCard[]> {
   const listings = await prisma.listing.findMany({
-    where: { status: 'PUBLISHED', ...where },
+    where: { status: 'PUBLISHED', ...newObourVisibility(), ...where },
     orderBy: { publishedAt: 'desc' },
     take: 24,
     select: { id: true, title: true, price: true, adNumber: true, area: true, typeOption: { select: { nameAr: true, nameEn: true } } },

@@ -1,6 +1,7 @@
 // Storefront land queries. Owner identity is NEVER selected here — visitors see every
 // land as "ours" (alsawarey decision #17). Management lives in the New Obour backend.
 import { prisma, Prisma } from '@noc/db';
+import { alsawareyVisibility } from '@noc/partner-portal/visibility';
 import { AREA_PRESETS, formatDetailValue, type DetailConfig } from '@noc/config';
 
 /** Admin-editable standard plot areas (m²) used to round Allocated-Area details. */
@@ -161,11 +162,13 @@ function toCard(l: Prisma.ListingGetPayload<{ select: typeof cardSelect }>, cove
 // Also limited to Types/Purposes still allowed on Al Sawarey (null = legacy/unset → allowed),
 // so disallowing a Type/Purpose in the admin instantly hides its listings here.
 const STOREFRONT_STATUS: Prisma.ListingWhereInput = {
-  showOnBrokerage: true,
   status: { in: ['PUBLISHED', 'SOLD'] },
   AND: [
     { OR: [{ typeOptionId: null }, { typeOption: { allowedOnAlsawarey: true } }] },
     { OR: [{ purposeOptionId: null }, { purposeOption: { allowedOnAlsawarey: true } }] },
+    // Phase 4 — partner listings appear only where their partner is enabled for Al Sawarey;
+    // staff/non-partner listings keep the per-listing `showOnBrokerage` toggle.
+    alsawareyVisibility(),
   ],
 };
 

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
+import { listingVisibleOnNewObour } from '@noc/partner-portal/visibility';
 import { marketHref, resolveMarketListingId } from '../../../lib/listings';
 import { PhotoGallery, TrackView, ListingCard, AreaAdvantages } from '@noc/ui';
 import { localizeUnit, currency } from '@noc/i18n';
@@ -76,10 +77,12 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const listing = resolvedId
     ? await prisma.listing.findUnique({
         where: { id: resolvedId },
-        include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: true, buildingConditions: { include: { condition: true } }, neighborhood: { include: { district: true } } },
+        include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: { include: { portalUser: { select: { id: true } } } }, buildingConditions: { include: { condition: true } }, neighborhood: { include: { district: true } } },
       })
     : null;
   if (!listing || listing.status !== 'PUBLISHED') notFound();
+  // Phase 4 — a partner listing whose partner isn't enabled for New Obour is hidden here (direct link → 404).
+  if (!listingVisibleOnNewObour(listing)) notFound();
   const id = listing.id;
   // Canonicalize: permanently redirect legacy cuids / mismatched slugs to the SEO URL (308).
   const canonicalPath = marketHref({ id, adNumber: listing.adNumber, typeEn: listing.typeOption?.nameEn ?? null, area: listing.area != null ? Number(listing.area) : null });
