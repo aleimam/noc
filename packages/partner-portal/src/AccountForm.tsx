@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@noc/ui';
-import { partnerUpdateAccount } from '@noc/partner-portal';
+import { partnerUpdateAccount } from './actions';
 
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-3 text-base';
 
