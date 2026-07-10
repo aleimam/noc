@@ -2,3 +2,4 @@
 // never a client component. Import from '@noc/partner-portal/server'.
 export * from './partner';
 export * from './catalog';
+export * from './Dashboard';
