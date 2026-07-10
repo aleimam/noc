@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@noc/ui';
-import { partnerUpdatePrice, partnerSetAvailability } from './actions';
+import { partnerUpdatePrice, partnerSetAvailability } from '@noc/partner-portal';
 
 export type PartnerRow = {
   id: string;

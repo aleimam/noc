@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { requirePartner } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { formatMoneyEgp, formatArea } from '@noc/config';
-import { partnerCanBrowseListings } from '../../../../lib/partner';
+import { partnerCanBrowseListings } from '@noc/partner-portal/server';
 
 export const dynamic = 'force-dynamic';
 

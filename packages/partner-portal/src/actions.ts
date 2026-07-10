@@ -2,9 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
-import { requirePartner, hashPassword } from '@noc/auth';
+import { requirePartner, hashPassword, rateLimit } from '@noc/auth';
 import { isValidPhone } from '@noc/config';
-import { rateLimit } from '@/lib/rateLimit';
 
 type Result = { ok: true } | { ok: false; error: string };
 

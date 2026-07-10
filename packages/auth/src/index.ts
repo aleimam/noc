@@ -144,4 +144,5 @@ export * from './rbac';
 export * from './otp';
 export * from './adminToken';
 export * from './site';
+export * from './rateLimit';
 export { loginKey, loginRetryAfter, LOGIN_MAX_FAILS } from './loginGuard';

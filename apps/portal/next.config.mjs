@@ -54,7 +54,7 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   // Shared workspace packages are TS source and must be transpiled by Next.
-  transpilePackages: ['@noc/ui', '@noc/i18n', '@noc/auth', '@noc/db', '@noc/sms', '@noc/mail', '@noc/config', '@noc/analytics'],
+  transpilePackages: ['@noc/ui', '@noc/i18n', '@noc/auth', '@noc/db', '@noc/sms', '@noc/mail', '@noc/config', '@noc/analytics', '@noc/partner-portal'],
   // geoip-lite reads its .dat database via fs at runtime — keep it external so the bundler
   // doesn't break its __dirname-relative paths. nodemailer is a CJS Node lib — keep it external.
   serverExternalPackages: ['geoip-lite', 'nodemailer'],

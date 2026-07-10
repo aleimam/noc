@@ -1,7 +1,7 @@
 import { getLocale } from 'next-intl/server';
 import { requirePartner } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { partnerCanBrowseListings } from '../../../lib/partner';
+import { partnerCanBrowseListings } from '@noc/partner-portal/server';
 import { SignOutButton } from '../../_components/SignOutButton';
 import { SiteShell } from '../../_components/SiteShell';
 

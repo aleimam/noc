@@ -12,6 +12,7 @@
   "dependencies": {
     "@noc/analytics": "*",
     "@noc/auth": "*",
+    "@noc/partner-portal": "*",
     "@noc/config": "*",
     "@noc/db": "*",
     "@noc/i18n": "*",
