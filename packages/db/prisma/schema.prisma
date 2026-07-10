@@ -1633,6 +1633,18 @@ model AnalyticsDaily {
   @@index([site, day])
 }
 
+/// A saved analytics-dashboard filter preset (staff-shared): a named (days, site) combination.
+model AnalyticsSavedView {
+  id          String   @id @default(cuid())
+  name        String
+  days        Int      @default(30)
+  site        String   @default("all")
+  createdById String? // who saved it (soft ref, no FK)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 enum PartnerApplicationStatus {
   PENDING
   REVIEWING

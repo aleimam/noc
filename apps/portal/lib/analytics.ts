@@ -103,6 +103,14 @@ export async function getOverview({ from, to, site }: Range) {
 
 export type Overview = Awaited<ReturnType<typeof getOverview>>;
 
+/** Staff-shared saved dashboard filter presets (name + days + site). */
+export async function getSavedViews() {
+  return prisma.analyticsSavedView.findMany({
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, name: true, days: true, site: true },
+  });
+}
+
 export async function getRecentSessions({ from, to, site }: Range, take = 100) {
   return prisma.visitSession.findMany({
     where: { startedAt: { gte: from, lte: to }, device: { not: 'bot' }, ...siteWhere(site) },

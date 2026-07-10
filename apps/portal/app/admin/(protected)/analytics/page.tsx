@@ -1,6 +1,7 @@
 import { getLocale } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
-import { parseRange, getOverview, getRecentSessions, getEventStats, getDailyRollups, type SiteFilter } from '../../../../lib/analytics';
+import { parseRange, getOverview, getRecentSessions, getEventStats, getDailyRollups, getSavedViews, type SiteFilter } from '../../../../lib/analytics';
+import { SavedViews } from './SavedViews';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export default async function VisitorAnalyticsPage({ searchParams }: { searchPar
   const range = parseRange(sp);
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
-  const [ov, recent, ev, roll] = await Promise.all([getOverview(range), getRecentSessions(range, 100), getEventStats(range), getDailyRollups(range)]);
+  const [ov, recent, ev, roll, savedViews] = await Promise.all([getOverview(range), getRecentSessions(range, 100), getEventStats(range), getDailyRollups(range), getSavedViews()]);
 
   const qs = (patch: Record<string, string | number>) => {
     const p = new URLSearchParams({ days: String(range.days), site: range.site, ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, String(v)])) });
@@ -84,6 +85,9 @@ export default async function VisitorAnalyticsPage({ searchParams }: { searchPar
           ))}
         </div>
       </div>
+
+      {/* Saved filter presets */}
+      <SavedViews views={savedViews} current={{ days: range.days, site: range.site }} locale={locale} />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
