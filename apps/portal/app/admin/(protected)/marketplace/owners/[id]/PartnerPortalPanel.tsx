@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@noc/ui';
-import { savePartnerAccount, setOwnerAllowedCategories, setOwnerBrowseListings, type PartnerAccountInput } from '../../actions';
+import { savePartnerAccount, setOwnerAllowedCategories, setOwnerBrowseListings, setPartnerSites, type PartnerAccountInput } from '../../actions';
 
 type TypeOpt = { id: string; nameAr: string; nameEn: string };
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
@@ -16,6 +16,7 @@ export function PartnerPortalPanel({
   typeOptions,
   granted,
   canBrowse,
+  sites,
   locale,
 }: {
   ownerId: string;
@@ -23,6 +24,7 @@ export function PartnerPortalPanel({
   typeOptions: TypeOpt[];
   granted: string[];
   canBrowse: boolean;
+  sites: { newObour: boolean; alsawary: boolean };
   locale: 'ar' | 'en';
 }) {
   const router = useRouter();
@@ -37,6 +39,18 @@ export function PartnerPortalPanel({
   });
   const [cats, setCats] = useState<Set<string>>(new Set(granted));
   const [browse, setBrowse] = useState(canBrowse);
+  const [sn, setSn] = useState(sites.newObour);
+  const [sa, setSa] = useState(sites.alsawary);
+
+  function saveSites(nextNo: boolean, nextAs: boolean) {
+    const prevNo = sn, prevAs = sa;
+    setSn(nextNo); setSa(nextAs);
+    start(async () => {
+      const r = await setPartnerSites(ownerId, nextNo, nextAs);
+      if (r.ok) { toast(L('تم الحفظ', 'Saved')); router.refresh(); }
+      else { setSn(prevNo); setSa(prevAs); toast(L('تعذّر الحفظ', 'Save failed'), 'error'); }
+    });
+  }
 
   function toggleBrowse(next: boolean) {
     setBrowse(next);
@@ -119,6 +133,21 @@ export function PartnerPortalPanel({
             {account.isActive ? L('نشط', 'Active') : L('موقوف', 'Disabled')}
           </span>
         )}
+      </div>
+
+      <div className="space-y-2 border-t border-gold-300/40 pt-3">
+        <div className="text-sm font-bold text-primary">{L('المواقع المتاحة للشريك', 'Sites this partner can access')}</div>
+        <p className="text-xs opacity-70">{L('يحدّد أين يسجّل الشريك دخوله وأين تظهر إعلاناته.', 'Controls where the partner can sign in and where their listings appear.')}</p>
+        <div className="flex flex-wrap gap-4">
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" checked={sn} disabled={pending} onChange={(e) => saveSites(e.target.checked, sa)} />
+            🏙️ {L('العبور الجديد', 'New Obour')}
+          </label>
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" checked={sa} disabled={pending} onChange={(e) => saveSites(sn, e.target.checked)} />
+            🏢 {L('الصواري', 'Al Sawarey')}
+          </label>
+        </div>
       </div>
 
       <div className="space-y-2 border-t border-gold-300/40 pt-3">

@@ -74,6 +74,7 @@ export default async function OwnerDetailPage({ params }: { params: Promise<{ id
           typeOptions={typeOptions}
           granted={owner.allowedCategories.map((c) => c.optionId)}
           canBrowse={owner.canBrowseListings}
+          sites={{ newObour: owner.siteNewObour, alsawary: owner.siteAlsawary }}
           locale={locale}
         />
       )}

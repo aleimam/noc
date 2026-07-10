@@ -243,6 +243,18 @@ export async function setOwnerBrowseListings(ownerId: string, canBrowse: boolean
   }
 }
 
+/** Which site(s) this partner may sign in to — and (restrict-to-site) where their listings show. */
+export async function setPartnerSites(ownerId: string, siteNewObour: boolean, siteAlsawary: boolean): Promise<Result> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    await prisma.owner.update({ where: { id: ownerId }, data: { siteNewObour, siteAlsawary } });
+    revalidatePath('/admin/marketplace/owners', 'page');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 /** Replace the Type categories this partner may create listings in (explicit grants). */
 export async function setOwnerAllowedCategories(ownerId: string, optionIds: string[]): Promise<Result> {
   await requirePermission('marketplace', 'UPDATE');

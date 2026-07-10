@@ -685,6 +685,10 @@ model Owner {
   // Partner-portal: may this partner browse (view-only) all our published sell offers?
   // Effective only when the global setting `partner.browseListings` is on too.
   canBrowseListings Boolean @default(true)
+  // Which sites this partner may sign in to — and (restrict-to-site) the only sites their own
+  // listings appear on. Admin-set per partner; both default on. Non-partner owners ignore these.
+  siteNewObour   Boolean @default(true)
+  siteAlsawary   Boolean @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

@@ -5,6 +5,7 @@ import { prisma } from '@noc/db';
 import { authConfig } from './config.base';
 import { verifyPassword } from './password';
 import { verifyOtp, verifyEmailOtp, normalizePhone } from './otp';
+import { currentSite, ownerAllowsSite } from './site';
 import { getEffectivePermissions, hasPermission } from './rbac';
 import { loginKey, loginRetryAfter, recordLoginFail, resetLogin } from './loginGuard';
 
@@ -91,11 +92,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             ownerId: { not: null },
             OR: [{ username: lower }, { email: lower }, { phone: ident }, { phone: normalizePhone(ident) }],
           },
+          include: { owner: { select: { siteNewObour: true, siteAlsawary: true } } },
         });
+        // This app process serves exactly one site (NOC_SITE). The partner must be enabled for
+        // it, else we reveal nothing — behave like an unknown account.
+        const siteOk = !!user && ownerAllowsSite(user.owner, currentSite());
         const password = String(creds?.password ?? '');
         const code = String(creds?.code ?? '');
         let ok = false;
-        if (user) {
+        if (user && siteOk) {
           if (password) ok = !!user.passwordHash && (await verifyPassword(password, user.passwordHash));
           // A login code may have been sent to the phone (SMS) or the email — accept either.
           else if (code)
@@ -103,7 +108,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               (!!user.phone && (await verifyOtp(user.phone, code)).ok) ||
               (!!user.email && (await verifyEmailOtp(user.email, code)).ok);
         }
-        if (!ok || !user) {
+        if (!ok || !user || !siteOk) {
           recordLoginFail(key);
           return null;
         }
@@ -138,4 +143,5 @@ export * from './password';
 export * from './rbac';
 export * from './otp';
 export * from './adminToken';
+export * from './site';
 export { loginKey, loginRetryAfter, LOGIN_MAX_FAILS } from './loginGuard';

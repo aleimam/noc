@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { prisma } from '@noc/db';
-import { requestOtp, requestEmailOtp, normalizePhone } from '@noc/auth';
+import { requestOtp, requestEmailOtp, normalizePhone, currentSite, ownerAllowsSite } from '@noc/auth';
 import { rateLimit, clientIp } from '@/lib/rateLimit';
 
 /** Mask an email as a•••@domain.com so the login page can show where the code went. */
@@ -30,9 +30,10 @@ export async function POST(req: NextRequest) {
       ownerId: { not: null },
       OR: [{ username: lower }, { email: lower }, { phone: ident }, { phone: normalizePhone(ident) }],
     },
-    select: { phone: true, email: true },
+    select: { phone: true, email: true, owner: { select: { siteNewObour: true, siteAlsawary: true } } },
   });
-  if (!user) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
+  // Reveal nothing if the account isn't enabled for this site (matches the login gate).
+  if (!user || !ownerAllowsSite(user.owner, currentSite())) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
 
   if (channel === 'email') {
     if (!user.email) return NextResponse.json({ ok: false, error: 'no_email' }, { status: 400 });
