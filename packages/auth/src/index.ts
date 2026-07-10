@@ -11,23 +11,37 @@ import { loginKey, loginRetryAfter, recordLoginFail, resetLogin } from './loginG
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
-    // Staff: email + password.
+    // Staff: identifier (email / username / phone) + password OR an SMS/email OTP code.
     Credentials({
       id: 'staff',
       name: 'Staff',
-      credentials: { email: {}, password: {} },
+      credentials: { identifier: {}, email: {}, password: {}, code: {} },
       async authorize(creds) {
-        const email = String(creds?.email ?? '')
-          .toLowerCase()
-          .trim();
-        const password = String(creds?.password ?? '');
-        if (!email || !password) return null;
-        const key = loginKey('staff', email);
+        // `identifier` is the field the login page sends; `email` is kept for backward-compat.
+        const ident = String(creds?.identifier ?? creds?.email ?? '').trim();
+        if (!ident) return null;
+        const key = loginKey('staff', ident);
         if (loginRetryAfter(key) > 0) return null; // locked out — too many attempts
+        const lower = ident.toLowerCase();
         const user = await prisma.user.findFirst({
-          where: { email, type: 'STAFF', isActive: true },
+          where: {
+            type: 'STAFF',
+            isActive: true,
+            OR: [{ email: lower }, { username: lower }, { phone: ident }, { phone: normalizePhone(ident) }],
+          },
         });
-        if (!user?.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
+        const password = String(creds?.password ?? '');
+        const code = String(creds?.code ?? '');
+        let ok = false;
+        if (user) {
+          if (password) ok = !!user.passwordHash && (await verifyPassword(password, user.passwordHash));
+          // A login code may have been sent to the phone (SMS) or the email — accept either.
+          else if (code)
+            ok =
+              (!!user.phone && (await verifyOtp(user.phone, code)).ok) ||
+              (!!user.email && (await verifyEmailOtp(user.email, code)).ok);
+        }
+        if (!ok || !user) {
           recordLoginFail(key);
           return null;
         }
