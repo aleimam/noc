@@ -15,7 +15,8 @@
   "dependencies": {
     "@noc/auth": "*",
     "@noc/config": "*",
-    "@noc/db": "*"
+    "@noc/db": "*",
+    "@noc/ui": "*"
   },
   "peerDependencies": {
     "next": ">=15",
