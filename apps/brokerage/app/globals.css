@@ -1,8 +1,9 @@
 @import 'tailwindcss';
 @import '../../../packages/ui/src/styles/theme.css';
 
-/* Include the shared UI package when scanning for Tailwind classes. */
+/* Include the shared UI + partner-portal packages when scanning for Tailwind classes. */
 @source '../../../packages/ui/src/**/*.{ts,tsx}';
+@source '../../../packages/partner-portal/src/**/*.{ts,tsx}';
 
 /* Golden Rule: raise the type-scale floor for low-vision/low-literacy users on phones.
    Only the small sizes grow (xs/sm/base); lg and up (headings, prices) keep their size. */
