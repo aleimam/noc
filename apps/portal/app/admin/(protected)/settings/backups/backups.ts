@@ -5,13 +5,16 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
+import { prisma } from '@noc/db';
 
 const pexec = promisify(execFile);
 
 export const APP_DIR = process.env.APP_DIR || '/root/noc';
 export const BACKUP_ROOT = process.env.BACKUP_ROOT || '/root/backups';
 export const OFFSITE_ENV = path.join(APP_DIR, 'ops', 'offsite.env');
+export const BACKUP_ENV = path.join(APP_DIR, 'ops', 'backup.env');
 const PUBKEY_PATH = '/root/.ssh/noc_backup.pub';
+export const DEFAULT_RETAIN_DAYS = 14;
 
 export type BackupKind = 'db' | 'uploads' | 'config';
 export type BackupFile = { name: string; kind: BackupKind; size: number; mtime: number };
@@ -102,4 +105,50 @@ export async function backupsSummary(files: BackupFile[]): Promise<BackupsSummar
 
   const offsiteLastLine = (await tailFile(path.join(BACKUP_ROOT, 'offsite.log'), 1)) || '';
   return { lastBackupAt, fileCount: files.length, totalSize, diskFree, offsiteLastLine };
+}
+
+/** RETAIN_DAYS from ops/backup.env (how many days of backups to keep); default 14. */
+export async function readRetentionDays(): Promise<number> {
+  try {
+    const m = (await readFile(BACKUP_ENV, 'utf8')).match(/^\s*RETAIN_DAYS\s*=\s*(\d+)/m);
+    const n = m ? parseInt(m[1]!, 10) : DEFAULT_RETAIN_DAYS;
+    return n >= 1 && n <= 365 ? n : DEFAULT_RETAIN_DAYS;
+  } catch {
+    return DEFAULT_RETAIN_DAYS;
+  }
+}
+
+export type Sched = { h: number; m: number };
+export type Schedule = { local: Sched; offsite: Sched };
+
+async function cronTime(file: string, def: Sched): Promise<Sched> {
+  try {
+    // matches the "MIN HOUR * * * root …" job line
+    const m = (await readFile(file, 'utf8')).match(/^\s*(\d{1,2})\s+(\d{1,2})\s+\*\s+\*\s+\*/m);
+    if (!m) return def;
+    return { m: parseInt(m[1]!, 10), h: parseInt(m[2]!, 10) };
+  } catch {
+    return def;
+  }
+}
+
+export async function readSchedule(): Promise<Schedule> {
+  const [local, offsite] = await Promise.all([
+    cronTime('/etc/cron.d/noc-backup', { h: 2, m: 30 }),
+    cronTime('/etc/cron.d/noc-offsite', { h: 3, m: 30 }),
+  ]);
+  return { local, offsite };
+}
+
+export type AlertConfig = { enabled: boolean; email: string; phone: string };
+
+export async function readAlertConfig(): Promise<AlertConfig> {
+  const row = await prisma.setting.findUnique({ where: { key: 'backup.alert' } }).catch(() => null);
+  if (!row?.value) return { enabled: false, email: '', phone: '' };
+  try {
+    const j = JSON.parse(row.value);
+    return { enabled: !!j.enabled, email: typeof j.email === 'string' ? j.email : '', phone: typeof j.phone === 'string' ? j.phone : '' };
+  } catch {
+    return { enabled: false, email: '', phone: '' };
+  }
 }

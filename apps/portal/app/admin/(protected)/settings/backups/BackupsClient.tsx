@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { runBackupNow, runOffsitePush, testOffsite, saveOffsiteConfig, type OffsiteInput } from './actions';
-import type { BackupFile, OffsiteConfig, BackupsSummary } from './backups';
+import { runBackupNow, runOffsitePush, testOffsite, saveOffsiteConfig, verifyLatest, saveScheduleRetention, saveAlertConfig, type OffsiteInput } from './actions';
+import type { BackupFile, OffsiteConfig, BackupsSummary, Schedule, AlertConfig } from './backups';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 function fmtWhen(ms: number): string {
@@ -16,6 +16,7 @@ function fmtBytes(n: number): string {
   const i = Math.min(u.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
   return `${(n / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
 }
+const hmStr = (s: { h: number; m: number }) => `${pad(s.h)}:${pad(s.m)}`;
 
 type Msg = { ok: boolean; text: string } | null;
 
@@ -25,12 +26,18 @@ export function BackupsClient({
   offsite,
   pubkey,
   summary,
+  retentionDays,
+  schedule,
+  alert,
 }: {
   locale: 'ar' | 'en';
   files: BackupFile[];
   offsite: OffsiteConfig;
   pubkey: string;
   summary: BackupsSummary;
+  retentionDays: number;
+  schedule: Schedule;
+  alert: AlertConfig;
 }) {
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const router = useRouter();
@@ -41,6 +48,13 @@ export function BackupsClient({
   const [port, setPort] = useState(offsite.port);
   const [destPath, setDestPath] = useState(offsite.path);
   const [mirror, setMirror] = useState(offsite.mirror);
+
+  const [retention, setRetention] = useState(String(retentionDays));
+  const [localTime, setLocalTime] = useState(hmStr(schedule.local));
+  const [offsiteTime, setOffsiteTime] = useState(hmStr(schedule.offsite));
+  const [alertEnabled, setAlertEnabled] = useState(alert.enabled);
+  const [alertEmail, setAlertEmail] = useState(alert.email);
+  const [alertPhone, setAlertPhone] = useState(alert.phone);
 
   const [pending, start] = useTransition();
   const [busy, setBusy] = useState<string>(''); // which action is running
@@ -72,6 +86,13 @@ export function BackupsClient({
     const input: OffsiteInput = { enabled, host, user, port, path: destPath, mirror };
     act('save', () => saveOffsiteConfig(input), L('تم حفظ إعدادات النسخ الخارجي', 'Off-site settings saved'));
   };
+  const saveSched = () => {
+    const [lh, lm] = localTime.split(':').map((x) => parseInt(x, 10) || 0);
+    const [oh, om] = offsiteTime.split(':').map((x) => parseInt(x, 10) || 0);
+    act('sched', () => saveScheduleRetention({ localH: lh ?? 2, localM: lm ?? 30, offsiteH: oh ?? 3, offsiteM: om ?? 30, retentionDays: parseInt(retention, 10) || 14 }), L('تم حفظ المواعيد ومدة الاحتفاظ', 'Schedule & retention saved'));
+  };
+  const saveAlerts = () =>
+    act('alerts', () => saveAlertConfig({ enabled: alertEnabled, email: alertEmail, phone: alertPhone }), L('تم حفظ التنبيهات', 'Alerts saved'));
 
   const inp = 'w-full rounded-md border border-graphite/25 bg-transparent px-3 py-2 text-base';
   const btn = 'rounded-md bg-primary px-4 py-2 text-sm font-bold text-soft disabled:opacity-50';
@@ -119,6 +140,9 @@ export function BackupsClient({
               {busy === 'push' ? L('جارٍ الدفع…', 'Pushing…') : L('دفع للخادم الخارجي الآن', 'Push off-site now')}
             </button>
           )}
+          <button className={btnSec} disabled={pending} onClick={() => act('verify', verifyLatest, L('النسخ سليمة ✓', 'Backups verified — OK ✓'))}>
+            {busy === 'verify' ? L('جارٍ الفحص…', 'Checking…') : L('فحص سلامة النسخ', 'Verify backups')}
+          </button>
         </div>
         {msg && <p className={`text-sm ${msg.ok ? 'text-green-600' : 'text-red-600'}`}>{msg.text}</p>}
         {logOut && <pre className="max-h-52 overflow-auto rounded-md bg-graphite/5 p-3 text-xs" dir="ltr">{logOut}</pre>}
@@ -236,6 +260,52 @@ export function BackupsClient({
             </button>
           </div>
         )}
+      </section>
+
+      {/* Schedule + retention */}
+      <section className="space-y-4 rounded-lg border border-graphite/15 p-5">
+        <h2 className="font-semibold text-primary">{L('المواعيد ومدة الاحتفاظ', 'Schedule & retention')}</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label={L('موعد النسخة اليومية', 'Daily backup time')}>
+            <input type="time" dir="ltr" value={localTime} onChange={(e) => setLocalTime(e.target.value)} className={inp} />
+          </Field>
+          <Field label={L('موعد النسخ الخارجي', 'Off-site push time')}>
+            <input type="time" dir="ltr" value={offsiteTime} onChange={(e) => setOffsiteTime(e.target.value)} className={inp} />
+          </Field>
+          <Field label={L('مدة الاحتفاظ (بالأيام)', 'Keep backups for (days)')}>
+            <input type="number" dir="ltr" min={1} max={365} value={retention} onChange={(e) => setRetention(e.target.value)} className={inp} />
+          </Field>
+        </div>
+        <p className="text-xs opacity-60">{L('يُفضّل أن يكون موعد النسخ الخارجي بعد النسخة اليومية.', 'Tip: set the off-site time a little after the daily backup.')}</p>
+        <button className={btn} disabled={pending} onClick={saveSched}>
+          {busy === 'sched' ? L('جارٍ الحفظ…', 'Saving…') : L('حفظ المواعيد', 'Save schedule')}
+        </button>
+      </section>
+
+      {/* Failure alerts */}
+      <section className="space-y-4 rounded-lg border border-graphite/15 p-5">
+        <h2 className="font-semibold text-primary">{L('تنبيهات عند فشل النسخ', 'Failure alerts')}</h2>
+        <p className="text-sm opacity-70">
+          {L(
+            'ننبّهك بالبريد أو رسالة SMS إذا لم تُنشأ نسخة احتياطية جديدة كالمعتاد (فحص يومي).',
+            'We alert you by email or SMS if a fresh backup was not created as expected (checked daily).',
+          )}
+        </p>
+        <label className="flex items-center gap-2 text-sm font-semibold">
+          <input type="checkbox" checked={alertEnabled} onChange={(e) => setAlertEnabled(e.target.checked)} className="h-4 w-4" />
+          {L('تفعيل التنبيهات', 'Enable alerts')}
+        </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={L('بريد التنبيه', 'Alert email')}>
+            <input dir="ltr" type="email" value={alertEmail} onChange={(e) => setAlertEmail(e.target.value)} placeholder="you@example.com" className={inp} />
+          </Field>
+          <Field label={L('هاتف التنبيه (SMS)', 'Alert phone (SMS)')}>
+            <input dir="ltr" value={alertPhone} onChange={(e) => setAlertPhone(e.target.value)} placeholder="01xxxxxxxxx" className={inp} />
+          </Field>
+        </div>
+        <button className={btn} disabled={pending} onClick={saveAlerts}>
+          {busy === 'alerts' ? L('جارٍ الحفظ…', 'Saving…') : L('حفظ التنبيهات', 'Save alerts')}
+        </button>
       </section>
     </div>
   );
