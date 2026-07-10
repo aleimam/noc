@@ -1,37 +1,21 @@
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePartner } from '@noc/auth';
-import { prisma } from '@noc/db';
-import { ListingForm } from '@/app/account/listings/ListingForm';
-import { loadCatalog, buildVals, loadListingAttachments } from '@/app/account/listings/catalog';
+import { loadPartnerCatalog, loadPartnerListing } from '@noc/partner-portal/server';
+import { LeanListingForm } from '@noc/partner-portal';
 
 export const dynamic = 'force-dynamic';
 
-/** Partner: edit one of their own listings — content changes re-enter staff review. */
+/** Partner: edit one of their own listings via the shared lean form — content changes re-enter review. */
 export default async function PartnerEditListing({ params }: { params: Promise<{ id: string }> }) {
   const { ownerId } = await requirePartner();
   const { id } = await params;
-  const listing = await prisma.listing.findUnique({
-    where: { id },
-    include: { values: true, buildingConditions: { select: { conditionId: true } } },
-  });
-  if (!listing || listing.ownerId !== ownerId) notFound();
-
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
-  const [{ classifiers, sections, attributes, standardAreas, buildingConditions }, grants, attachData] = await Promise.all([
-    loadCatalog(),
-    prisma.ownerAllowedCategory.findMany({ where: { ownerId }, select: { optionId: true } }),
-    loadListingAttachments(id),
-  ]);
-  const granted = new Set(grants.map((g) => g.optionId));
-  // The current Type stays selectable even if its grant was later revoked (editing an
-  // existing listing must not dead-end); NEW types remain grant-restricted.
-  if (listing.typeOptionId) granted.add(listing.typeOptionId);
-  const restricted = classifiers.map((c) => (c.key === 'type' ? { ...c, options: c.options.filter((o) => granted.has(o.id)) } : c));
-  const { photos, attachs } = attachData;
-  const vals = buildVals(listing.values, new Map(attributes.map((a) => [a.id, a.type])));
+
+  const [catalog, listing] = await Promise.all([loadPartnerCatalog(ownerId), loadPartnerListing(id, ownerId)]);
+  if (!listing) notFound();
 
   return (
     <div className="space-y-4">
@@ -42,44 +26,7 @@ export default async function PartnerEditListing({ params }: { params: Promise<{
       <p className="rounded-lg border border-gold-300/50 bg-gold/10 p-3 text-sm">
         {L('تعديل البيانات يعيد الإعلان لمراجعة الإدارة قبل نشره من جديد.', 'Content changes send the listing back to staff review before republishing.')}
       </p>
-      <ListingForm
-        partnerMode
-        classifiers={restricted}
-        sections={sections}
-        attributes={attributes}
-        locale={locale}
-        standardAreas={standardAreas}
-        buildingConditions={buildingConditions}
-        initial={{
-          id: listing.id,
-          typeOptionId: listing.typeOptionId ?? '',
-          purposeOptionId: listing.purposeOptionId ?? '',
-          conditionOptionId: listing.conditionOptionId ?? '',
-          title: listing.title,
-          description: listing.description ?? '',
-          area: listing.area != null ? String(listing.area) : '',
-          price: listing.price != null ? String(listing.price) : '',
-          priceUnit: listing.priceUnit,
-          priceNegotiable: listing.priceNegotiable,
-          priceNote: listing.priceNote ?? '',
-          isPartnership: listing.isPartnership,
-          partnershipType: listing.partnershipType ?? '',
-          partnershipNote: listing.partnershipNote ?? '',
-          // Read-only paper switches (partner sees status only).
-          hasAllocationLetter: listing.hasAllocationLetter,
-          hasSaleMandate: listing.hasSaleMandate,
-          contactPhone: listing.contactPhone,
-          contactWhatsapp: listing.contactWhatsapp,
-          ownerId: '',
-          ownerName: '',
-          ownerType: 'PERSONAL',
-          showOnBrokerage: listing.showOnBrokerage,
-          vals,
-          photos,
-          attachs,
-          buildingConditionIds: listing.buildingConditions.map((b) => b.conditionId),
-        }}
-      />
+      <LeanListingForm catalog={catalog} initial={listing} locale={locale} />
     </div>
   );
 }

@@ -1,27 +1,22 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePartner } from '@noc/auth';
-import { prisma } from '@noc/db';
-import { ListingForm } from '@/app/account/listings/ListingForm';
-import { loadCatalog } from '@/app/account/listings/catalog';
+import { loadPartnerCatalog } from '@noc/partner-portal/server';
+import { LeanListingForm } from '@noc/partner-portal';
 
 export const dynamic = 'force-dynamic';
 
-/** Partner: create a listing — Type restricted to the admin-granted categories;
- *  submission enters the staff moderation queue (PENDING). */
+/** Partner: create a listing via the shared lean form — Type restricted to the admin-granted
+ *  categories; submission enters the staff moderation queue (PENDING). */
 export default async function PartnerNewListing() {
   const { ownerId } = await requirePartner();
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
-  const [{ classifiers, sections, attributes, standardAreas, buildingConditions }, grants, owner] = await Promise.all([
-    loadCatalog(),
-    prisma.ownerAllowedCategory.findMany({ where: { ownerId }, select: { optionId: true } }),
-    prisma.owner.findUnique({ where: { id: ownerId }, select: { phone1: true } }),
-  ]);
-  const granted = new Set(grants.map((g) => g.optionId));
+  const catalog = await loadPartnerCatalog(ownerId);
+  const hasGrant = !!catalog.classifiers.find((c) => c.key === 'type')?.options.some((o) => o.granted);
 
-  if (granted.size === 0) {
+  if (!hasGrant) {
     return (
       <div className="mx-auto max-w-lg space-y-3 rounded-lg border border-ink-200 bg-white p-8 text-center">
         <div className="text-4xl">🔒</div>
@@ -32,9 +27,6 @@ export default async function PartnerNewListing() {
     );
   }
 
-  // Restrict the Type list to the granted categories (Purpose/Condition cascade follows).
-  const restricted = classifiers.map((c) => (c.key === 'type' ? { ...c, options: c.options.filter((o) => granted.has(o.id)) } : c));
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -44,36 +36,7 @@ export default async function PartnerNewListing() {
       <p className="rounded-lg border border-gold-300/50 bg-gold/10 p-3 text-sm">
         {L('سيُراجع الإعلان من الإدارة قبل النشر.', 'Your listing will be reviewed by staff before it goes public.')}
       </p>
-      <ListingForm
-        partnerMode
-        classifiers={restricted}
-        sections={sections}
-        attributes={attributes}
-        locale={locale}
-        standardAreas={standardAreas}
-        buildingConditions={buildingConditions}
-        initial={{
-          typeOptionId: '',
-          purposeOptionId: '',
-          conditionOptionId: '',
-          title: '',
-          description: '',
-          area: '',
-          price: '',
-          priceUnit: 'TOTAL',
-          priceNegotiable: false,
-          priceNote: '',
-          contactPhone: owner?.phone1 ?? '',
-          contactWhatsapp: true,
-          ownerId: '',
-          ownerName: '',
-          ownerType: 'PERSONAL',
-          showOnBrokerage: false,
-          vals: {},
-          photos: [],
-          attachs: {},
-        }}
-      />
+      <LeanListingForm catalog={catalog} locale={locale} />
     </div>
   );
 }
