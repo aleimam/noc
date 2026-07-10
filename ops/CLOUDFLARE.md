@@ -82,34 +82,52 @@ feed the app real IPs automatically. The app's rate-limiter keys keep working.
 
 ## Part C — Cloudflare dashboard checklist (each zone)
 
-Order matters — TLS first:
+**Current state (2026-07-10):** zones are Active on Cloudflare (Part A done) but every
+A record is **DNS-only (grey)** — so Cloudflare is only doing authoritative DNS today,
+zero proxy/WAF/CDN. Part B (server real-IP + CSF trust) is **done and verified live**.
+This is the "flip it on" run.
 
-1. **SSL/TLS → Overview → mode = Full (strict).** The origin has a valid Let's
-   Encrypt cert for both domains, so strict works. (NEVER "Flexible" — redirect loops
-   + plaintext origin traffic.)
-2. **SSL/TLS → Edge Certificates:** enable *Always Use HTTPS* + *HTTP/3*.
-   Note: our Nginx already 301s HTTP→HTTPS; enabling it at the edge too is fine.
-3. **Speed → Optimization:** Brotli on (default). Skip Rocket Loader (breaks Next.js
-   hydration sometimes) — leave OFF.
-4. **Caching:** leave standard. Next.js sends correct cache headers for
-   `/_next/static` (immutable) — no page-cache rules needed. Do NOT "Cache Everything".
-5. **Security:**
-   - **Bot Fight Mode: ON** (Security → Bots).
-   - Security level: Medium.
-   - **WAF managed rules** (free tier's Cloudflare Managed Ruleset): ON.
-6. **WAF → Rate limiting rule** (1 free rule per zone) — edge backstop above the app's
-   quotas. Suggested: if URI path starts with `/rationing` (newobour zone) → more than
-   **60 requests / 1 minute per IP** → Block for 1 hour. On alsawarey: path `/` any,
-   300 req/min per IP → Managed Challenge.
-7. **Hotlink protection** (Scrape Shield): ON for both zones — stops other sites
-   embedding `/uploads/*` images. (Our own two domains still work: Cloudflare allows
-   same-zone referers; cross-site NO→AlSawarey image use is same files via each site's
-   own proxy route, so unaffected.)
-8. **Renewal caveat — Let's Encrypt:** our cert renews via **HTTP-01** (`certbot`,
-   `/.well-known/acme-challenge/`). This keeps working behind the proxy (Cloudflare
-   passes it through; Always-Use-HTTPS excludes ACME paths). After the cutover, do one
-   dry run to be sure: `certbot renew --dry-run` on the server. If it ever fails,
-   switch that cert to the DNS-01 plugin or a Cloudflare Origin Certificate.
+**Pre-flight — verified on the origin `77.42.66.76:443` (2026-07-10):**
+- The Let's Encrypt cert is a **SAN cert for `newobour.com` + `alsawarey.com`** (both
+  apexes) → **Full (strict) validates for both.** ⚠️ It does **NOT** include the `www.`
+  names — so do not orange-proxy `www` (see step 3), or strict returns **526**.
+- Real-IP restore (`CF-Connecting-IP`, 22 ranges) + CSF trust (22 ranges) are live;
+  `nginx -t` passes. LFD will not ban Cloudflare after the flip.
+
+Do it **one zone at a time**, in **this order** (TLS mode BEFORE the DNS flip):
+
+1. **SSL/TLS → Overview → mode = Full (strict)** — set this FIRST, while records are
+   still grey. It's harmless now and only takes effect once traffic is proxied.
+   (NEVER "Flexible" — redirect loops + plaintext origin traffic.)
+2. **DNS → flip the APEX record to Proxied (orange):** `newobour.com  A  77.42.66.76`
+   → click the grey cloud so it turns orange. Wait ~30s, then verify from any shell:
+   `curl -sI https://newobour.com | grep -i cf-ray` → a `cf-ray:` header appears **and**
+   the site loads + sign-in/OTP still work. Only if good, repeat the whole run for the
+   **alsawarey** zone (`alsawarey.com A 77.42.66.76`).
+3. **www — do NOT orange-proxy it** (origin cert omits `www`). Either leave `www.*`
+   **DNS-only (grey)**, or add **Rules → Redirect Rules**: when hostname equals
+   `www.newobour.com` → dynamic redirect to `concat("https://newobour.com", http.request.uri.path)`
+   (301). Edge-only, needs no origin www cert. (To proxy www properly later: reissue the
+   LE cert with the `www` SANs, or install a Cloudflare **Origin Certificate**.)
+4. **SSL/TLS → Edge Certificates:** *Always Use HTTPS* ON, *HTTP/3* ON. (Our Nginx
+   already 301s HTTP→HTTPS; enabling it at the edge too is fine. Always-Use-HTTPS keeps
+   the built-in `/.well-known/acme-challenge/` exception, so cert renewal still works.)
+5. **Speed → Optimization:** Brotli on (default). **Rocket Loader OFF** (breaks Next.js
+   hydration). No "Auto Minify" needed — Next already minifies.
+6. **Caching:** leave standard. Next.js sends correct `/_next/static` immutable headers —
+   no page rules needed. **Do NOT "Cache Everything"** (would cache logged-in/admin HTML).
+7. **Security:** Bot Fight Mode **ON** (Security → Bots); Security level **Medium**;
+   **WAF → Managed rules → Cloudflare Managed Ruleset ON** (free tier).
+8. **Security → WAF → Rate limiting rule** (1 free rule per zone) — edge backstop above
+   the app's own quotas. newobour: path starts with `/rationing` → >**60 req / 1 min per
+   IP** → Block 1h. alsawarey: path `/` → >**300 req / 1 min per IP** → Managed Challenge.
+9. **Scrape Shield → Hotlink protection ON** (both zones) — stops other sites embedding
+   `/uploads/*`. Same-zone referers still work; the NO↔AS image sharing goes through each
+   app's own proxy route (same-origin), so it's unaffected.
+10. **After the flip — renewal sanity:** cert renews via **HTTP-01** (`certbot`,
+    authenticator=nginx). It keeps working behind the proxy, but run one dry run to be
+    sure: `certbot renew --dry-run` on the VPS. If it ever fails, switch to a Cloudflare
+    **Origin Certificate** (15-yr, CF→origin only) — also removes the www-SAN gap.
 
 ---
 
