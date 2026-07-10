@@ -14,8 +14,8 @@ type Section = { id: string; nameAr: string; nameEn: string };
 export type LeanCatalog = { classifiers: Classifier[]; sections: Section[]; attributes: Attr[] };
 export type LeanInitial = {
   id?: string;
-  typeOptionId?: string; purposeOptionId?: string; conditionOptionId?: string;
-  title?: string; description?: string; price?: number | null; priceUnit?: string;
+  typeOptionId?: string | null; purposeOptionId?: string | null; conditionOptionId?: string | null;
+  title?: string; description?: string | null; price?: number | null; priceUnit?: string | null;
   contactPhone?: string; contactWhatsapp?: boolean;
   vals?: Record<string, string | boolean | string[]>;
   photos?: UploadedAttachment[];

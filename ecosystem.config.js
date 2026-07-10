@@ -14,7 +14,8 @@ module.exports = {
       cwd: './apps/portal',
       script: 'npm',
       args: 'run start', // next start -p 3001
-      env: { NODE_ENV: 'production' },
+      // NOC_SITE tells @noc/auth which brand this process serves (partner-portal site gate).
+      env: { NODE_ENV: 'production', NOC_SITE: 'newobour' },
       max_memory_restart: '512M',
       time: true,
     },
@@ -23,7 +24,8 @@ module.exports = {
       cwd: './apps/brokerage',
       script: 'npm',
       args: 'run start', // next start -p 3002
-      env: { NODE_ENV: 'production' },
+      // NOC_SITE=alsawarey → the partner-portal login gate here requires siteAlsawary access.
+      env: { NODE_ENV: 'production', NOC_SITE: 'alsawarey' },
       max_memory_restart: '512M',
       time: true,
     },

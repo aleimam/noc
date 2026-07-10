@@ -104,6 +104,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
           {footerPages.map((p) => (
             <Link key={p.slug} href={`/p/${p.slug}`} className="text-white/70 hover:text-gold">{locale === 'en' ? p.titleEn || p.titleAr : p.titleAr}</Link>
           ))}
+          <Link href="/partner/login" className="text-white/70 hover:text-gold">{L('الشركاء', 'Partners')}</Link>
           <a href={`https://wa.me/${whatsapp.replace(/[^\d]/g, '')}`} className="text-gold" dir="ltr">{whatsapp}</a>
           {socials.map((s) => (
             <a key={s.platform + s.url} href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.platform}
