@@ -67,7 +67,16 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
     const r = areaMaps.find((x) => x.kind === kind);
     return r ? r.newobourPath || r.cleanPath : null;
   };
-  const locationMap = pickMap('location');
+  let locationMap = pickMap('location');
+  // Inherit the district's location map when the neighborhood has none of its own. Display only —
+  // listings never embed this fallback; they use their own annotated (level:'listing') map.
+  if (!locationMap && n.districtId) {
+    const dm = await prisma.areaMap.findFirst({
+      where: { level: 'district', areaId: n.districtId, kind: 'location' },
+      select: { newobourPath: true, cleanPath: true },
+    });
+    locationMap = dm?.newobourPath || dm?.cleanPath || null;
+  }
   const masterplanMap = pickMap('masterplan');
 
   // Maps stay open at LIGHT/MEDIUM; only the HIGH break-glass posture requires login.
