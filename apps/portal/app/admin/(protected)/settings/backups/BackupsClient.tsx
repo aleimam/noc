@@ -296,8 +296,8 @@ export function BackupsClient({
           {L('تفعيل التنبيهات', 'Enable alerts')}
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={L('بريد التنبيه', 'Alert email')}>
-            <input dir="ltr" type="email" value={alertEmail} onChange={(e) => setAlertEmail(e.target.value)} placeholder="you@example.com" className={inp} />
+          <Field label={L('بريد التنبيه (يمكن أكثر من واحد بفاصلة)', 'Alert email(s) — comma-separated for more than one')}>
+            <input dir="ltr" type="text" value={alertEmail} onChange={(e) => setAlertEmail(e.target.value)} placeholder="you@example.com, other@example.com" className={inp} />
           </Field>
           <Field label={L('هاتف التنبيه (SMS)', 'Alert phone (SMS)')}>
             <input dir="ltr" value={alertPhone} onChange={(e) => setAlertPhone(e.target.value)} placeholder="01xxxxxxxxx" className={inp} />

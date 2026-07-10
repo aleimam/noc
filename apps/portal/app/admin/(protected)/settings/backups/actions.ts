@@ -152,10 +152,11 @@ export async function verifyLatest(): Promise<R> {
 
 export async function saveAlertConfig(input: { enabled: boolean; email: string; phone: string }): Promise<R> {
   await requirePermission('settings', 'UPDATE');
-  const email = input.email.trim().toLowerCase();
+  const emails = input.email.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+  const email = emails.join(', '); // one or more recipients (comma-separated)
   const phone = input.phone.trim();
-  if (input.enabled && !email && !phone) return { ok: false, error: 'need_email_or_phone' };
-  if (email && !isValidEmail(email)) return { ok: false, error: 'invalid_email' };
+  if (input.enabled && emails.length === 0 && !phone) return { ok: false, error: 'need_email_or_phone' };
+  for (const e of emails) if (!isValidEmail(e)) return { ok: false, error: 'invalid_email' };
   if (phone && !isValidPhone(phone)) return { ok: false, error: 'invalid_phone' };
   const value = JSON.stringify({ enabled: input.enabled, email, phone });
   try {
