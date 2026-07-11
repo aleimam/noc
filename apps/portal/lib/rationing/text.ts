@@ -39,21 +39,6 @@ export function normalizeArabic(input: string | null | undefined): string {
   return s;
 }
 
-/** Normalize but KEEP single spaces between tokens (for display-ish comparisons). */
-export function normalizeArabicSpaced(input: string | null | undefined): string {
-  if (!input) return '';
-  let s = toLatinDigits(String(input));
-  s = s.replace(/[ً-ٰٟـ]/g, '');
-  s = s
-    .replace(/[أإآٱ]/g, 'ا')
-    .replace(/[ىئ]/g, 'ي')
-    .replace(/ة/g, 'ه')
-    .replace(/ؤ/g, 'و')
-    .replace(/ء/g, '');
-  s = s.toLowerCase().replace(/[^ء-ي0-9a-z\s]/g, ' ');
-  return s.replace(/\s+/g, ' ').trim();
-}
-
 /** Levenshtein edit distance (iterative, O(n·m)). */
 export function editDistance(a: string, b: string): number {
   if (a === b) return 0;

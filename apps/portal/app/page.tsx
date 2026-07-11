@@ -62,18 +62,19 @@ export default async function Home() {
           </p>
           {/* Real search: submitting navigates to /rationing?q=… and shows results there.
               `required` means it won't leave the homepage until the user types a query. */}
-          <form action="/rationing" method="get" className="mx-auto mt-5 flex max-w-xl items-center gap-2 rounded-xl bg-white p-2 shadow-xl">
-            <span className="ps-2 text-ink-400" aria-hidden>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
+          {/* Oversized controls on purpose (golden rule) — same sizing family as the rationing SearchBar. */}
+          <form action="/rationing" method="get" className="mx-auto mt-5 flex max-w-xl items-center gap-2 rounded-2xl bg-white p-2 shadow-xl">
+            <span className="ps-2 text-gold" aria-hidden>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
             </span>
             <input
               name="q"
               required
               placeholder={L('ابحث عن اسمك في كشوف التقنين', 'Search the ledgers by your name…')}
               aria-label={L('ابحث عن اسمك في كشوف التقنين', 'Search the ledgers by your name')}
-              className="min-w-0 flex-1 bg-transparent px-1 text-navy-800 outline-none placeholder:text-ink-400"
+              className="min-w-0 flex-1 bg-transparent px-1 py-3 text-xl text-navy-800 outline-none placeholder:text-ink-400"
             />
-            <button type="submit" className="flex-none rounded-md bg-navy px-5 py-3 text-sm font-bold text-soft transition hover:brightness-110">{L('بحث', 'Search')}</button>
+            <button type="submit" className="flex-none rounded-xl bg-gold px-6 py-3 text-xl font-bold text-navy-900 transition hover:brightness-105">{L('بحث', 'Search')}</button>
           </form>
         </div>
       </section>

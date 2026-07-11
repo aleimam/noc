@@ -88,7 +88,7 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
     arr.push(p.path);
     photosByUpdate.set(p.ownerId, arr);
   }
-  const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 
   const areas = (n.areas as number[] | null) ?? [];
   const buildingTypes = labels((n.buildingTypes as string[] | null) ?? [], BUILDING_TYPES, locale);

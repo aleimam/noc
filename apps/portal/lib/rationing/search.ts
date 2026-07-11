@@ -140,24 +140,6 @@ export async function searchSheets(opts: {
   return { results: rows.map(toCard), total, suggestions };
 }
 
-/** Browse mode (no query): paginated list, optional city filter. */
-export async function browseSheets(opts: { cityId?: string; take?: number; skip?: number; sort?: SortKey }): Promise<{ results: SheetCard[]; total: number }> {
-  const take = opts.take ?? 50;
-  const skip = opts.skip ?? 0;
-  const where: Prisma.RationingSheetWhereInput = opts.cityId ? { cityId: opts.cityId } : {};
-  const [rows, total] = await Promise.all([
-    prisma.rationingSheet.findMany({
-      where,
-      include: { city: { select: { name: true } } },
-      orderBy: sheetOrderBy(opts.sort ?? 'newest'),
-      take,
-      skip,
-    }),
-    prisma.rationingSheet.count({ where }),
-  ]);
-  return { results: rows.map(toCard), total };
-}
-
 export type PlotRow = { ref: string; plotNo: string; blockNo: string; cityName: string | null; owner: string | null; count: number };
 
 /** Plots tab: distinct plots (by plot full reference) with applicant counts. Filter/sort/paginate in JS. */

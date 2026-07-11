@@ -2,8 +2,6 @@ import { prisma } from '@noc/db';
 import type { StampCategory } from './stampTypes';
 
 export type Brand = 'newobour' | 'alsawarey';
-export const CONTACT_TYPES = ['phone', 'whatsapp', 'email', 'website', 'address', 'facebook', 'instagram'] as const;
-export type ContactType = (typeof CONTACT_TYPES)[number];
 export type BrandContactItem = { type: string; value: string };
 
 /** Which brand's logo + contacts a photo category belongs to (listing photos + maps are the

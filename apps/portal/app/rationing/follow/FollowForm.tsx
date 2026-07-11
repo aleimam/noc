@@ -108,7 +108,7 @@ export function FollowForm({
             {t('otpResend')}
           </button>
         </div>
-        {error && <span className="text-sm text-red-600">{error}</span>}
+        {error && <span className="text-sm text-danger">{error}</span>}
       </form>
     );
   }
@@ -150,7 +150,7 @@ export function FollowForm({
         <button disabled={pending} className="rounded-xl bg-gold px-6 py-2.5 font-bold text-navy-900 disabled:opacity-50">
           {pending ? t('submitting') : t('followSubmit')}
         </button>
-        {error && <span className="text-sm text-red-600">{error}</span>}
+        {error && <span className="text-sm text-danger">{error}</span>}
       </div>
       <p className="text-xs text-ink-500 sm:col-span-2">{t('freeServiceNote')}</p>
     </form>

@@ -150,7 +150,7 @@ export default function CustomerLoginPage() {
                 className="w-full rounded-md border border-graphite/20 bg-transparent px-3 py-3 text-lg"
               />
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
             <button
               type="submit"
               disabled={loading}
@@ -179,7 +179,7 @@ export default function CustomerLoginPage() {
                 className="w-full rounded-md border border-graphite/20 bg-transparent px-3 py-3 text-lg tracking-[0.4em]"
               />
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
             <button
               type="submit"
               disabled={loading}

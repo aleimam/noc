@@ -59,7 +59,7 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
     arr.push(p.path);
     photosByUpdate.set(p.ownerId, arr);
   }
-  const fmt = (dt: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(dt);
+  const fmt = (dt: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(dt);
   const pickMap = (kind: string) => {
     const r = areaMaps.find((x) => x.kind === kind);
     return r ? r.newobourPath || r.cleanPath : null;

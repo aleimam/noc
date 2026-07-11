@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react';
 import { useTranslations } from 'next-intl';
+import { toast } from '@noc/ui';
 import { deleteRationingFollow, deleteLandFollow } from './actions';
 
 export function DeleteFollowButton({ id, kind }: { id: string; kind: 'rationing' | 'land' }) {
@@ -12,8 +13,8 @@ export function DeleteFollowButton({ id, kind }: { id: string; kind: 'rationing'
       onClick={() => {
         if (!confirm(t('confirmUnfollow'))) return;
         start(async () => {
-          if (kind === 'rationing') await deleteRationingFollow(id);
-          else await deleteLandFollow(id);
+          const r = kind === 'rationing' ? await deleteRationingFollow(id) : await deleteLandFollow(id);
+          if (!r.ok) toast(t('saveError'), 'error');
         });
       }}
       disabled={pending}

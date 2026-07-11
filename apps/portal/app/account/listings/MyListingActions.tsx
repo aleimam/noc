@@ -3,6 +3,7 @@
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { toast } from '@noc/ui';
 import { setMyListingStatus } from './actions';
 
 export function MyListingActions({ id, status }: { id: string; status: string }) {
@@ -11,8 +12,9 @@ export function MyListingActions({ id, status }: { id: string; status: string })
   const [pending, start] = useTransition();
   const act = (s: 'SOLD' | 'ARCHIVED' | 'DRAFT' | 'PENDING') =>
     start(async () => {
-      await setMyListingStatus(id, s);
-      router.refresh();
+      const r = await setMyListingStatus(id, s);
+      if (r.ok) router.refresh();
+      else toast(t('negoError'), 'error');
     });
 
   return (

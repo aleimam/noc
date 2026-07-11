@@ -59,7 +59,7 @@ export function NegotiationThread({
   }
 
   const statusLabel = status === 'ACCEPTED' ? t('negoStatusAccepted') : status === 'REJECTED' ? t('negoStatusRejected') : status === 'WITHDRAWN' ? t('negoStatusWithdrawn') : t('negoStatusOpen');
-  const statusColor = status === 'ACCEPTED' ? 'text-success' : status === 'REJECTED' || status === 'WITHDRAWN' ? 'text-red-600' : 'text-navy-600';
+  const statusColor = status === 'ACCEPTED' ? 'text-success' : status === 'REJECTED' || status === 'WITHDRAWN' ? 'text-danger' : 'text-navy-600';
 
   return (
     <div className={`space-y-3 rounded-2xl border border-ink-200 bg-white p-4 ${compact ? '' : 'shadow-sm'}`}>
@@ -84,7 +84,7 @@ export function NegotiationThread({
       {awaitingMe && (
         <div className="flex flex-wrap gap-2">
           <button disabled={pending} onClick={() => act('accept')} className="rounded-lg bg-success px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{t('negoAccept')}</button>
-          <button disabled={pending} onClick={() => act(role === 'buyer' ? 'withdraw' : 'reject')} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-bold text-red-600 disabled:opacity-50">{role === 'buyer' ? t('negoWithdraw') : t('negoReject')}</button>
+          <button disabled={pending} onClick={() => act(role === 'buyer' ? 'withdraw' : 'reject')} className="rounded-lg border border-danger/40 px-4 py-2 text-sm font-bold text-danger disabled:opacity-50">{role === 'buyer' ? t('negoWithdraw') : t('negoReject')}</button>
         </div>
       )}
       {iMadeLast && <p className="text-sm text-ink-500">{t('negoAwaiting')}</p>}
@@ -100,7 +100,7 @@ export function NegotiationThread({
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('negoNote')} className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2 text-sm" />
         </div>
       )}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
     </div>
   );
 }

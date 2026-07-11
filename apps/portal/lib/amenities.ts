@@ -59,13 +59,6 @@ export function amenitiesForDistrict(districtId: string) {
   return loadCards({ districtId });
 }
 
-export function amenitiesForListing(listingId: string, neighborhoodId: string | null, districtId: string | null) {
-  const or: Prisma.AmenityPlacementWhereInput[] = [{ listingId }];
-  if (neighborhoodId) or.push({ neighborhoodId });
-  if (districtId) or.push({ districtId });
-  return loadCards({ OR: or });
-}
-
 // ── Admin helpers ──
 
 /** Every amenity in the library (active + inactive) for the admin library page. */

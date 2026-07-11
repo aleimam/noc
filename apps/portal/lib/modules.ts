@@ -41,9 +41,3 @@ export async function saveModuleVisibility(map: Record<string, boolean>): Promis
   const clean = Object.fromEntries(MODULE_KEYS.map((k) => [k, map[k] !== false]));
   await prisma.setting.upsert({ where: { key: KEY }, update: { value: JSON.stringify(clean) }, create: { key: KEY, value: JSON.stringify(clean) } });
 }
-
-/** Keys that are turned OFF (hidden from the public nav). */
-export async function hiddenModuleKeys(): Promise<string[]> {
-  const vis = await getModuleVisibility();
-  return MODULE_KEYS.filter((k) => vis[k] === false);
-}
