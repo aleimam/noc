@@ -21,9 +21,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(process.env.PORTAL_URL || 'https://newobour.com'),
     title: en
-      ? 'New Obour | Free services portal of New Obour City'
-      : 'العبور الجديد | بوابة خدمات مدينة العبور الجديدة المجانية',
-    description: en ? 'New Obour City — free community services portal' : 'بوابة خدمات مدينة العبور الجديدة المجانية',
+      ? 'New Obour | Free services portal'
+      : 'العبور الجديد | بوابة الخدمات المجانية',
+    description: en ? 'New Obour City — free community services portal' : 'بوابة الخدمات المجانية لمدينة العبور الجديدة',
     icons: { icon: '/brand/favicon' },
   };
 }
