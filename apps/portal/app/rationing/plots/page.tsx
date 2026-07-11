@@ -63,6 +63,10 @@ export default async function PlotsTab({ searchParams }: { searchParams: Promise
         <RationingTabs active="plots" showDashboard={config.showDashboard} />
 
         <form method="get" className="flex items-center gap-2 rounded-2xl bg-white p-2.5 shadow-md" style={{ minHeight: 64 }}>
+          {/* keep the active filters when submitting a text search */}
+          {cityId && <input type="hidden" name="city" value={cityId} />}
+          {per !== 10 && <input type="hidden" name="per" value={String(per)} />}
+          {sort !== 'count' && <input type="hidden" name="sort" value={sort} />}
           <input name="q" defaultValue={q} placeholder={t('plotsSearchPh')} className="flex-1 bg-transparent px-3 text-xl text-navy-800 outline-none" />
           <button className="rounded-xl bg-gold px-7 py-3 text-lg font-bold text-navy-900">{t('search')}</button>
         </form>

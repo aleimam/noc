@@ -1,3 +1,5 @@
+import { waPhone } from '@noc/config';
+
 // Shown when a visitor exceeds the New Obour rationing quota (search or record views).
 // Friendly + big for low-tech users; offers login (more budget) or a short wait.
 export function LimitCard({ locale, loggedIn, whatsapp }: { locale: 'ar' | 'en'; loggedIn: boolean; whatsapp?: string | null }) {
@@ -29,7 +31,7 @@ export function LimitCard({ locale, loggedIn, whatsapp }: { locale: 'ar' | 'en';
       )}
       {whatsapp && (
         <div className="mt-3">
-          <a href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}`} className="text-base text-navy-600 underline">
+          <a href={`https://wa.me/${waPhone(whatsapp)}`} className="text-base text-navy-600 underline">
             {ar ? 'تحتاج مساعدة؟ راسلنا' : 'Need help? Message us'}
           </a>
         </div>

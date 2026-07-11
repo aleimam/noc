@@ -6,7 +6,8 @@ import { listingVisibleOnNewObour } from '@noc/partner-portal/visibility';
 import { marketHref, resolveMarketListingId } from '../../../lib/listings';
 import { PhotoGallery, TrackView, ListingCard, AreaAdvantages } from '@noc/ui';
 import { localizeUnit, currency } from '@noc/i18n';
-import { formatDetailValue, type DetailConfig } from '@noc/config';
+import { formatDetailValue, waPhone, type DetailConfig } from '@noc/config';
+import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { auth } from '@noc/auth';
 import { getStandardAreas } from '../../../lib/marketplace';
 import { advantagesForNeighborhood } from '../../../lib/advantages';
@@ -151,7 +152,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   // Recommendations: other published listings of the same type ("like what you're viewing").
   const similar = listing.typeOptionId
     ? await prisma.listing.findMany({
-        where: { status: 'PUBLISHED', typeOptionId: listing.typeOptionId, id: { not: listing.id } },
+        where: { status: 'PUBLISHED', ...newObourVisibility(), typeOptionId: listing.typeOptionId, id: { not: listing.id } },
         orderBy: { publishedAt: 'desc' },
         take: 6,
         select: { id: true, title: true, price: true, adNumber: true, area: true, typeOption: { select: { nameAr: true, nameEn: true } } },
@@ -250,7 +251,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     contactPhone = listing.owner.phone1;
     contactWhatsapp = listing.owner.phone1Whatsapp;
   }
-  const waNumber = contactPhone.replace(/\D/g, '');
+  const waNumber = waPhone(contactPhone); // wa.me needs international form (01x → 201x)
   const perLabel =
     listing.priceUnit === 'UNIT' ? (locale === 'ar' ? 'للوحدة' : 'per unit') : listing.priceUnit === 'SQM' ? (locale === 'ar' ? 'للمتر' : 'per m²') : '';
 

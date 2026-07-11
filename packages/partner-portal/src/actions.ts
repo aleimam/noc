@@ -46,6 +46,8 @@ export async function partnerUpdatePrice(listingId: string, price: number | null
   if (price != null && (!Number.isFinite(price) || price < 0)) return { ok: false, error: 'invalid' };
   const l = await ownListing(listingId, ownerId);
   if (!l) return { ok: false, error: 'forbidden' };
+  // Same lifecycle rule as availability: moderation statuses stay staff-controlled.
+  if (!FAST_STATUSES.includes(l.status as FastStatus)) return { ok: false, error: 'not_editable' };
   await prisma.listing.update({
     where: { id: listingId },
     data: { price, postersStale: true }, // price shows on the generated images

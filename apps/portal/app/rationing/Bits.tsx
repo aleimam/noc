@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { waPhone } from '@noc/config';
 
 // Official-source notice (req #11) — shown on the rationing surfaces with a link to the
 // Authority's Facebook page where the sheets are published.
@@ -23,7 +24,7 @@ export async function FbNotice() {
 export async function HelpButton({ number }: { number: string }) {
   if (!number) return null;
   const t = await getTranslations('rationing');
-  const href = `https://wa.me/${number.replace(/[^\d]/g, '')}`;
+  const href = `https://wa.me/${waPhone(number)}`;
   return (
     <a
       href={href}

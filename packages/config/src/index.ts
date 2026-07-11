@@ -125,6 +125,13 @@ export function isValidPhone(input: string | null | undefined): boolean {
   return PHONE_EG_LOCAL.test(p) || PHONE_INTL.test(p);
 }
 
+/** Digits for a wa.me link: international, no '+', no leading 0 — Egyptian local 01x → 201x.
+ *  wa.me/01225227677 is BROKEN (WhatsApp requires a country code); use wa.me/${waPhone(n)}. */
+export function waPhone(input: string | null | undefined): string {
+  const digits = cleanPhone(input).replace(/\D/g, '');
+  return digits.replace(/^0/, '20');
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Loose email check — one @, a dot in the domain, no spaces. Good enough for OTP routing. */

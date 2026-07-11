@@ -662,8 +662,13 @@ export async function snapshotPricesNow(): Promise<Result | { ok: true; count: n
   }
 }
 
+// Only the storefront contact keys may be written through this marketplace-gated action —
+// an open key would let marketplace staff bypass the `settings` RBAC (security.level, theme.*).
+const MARKETPLACE_SETTING_KEYS = new Set(['alswarey_phone', 'alswarey_whatsapp']);
+
 export async function updateSetting(key: string, value: string): Promise<Result> {
   await requirePermission('marketplace', 'UPDATE');
+  if (!MARKETPLACE_SETTING_KEYS.has(key)) return { ok: false, error: 'forbidden' };
   // Phone-type settings must satisfy the shared phone rule when non-empty.
   if (/_phone$/.test(key) && value.trim() && !isValidPhone(value)) {
     return { ok: false, error: 'invalid_phone' };

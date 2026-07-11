@@ -122,7 +122,8 @@ export async function savePartnerListing(input: LeanListingInput): Promise<Resul
         conditionOptionId: input.conditionOptionId,
         title: input.title.trim(),
         description: input.description?.trim() ? toSafeHtml(input.description.trim().slice(0, 5000)) : null,
-        price: input.price ?? null,
+        // Reject NaN/negative prices server-side (mirrors partnerUpdatePrice).
+        price: input.price != null && Number.isFinite(input.price) && input.price >= 0 ? input.price : null,
         priceUnit: input.priceUnit ?? 'TOTAL',
         contactPhone: input.contactPhone.trim(),
         contactWhatsapp: input.contactWhatsapp,

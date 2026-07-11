@@ -1,11 +1,12 @@
 // Storefront config: central contact, top-menu groups, and the featured-filter banners.
 // Banner images live in /public/market/banners (copied from the Al Sawarey asset folder).
 // Each entry links to the catalogue with the matching filter querystring.
+import { waPhone } from '@noc/config';
 
 export const WHATSAPP = '+201040810000';
 
 export function waLink(text: string, number: string = WHATSAPP): string {
-  return `https://wa.me/${number.replace(/[^\d]/g, '')}?text=${encodeURIComponent(text)}`;
+  return `https://wa.me/${waPhone(number)}?text=${encodeURIComponent(text)}`;
 }
 
 export type MenuLink = { labelAr: string; labelEn: string; href: string };

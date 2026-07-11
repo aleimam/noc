@@ -22,8 +22,7 @@ export const dynamic = 'force-dynamic';
 const fmt = (n: number) => n.toLocaleString('en');
 const BASE = (process.env.BROKERAGE_URL || 'https://alsawarey.com').replace(/\/$/, '');
 
-// Egyptian local number → wa.me international form (0100… → 20100…).
-const waPhone = (p: string) => p.replace(/\D/g, '').replace(/^0/, '20');
+import { waPhone } from '@noc/config';
 
 /** Owner phone in the staff card: the number on desktop, plus tap-to-call and (when the
  *  line has WhatsApp) tap-to-WhatsApp icons. On mobile only the icons show. */

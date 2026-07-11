@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
+import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { currency } from '@noc/i18n';
 import { SiteShell } from '../../_components/SiteShell';
 
@@ -14,7 +15,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
   const listings = ids.length
-    ? await prisma.listing.findMany({ where: { id: { in: ids }, status: 'PUBLISHED' }, include: { typeOption: true, neighborhood: { include: { district: true } } } })
+    ? await prisma.listing.findMany({ where: { id: { in: ids }, status: 'PUBLISHED', ...newObourVisibility() }, include: { typeOption: true, neighborhood: { include: { district: true } } } })
     : [];
   const byId = new Map(listings.map((l) => [l.id, l]));
   const ordered = ids.map((i) => byId.get(i)).filter((l): l is NonNullable<typeof l> => !!l);

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@noc/db';
+import { waPhone } from '@noc/config';
 import { LanguageSwitcher, ThemeToggle } from '@noc/ui';
 import { getStorefront } from '../../lib/storefront';
 import { getAdminViewer } from '../../lib/adminView';
@@ -105,7 +106,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
             <Link key={p.slug} href={`/p/${p.slug}`} className="text-white/70 hover:text-gold">{locale === 'en' ? p.titleEn || p.titleAr : p.titleAr}</Link>
           ))}
           <Link href="/partner/login" className="text-white/70 hover:text-gold">{L('الشركاء', 'Partners')}</Link>
-          <a href={`https://wa.me/${whatsapp.replace(/[^\d]/g, '')}`} className="text-gold" dir="ltr">{whatsapp}</a>
+          <a href={`https://wa.me/${waPhone(whatsapp)}`} className="text-gold" dir="ltr">{whatsapp}</a>
           {socials.map((s) => (
             <a key={s.platform + s.url} href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.platform}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-gold hover:text-navy-900">

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auth, hasPermission } from '@noc/auth';
-import { AdminShell, Toaster, type AdminNavGroup } from '@noc/ui';
+import { AdminShell, type AdminNavGroup } from '@noc/ui'; // Toaster now mounts once in the root layout
 import { SignOutButton } from '../../_components/SignOutButton';
 import { AdminLightGuard } from '../../_components/AdminLightGuard';
 import { AdminSearch } from '../../_components/AdminSearch';
@@ -114,7 +114,6 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
     >
       <AdminLightGuard />
       {children}
-      <Toaster />
     </AdminShell>
   );
 }
