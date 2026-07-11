@@ -1,5 +1,9 @@
 # Deploying NOC (newobour.com + alsawarey.com)
 
+> **⚠️ Start with [CLAUDE.md](CLAUDE.md)** — it has the current deploy runbook with all known
+> gotchas and the up-to-date server map, and supersedes this doc wherever they differ. This file
+> remains the original setup narrative (useful when rebuilding a server from scratch).
+
 Two Next.js apps from one monorepo sharing one MariaDB backend, served behind **Nginx**
 as two domains. This documents the live production setup (CWP / AlmaLinux 9 VPS).
 **Port 3000 is taken on the server — the apps use 3001 (portal) / 3002 (brokerage).**

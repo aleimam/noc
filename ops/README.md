@@ -1,34 +1,47 @@
 # ops/ — server operations toolkit
 
-Scripts + runbooks for hardening and backing up the production VPS
-(`root@77.42.66.76`, AlmaLinux 9 + CWP). Everything here runs **on the server**;
-pull the repo there first (`cd /root/noc && git pull`).
+Scripts + runbooks for the production VPS (`root@77.42.66.76`, AlmaLinux 9 + CWP).
+Everything here runs **on the server**; pull the repo there first (`cd /root/noc && git pull`).
+The big picture (deploy runbook, server map, gotchas) lives in the repo root **CLAUDE.md**.
 
-| File | What it does | How to run |
-|------|--------------|-----------|
-| `audit.sh` | Read-only snapshot of firewall, sshd, open ports, brute-force load, backups. Changes nothing. | `bash ops/audit.sh` |
-| `backup.sh` | Dumps the DB + archives uploads + snapshots `.env`, with rotation. | `bash ops/backup.sh` |
-| `install-backups.sh` | Creates `/root/backups`, installs the daily cron, runs one backup to verify. | `bash ops/install-backups.sh` |
-| `backup.env.example` | Optional credential/retention overrides for `backup.sh`. | copy to `ops/backup.env` only if needed |
-| `HARDENING.md` | Gated runbook: key-only SSH + new port, auto-ban, auto-updates. | follow step by step |
-| `RESTORE.md` | How to restore the DB / uploads / env, plus a non-destructive test restore. | reference |
-| `CLOUDFLARE.md` | Cutover runbook: owner's zone/NS steps + server real-IP/CSF config + dashboard checklist. | follow step by step |
-| `cloudflare-realip.sh` | (Re)generate Nginx `set_real_ip_from` + CSF ignore from Cloudflare's ranges. | `bash ops/cloudflare-realip.sh` (after cutover) |
+## Runbooks
 
-## Recommended order
+| Doc | What |
+|---|---|
+| `CLOUDFLARE.md` | Proxy cutover: owner dashboard checklist (Part C is the current step) + server prep (done) |
+| `OFFSITE.md` | One-time off-site backup setup (owner enters details in `/admin/settings/backups` or here) |
+| `RESTORE.md` | How to restore DB / uploads / .env from a backup (deliberately CLI-only) |
+| `MAIL-DELIVERABILITY.md` | Outbound mail: Postfix→Brevo relay, SPF/DKIM/DMARC state, testing |
+| `HARDENING.md` | SSH/firewall hardening (applied; kept as reference) |
 
-1. **`git pull`** on the server.
-2. **`bash ops/audit.sh`** — paste the output back so the firewall/SSH steps get
-   tailored to what's actually installed.
-3. **Backups first** (zero lock-out risk): `bash ops/install-backups.sh`, then
-   confirm files appear under `/root/backups`. Do one **test restore** from
-   `RESTORE.md` so you trust them.
-4. **Hardening**: follow `HARDENING.md` — but only with a second SSH session held
-   open and the CWP panel reachable, exactly as that doc's "one rule" says.
+## Scripts
+
+| Script | What | Cron |
+|---|---|---|
+| `backup.sh` | DB dump + uploads archive + .env snapshot → `/root/backups`, rotation via `RETAIN_DAYS` | `/etc/cron.d/noc-backup` 02:30 |
+| `offsite-backup.sh` | rsync-over-SSH mirror of `/root/backups/{db,uploads,config}` to the owner's server (key `/root/.ssh/noc_backup`). `--test` / `--install-cron`; skips quietly until `ops/offsite.env` is configured | `/etc/cron.d/noc-offsite` 03:30 |
+| `backup-alert.sh` → `backup-alert.ts` | Health check: newest DB backup <26h + last off-site push OK, else email/SMS the owner (recipients in DB Setting `backup.alert`, editable at `/admin/settings/backups`) | `/etc/cron.d/noc-backup-alert` 04:00 |
+| `analytics-rollup.sh` → `.ts` | Aggregate raw visits into `AnalyticsDaily` | `/etc/cron.d/noc-analytics-rollup` 03:05 |
+| `analytics-prune.sh` → `.ts` | Retention prune of raw analytics | `/etc/cron.d/noc-analytics-prune` 03:15 |
+| `install-backups.sh` | One-time: backup tree + daily cron + first run | — |
+| `cloudflare-realip.sh` | Regenerate Nginx real-IP + CSF ignore from Cloudflare's published ranges (already applied; rerun a few times/year) | — |
+| `mail-relay-brevo.sh` | (Re)configure Postfix→Brevo relay creds (`/etc/postfix/sasl_passwd`). Use after rotating the Brevo key | — |
+| `audit.sh` | Read-only security/ops snapshot; changes nothing | — |
+
+## Config files (server-side, gitignored where secret)
+
+| File | What |
+|---|---|
+| `nginx-noc.conf` | **Mirror of the live `/etc/nginx/conf.d/noc.conf`** (vhosts, ACME webroot locations, www→apex). Edit on the server, keep this copy in sync |
+| `backup.env.example` → `ops/backup.env` | Backup overrides (`RETAIN_DAYS` is managed by the admin Backups page) |
+| `offsite.env.example` → `ops/offsite.env` | Off-site target (host/user/port/path, enable, mirror) — managed by the admin Backups page |
 
 ## Notes
 
-- `*.sh` files are forced to LF endings via the repo `.gitattributes` so they run
-  on Linux even though the repo is edited on Windows.
-- `ops/backup.env` is gitignored — it may hold DB credentials and must never be
-  committed. Backups themselves live under `/root/backups`, outside the repo.
+- Certificate renewal uses **certbot webroot** (`/usr/local/apache/autossl_tmp`) — the nginx
+  authenticator does NOT work on this CWP box. Never re-run `certbot --nginx`.
+- Postfix discards mail to the placeholder `yourdomain.com` (transport_maps) so hourly cron
+  mail can't bounce through Brevo and damage sender reputation.
+- `*.sh` are LF-forced via `.gitattributes`. Don't `chmod` tracked scripts on the server
+  (file-mode diffs used to abort `git pull`; `core.fileMode false` is set as a guard).
+- `ops/backup.env` + `ops/offsite.env` are gitignored (may hold credentials/targets).

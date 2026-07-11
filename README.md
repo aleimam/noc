@@ -6,14 +6,19 @@ A bilingual (Arabic‑first, RTL) platform for New Obour City, built as one mono
 - **`apps/portal`** → **newobour.com** — the free community services portal (brand: العبور الجديد / New Obour Real Estate)
 - **`apps/brokerage`** → **alsawarey.com** — the Al Sawarey (الصواري) real‑estate brokerage
 
+> **👉 New here (or a new Claude/AI session)? Read [CLAUDE.md](CLAUDE.md) first** — the master
+> onboarding doc: architecture rules, the production deploy runbook with all its gotchas, the
+> server map, and the current pending-task list.
+
 ## Stack
 Next.js 15 (App Router) · React 19 · Tailwind v4 · TypeScript · Prisma + MySQL/MariaDB ·
 Auth.js v5 (JWT) · next‑intl · Turborepo + npm workspaces.
 
 ```
-apps/        portal, brokerage                (Next.js apps)
-packages/    db, auth, i18n, ui, sms, config  (shared)
+apps/        portal (also hosts the one /admin), brokerage         (Next.js apps)
+packages/    db, auth, ui, partner-portal, mail, sms, analytics, config, i18n
 Identity/    brand assets (logos, palette)
+ops/         production server scripts + runbooks (see ops/README.md)
 .devdb/      local portable MariaDB           (git-ignored)
 uploads/     user media                       (git-ignored)
 ```

@@ -11,33 +11,37 @@ SMS gateway, and next-intl ar/en.
 
 ---
 
-## 📌 Current status (2026-07-09)
+## 📌 Current status (2026-07-11)
 
-**Recently shipped & deployed:** partner portal + full-site chrome + public "become a partner"
-apply flow (#6), **SEO-friendly listing URLs** on both apps (#7), first-party visitor analytics
-(**Phases 1 & 2** — sessions + events + funnel + search intelligence), the watermark/stamp
-**brand-split + managed contacts footer + per-listing-category
-rules**, official-papers on listings, and **login hardening** (bilingual errors + 5-try
-lockout, partner login tabs). Earlier: the City-geo / map-inheritance / area-advantages /
-generated-photos feature (both phases) and the **ALSWARY → "Al Sawarey"** rename.
+> The always-current pending list + server runbook live in **[CLAUDE.md](CLAUDE.md)** — this
+> block is a snapshot.
 
-**Immediate backlog:**
-- **Off-server backups** — on-server daily DB+uploads backups already exist and restore
-  (`ops/RESTORE.md`); the gap is an **off-site copy** (SSH-key push from the VPS to the
-  owner's backup server). VPS keypair generated; **blocked on the owner** supplying the
-  backup server's host / port / user / target path + installing the VPS public key there.
-- **Cloudflare** — server-side prep DONE (`ops/CLOUDFLARE.md` + `ops/cloudflare-realip.sh`).
-  **Blocked on the owner** doing Part A (create zones, switch nameservers); then run Part B
-  on the VPS + Part C checklist.
-- **`/code-review ultra`** — owner-triggered when wanted.
-- **Partner OTP-by-email** — deferred until outbound-mail deliverability (SPF/DKIM) is
-  verified; partner OTP stays SMS-only until then.
-- **Web analytics — feature-complete (Phases 1–3 SHIPPED 2026-07-09).** Phase 3 part 2 added
-  dead clicks + form abandonment, visitor cohorts (new/returning/repeat), and `AnalyticsDaily`
-  daily rollups (nightly cron @ 3:05, before the 3:15 prune) with a retained long-term-trend
-  chart. Only optional/blocked extras remain: **saved custom dashboard views** (nice-to-have)
-  and **scheduled email reports** (blocked on outbound-mail SPF/DKIM — same gate as partner
-  email-OTP).
+**Recently shipped & deployed (2026-07-10/11):**
+- **Multi-site partner portal — COMPLETE.** The whole partner portal was extracted into
+  `@noc/partner-portal` and mounted on **both** domains (`/partner` on newobour.com AND
+  alsawarey.com). Admin decides per-partner site access (`Owner.siteNewObour/siteAlsawary`);
+  partner logins are gated per site (`NOC_SITE` env); a partner's listings appear ONLY on their
+  enabled sites (Phase 4 visibility, truth-table verified); both apps use the shared **lean
+  listing form**. Backend pipeline verified end-to-end on prod; a UI click-test by a human
+  remains (test account `testpartner` exists — delete after).
+- **Partner email-OTP + admin OTP login** (password OR code via SMS/email).
+- **Web analytics Phases 1–3 + saved dashboard views** — feature-complete.
+- **Outbound mail** — Brevo relay live; BOTH domains SPF+DKIM authenticated (verified);
+  Gmail inboxes, Outlook still spam (shared-IP reputation, nothing left to fix technically);
+  hourly cron-bounce reputation leak fixed (Postfix transport discard).
+- **Backups** — full admin page `/admin/settings/backups` (downloads, instant backup, integrity
+  check, schedule + retention editors, off-site config + test, failure alerts → email×2 + SMS).
+  Off-site push script + cron installed, waiting only on the owner's server details.
+- **TLS** — cert reissued as a 4-name SAN (both apexes + www) and the silently-broken renewal
+  fixed (webroot method; dry-run verified).
+- Explore: a neighborhood with no location map inherits its district's (never shown on listings).
+
+**Owner-action backlog (everything prepped, see CLAUDE.md for details):**
+1. Cloudflare proxy flip — Part C checklist in `ops/CLOUDFLARE.md`.
+2. Off-site backup server details → enter in `/admin/settings/backups`, add the VPS pubkey.
+3. Rotate the Brevo SMTP key, then re-apply via `ops/mail-relay-brevo.sh`.
+4. Partner portal UI click-test on both sites (then delete the `testpartner` account).
+5. `/code-review ultra` when wanted.
 
 ---
 
