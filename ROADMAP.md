@@ -111,13 +111,22 @@ transparent fee table (admin-editable Setting). Admin queue. Documents are **int
 (same rule as DOCUMENTS attributes).
 **Effort:** M.
 
-## 3. Price Heatmap (extends the new Price Index)
-**Where:** `/price-index` (already live with per-district averages).
-**Build:** add a 6-month trend per district (needs a small `PriceSnapshot` table or a
-monthly cron capturing district averages), a side-by-side district comparator, and
-infrastructure-completion bars. Plot with inline SVG (no chart lib).
-**Effort:** S–M (the page exists; this is data history + comparison UI).
-**Dependency:** a scheduled job to snapshot monthly averages.
+## 3. ✅ Price Heatmap — SHIPPED 2026-07-11
+**Delivered (commit `e74ccd7`, migration `20260711120000_price_snapshots`):**
+`PriceSnapshot` (one row per district-month: avg EGP/m², samples, volume) written by a
+monthly cron (`ops/price-snapshot.{ts,sh}`, `/etc/cron.d/noc-price-snapshot`, 1st 03:20)
+and an admin **"Snapshot now"** button. Live aggregation (`apps/portal/lib/priceIndex.ts`)
+now combines **published marketplace Listings** (TOTAL→price/area, SQM as-is, UNIT skipped)
+**+ published Lands** (lands linked to a listing skipped — no double count), normalized to
+EGP/m². `/price-index` gained: gold **heat-tinted** averages, **monthly-change** arrows,
+**6-month inline-SVG sparkline** per district, and a big mobile-first **two-district
+comparator** with an explicit "X أرخص من Y بنسبة Z٪" line. Admin page
+`/admin/marketplace/price-index` (live table + snapshot history, marketplace RBAC).
+**Notes:** infra-completion bars deliberately skipped (owner). Trend history accumulates
+from 2026-07 — it cannot be backfilled. Prod had no priced+located inventory at ship time
+(first snapshot = 0 rows; fills in as listings get price+area+neighborhood). The public
+page is currently **hidden by the owner's module toggle** (`priceIndex: false` in
+`/admin/settings/modules`) — enable it there to go public.
 
 ## 4. Premium Document Verification / escrow (طلب فحص الأوراق)
 **Trigger:** an **unverified** public listing (`/market/[id]`).
