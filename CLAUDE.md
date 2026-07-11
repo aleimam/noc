@@ -163,8 +163,17 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
    log in once on each site, submit the lean form, confirm PENDING in moderation. A dedicated
    **test partner exists**: username `testpartner`, email `egyptvitaminsshare@gmail.com`, both
    sites enabled, all categories granted (password resettable from the owner's admin panel →
-   Owners → its PartnerPortalPanel). **Delete this owner+user after testing.**
+   Owners → the unified owner editor's partner card). **Delete this owner+user after testing.**
 5. `/code-review ultra` — owner-triggered, billed; fold findings into `security.md` §7.
+6. **Enable the Price Index module** (Settings → Modules → مؤشر الأسعار) when the owner wants
+   `/price-index` public — the page + monthly snapshot cron are live but hidden by this toggle.
+
+**2026-07-11 sweep (see ROADMAP "Current status"):** full UI/UX review fixed+deployed (~80
+findings incl. wa.me links via shared `waPhone()`, Toaster in both apps, partner photo-drop,
+admin confirms/error surfacing, required rejection reason); Price Heatmap shipped
+(`PriceSnapshot` + `noc-price-snapshot` cron, 1st @ 03:20); owner editor unified (atomic
+`saveOwnerFull`; PartnerPortalPanel deleted); partner Browse scoped to Al Sawarey offers;
+Al Sawarey footer name/slogan editable + Partners in header; geo explorer fully public.
 
 **Known-good facts** (don't re-litigate): SMS Misr works; email-OTP works; both domains'
 SPF/DKIM verified; cert renewal verified via dry-run; analytics crons verified; Phase-4 listing

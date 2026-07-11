@@ -11,10 +11,29 @@ SMS gateway, and next-intl ar/en.
 
 ---
 
-## 📌 Current status (2026-07-11)
+## 📌 Current status (2026-07-11, end of day)
 
 > The always-current pending list + server runbook live in **[CLAUDE.md](CLAUDE.md)** — this
 > block is a snapshot.
+
+**Shipped & deployed today (commits `e74ccd7` → `b9e45bc`):**
+- **Price Heatmap** (#3 below) — trends, comparator, heat table, monthly cron, admin snapshots page.
+- **System-wide UI/UX review** (4 parallel review agents, ~80 verified findings) → **all fixed
+  and deployed** in batches: broken wa.me links (new shared `waPhone()`), Toaster mounted in both
+  apps, partner photo-drop on alsawarey.com, visibility leaks (similar/compare), `updateSetting`
+  RBAC whitelist, admin delete-confirms + error surfacing everywhere (shared `runAction`),
+  required rejection reason, rationing /plot anti-scrape quota, mobile language switcher, real
+  OTP resends, upload-error mapping (+HEIC), contrast/touch/RTL/i18n sweep, and the P3 polish
+  tail (hero search sizing, theme tokens, date digits `ar-EG-u-nu-latn`, dead code).
+- **Owner edit page reworked** — single bottom Save/Reset via atomic `saveOwnerFull`, unified
+  cards, ad-codes at bottom, real site favicons, browse label «يمكنه تصفح جميع عروضنا»
+  (PartnerPortalPanel deleted; controls live in the unified OwnerEditor).
+- **Partner Browse scoped** to Al Sawarey storefront offers only (list + detail).
+- **Al Sawarey**: footer name/slogan admin-editable (`StorefrontContent.footer`), real SVG
+  contact logos, Partners link moved to the header.
+- **Geo explorer fully public** (owner decision): city/district/neighborhood details, maps,
+  advantages render without login; LoginToView removed there. Rationing gates untouched.
+- Homepage title shortened to «العبور الجديد | بوابة الخدمات المجانية».
 
 **Recently shipped & deployed (2026-07-10/11):**
 - **Multi-site partner portal — COMPLETE.** The whole partner portal was extracted into
