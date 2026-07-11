@@ -6,6 +6,7 @@ import { requirePermission, hashPassword } from '@noc/auth';
 import { isValidPhone } from '@noc/config';
 import { ensureAdNumber } from '../../../../lib/adNumber';
 import { regenerateListingImages } from '../../../../lib/poster/generate';
+import { snapshotPrices } from '../../../../lib/priceIndex';
 import { isPosterIcon } from '../../../../lib/poster/icons';
 import { STANDARD_AREAS_KEY } from '../../../../lib/marketplace';
 
@@ -644,6 +645,18 @@ export async function deleteOwner(id: string): Promise<Result> {
     await prisma.owner.delete({ where: { id } });
     revalidatePath('/admin/marketplace/owners', 'page');
     return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Write this month's per-district price snapshot on demand (same as the monthly cron). */
+export async function snapshotPricesNow(): Promise<Result | { ok: true; count: number }> {
+  await requirePermission('marketplace', 'UPDATE');
+  try {
+    const count = await snapshotPrices();
+    revalidatePath('/admin/marketplace/price-index', 'page');
+    return { ok: true, count };
   } catch (e) {
     return fail(e);
   }

@@ -99,7 +99,8 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 - **Crons** (`/etc/cron.d/`): `noc-backup` 02:30 (DB+uploads+.env, 14-day rotation) ·
   `noc-offsite` 03:30 (rsync push to owner's server — activates when configured) ·
   `noc-backup-alert` 04:00 (emails/SMSes owner if backups are stale) ·
-  `noc-analytics-rollup` 03:05 · `noc-analytics-prune` 03:15.
+  `noc-analytics-rollup` 03:05 · `noc-analytics-prune` 03:15 ·
+  `noc-price-snapshot` 03:20 on the 1st (monthly per-district price capture → /price-index trend).
 - **Backups admin UI:** `/admin/settings/backups` — status, per-file downloads, instant backup,
   integrity check, schedule/retention editors, off-site config + connection test, failure alerts
   (currently: aleimam@live.com + ebmta17@gmail.com + SMS 01225227677). **Restore stays CLI-only**

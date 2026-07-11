@@ -1178,9 +1178,28 @@ model District {
   amenityPlacements AmenityPlacement[]
   linksFrom     DistrictLink[] @relation("DistrictLinkFrom")
   linksTo       DistrictLink[] @relation("DistrictLinkTo")
+  priceSnapshots PriceSnapshot[]
 
   @@index([isActive, order])
   @@index([cityId])
+}
+
+/// Monthly per-district price capture for the /price-index trend (history accumulates —
+/// it cannot be backfilled). Written by ops/price-snapshot.ts (cron, 1st of month) and the
+/// admin "Snapshot now" action. Prices normalized to EGP per m² across Listings + Lands.
+model PriceSnapshot {
+  id           String   @id @default(cuid())
+  districtId   String
+  month        String // "YYYY-MM"
+  avgPerM      Int // rounded EGP/m² average
+  listingCount Int // samples behind the average (listings + lands)
+  volume       Decimal  @db.Decimal(18, 2) // total EGP asking value of the samples
+  createdAt    DateTime @default(now())
+
+  district District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+
+  @@unique([districtId, month])
+  @@index([month])
 }
 
 /// A neighborhood / مجاورة within a district, carrying the doc's metadata.

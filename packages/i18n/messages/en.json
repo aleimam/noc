@@ -281,7 +281,10 @@
     "avgPerM": "Avg / m²",
     "count": "Plots",
     "volume": "Volume",
-    "disclaimer": "Indicative averages computed from currently published land plots; not an official valuation."
+    "monthChange": "Monthly change",
+    "trend6m": "6-month trend",
+    "trendNote": "The trend builds up month by month from the day tracking started — a dash means no history yet.",
+    "disclaimer": "Indicative averages computed from currently published land plots and listings; not an official valuation."
   },
   "mp": {
     "title": "Marketplace",

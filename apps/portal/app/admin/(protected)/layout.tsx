@@ -30,6 +30,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
         { href: '/admin/rationing', label: t('rationing'), section: 'sheets' },
         { href: '/admin/lands', label: t('lands'), section: 'lands' },
         { href: '/admin/newobour/market', label: L('سوق العبور — العروض', 'New Obour market'), section: 'marketplace' },
+        { href: '/admin/marketplace/price-index', label: L('مؤشر الأسعار', 'Price index'), section: 'marketplace' },
         { href: '/admin/settings/calculator', label: L('حاسبة التصالح', 'Calculator'), section: 'settings' },
       ],
     },
