@@ -185,6 +185,23 @@ route **is the active protection**, not a mirror.
 - Patch OS/CWP; run apps + PM2 as a **non-root** user with log rotation.
 - `.env` `chmod 600`, owned by the app user, never committed.
 
+**Hardening round 3 — attack-surface reduction (applied 2026-07-11, all verified)**
+- **pure-ftpd removed** (stopped + disabled; ports 20/21 closed in CSF). FTP had *never* been
+  used and was under active brute-force at the time of removal.
+- **BIND/named removed** (stopped + disabled; 53/853 closed in CSF TCP+UDP). All domains'
+  authoritative DNS is Cloudflare; the system resolves via the host provider's resolvers —
+  named served nothing.
+- **CSF TCP_IN trimmed** to `22,25,80,110,143,443,465,587,993,995` + CWP panel ports
+  (2030–2096 kept deliberately — they are the lockout-recovery path). UDP_IN = `80,443`.
+- **TLSv1.3 enabled** alongside 1.2 (nginx.conf + CWP host vhosts); **`server_tokens off`**
+  (version no longer disclosed).
+- **Next.js bound to localhost** — `next start -H 127.0.0.1` in both apps' start scripts, so
+  :3001/:3002 no longer listen on public interfaces at all (previously firewall-blocked only).
+- `.env` tightened to `600` (was 644).
+- **Still open (accepted / pending):** apps run under pm2 as root (CWP box convention; a
+  non-root migration is possible but touchy — revisit after Cloudflare cutover). Kernel reboot
+  pending (owner schedules). CSF `RESTRICT_SYSLOG` left at CWP default.
+
 ---
 
 ## 6. Procedures
@@ -225,6 +242,10 @@ From the review; severities Critical / High / Medium / Low. Update **Status** as
 | F6 | Med | Full sheet / scans / maps not gated at MEDIUM posture yet | **fixed (3b, revised)** — data kept fully open; per-visitor hourly quota (cookie+IP, New Obour only) deters bulk copy; HIGH break-glass re-gates scans/maps (§3) |
 | F7 | Low | `AUTH_SECRET` dev fallback must be impossible in prod | **fixed (3c)** — `appSecret()` throws in prod if unset/weak |
 | F8 | Low | OTP throttled per-phone only, not per-IP | **fixed (3a)** — per-IP cap added on both apps |
+| F9 | Med | pure-ftpd running + port 21 open (unused, under live brute-force) | **fixed (round 3)** — service disabled, 20/21 closed |
+| F10 | Med | BIND/named exposed on public :53 with no delegated zones | **fixed (round 3)** — service disabled, 53/853 closed |
+| F11 | Low | TLSv1.2-only; nginx version disclosed in Server header | **fixed (round 3)** — TLSv1.3 enabled; server_tokens off |
+| F12 | Low | Next.js listened on 0.0.0.0:3001/3002 (firewall-blocked but public-bound); `.env` was 644 | **fixed (round 3)** — bound to 127.0.0.1; `.env` 600 |
 
 ---
 
