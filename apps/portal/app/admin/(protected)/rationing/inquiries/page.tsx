@@ -12,7 +12,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 function fmtDateTime(d: Date, locale: string) {
-  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', {
+  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

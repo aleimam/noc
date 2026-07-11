@@ -18,7 +18,7 @@ export default async function OffersPage() {
     include: { city: { select: { name: true } }, district: { select: { nameAr: true } } },
   });
 
-  const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { dateStyle: 'medium' }).format(d);
+  const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'medium' }).format(d);
 
   return (
     <div className="space-y-6">

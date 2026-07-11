@@ -30,7 +30,7 @@ export default async function PartnerApplicationsPage({ searchParams }: { search
   };
   const typeLabel = (v: string | null) =>
     v === 'individual' ? L('فرد / مالك', 'Individual') : v === 'broker' ? L('سمسار', 'Broker') : v === 'company' ? L('شركة', 'Company') : v === 'developer' ? L('مطوّر', 'Developer') : v === 'other' ? L('أخرى', 'Other') : '—';
-  const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(d);
+  const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(d);
   const chip = (active: boolean) => `rounded-lg px-3 py-1 text-sm font-semibold ${active ? 'bg-primary text-soft' : 'border border-graphite/25 hover:bg-graphite/10'}`;
 
   return (

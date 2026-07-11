@@ -27,7 +27,7 @@ export default async function DistrictDetail({ params }: { params: Promise<{ id:
     ? await prisma.district.findMany({ where: { id: { in: adjacencyIds } }, select: { id: true, nameAr: true, nameEn: true } })
     : [];
 
-  const fmt = (s: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
+  const fmt = (s: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
 
   return (
     <div className="space-y-6">

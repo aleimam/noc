@@ -35,7 +35,7 @@ export default async function NewsDetail({ params }: { params: Promise<{ id: str
   const n = await prisma.news.findUnique({ where: { id } });
   if (!n || !n.publishedAt) notFound();
   const photos = await prisma.attachment.findMany({ where: { ownerType: 'News', ownerId: id }, orderBy: { createdAt: 'asc' }, select: { path: true } });
-  const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }).format(d);
+  const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }).format(d);
 
   const title = L(n.titleAr, n.titleEn);
   const articleLd = {

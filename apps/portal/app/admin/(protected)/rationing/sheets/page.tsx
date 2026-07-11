@@ -14,7 +14,7 @@ const num = (v: string | string[] | undefined) => {
 
 function fmtDate(d: Date | null, locale: string) {
   if (!d) return '—';
-  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 }
 
 type Sort = 'newest' | 'name' | 'plot' | 'listDate';

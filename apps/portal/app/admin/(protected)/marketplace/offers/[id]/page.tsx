@@ -29,7 +29,7 @@ export default async function OfferDetail({ params }: { params: Promise<{ id: st
     select: { path: true },
   });
 
-  const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(d);
+  const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(d);
   const rows: [string, string][] = [
     ['النوع', o.mode === 'SHEET' ? 'أرض في كشف التقنين' : 'أرض مخصصة (تخصيص)'],
     ['اسم المالك', o.ownerName],

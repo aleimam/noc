@@ -57,7 +57,7 @@ function formatMonthYear(s: string, locale: string): string {
   const [y, m] = s.split('-').map(Number);
   if (!y || !m) return s;
   try {
-    return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en', { month: 'long', year: 'numeric' }).format(
+    return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en', { month: 'long', year: 'numeric' }).format(
       new Date(y, m - 1, 1),
     );
   } catch {

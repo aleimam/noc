@@ -34,7 +34,7 @@ export default async function MissedSheetReportsPage({ searchParams }: { searchP
   const newCount = await prisma.missedSheetReport.count({ where: { status: 'NEW' } });
 
   const fmt = (d: Date | null) =>
-    d ? new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d) : '—';
+    d ? new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d) : '—';
 
   return (
     <div className="space-y-6">

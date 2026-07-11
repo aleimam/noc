@@ -175,45 +175,8 @@ export async function deleteSection(id: string): Promise<Result> {
 }
 
 // ──────────────────────────── Partner portal (owner logins) ────────────────────────────
-
-export type PartnerAccountInput = {
-  username: string;
-  email: string;
-  phone: string;
-  password: string; // '' = keep the current one
-  isActive: boolean;
-};
-
-/** Create/update the partner-portal login attached to an Owner. Any of username/email/
- *  phone works as the login identifier — at least one is required. */
-export async function savePartnerAccount(ownerId: string, input: PartnerAccountInput): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
-  const username = input.username.trim().toLowerCase() || null;
-  const email = input.email.trim().toLowerCase() || null;
-  const phone = input.phone.trim() || null;
-  if (!username && !email && !phone) return { ok: false, error: 'identifier_required' };
-  if (phone && !isValidPhone(phone)) return { ok: false, error: 'invalid_phone' };
-  try {
-    const owner = await prisma.owner.findUnique({ where: { id: ownerId }, select: { name: true } });
-    if (!owner) return { ok: false, error: 'failed' };
-    const passPatch = input.password.trim() ? { passwordHash: await hashPassword(input.password.trim()) } : {};
-    const existing = await prisma.user.findUnique({ where: { ownerId } });
-    if (existing) {
-      await prisma.user.update({
-        where: { id: existing.id },
-        data: { username, email, phone, isActive: input.isActive, name: owner.name, ...passPatch },
-      });
-    } else {
-      await prisma.user.create({
-        data: { type: 'PARTNER', ownerId, username, email, phone, isActive: input.isActive, name: owner.name, ...passPatch },
-      });
-    }
-    revalidate();
-    return { ok: true };
-  } catch (e) {
-    return fail(e);
-  }
-}
+// The per-owner account / sites / categories / browse actions were consolidated into
+// saveOwnerFull below (one Save button on the owner detail page).
 
 /** Global master switch: may partners browse (view-only) all our published sell offers? */
 export async function setPartnerBrowseGlobal(enabled: boolean): Promise<Result> {
@@ -231,43 +194,114 @@ export async function setPartnerBrowseGlobal(enabled: boolean): Promise<Result> 
   }
 }
 
-/** Per-partner: may this partner browse all sell offers (effective only when the global
- *  switch above is on too). */
-export async function setOwnerBrowseListings(ownerId: string, canBrowse: boolean): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
-  try {
-    await prisma.owner.update({ where: { id: ownerId }, data: { canBrowseListings: canBrowse } });
-    revalidatePath('/admin/marketplace/owners', 'page');
-    return { ok: true };
-  } catch (e) {
-    return fail(e);
-  }
-}
+// ─────────────── Unified owner save (owner detail page — one Save button) ───────────────
 
-/** Which site(s) this partner may sign in to — and (restrict-to-site) where their listings show. */
-export async function setPartnerSites(ownerId: string, siteNewObour: boolean, siteAlsawary: boolean): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
-  try {
-    await prisma.owner.update({ where: { id: ownerId }, data: { siteNewObour, siteAlsawary } });
-    revalidatePath('/admin/marketplace/owners', 'page');
-    return { ok: true };
-  } catch (e) {
-    return fail(e);
-  }
-}
+export type OwnerFullInput = {
+  id: string;
+  name: string;
+  type: OwnerTypeKey;
+  codes: number[]; // allocated ad codes (Us 0–9, Company/Broker 10–79; ignored for Personal)
+  phone1: string;
+  phone1Whatsapp: boolean;
+  phone2: string;
+  phone2Whatsapp: boolean;
+  details: string;
+  /** Partner-portal block — null for US owners (they never get partner access). */
+  partner: {
+    username: string;
+    email: string;
+    phone: string;
+    password: string; // '' = keep the current one
+    isActive: boolean;
+    siteNewObour: boolean;
+    siteAlsawary: boolean;
+    categories: string[]; // allowed Type option ids (replace-all)
+    canBrowse: boolean;
+  } | null;
+};
 
-/** Replace the Type categories this partner may create listings in (explicit grants). */
-export async function setOwnerAllowedCategories(ownerId: string, optionIds: string[]): Promise<Result> {
+/** One-shot save for the owner detail page: owner fields + ad codes + partner-portal
+ *  account / site access / category grants / browse flag — one transaction, one Save button.
+ *  A partner login is only CREATED when at least one identifier (username/email/phone) is
+ *  entered; an existing login must keep at least one identifier. */
+export async function saveOwnerFull(input: OwnerFullInput): Promise<Result> {
   await requirePermission('marketplace', 'UPDATE');
+  const name = input.name.trim();
+  if (!name) return { ok: false, error: 'failed' };
+  if (input.phone1.trim() && !isValidPhone(input.phone1)) return { ok: false, error: 'invalid_phone' };
+  if (input.phone2.trim() && !isValidPhone(input.phone2)) return { ok: false, error: 'invalid_phone' };
+
+  // Ad codes — same rules as upsertOwner (Personal none, Us 0–9, Company/Broker 10–79).
+  let codes: number[] = [];
+  if (input.type !== 'PERSONAL') {
+    codes = Array.from(new Set(input.codes.map((c) => Math.trunc(c)).filter((c) => Number.isFinite(c))));
+    const [lo, hi] = input.type === 'US' ? [0, 9] : [10, 79];
+    if (codes.some((c) => c < lo || c > hi)) return { ok: false, error: 'owner_code_range' };
+  }
+
+  // Partner login account (normalized like savePartnerAccount).
+  const partner = input.type === 'US' ? null : input.partner;
+  let account: { username: string | null; email: string | null; phone: string | null; isActive: boolean; passwordHash?: string } | null = null;
+  if (partner) {
+    const username = partner.username.trim().toLowerCase() || null;
+    const email = partner.email.trim().toLowerCase() || null;
+    const phone = partner.phone.trim() || null;
+    if (phone && !isValidPhone(phone)) return { ok: false, error: 'invalid_phone' };
+    if (username || email || phone) {
+      account = { username, email, phone, isActive: partner.isActive };
+      if (partner.password.trim()) account.passwordHash = await hashPassword(partner.password.trim());
+    }
+  }
+  const existingUser = partner ? await prisma.user.findUnique({ where: { ownerId: input.id }, select: { id: true } }) : null;
+  if (partner && existingUser && !account) return { ok: false, error: 'identifier_required' };
+
   try {
-    const ids = [...new Set(optionIds)];
-    await prisma.$transaction([
-      prisma.ownerAllowedCategory.deleteMany({ where: { ownerId } }),
-      ...(ids.length ? [prisma.ownerAllowedCategory.createMany({ data: ids.map((optionId) => ({ ownerId, optionId })) })] : []),
-    ]);
+    await prisma.$transaction(async (tx) => {
+      const owner = await tx.owner.update({
+        where: { id: input.id },
+        data: {
+          name,
+          type: input.type,
+          phone1: input.phone1.trim() || null,
+          phone1Whatsapp: !!input.phone1Whatsapp,
+          phone2: input.phone2.trim() || null,
+          phone2Whatsapp: !!input.phone2Whatsapp,
+          details: input.details.trim() || null,
+          ...(partner
+            ? { siteNewObour: partner.siteNewObour, siteAlsawary: partner.siteAlsawary, canBrowseListings: partner.canBrowse }
+            : {}),
+        },
+      });
+
+      // Reconcile ad codes (diff, keep untouched rows).
+      const existing = (await tx.ownerCode.findMany({ where: { ownerId: owner.id }, select: { code: true } })).map((e) => e.code);
+      const want = new Set(codes);
+      const toDelete = existing.filter((c) => !want.has(c));
+      const toAdd = codes.filter((c) => !existing.includes(c));
+      if (toDelete.length) await tx.ownerCode.deleteMany({ where: { ownerId: owner.id, code: { in: toDelete } } });
+      for (const code of toAdd) await tx.ownerCode.create({ data: { ownerId: owner.id, code } });
+
+      if (partner) {
+        // Login account: update the existing one, or create when an identifier was entered.
+        if (existingUser) {
+          await tx.user.update({ where: { id: existingUser.id }, data: { ...account!, name } });
+        } else if (account) {
+          await tx.user.create({ data: { type: 'PARTNER', ownerId: owner.id, name, ...account } });
+        }
+        // Allowed posting categories (replace-all).
+        const ids = [...new Set(partner.categories)];
+        await tx.ownerAllowedCategory.deleteMany({ where: { ownerId: owner.id } });
+        if (ids.length) await tx.ownerAllowedCategory.createMany({ data: ids.map((optionId) => ({ ownerId: owner.id, optionId })) });
+      }
+    });
     revalidate();
     return { ok: true };
   } catch (e) {
+    if ((e as { code?: string })?.code === 'P2002') {
+      // Disambiguate the two unique constraints we can hit: OwnerCode.code vs User identifiers.
+      const target = String((e as { meta?: { target?: unknown } })?.meta?.target ?? '');
+      return { ok: false, error: /ownercode|(^|[^a-z])code/i.test(target) ? 'owner_code_taken' : 'duplicate_key' };
+    }
     return fail(e);
   }
 }

@@ -1,12 +1,9 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { PhotoGallery } from '@noc/ui';
-import { LoginToView } from '../../../_components/LoginToView';
 import { SiteShell } from '../../../_components/SiteShell';
-import { getSecurityGates } from '../../../../lib/security';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -47,9 +44,7 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
     const r = maps.find((x) => x.kind === kind);
     return r ? r.newobourPath || r.cleanPath : null;
   };
-  const [gates, session] = await Promise.all([getSecurityGates(), auth()]);
-  const showMaps = !gates.loginWall || !!session?.user;
-
+  // Owner decision (2026-07-11): the geo explorer — details, maps, advantages — is fully public.
   const mapSections: { key: string; label: string }[] = [
     { key: 'masterplan', label: t('masterplan') },
     { key: 'location', label: t('locationMap') },
@@ -87,16 +82,7 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
           return (
             <section key={m.key} className="space-y-2">
               <h2 className="font-semibold text-primary">{m.label}</h2>
-              {showMaps ? (
-                <PhotoGallery photos={[src]} />
-              ) : (
-                <LoginToView
-                  next={`/explore/city/${city.id}`}
-                  title={L('الخرائط تتطلب تسجيل الدخول', 'Sign in to view maps')}
-                  note={L('سجّل الدخول برقم هاتفك لعرض الخرائط.', 'Sign in with your phone number to view the maps.')}
-                  cta={L('تسجيل الدخول', 'Sign in')}
-                />
-              )}
+              <PhotoGallery photos={[src]} />
             </section>
           );
         })}

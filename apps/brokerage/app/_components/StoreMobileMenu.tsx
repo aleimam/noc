@@ -16,6 +16,7 @@ export function StoreMobileMenu({
   groups,
   account,
   wishlist,
+  partners,
   brand,
   locale = 'ar',
 }: {
@@ -25,6 +26,7 @@ export function StoreMobileMenu({
   groups: Group[];
   account: Item;
   wishlist: Item;
+  partners?: Item;
   brand: string;
   locale?: 'ar' | 'en';
 }) {
@@ -62,6 +64,7 @@ export function StoreMobileMenu({
               </div>
             ))}
             <Row href={sell.href} label={sell.label} accent />
+            {partners && <Row href={partners.href} label={partners.label} />}
             <div className="my-2 border-t border-white/10" />
             <Row href={wishlist.href} label={`♥ ${wishlist.label}`} />
             <Row href={account.href} label={account.label} />

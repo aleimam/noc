@@ -187,7 +187,13 @@ export function StorefrontEditor({ initial }: { initial: StorefrontContent }) {
           <p className="mt-1 text-xs opacity-50">اترك الرابط فارغاً لإخفاء الأيقونة. الروابط الفارغة لا تظهر.</p>
         </div>
 
-        <Loc2 label="سطر التذييل" val={c.footer.brandLine} onChange={(v) => up((n) => { n.footer.brandLine = v; })} />
+        <div className="rounded-md border border-graphite/15 p-3">
+          <div className="mb-2 text-sm font-medium">التذييل (Footer)</div>
+          <div className="space-y-3">
+            <Loc2 label="اسم الموقع في التذييل" val={c.footer.name} onChange={(v) => up((n) => { n.footer.name = v; })} />
+            <Loc2 label="الشعار / السطر التعريفي (يظهر تحت الاسم)" val={c.footer.slogan} onChange={(v) => up((n) => { n.footer.slogan = v; })} />
+          </div>
+        </div>
       </Card>
 
       <div className="flex items-center gap-3">

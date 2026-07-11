@@ -4,7 +4,8 @@ import { useTranslations } from 'next-intl';
 
 // Shared owner form fields (name / type / phones / ad-codes / details), used by both the
 // owners LIST (add new) and the owner DETAIL page (edit existing) so there is one source
-// of truth for the form.
+// of truth for the form. The detail page renders the ad-code picker separately (bottom of
+// the page) via `showCodes={false}` + <OwnerCodesPicker/>.
 
 export type OwnerType = 'PERSONAL' | 'COMPANY' | 'BROKER' | 'US';
 export type OwnerDraft = {
@@ -31,12 +32,48 @@ export function poolFor(type: OwnerType): number[] {
   return [];
 }
 
-export function OwnerFields({ draft, setDraft, taken }: { draft: OwnerDraft; setDraft: (d: OwnerDraft) => void; taken: Set<number> }) {
+/** Ad-code allocation grid (أكواد الإعلانات). `heading` renders the label + hint line —
+ *  the owner detail page provides its own card heading instead. */
+export function OwnerCodesPicker({ draft, setDraft, taken, heading = true }: { draft: OwnerDraft; setDraft: (d: OwnerDraft) => void; taken: Set<number>; heading?: boolean }) {
   const t = useTranslations('mp');
   const toggleCode = (code: number) => {
     const has = draft.codes.includes(code);
     setDraft({ ...draft, codes: has ? draft.codes.filter((c) => c !== code) : [...draft.codes, code].sort((a, b) => a - b) });
   };
+  return (
+    <div>
+      {heading && <div className="text-sm font-medium">{t('ownerCodes')}</div>}
+      <p className="mb-2 mt-0.5 text-xs opacity-60">{draft.type === 'PERSONAL' ? t('ownerCodesPersonal') : t('ownerCodesHint')}</p>
+      {draft.type !== 'PERSONAL' && (
+        <div className="flex flex-wrap gap-1.5" dir="ltr">
+          {poolFor(draft.type).map((code) => {
+            const selected = draft.codes.includes(code);
+            const disabled = !selected && taken.has(code); // owned by another owner
+            return (
+              <button
+                key={code}
+                type="button"
+                disabled={disabled}
+                onClick={() => toggleCode(code)}
+                className={`w-11 rounded-md border px-0 py-1.5 text-center font-num text-sm ${
+                  selected ? 'border-gold bg-gold/20 font-bold text-gold-800' : disabled ? 'cursor-not-allowed border-graphite/10 bg-graphite/5 text-graphite/30 line-through' : 'border-graphite/25 hover:border-gold/60'
+                }`}
+              >
+                {pad(code)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {draft.type !== 'PERSONAL' && draft.codes.length > 0 && (
+        <p className="mt-2 text-xs opacity-70" dir="ltr">{draft.codes.map(pad).join(' · ')}</p>
+      )}
+    </div>
+  );
+}
+
+export function OwnerFields({ draft, setDraft, taken, showCodes = true }: { draft: OwnerDraft; setDraft: (d: OwnerDraft) => void; taken: Set<number>; showCodes?: boolean }) {
+  const t = useTranslations('mp');
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -56,35 +93,7 @@ export function OwnerFields({ draft, setDraft, taken }: { draft: OwnerDraft; set
         </div>
       </div>
 
-      {/* Ad-code allocation */}
-      <div>
-        <div className="text-sm font-medium">{t('ownerCodes')}</div>
-        <p className="mb-2 mt-0.5 text-xs opacity-60">{draft.type === 'PERSONAL' ? t('ownerCodesPersonal') : t('ownerCodesHint')}</p>
-        {draft.type !== 'PERSONAL' && (
-          <div className="flex flex-wrap gap-1.5" dir="ltr">
-            {poolFor(draft.type).map((code) => {
-              const selected = draft.codes.includes(code);
-              const disabled = !selected && taken.has(code); // owned by another owner
-              return (
-                <button
-                  key={code}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => toggleCode(code)}
-                  className={`w-11 rounded-md border px-0 py-1.5 text-center font-num text-sm ${
-                    selected ? 'border-gold bg-gold/20 font-bold text-gold-800' : disabled ? 'cursor-not-allowed border-graphite/10 bg-graphite/5 text-graphite/30 line-through' : 'border-graphite/25 hover:border-gold/60'
-                  }`}
-                >
-                  {pad(code)}
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {draft.type !== 'PERSONAL' && draft.codes.length > 0 && (
-          <p className="mt-2 text-xs opacity-70" dir="ltr">{draft.codes.map(pad).join(' · ')}</p>
-        )}
-      </div>
+      {showCodes && <OwnerCodesPicker draft={draft} setDraft={setDraft} taken={taken} />}
 
       <label className="block text-sm">{t('details')}<textarea value={draft.details} onChange={(e) => setDraft({ ...draft, details: e.target.value })} rows={2} className={inp} /></label>
     </>

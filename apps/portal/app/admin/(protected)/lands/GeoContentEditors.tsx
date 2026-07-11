@@ -232,7 +232,7 @@ export function UpdatesEditor({ level, targetId, updates, followerCount, locale 
   const [photos, setPhotos] = useState<UploadedAttachment[]>([]);
   const [zoom, setZoom] = useState<string | null>(null);
 
-  const fmt = (s: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
+  const fmt = (s: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
   const plain = (html: string) => html.replace(/<[^>]+>/g, '').trim();
 
   function add() {
@@ -319,7 +319,7 @@ export function UpdatesEditor({ level, targetId, updates, followerCount, locale 
 /** Read-only timeline for inherited updates (shown on lower levels). */
 export function InheritedUpdates({ updates, locale, sourceLabel }: { updates: UpdateRow[]; locale: 'ar' | 'en'; sourceLabel: string }) {
   const [zoom, setZoom] = useState<string | null>(null);
-  const fmt = (s: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
+  const fmt = (s: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
   if (updates.length === 0) return null;
   return (
     <div className="space-y-2">

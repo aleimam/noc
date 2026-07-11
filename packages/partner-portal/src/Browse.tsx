@@ -1,11 +1,25 @@
 import { getLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { requirePartner } from '@noc/auth';
-import { prisma } from '@noc/db';
+import { prisma, Prisma } from '@noc/db';
 import { formatMoneyEgp, formatArea } from '@noc/config';
 import { partnerCanBrowseListings } from './partner';
+import { alsawareyVisibility } from './visibility';
 
-/** Partner-portal, view-only: browse all our published sell offers. Gated by the global switch
+// Owner rule: partners browse OUR store only — exactly the offers visible on the Al Sawarey
+// storefront: published + Type/Purpose allowed on Al Sawarey + the storefront's partner-site
+// visibility rule (non-partner listings keep the per-listing `showOnBrokerage` toggle).
+// Mirrors the catalogue where-clause in apps/brokerage/lib/listings.ts (available only, no SOLD).
+const BROWSE_WHERE: Prisma.ListingWhereInput = {
+  status: 'PUBLISHED',
+  AND: [
+    { OR: [{ typeOptionId: null }, { typeOption: { allowedOnAlsawarey: true } }] },
+    { OR: [{ purposeOptionId: null }, { purposeOption: { allowedOnAlsawarey: true } }] },
+    alsawareyVisibility(),
+  ],
+};
+
+/** Partner-portal, view-only: browse our Al Sawarey store offers. Gated by the global switch
  *  + the partner's own flag; each card links to the partner listing detail. Shared by both apps. */
 export async function PartnerBrowse() {
   const { ownerId } = await requirePartner();
@@ -14,7 +28,7 @@ export async function PartnerBrowse() {
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
   const listings = await prisma.listing.findMany({
-    where: { status: 'PUBLISHED' },
+    where: BROWSE_WHERE,
     orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
     take: 500,
     select: {
@@ -89,7 +103,7 @@ export async function PartnerBrowseDetail({ params }: { params: Promise<{ id: st
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
   const listing = await prisma.listing.findFirst({
-    where: { id, status: 'PUBLISHED' },
+    where: { id, ...BROWSE_WHERE },
     select: {
       id: true, title: true, adNumber: true, area: true, price: true, priceUnit: true,
       hasAllocationLetter: true, hasSaleMandate: true,

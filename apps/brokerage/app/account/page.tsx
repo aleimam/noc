@@ -75,7 +75,7 @@ export default async function AccountPage() {
                         ) : '—'}
                       </td>
                       <td className="p-3">{L(...(STATUS_LABEL[r.status] ?? [r.status, r.status]))}</td>
-                      <td className="p-3" dir="ltr">{new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { dateStyle: 'medium' }).format(r.createdAt)}</td>
+                      <td className="p-3" dir="ltr">{new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'medium' }).format(r.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>

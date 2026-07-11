@@ -15,7 +15,7 @@ export function UpdatesManager({ options, rows, locale }: { options: Option[]; r
   const t = useTranslations('lands');
   const router = useRouter();
   const [pending, start] = useTransition();
-  const fmt = (s: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
+  const fmt = (s: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
   const plain = (html: string) => html.replace(/<[^>]+>/g, '').trim();
 
   // create state

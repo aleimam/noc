@@ -367,7 +367,7 @@ export type StorefrontContent = {
   priceChips: StoreLink[]; // price-tier quick filters (Cheapest / under 1M / …)
   nav: { allLands: StoreLink; featured: StoreLink; sell: StoreLink; groups: StoreMenuGroup[] };
   contact: { whatsapp: string; socials: { platform: string; url: string }[] };
-  footer: { brandLine: Loc };
+  footer: { name: Loc; slogan: Loc };
 };
 
 const loc = (ar: string, en: string): Loc => ({ ar, en });
@@ -470,7 +470,10 @@ export const DEFAULT_STOREFRONT: StorefrontContent = {
       { platform: 'whatsapp', url: 'https://wa.me/201040810000' },
     ],
   },
-  footer: { brandLine: loc('للاستثمار العقاري', 'Real-estate investment') },
+  footer: {
+    name: loc('الصواري', 'Al Sawarey'),
+    slogan: loc('للاستثمار العقاري', 'Real-estate investment'),
+  },
 };
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
@@ -492,5 +495,10 @@ function deepMerge<T>(base: T, override: unknown): T {
 
 /** Merge an admin override blob over the storefront defaults (shape-preserving). */
 export function mergeStorefront(override: unknown): StorefrontContent {
+  // Back-compat: blobs saved before 2026-07 stored footer.brandLine — treat it as the slogan.
+  if (isPlainObject(override) && isPlainObject(override.footer)) {
+    const f = override.footer as Record<string, unknown>;
+    if (f.brandLine != null && f.slogan == null) f.slogan = f.brandLine;
+  }
   return deepMerge(DEFAULT_STOREFRONT, override);
 }

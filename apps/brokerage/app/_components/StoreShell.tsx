@@ -9,18 +9,45 @@ import { SearchBox } from './SearchBox';
 import { CompareBar } from './CompareBar';
 import { StoreMobileMenu } from './StoreMobileMenu';
 
-const SOCIAL_ICON: Record<string, string> = {
-  facebook: '📘',
+/* Real brand glyphs (inline SVG, currentColor) for the footer contact icons. */
+function FacebookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+      <path d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.9h2.54V9.85c0-2.52 1.5-3.92 3.78-3.92 1.1 0 2.24.2 2.24.2v2.47H15.2c-1.25 0-1.64.78-1.64 1.57v1.89h2.78l-.44 2.9h-2.34V22c4.78-.76 8.44-4.92 8.44-9.94Z" />
+    </svg>
+  );
+}
+function WhatsAppIcon({ className = 'h-5 w-5' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12.04 2A9.9 9.9 0 0 0 2.1 11.9c0 1.75.46 3.45 1.34 4.96L2 22l5.3-1.39a9.96 9.96 0 0 0 4.74 1.2h.01a9.9 9.9 0 0 0 9.94-9.9A9.83 9.83 0 0 0 19.07 4.9 9.9 9.9 0 0 0 12.04 2Zm0 18.13h-.01a8.24 8.24 0 0 1-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38 8.23 8.23 0 0 1 8.26-8.2 8.2 8.2 0 0 1 5.83 2.42 8.15 8.15 0 0 1 2.41 5.8 8.23 8.23 0 0 1-8.24 8.22Zm4.52-6.15c-.25-.13-1.47-.72-1.69-.8-.23-.09-.4-.13-.56.12-.17.25-.64.8-.79.97-.14.16-.29.19-.53.06a6.7 6.7 0 0 1-1.98-1.22 7.4 7.4 0 0 1-1.37-1.7c-.14-.25-.02-.38.11-.5.11-.12.25-.3.37-.44.13-.15.17-.25.25-.42.08-.16.04-.31-.02-.44-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.42h-.47c-.17 0-.44.06-.66.31-.23.25-.87.85-.87 2.07 0 1.22.9 2.4 1.02 2.57.12.16 1.74 2.65 4.23 3.72.59.25 1.05.4 1.41.52.6.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.16-.48-.28Z" />
+    </svg>
+  );
+}
+function PhoneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+      <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.24 1.02l-2.21 2.2Z" />
+    </svg>
+  );
+}
+
+const SOCIAL_EMOJI: Record<string, string> = {
   instagram: '📷',
-  whatsapp: '💬',
   youtube: '▶️',
   tiktok: '🎵',
   telegram: '✈️',
   twitter: '𝕏',
   x: '𝕏',
-  phone: '📞',
   email: '✉️',
 };
+
+function SocialIcon({ platform }: { platform: string }) {
+  if (platform === 'facebook') return <FacebookIcon />;
+  if (platform === 'whatsapp') return <WhatsAppIcon />;
+  if (platform === 'phone') return <PhoneIcon />;
+  return <>{SOCIAL_EMOJI[platform] ?? '🔗'}</>;
+}
 
 export async function StoreShell({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as 'ar' | 'en';
@@ -62,6 +89,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
             groups={content.nav.groups.map((g) => ({ title: Lc(g.title), links: g.links.map((l) => ({ label: Lc(l.label), href: l.href })) }))}
             account={{ label: L('حسابي', 'Account'), href: '/account' }}
             wishlist={{ label: L('المفضلة', 'Wishlist'), href: '/wishlist' }}
+            partners={{ label: L('الشركاء', 'Partners'), href: '/partner/login' }}
           />
           <Link href="/" aria-label="Al Sawarey" className="flex-none">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -82,6 +110,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
               </div>
             ))}
             <Link href={content.nav.sell.href} className="rounded-lg px-3 py-2 text-sm font-bold text-gold hover:bg-white/10">{Lc(content.nav.sell.label)}</Link>
+            <Link href="/partner/login" className="rounded-lg px-3 py-2 text-sm hover:bg-white/10">{L('الشركاء', 'Partners')}</Link>
           </nav>
 
           <div className="ms-auto flex items-center gap-2">
@@ -101,17 +130,22 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
       <CompareBar labels={{ compare: L('قارن', 'Compare'), clear: L('مسح', 'Clear'), items: L('عناصر للمقارنة', 'to compare') }} />
 
       <footer className="mt-10 bg-navy-900 text-white/80">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 py-4 text-center text-sm">
-          <span className="font-bold text-white">{Lc(content.footer.brandLine)}</span>
+        <div className="mx-auto max-w-6xl px-4 py-4 text-center">
+          <div className="font-bold text-white">{Lc(content.footer.name)}</div>
+          {Lc(content.footer.slogan) && <div className="mt-0.5 text-sm text-white/70">{Lc(content.footer.slogan)}</div>}
+        </div>
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 pb-4 text-center text-sm">
           {footerPages.map((p) => (
             <Link key={p.slug} href={`/p/${p.slug}`} className="text-white/70 hover:text-gold">{locale === 'en' ? p.titleEn || p.titleAr : p.titleAr}</Link>
           ))}
-          <Link href="/partner/login" className="text-white/70 hover:text-gold">{L('الشركاء', 'Partners')}</Link>
-          <a href={`https://wa.me/${waPhone(whatsapp)}`} className="text-gold" dir="ltr">{whatsapp}</a>
+          <a href={`https://wa.me/${waPhone(whatsapp)}`} aria-label="WhatsApp" className="inline-flex items-center gap-1.5 text-gold" dir="ltr">
+            <WhatsAppIcon className="h-4 w-4" />
+            {whatsapp}
+          </a>
           {socials.map((s) => (
             <a key={s.platform + s.url} href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.platform}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-gold hover:text-navy-900">
-              {SOCIAL_ICON[s.platform] ?? '🔗'}
+              <SocialIcon platform={s.platform} />
             </a>
           ))}
         </div>

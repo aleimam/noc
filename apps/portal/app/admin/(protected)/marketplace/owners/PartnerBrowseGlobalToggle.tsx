@@ -26,9 +26,9 @@ export function PartnerBrowseGlobalToggle({ initial, locale }: { initial: boolea
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gold-300/50 bg-gold/10 p-3 text-sm">
       <label className="flex items-center gap-2 font-semibold text-primary">
         <input type="checkbox" checked={on} disabled={pending} onChange={(e) => toggle(e.target.checked)} />
-        {L('السماح للشركاء بتصفّح جميع العروض (عام)', 'Let partners browse all offers (global)')}
+        {L('السماح للشركاء بتصفح جميع عروضنا (عام)', 'Let partners browse all our listings (global)')}
       </label>
-      <span className="opacity-70">{L('عند التفعيل يظهر «تصفّح العروض» في بوابة كل شريك مسموح له (للاطّلاع فقط).', 'When on, each allowed partner sees a view-only “Browse offers” tab in their portal.')}</span>
+      <span className="opacity-70">{L('عند التفعيل يظهر «تصفّح العروض» في بوابة كل شريك مسموح له — عروض متجر الصواري فقط (للاطلاع فقط).', 'When on, each allowed partner sees a view-only “Browse offers” tab — Al Sawarey storefront listings only.')}</span>
     </div>
   );
 }

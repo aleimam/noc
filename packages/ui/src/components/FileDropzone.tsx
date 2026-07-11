@@ -68,8 +68,8 @@ export function FileDropzone({
         dragOver ? 'border-accent bg-accent/5' : 'border-graphite/30 hover:border-accent/60'
       } ${disabled ? 'pointer-events-none opacity-60' : ''}`}
     >
-      <span className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-soft">
-        <span aria-hidden>⬆</span> {busy ? '…' : label}
+      <span className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-base font-bold text-soft">
+        <span aria-hidden>⬆</span> {busy ? `${label} …` : label}
       </span>
       {hint && <span className="text-xs opacity-60">{hint}</span>}
       {selectedName && <span className="mt-1 break-all text-sm font-medium text-primary">{selectedName}</span>}

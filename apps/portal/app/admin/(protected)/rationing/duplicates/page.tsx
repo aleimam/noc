@@ -49,7 +49,7 @@ export default async function DuplicatesPage({ searchParams }: { searchParams: P
     : [];
   const scanByFile = new Map(scans.map((s) => [s.fileName, s.path]));
 
-  const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  const fmt = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 
   const byKey = new Map<string, DupRow[]>();
   for (const r of rows) {

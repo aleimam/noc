@@ -21,7 +21,7 @@ export default async function NewsPage() {
   const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('news');
   const L = (ar: string, en: string | null) => (locale === 'ar' ? ar : en || ar);
-  const fmt = (d: Date | null) => (d ? new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }).format(d) : '');
+  const fmt = (d: Date | null) => (d ? new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }).format(d) : '');
 
   const rows = await prisma.news.findMany({ where: { publishedAt: { not: null } }, orderBy: [{ pinned: 'desc' }, { publishedAt: 'desc' }], take: 50 });
   const ids = rows.map((r) => r.id);
