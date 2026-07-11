@@ -78,7 +78,7 @@ export function PartnerLogin() {
     const res = await fetch('/api/partner/otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier, channel }),
+      body: JSON.stringify({ identifier, channel, locale }),
     });
     const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; sentTo?: string };
     setLoading(false);

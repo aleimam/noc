@@ -17,8 +17,8 @@ export function StoreLandCard({ land, locale, wishlisted = false, owner }: { lan
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-ink-200 bg-white text-navy-800 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg dark:border-white/10 dark:bg-navy-800 dark:text-soft">
       <div className="absolute end-3 top-3 z-10 flex flex-col items-end gap-1.5">
-        <WishlistButton listingId={land.id} initialSaved={wishlisted} />
-        <CompareToggle id={land.id} label={L('قارن', 'Compare')} />
+        <WishlistButton listingId={land.id} initialSaved={wishlisted} locale={locale} />
+        <CompareToggle id={land.id} label={L('قارن', 'Compare')} locale={locale} />
       </div>
       <Link href={land.href} className="flex flex-1 flex-col">
         <div className="relative aspect-[16/10] overflow-hidden bg-navy-100">

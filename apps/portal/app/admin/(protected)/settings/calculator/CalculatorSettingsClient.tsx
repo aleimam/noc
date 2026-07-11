@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from '@noc/ui';
 import type { CalculatorConfig, UtilityBracket, DownPaymentBand } from '../../../../../lib/calculator/calc';
 import { saveCalcSettings } from './actions';
 
@@ -40,6 +41,8 @@ export function CalculatorSettingsClient({ initial }: { initial: CalculatorConfi
         setAreasText(standardAreas.join('، '));
         setSaved(true);
         router.refresh();
+      } else {
+        toast('تعذّر الحفظ / Save failed', 'error');
       }
     });
   }

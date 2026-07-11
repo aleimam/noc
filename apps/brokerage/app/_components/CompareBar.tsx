@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { getCompare, clearCompare, COMPARE_EVENT } from './compare';
 
 export function CompareBar({ labels }: { labels: { compare: string; clear: string; items: string } }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [ids, setIds] = useState<string[]>([]);
   useEffect(() => {
     const sync = () => setIds(getCompare());
@@ -19,8 +20,11 @@ export function CompareBar({ labels }: { labels: { compare: string; clear: strin
   }, []);
 
   if (ids.length === 0) return null;
+  // On a listing detail page the mobile sticky contact bar owns bottom-0 (hidden ≥lg) —
+  // sit above it there so the "contact us" CTA is never covered.
+  const onListingDetail = /^\/listings\/[^/]+/.test(pathname ?? '');
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-navy-800 text-white shadow-lg">
+    <div className={`fixed inset-x-0 ${onListingDetail ? 'bottom-16 lg:bottom-0' : 'bottom-0'} z-50 border-t border-white/10 bg-navy-800 text-white shadow-lg`}>
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
         <span className="text-sm">{ids.length} {labels.items}</span>
         <div className="flex items-center gap-2">

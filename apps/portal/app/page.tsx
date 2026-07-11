@@ -83,7 +83,7 @@ export default async function Home() {
         <section className="mx-auto max-w-[1120px] px-6 pt-10 pb-2">
           <div className="mb-5 flex items-end justify-between">
             <h2 className="text-2xl font-extrabold text-navy-800">{L('أحدث الإعلانات', 'Recent listings')}</h2>
-            <a href="/market" className="text-sm font-bold text-accent hover:underline">{t('browse')} →</a>
+            <a href="/market" className="text-sm font-bold text-accent hover:underline">{t('browse')} ›</a>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {listings.map((l) => (

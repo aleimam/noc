@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from '@noc/ui';
 import { THEME_FONTS, type BrandTheme } from '@noc/config';
 import { saveBrandTheme, resetBrandTheme } from './actions';
 
@@ -35,6 +36,7 @@ export function ThemeEditor({ brand, title, initial }: { brand: Brand; title: st
     start(async () => {
       const r = await saveBrandTheme(brand, t);
       if (r.ok) { setSaved(true); router.refresh(); }
+      else toast('تعذّر الحفظ / Save failed', 'error');
     });
   }
   function reset() {
@@ -42,6 +44,7 @@ export function ThemeEditor({ brand, title, initial }: { brand: Brand; title: st
     start(async () => {
       const r = await resetBrandTheme(brand);
       if (r.ok) { setT({}); setSaved(true); router.refresh(); }
+      else toast('تعذّر الحفظ / Save failed', 'error');
     });
   }
 

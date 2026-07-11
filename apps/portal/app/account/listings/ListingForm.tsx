@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -64,7 +64,8 @@ export type ListingFormInitial = {
   buildingConditionIds?: string[];
 };
 
-const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
+// text-base (16px) — anything smaller triggers iOS focus-zoom on the whole page.
+const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-base';
 
 export function ListingForm({
   classifiers,
@@ -107,6 +108,12 @@ export function ListingForm({
   const [pending, start] = useTransition();
   const [error, setError] = useState('');
   const [zoom, setZoom] = useState<string | null>(null);
+  // The submit buttons live at the bottom of a long form — scroll the error into view so
+  // a failed validation never goes unnoticed.
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [error]);
 
   const optCls = useMemo(() => {
     const m = new Map<string, string>();
@@ -819,6 +826,7 @@ export function ListingForm({
       </div>
 
       <div className="flex flex-wrap gap-3">
+        {error && <p ref={errorRef} className="w-full text-sm font-semibold text-red-600">{error}</p>}
         <button disabled={pending} onClick={() => submit('PENDING')} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{t('submitOffer')}</button>
         <button disabled={pending} onClick={() => submit('DRAFT')} className="rounded-md border border-graphite/25 px-4 py-2 text-sm">{t('saveDraft')}</button>
         <a href={returnTo ?? (staffMode ? '/admin/marketplace/listings' : partnerMode ? '/partner' : '/account/listings')} className="px-4 py-2 text-sm opacity-70">{t('cancel')}</a>

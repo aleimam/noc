@@ -14,7 +14,7 @@ export async function PartnerDashboard() {
     prisma.listing.findMany({
       where: { ownerId },
       orderBy: { updatedAt: 'desc' },
-      select: { id: true, title: true, adNumber: true, status: true, price: true, soldPrice: true, views: true },
+      select: { id: true, title: true, adNumber: true, status: true, price: true, soldPrice: true, views: true, rejectionReason: true },
     }),
     prisma.ownerAllowedCategory.count({ where: { ownerId } }),
   ]);
@@ -41,6 +41,7 @@ export async function PartnerDashboard() {
     status: l.status,
     price: l.price != null ? String(l.price) : '',
     views: l.views,
+    rejectionReason: l.rejectionReason,
   }));
 
   return (
@@ -55,7 +56,7 @@ export async function PartnerDashboard() {
       </div>
 
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-black text-navy-800">{L('إعلاناتي', 'My listings')}</h1>
+        <h1 className="text-xl font-black text-navy-800 dark:text-soft">{L('إعلاناتي', 'My listings')}</h1>
         {grantCount > 0 && (
           <a href="/partner/listings/new" className="rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-soft">
             + {L('إضافة إعلان', 'Add listing')}

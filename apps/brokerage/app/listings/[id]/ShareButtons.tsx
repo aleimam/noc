@@ -29,7 +29,8 @@ const ILink = () => (
 
 /** Quick share row: native share sheet (details + photo preview), WhatsApp, Facebook,
  *  and copy-link. The native button falls back to copy where Web Share is unavailable. */
-export function ShareButtons({ url, title, whatsapp }: { url: string; title: string; whatsapp?: string }) {
+export function ShareButtons({ url, title, whatsapp, locale = 'ar' }: { url: string; title: string; whatsapp?: string; locale?: 'ar' | 'en' }) {
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const shareText = `${title}\n${url}`;
 
   async function nativeShare() {
@@ -47,8 +48,8 @@ export function ShareButtons({ url, title, whatsapp }: { url: string; title: str
   function copy() {
     track('share', { how: 'copy' });
     navigator.clipboard?.writeText(url).then(
-      () => toast('تم نسخ رابط الإعلان'),
-      () => toast('تعذّر النسخ'),
+      () => toast(L('تم نسخ رابط الإعلان', 'Listing link copied')),
+      () => toast(L('تعذّر النسخ', 'Could not copy')),
     );
   }
   const open = (href: string, how: string) => {
@@ -59,10 +60,10 @@ export function ShareButtons({ url, title, whatsapp }: { url: string; title: str
   const btn = 'flex flex-1 flex-col items-center gap-1 rounded-xl border border-ink-100 bg-white/60 px-2 py-2 text-[11px] font-semibold text-navy-700 hover:bg-navy-50';
   return (
     <div className="mt-3 flex gap-2">
-      <button type="button" onClick={nativeShare} className={btn}><IShare />مشاركة</button>
-      <button type="button" onClick={() => open(waLink(shareText, whatsapp || undefined), 'whatsapp')} className={btn}><IWhatsApp />واتساب</button>
-      <button type="button" onClick={() => open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, 'facebook')} className={btn}><IFacebook />فيسبوك</button>
-      <button type="button" onClick={copy} className={btn}><ILink />نسخ الرابط</button>
+      <button type="button" onClick={nativeShare} className={btn}><IShare />{L('مشاركة', 'Share')}</button>
+      <button type="button" onClick={() => open(waLink(shareText, whatsapp || undefined), 'whatsapp')} className={btn}><IWhatsApp />{L('واتساب', 'WhatsApp')}</button>
+      <button type="button" onClick={() => open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, 'facebook')} className={btn}><IFacebook />{L('فيسبوك', 'Facebook')}</button>
+      <button type="button" onClick={copy} className={btn}><ILink />{L('نسخ الرابط', 'Copy link')}</button>
     </div>
   );
 }

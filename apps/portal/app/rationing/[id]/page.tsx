@@ -7,6 +7,7 @@ import { LoginToView } from '../../_components/LoginToView';
 import { LimitCard } from '../LimitCard';
 import { getRationingConfig } from '../../../lib/rationing/settings';
 import { consumeRationingQuota } from '../../../lib/rationing/quota';
+import { getSiteConfig } from '../../../lib/site';
 import { rationingScanOverlay } from '../../../lib/stamp';
 import { SourceSheetViewer } from './SourceSheetViewer';
 import { ShareButton } from './ShareButton';
@@ -46,11 +47,12 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
   const quota = await consumeRationingQuota(true);
   const showScan = !quota.loginWall || quota.loggedIn;
   if (!quota.ok) {
+    const site = await getSiteConfig();
     return (
       <SiteShell active="rationing">
         <div className="mx-auto max-w-3xl space-y-5 p-4 sm:p-6">
           <Link href="/rationing" className="inline-block text-base text-navy-600">‹ {t('backToSearch')}</Link>
-          <LimitCard locale={locale} loggedIn={quota.loggedIn} />
+          <LimitCard locale={locale} loggedIn={quota.loggedIn} whatsapp={site.whatsappHelp} />
         </div>
       </SiteShell>
     );

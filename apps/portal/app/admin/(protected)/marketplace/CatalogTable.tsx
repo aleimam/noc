@@ -90,7 +90,7 @@ export function CatalogTable({
 
   return (
     <div className="space-y-3">
-      {error && <p className="text-sm text-red-600">{t('delete')}: {error}</p>}
+      {error && <p className="text-sm text-red-600">تعذّر الحفظ / Save failed: {error}</p>}
       <div className="flex items-center justify-between gap-3">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('search')} className="w-full max-w-xs rounded-md border border-graphite/20 bg-transparent px-3 py-1.5 text-sm" />
         <span className="whitespace-nowrap text-xs opacity-60">{rows.length}/{initial.length}</span>
@@ -145,7 +145,16 @@ export function CatalogTable({
                   <td className="whitespace-nowrap p-2 text-end">
                     {childAdd && <a href={`${childAdd.hrefBase}?district=${row.id}`} className="px-2 py-1 text-green">{childAdd.label}</a>}
                     <button onClick={() => setDraft({ id: row.id, key: row.key, nameAr: row.nameAr, nameEn: row.nameEn, order: row.order, isActive: row.isActive })} className="px-2 py-1 text-accent">{t('edit')}</button>
-                    <button disabled={pending} onClick={() => run(() => remove(row.id), () => toast(t('deleted')))} className="px-2 py-1 text-red-600">{t('delete')}</button>
+                    <button
+                      disabled={pending}
+                      onClick={() => {
+                        if (!window.confirm('حذف نهائيًا؟ / Delete permanently?')) return;
+                        run(() => remove(row.id), () => toast(t('deleted')));
+                      }}
+                      className="px-2 py-1 text-red-600"
+                    >
+                      {t('delete')}
+                    </button>
                   </td>
                 </tr>
               ),

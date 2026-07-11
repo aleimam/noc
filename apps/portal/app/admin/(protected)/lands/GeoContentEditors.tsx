@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { ImageAttachment, Lightbox, type UploadedAttachment } from '@noc/ui';
+import { ImageAttachment, Lightbox, toast, type UploadedAttachment } from '@noc/ui';
 import { RichEditor } from '../pages/RichEditor';
 import {
   addGeoUpdate,
@@ -42,7 +42,8 @@ export function AdvantagesEditor({
   function save() {
     if (!draft?.textAr.trim()) return;
     start(async () => {
-      await upsertAdvantage({ id: draft.id, level, targetId, textAr: draft.textAr, textEn: draft.textEn, order: advantages.length });
+      const r = await upsertAdvantage({ id: draft.id, level, targetId, textAr: draft.textAr, textEn: draft.textEn, order: advantages.length });
+      if (!r.ok) { toast(locale === 'ar' ? 'تعذّر الحفظ' : 'Save failed', 'error'); return; }
       setDraft(null);
       router.refresh();
     });
@@ -191,7 +192,8 @@ export function AdjacencyEditor({ level, targetId, candidates, selected }: { lev
   function save() {
     start(async () => {
       const ids = [...sel];
-      await (level === 'district' ? setDistrictAdjacency(targetId, ids) : setNeighborhoodAdjacency(targetId, ids));
+      const r = await (level === 'district' ? setDistrictAdjacency(targetId, ids) : setNeighborhoodAdjacency(targetId, ids));
+      if (!r.ok) { toast('تعذّر الحفظ / Save failed', 'error'); return; }
       setSaved(true);
       router.refresh();
     });
@@ -236,7 +238,8 @@ export function UpdatesEditor({ level, targetId, updates, followerCount, locale 
   function add() {
     if (!plain(body)) return;
     start(async () => {
-      await addGeoUpdate({ level, targetId, title: title || undefined, body, happenedAt: happenedAt || undefined, photoIds: photos.map((p) => p.id) });
+      const r = await addGeoUpdate({ level, targetId, title: title || undefined, body, happenedAt: happenedAt || undefined, photoIds: photos.map((p) => p.id) });
+      if (!r.ok) { toast(locale === 'ar' ? 'تعذّر الحفظ' : 'Save failed', 'error'); return; }
       setTitle('');
       setBody('');
       setHappenedAt('');

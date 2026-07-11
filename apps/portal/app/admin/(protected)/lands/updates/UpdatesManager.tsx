@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ImageAttachment, type UploadedAttachment } from '@noc/ui';
+import { ImageAttachment, toast, type UploadedAttachment } from '@noc/ui';
 import { RichEditor } from '../../pages/RichEditor';
 import { addGeoUpdate, updateGeoUpdate, deleteGeoUpdate, notifyGeoUpdate } from '../actions';
 
@@ -31,7 +31,8 @@ export function UpdatesManager({ options, rows, locale }: { options: Option[]; r
     if (!target || !plain(body)) return;
     const [level, targetId] = target.split(':');
     start(async () => {
-      await addGeoUpdate({ level: level as 'district' | 'neighborhood', targetId: targetId!, title: title || undefined, body, happenedAt: happenedAt || undefined, photoIds: photos.map((p) => p.id) });
+      const r = await addGeoUpdate({ level: level as 'district' | 'neighborhood', targetId: targetId!, title: title || undefined, body, happenedAt: happenedAt || undefined, photoIds: photos.map((p) => p.id) });
+      if (!r.ok) { toast(locale === 'ar' ? 'تعذّر الحفظ' : 'Save failed', 'error'); return; }
       setTitle('');
       setBody('');
       setHappenedAt('');
@@ -42,7 +43,8 @@ export function UpdatesManager({ options, rows, locale }: { options: Option[]; r
   function saveEdit() {
     if (!edit || !plain(edit.body)) return;
     start(async () => {
-      await updateGeoUpdate({ id: edit.id, title: edit.title || undefined, body: edit.body, happenedAt: edit.happenedAt || undefined });
+      const r = await updateGeoUpdate({ id: edit.id, title: edit.title || undefined, body: edit.body, happenedAt: edit.happenedAt || undefined });
+      if (!r.ok) { toast(locale === 'ar' ? 'تعذّر الحفظ' : 'Save failed', 'error'); return; }
       setEdit(null);
       router.refresh();
     });

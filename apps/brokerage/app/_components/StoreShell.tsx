@@ -54,6 +54,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-40 bg-navy-800 text-white shadow-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
           <StoreMobileMenu
+            locale={locale}
             brand={L('الصواري', 'Al Sawarey')}
             allLands={{ label: Lc(content.nav.allLands.label), href: content.nav.allLands.href }}
             featured={{ label: Lc(content.nav.featured.label), href: content.nav.featured.href }}

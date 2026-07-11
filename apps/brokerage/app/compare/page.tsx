@@ -34,7 +34,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
           </p>
         ) : (
           <div className="overflow-x-auto rounded-2xl bg-white shadow-sm dark:bg-navy-800">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-ink-100 dark:border-white/10">
                   <th className="p-3"></th>

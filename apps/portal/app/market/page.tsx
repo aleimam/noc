@@ -122,12 +122,12 @@ export default async function MarketPage({
             currency={currency(locale)}
             badge={<MarketCardActions listingId={l.id} initialSaved={wished.has(l.id)} compareLabel={t('compare')} />}
             meta={l.isPartnership && partnershipsOn ? (
-              <span className="inline-block rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-bold text-navy-800">🤝 {t('partnershipBadge')}</span>
+              <span className="inline-block rounded-full bg-gold/20 px-2 py-0.5 text-xs font-bold text-navy-800">🤝 {t('partnershipBadge')}</span>
             ) : undefined}
           />
         ))}
       </div>
-      <div className="mt-8"><RecentlyViewed title={t('recentlyViewed')} /></div>
+      <div className="mt-8"><RecentlyViewed title={t('recentlyViewed')} currency={currency(locale)} /></div>
       </div>
       <CompareBar labels={{ compare: t('compare'), clear: t('clear'), items: t('compareItems') }} />
     </SiteShell>

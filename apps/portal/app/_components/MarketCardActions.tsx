@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { nocEvent } from '@noc/ui';
+import { useLocale } from 'next-intl';
+import { nocEvent, toast } from '@noc/ui';
 import { getCompare, toggleCompare, COMPARE_EVENT } from './compare';
 import { toggleWishlist } from '../account/wishlist/actions';
 
 // Overlay on a listing card's media: a wishlist heart + a compare toggle. Kept tiny + tappable.
 export function MarketCardActions({ listingId, initialSaved, compareLabel }: { listingId: string; initialSaved: boolean; compareLabel: string }) {
+  const locale = useLocale();
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const [saved, setSaved] = useState(initialSaved);
   const [pending, start] = useTransition();
   const [cmp, setCmp] = useState(false);
@@ -23,7 +26,7 @@ export function MarketCardActions({ listingId, initialSaved, compareLabel }: { l
       <button
         type="button"
         aria-pressed={saved}
-        aria-label="wishlist"
+        aria-label={L('المفضلة', 'Wishlist')}
         disabled={pending}
         onClick={(e) => {
           e.preventDefault();
@@ -31,6 +34,7 @@ export function MarketCardActions({ listingId, initialSaved, compareLabel }: { l
           start(async () => {
             const r = await toggleWishlist(listingId);
             if (r.ok) { setSaved(r.saved); if (r.saved) nocEvent('wishlist', listingId); }
+            else toast(L('تعذّر الحفظ — حاول مرة أخرى', 'Could not save — try again'), 'error');
           });
         }}
         className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-lg shadow-md transition hover:bg-white disabled:opacity-60"
@@ -43,7 +47,9 @@ export function MarketCardActions({ listingId, initialSaved, compareLabel }: { l
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          setCmp(toggleCompare(listingId));
+          const r = toggleCompare(listingId);
+          if (r === 'max') toast(L('الحد الأقصى ٤ للمقارنة', 'Compare is limited to 4'), 'error');
+          else setCmp(r);
         }}
         className={`rounded-md px-2 py-1 text-[11px] font-bold shadow ${cmp ? 'bg-navy-700 text-white' : 'bg-white/90 text-navy-700'}`}
       >

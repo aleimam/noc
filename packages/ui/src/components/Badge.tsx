@@ -7,12 +7,12 @@ const TONES = {
   neutral: { bg: 'bg-ink-200/50', fg: 'text-ink-700', dot: 'bg-ink-400' },
   navy: { bg: 'bg-navy-50', fg: 'text-navy-700', dot: 'bg-navy-600' },
   gold: { bg: 'bg-gold-100', fg: 'text-gold-800', dot: 'bg-gold-600' },
-  green: { bg: 'bg-green/12', fg: 'text-green', dot: 'bg-green' },
+  green: { bg: 'bg-green/12', fg: 'text-success', dot: 'bg-green' },
   slate: { bg: 'bg-status-mail/12', fg: 'text-status-mail', dot: 'bg-status-mail' },
   blue: { bg: 'bg-info-soft', fg: 'text-info', dot: 'bg-info' },
-  amber: { bg: 'bg-status-build/15', fg: 'text-status-build', dot: 'bg-status-build' },
+  amber: { bg: 'bg-status-build/15', fg: 'text-warning', dot: 'bg-status-build' },
   success: { bg: 'bg-success-soft', fg: 'text-success', dot: 'bg-success' },
-  warning: { bg: 'bg-warning-soft', fg: 'text-warning', dot: 'bg-warning' },
+  warning: { bg: 'bg-warning-soft', fg: 'text-gold-800', dot: 'bg-warning' },
   danger: { bg: 'bg-danger-soft', fg: 'text-danger', dot: 'bg-danger' },
   info: { bg: 'bg-info-soft', fg: 'text-info', dot: 'bg-info' },
 } as const;
@@ -46,12 +46,3 @@ export function Badge({
     </span>
   );
 }
-
-/** The five canonical New Obour land legal states → tone. */
-export const LAND_STATUS_TONE: Record<string, BadgeTone> = {
-  mail: 'slate',
-  ledger: 'gold',
-  alloc: 'green',
-  license: 'blue',
-  build: 'amber',
-};

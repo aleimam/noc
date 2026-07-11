@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { runAction } from '@/app/admin/(protected)/runAction';
 import { saveAnalyticsView, deleteAnalyticsView } from './actions';
 
 type View = { id: string; name: string; days: number; site: string };
@@ -26,7 +27,13 @@ export function SavedViews({ views, current, locale }: { views: View[]; current:
     });
   }
   function del(id: string) {
-    start(async () => { await deleteAnalyticsView(id); router.refresh(); });
+    start(async () => {
+      const ok = await runAction(() => deleteAnalyticsView(id), {
+        confirmText: L('حذف طريقة العرض المشتركة؟ (تظهر لكل الموظفين)', 'Delete this shared view? (visible to all staff)'),
+        errorText: L('تعذّر الحذف', 'Delete failed'),
+      });
+      if (ok) router.refresh();
+    });
   }
 
   return (

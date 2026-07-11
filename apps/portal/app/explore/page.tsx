@@ -73,7 +73,7 @@ export default async function ExplorePage() {
                     <a key={n.id} href={`/explore/${n.id}`} className="rounded-lg border border-graphite/15 p-4 transition-colors hover:border-accent">
                       <div className="font-semibold">{L(n.nameAr, n.nameEn)}</div>
                       <div className="mt-1 text-xs opacity-70">
-                        {n.assortedAreas ? t('assorted') : areas.length ? `${areas.join('، ')} ${m2}` : '—'}
+                        {n.assortedAreas ? t('assorted') : areas.length ? `${areas.join(locale === 'ar' ? '، ' : ', ')} ${m2}` : '—'}
                       </div>
                     </a>
                   );

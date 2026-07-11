@@ -1,14 +1,15 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ImageAttachment, type UploadedAttachment } from '@noc/ui';
 import { savePartnerListing, type LeanListingInput, type LeanValueInput } from './listingSave';
 
-type COption = { id: string; nameAr: string; nameEn: string; granted: boolean };
+type COption = { id: string; nameAr: string; nameEn: string; granted: boolean; parentIds: string[] };
 type Classifier = { id: string; key: string; nameAr: string; nameEn: string; options: COption[] };
-type Attr = { id: string; sectionId: string; labelAr: string; labelEn: string; type: string; unit: string | null; options: { id: string; labelAr: string; labelEn: string }[]; usesList: boolean; optionIds: string[] };
+type AttrOption = { id: string; labelAr: string; labelEn: string; districtId?: string };
+type Attr = { id: string; sectionId: string; labelAr: string; labelEn: string; type: string; unit: string | null; options: AttrOption[]; usesList: boolean; optionIds: string[] };
 type Section = { id: string; nameAr: string; nameEn: string };
 
 export type LeanCatalog = { classifiers: Classifier[]; sections: Section[]; attributes: Attr[] };
@@ -35,6 +36,12 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState('');
+  const errRef = useRef<HTMLParagraphElement>(null);
+
+  // Bring the error message into view — on a long phone form it's otherwise off-screen.
+  useEffect(() => {
+    if (error) errRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [error]);
 
   const byKey = (k: string) => catalog.classifiers.find((c) => c.key === k);
   const typeC = byKey('type'), purposeC = byKey('purpose'), condC = byKey('condition');
@@ -156,7 +163,48 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
         </div>
       );
     }
-    if (a.type === 'SELECT' || GEO_TYPES.has(a.type)) {
+    if (a.type === 'DISTRICT') {
+      return (
+        <select
+          value={(v as string) ?? ''}
+          onChange={(e) => {
+            const districtId = e.target.value;
+            setVals((p) => {
+              const next = { ...p, [a.id]: districtId };
+              // Clear any NEIGHBORHOOD choice that no longer belongs to the chosen district.
+              for (const nb of catalog.attributes) {
+                if (nb.type !== 'NEIGHBORHOOD') continue;
+                const cur = next[nb.id];
+                if (typeof cur === 'string' && cur && !nb.options.some((o) => o.id === cur && o.districtId === districtId)) next[nb.id] = '';
+              }
+              return next;
+            });
+          }}
+          className={inp}
+        >
+          <option value="">{L('— اختر —', '— select —')}</option>
+          {a.options.map((o) => <option key={o.id} value={o.id}>{label(o)}</option>)}
+        </select>
+      );
+    }
+    if (a.type === 'NEIGHBORHOOD') {
+      // Nested under DISTRICT: filter by the district chosen in the same form (staff-form rule).
+      const districtAttr = applicable.find((x) => x.type === 'DISTRICT');
+      const chosenDistrict = districtAttr && typeof vals[districtAttr.id] === 'string' ? (vals[districtAttr.id] as string) : '';
+      const opts = chosenDistrict ? a.options.filter((o) => o.districtId === chosenDistrict) : a.options;
+      return (
+        <div>
+          <select value={(v as string) ?? ''} onChange={(e) => setVal(a.id, e.target.value)} className={inp}>
+            <option value="">{L('— اختر —', '— select —')}</option>
+            {opts.map((o) => <option key={o.id} value={o.id}>{label(o)}</option>)}
+          </select>
+          {districtAttr && !chosenDistrict && (
+            <p className="mt-1 text-xs opacity-60">{L('اختر المنطقة أولاً لتصفية المجاورات', 'Choose the district first to filter neighborhoods')}</p>
+          )}
+        </div>
+      );
+    }
+    if (a.type === 'SELECT') {
       return (
         <select value={(v as string) ?? ''} onChange={(e) => setVal(a.id, e.target.value)} className={inp}>
           <option value="">{L('— اختر —', '— select —')}</option>
@@ -178,26 +226,46 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
   }
 
   const grantedTypes = typeC?.options.filter((o) => o.granted) ?? [];
+  // Editing a listing whose Type grant was revoked: keep the current option visible (disabled)
+  // so the select doesn't silently show empty / lose the value.
+  const revokedType = typeId && !grantedTypes.some((o) => o.id === typeId) ? typeC?.options.find((o) => o.id === typeId) : undefined;
+  // Hard nesting Type → Purpose → Condition (mirrors the staff form's visibleOptions):
+  // unscoped options (no parents) always show; scoped ones only under their chosen parent.
+  const nested = (opts: COption[] | undefined, parentId: string) =>
+    (opts ?? []).filter((o) => !parentId || o.parentIds.length === 0 || o.parentIds.includes(parentId));
+  const purposeOptions = nested(purposeC?.options, typeId);
+  const condOptions = nested(condC?.options, purposeId);
 
   return (
     <form onSubmit={submit} className="mx-auto max-w-2xl space-y-5">
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="text-sm font-semibold">{L('النوع', 'Type')}
-          <select value={typeId} onChange={(e) => setTypeId(e.target.value)} required className={`${inp} mt-1`}>
+          <select
+            value={typeId}
+            onChange={(e) => { setTypeId(e.target.value); setPurposeId(''); setCondId(''); }}
+            required
+            className={`${inp} mt-1`}
+          >
             <option value="">{L('— اختر —', '— select —')}</option>
             {grantedTypes.map((o) => <option key={o.id} value={o.id}>{label(o)}</option>)}
+            {revokedType && <option value={revokedType.id} disabled>{label(revokedType)} {L('(صلاحية ملغاة)', '(permission revoked)')}</option>}
           </select>
         </label>
         <label className="text-sm font-semibold">{L('الغرض', 'Purpose')}
-          <select value={purposeId} onChange={(e) => setPurposeId(e.target.value)} required className={`${inp} mt-1`}>
+          <select
+            value={purposeId}
+            onChange={(e) => { setPurposeId(e.target.value); setCondId(''); }}
+            required
+            className={`${inp} mt-1`}
+          >
             <option value="">{L('— اختر —', '— select —')}</option>
-            {purposeC?.options.map((o) => <option key={o.id} value={o.id}>{label(o)}</option>)}
+            {purposeOptions.map((o) => <option key={o.id} value={o.id}>{label(o)}</option>)}
           </select>
         </label>
         <label className="text-sm font-semibold">{L('الحالة', 'Condition')}
           <select value={condId} onChange={(e) => setCondId(e.target.value)} required className={`${inp} mt-1`}>
             <option value="">{L('— اختر —', '— select —')}</option>
-            {condC?.options.map((o) => <option key={o.id} value={o.id}>{label(o)}</option>)}
+            {condOptions.map((o) => <option key={o.id} value={o.id}>{label(o)}</option>)}
           </select>
         </label>
       </div>
@@ -264,7 +332,7 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
         <label className="flex items-end gap-2 text-sm font-semibold"><input type="checkbox" checked={contactWhatsapp} onChange={(e) => setContactWhatsapp(e.target.checked)} /> {L('واتساب متاح', 'WhatsApp available')}</label>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p ref={errRef} className="text-sm text-red-600">{error}</p>}
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={pending} className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-soft disabled:opacity-50">{initial.id ? L('حفظ التعديلات', 'Save changes') : L('نشر الإعلان', 'Submit listing')}</button>
         <a href={returnTo} className="text-sm text-ink-500">{L('إلغاء', 'Cancel')}</a>

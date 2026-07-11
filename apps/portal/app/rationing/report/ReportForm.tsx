@@ -32,6 +32,11 @@ export function ReportForm({ cities, account }: { cities: City[]; account: { nam
         const r = await fetch('/api/report-upload', { method: 'POST', body: fd });
         const j = await r.json().catch(() => null);
         if (j?.ok) setPhotos((p) => [...p, { id: j.attachment.id, path: j.attachment.path }]);
+        else {
+          // A failed photo must never vanish silently — tell the user and stop the batch.
+          setError(j?.error === 'rate_limited' ? t('reportRateLimited') : t('registerError'));
+          break;
+        }
       }
     } finally {
       setBusy(false);

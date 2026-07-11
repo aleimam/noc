@@ -71,7 +71,7 @@ export default async function Home() {
           <section key="ft" className="mx-auto max-w-6xl px-4 pt-8">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-xl font-bold text-navy-800 dark:text-soft"><span className="text-gold-600">★</span> {L(c.titles.featured)}</h2>
-              <Link href="/listings?featured=1" className="text-sm font-bold text-gold-700">{locale === 'ar' ? 'عرض الكل' : 'View all'} ←</Link>
+              <Link href="/listings?featured=1" className="text-sm font-bold text-gold-700">{locale === 'ar' ? 'عرض الكل ←' : 'View all →'}</Link>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {featured.map((land) => <StoreLandCard key={land.id} land={land} locale={locale} wishlisted={wished.has(land.id)} />)}
@@ -83,7 +83,7 @@ export default async function Home() {
           <section key="lt" className="mx-auto max-w-6xl px-4 pb-10 pt-8">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-navy-800 dark:text-soft">{L(c.titles.latest)}</h2>
-              <Link href="/listings" className="text-sm font-bold text-gold-700">{locale === 'ar' ? 'عرض الكل' : 'View all'} ←</Link>
+              <Link href="/listings" className="text-sm font-bold text-gold-700">{locale === 'ar' ? 'عرض الكل ←' : 'View all →'}</Link>
             </div>
             {lands.length === 0 ? (
               <p className="py-12 text-center text-ink-500">{locale === 'ar' ? 'لا توجد أراضٍ متاحة حالياً' : 'No lands available yet'}</p>

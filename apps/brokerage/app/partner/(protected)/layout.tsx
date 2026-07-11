@@ -12,12 +12,16 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   const { ownerId } = await requirePartner();
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
-  const owner = await prisma.owner.findUnique({ where: { id: ownerId }, select: { name: true } });
-  const canBrowse = await partnerCanBrowseListings(ownerId);
+  const [owner, canBrowse, grantCount] = await Promise.all([
+    prisma.owner.findUnique({ where: { id: ownerId }, select: { name: true } }),
+    partnerCanBrowseListings(ownerId),
+    // Same grant check the Dashboard uses — no grants → no "add listing" entry point.
+    prisma.ownerAllowedCategory.count({ where: { ownerId } }),
+  ]);
 
   const nav = [
     { href: '/partner', label: L('لوحتي', 'Dashboard') },
-    { href: '/partner/listings/new', label: L('+ إضافة إعلان', '+ Add listing') },
+    ...(grantCount > 0 ? [{ href: '/partner/listings/new', label: L('+ إضافة إعلان', '+ Add listing') }] : []),
     ...(canBrowse ? [{ href: '/partner/browse', label: L('تصفّح العروض', 'Browse offers') }] : []),
     { href: '/partner/analytics', label: L('الإحصائيات', 'Analytics') },
     { href: '/partner/account', label: L('حسابي', 'My account') },
@@ -32,9 +36,9 @@ export default async function PartnerLayout({ children }: { children: React.Reac
               🔑 {L('بوابة الشركاء', 'Partner portal')}
               <span className="rounded-full bg-gold/20 px-3 py-1 text-sm font-bold text-gold-300">{owner?.name ?? ''}</span>
             </span>
-            <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-semibold">
+            <nav className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
               {nav.map((n) => (
-                <a key={n.href} href={n.href} className="hover:text-gold-300">{n.label}</a>
+                <a key={n.href} href={n.href} className="rounded-md px-3 py-2 hover:bg-white/10 hover:text-gold-300">{n.label}</a>
               ))}
               <SignOutButton label={L('خروج', 'Sign out')} />
             </nav>

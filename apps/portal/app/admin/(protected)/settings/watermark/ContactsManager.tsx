@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@noc/ui';
+import { runAction } from '@/app/admin/(protected)/runAction';
 import { saveBrandContact, deleteBrandContact } from './actions';
 
 export type Contact = { id: string; brand: string; type: string; value: string; isActive: boolean };
@@ -39,8 +40,12 @@ export function ContactsManager({ brand, brandLabel, contacts }: { brand: string
     });
   const del = (id: string) =>
     start(async () => {
-      const r = await deleteBrandContact(id);
-      if (r.ok) { router.refresh(); toast('تم الحذف'); }
+      const ok = await runAction(() => deleteBrandContact(id), {
+        confirmText: 'حذف نهائيًا؟ / Delete permanently?',
+        successText: 'تم الحذف',
+        errorText: 'تعذّر الحذف / Delete failed',
+      });
+      if (ok) router.refresh();
     });
 
   return (

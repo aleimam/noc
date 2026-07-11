@@ -529,10 +529,12 @@ export async function toggleFeatured(id: string, featured: boolean): Promise<Res
 
 export async function rejectListing(id: string, reason: string): Promise<Result> {
   await requirePermission('marketplace', 'UPDATE');
+  // A rejection must carry a reason (the UI enforces this too — this is the server backstop).
+  if (!reason.trim()) return { ok: false, error: 'reason_required' };
   try {
     await prisma.listing.update({
       where: { id },
-      data: { status: 'REJECTED', rejectionReason: reason.trim() || null },
+      data: { status: 'REJECTED', rejectionReason: reason.trim() },
     });
     revalidatePath('/admin/marketplace/listings', 'page');
     return { ok: true };

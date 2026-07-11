@@ -27,7 +27,7 @@ export default async function OffersPage() {
         {incoming.map((n) => (
           <div key={n.id} className="space-y-1.5">
             <div className="text-sm">
-              <Link href={`/market/${n.listingId}`} className="font-bold text-navy-700 hover:underline dark:text-soft">{n.listingTitle}</Link>
+              <Link href={n.listingHref} className="font-bold text-navy-700 hover:underline dark:text-soft">{n.listingTitle}</Link>
               {(n.buyerName || n.buyerPhone) && <span className="ms-2 text-ink-600" dir="ltr">{n.buyerName ?? ''} {n.buyerPhone ?? ''}</span>}
             </div>
             <NegotiationThread role="seller" listingId={n.listingId} negotiation={{ id: n.id, status: n.status, offers: n.offers }} locale={locale} compact />
@@ -41,7 +41,7 @@ export default async function OffersPage() {
         {mine.map((n) => (
           <div key={n.id} className="space-y-1.5">
             <div className="text-sm">
-              <Link href={`/market/${n.listingId}`} className="font-bold text-navy-700 hover:underline dark:text-soft">{n.listingTitle}</Link>
+              <Link href={n.listingHref} className="font-bold text-navy-700 hover:underline dark:text-soft">{n.listingTitle}</Link>
               {n.contactPhone && <> · <a href={`tel:${n.contactPhone}`} dir="ltr" className="text-accent">{n.contactPhone}</a></>}
             </div>
             <NegotiationThread role="buyer" listingId={n.listingId} negotiation={{ id: n.id, status: n.status, offers: n.offers }} locale={locale} compact />

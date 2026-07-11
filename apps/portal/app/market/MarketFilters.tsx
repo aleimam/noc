@@ -72,16 +72,17 @@ export function MarketFilters({
                   <input type="number" dir="ltr" defaultValue={sp.get(`${a.key}_max`) ?? ''} placeholder={t('to')} onBlur={(e) => pushParams((p) => (e.target.value ? p.set(`${a.key}_max`, e.target.value) : p.delete(`${a.key}_max`)))} className="w-24 rounded border border-graphite/20 bg-transparent px-2 py-1" />
                 </div>
               ) : a.type === 'BOOLEAN' ? (
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={sp.get(a.key) === '1'} onChange={() => pushParams((p) => (p.get(a.key) === '1' ? p.delete(a.key) : p.set(a.key, '1')))} />
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-graphite/25 px-3 py-2 hover:bg-graphite/5">
+                  <input type="checkbox" className="scale-125" checked={sp.get(a.key) === '1'} onChange={() => pushParams((p) => (p.get(a.key) === '1' ? p.delete(a.key) : p.set(a.key, '1')))} />
                   {L(a.labelAr, a.labelEn)}
                 </label>
               ) : (
-                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                <div className="flex flex-wrap gap-2">
                   {a.options.map((o) => (
-                    <label key={o.key} className="flex items-center gap-1">
+                    <label key={o.key} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-graphite/25 px-3 py-2 hover:bg-graphite/5">
                       <input
                         type="checkbox"
+                        className="scale-125"
                         checked={csv(a.key).includes(o.key)}
                         onChange={() => pushParams((p) => {
                           const cur = csv(a.key);

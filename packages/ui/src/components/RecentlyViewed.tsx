@@ -34,8 +34,14 @@ export function TrackView({ item }: { item: ViewedItem }) {
   return null;
 }
 
+/** Price snapshots are stored raw (e.g. "1500000") — format with thousands separators. */
+function fmtPrice(p: string): string {
+  const n = Number(String(p).replace(/,/g, ''));
+  return Number.isFinite(n) ? n.toLocaleString('en-US') : p;
+}
+
 /** Horizontal "recently viewed" row, excluding the current listing. Hidden when empty. */
-export function RecentlyViewed({ title, excludeId }: { title: string; excludeId?: string }) {
+export function RecentlyViewed({ title, excludeId, currency = 'ج.م' }: { title: string; excludeId?: string; currency?: string }) {
   const [items, setItems] = useState<ViewedItem[]>([]);
   useEffect(() => {
     setItems(read().filter((x) => x.id !== excludeId));
@@ -56,7 +62,12 @@ export function RecentlyViewed({ title, excludeId }: { title: string; excludeId?
             </div>
             <div className="p-2">
               <div className="truncate text-sm font-bold text-navy-800 dark:text-soft">{it.title}</div>
-              {it.price && <div className="font-num text-sm text-gold-700" dir="ltr">{it.price}</div>}
+              {it.price && (
+                <div className="text-sm font-bold text-navy-800 dark:text-soft">
+                  <span className="font-num" dir="ltr">{fmtPrice(it.price)}</span>{' '}
+                  <span className="text-xs font-semibold text-ink-500">{currency}</span>
+                </div>
+              )}
             </div>
           </a>
         ))}

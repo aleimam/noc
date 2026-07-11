@@ -17,6 +17,7 @@ export function StoreMobileMenu({
   account,
   wishlist,
   brand,
+  locale = 'ar',
 }: {
   allLands: Item;
   featured: Item;
@@ -25,7 +26,9 @@ export function StoreMobileMenu({
   account: Item;
   wishlist: Item;
   brand: string;
+  locale?: 'ar' | 'en';
 }) {
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const [open, setOpen] = useState(false);
   const Row = ({ href, label, accent }: { href: string; label: string; accent?: boolean }) => (
     <Link href={href} onClick={() => setOpen(false)} className={`block rounded-xl px-5 py-4 text-2xl font-bold hover:bg-white/10 ${accent ? 'text-gold' : 'text-soft'}`}>
@@ -35,7 +38,7 @@ export function StoreMobileMenu({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-label="menu" className="rounded-lg p-2.5 text-white hover:bg-white/10 md:hidden">
+      <button type="button" onClick={() => setOpen(true)} aria-label={L('القائمة', 'Menu')} className="rounded-lg p-2.5 text-white hover:bg-white/10 md:hidden">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
       </button>
 
@@ -43,7 +46,7 @@ export function StoreMobileMenu({
         <div className="fixed inset-0 z-50 flex flex-col bg-navy-800 text-soft md:hidden">
           <div className="flex h-16 flex-none items-center justify-between border-b border-white/10 px-4">
             <span className="text-lg font-extrabold text-gold">{brand}</span>
-            <button type="button" onClick={() => setOpen(false)} aria-label="close" className="rounded-lg p-2.5 hover:bg-white/10">
+            <button type="button" onClick={() => setOpen(false)} aria-label={L('إغلاق', 'Close')} className="rounded-lg p-2.5 hover:bg-white/10">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
             </button>
           </div>

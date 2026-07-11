@@ -52,6 +52,15 @@ export function MapAnnotator({
   const trRef = useRef<Konva.Transformer>(null);
   const nodeRefs = useRef<Record<string, Konva.Node>>({});
   const drawingId = useRef<string | null>(null);
+  // The initial shapes array reference — any user edit produces a new array, so a simple
+  // reference check tells us whether there are unsaved changes.
+  const initialShapesRef = useRef(shapes);
+  const dirty = shapes !== initialShapesRef.current;
+
+  function requestClose() {
+    if (dirty && shapes.length > 0 && !window.confirm('تجاهل التعديلات؟ / Discard changes?')) return;
+    onClose();
+  }
 
   // Continue the id counter past any pre-loaded shapes so new ones don't collide.
   useEffect(() => {
@@ -98,6 +107,10 @@ export function MapAnnotator({
   function removeSelected() {
     if (!selectedId) return;
     setShapes((s) => s.filter((sh) => sh.id !== selectedId));
+    setSelectedId(null);
+  }
+  function undo() {
+    setShapes((s) => s.slice(0, -1));
     setSelectedId(null);
   }
   function recolor(c: string) {
@@ -150,7 +163,8 @@ export function MapAnnotator({
     setSelectedId(null);
     await new Promise((r) => requestAnimationFrame(() => r(null)));
     try {
-      const exportScale = Math.min(img.naturalWidth, MAX_EXPORT) / display.w;
+      // Scale from the LONGEST dimension so tall (portrait) maps export at full quality too.
+      const exportScale = Math.min(Math.max(img.naturalWidth, img.naturalHeight), MAX_EXPORT) / Math.max(display.w, display.h);
       const dataUrl = stage.toDataURL({ pixelRatio: exportScale, mimeType: 'image/png' });
       // Decode the data URL manually — `fetch(dataUrl)` is governed by the CSP
       // connect-src (which deliberately excludes data:) and gets blocked.
@@ -174,7 +188,7 @@ export function MapAnnotator({
   const toolBtn = (active: boolean) => `rounded-lg px-3 py-1.5 text-sm font-bold ${active ? 'bg-primary text-soft' : 'border border-graphite/25'}`;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={requestClose}>
       <div className="max-h-full w-full max-w-4xl overflow-auto rounded-2xl bg-white p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => addBox('rect')} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-soft">▭ {t('annotRect')}</button>
@@ -186,9 +200,10 @@ export function MapAnnotator({
               <button key={c} type="button" onClick={() => recolor(c)} aria-label={c} className={`h-6 w-6 rounded-full ring-2 ${color === c ? 'ring-primary' : 'ring-graphite/20'}`} style={{ backgroundColor: c }} />
             ))}
           </span>
+          <button type="button" onClick={undo} disabled={shapes.length === 0} className="rounded-lg border border-graphite/25 px-3 py-1.5 text-sm disabled:opacity-40">↩ تراجع / Undo</button>
           <button type="button" onClick={removeSelected} disabled={!selectedId} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 disabled:opacity-40">✕ {t('annotDelete')}</button>
           <div className="ms-auto flex items-center gap-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-graphite/25 px-3 py-1.5 text-sm">{t('annotCancel')}</button>
+            <button type="button" onClick={requestClose} className="rounded-lg border border-graphite/25 px-3 py-1.5 text-sm">{t('annotCancel')}</button>
             <button type="button" onClick={save} disabled={busy || !img} className="rounded-lg bg-green px-4 py-1.5 text-sm font-bold text-white disabled:opacity-50">{busy ? t('annotSaving') : t('annotSave')}</button>
           </div>
         </div>
@@ -221,7 +236,7 @@ export function MapAnnotator({
                       <Rect
                         key={sh.id}
                         ref={(n) => { if (n) nodeRefs.current[sh.id] = n; }}
-                        x={sh.x} y={sh.y} width={sh.width} height={sh.height} stroke={sh.stroke} strokeWidth={sw}
+                        x={sh.x} y={sh.y} width={sh.width} height={sh.height} stroke={sh.stroke} strokeWidth={sw} hitStrokeWidth={20}
                         draggable onClick={() => setSelectedId(sh.id)} onTap={() => setSelectedId(sh.id)}
                         onDragEnd={(e) => patch(sh.id, { x: e.target.x(), y: e.target.y() })}
                         onTransformEnd={(e) => {
@@ -236,7 +251,7 @@ export function MapAnnotator({
                       <Circle
                         key={sh.id}
                         ref={(n) => { if (n) nodeRefs.current[sh.id] = n; }}
-                        x={sh.x + sh.width / 2} y={sh.y + sh.height / 2} radius={sh.width / 2} stroke={sh.stroke} strokeWidth={sw}
+                        x={sh.x + sh.width / 2} y={sh.y + sh.height / 2} radius={sh.width / 2} stroke={sh.stroke} strokeWidth={sw} hitStrokeWidth={20}
                         draggable onClick={() => setSelectedId(sh.id)} onTap={() => setSelectedId(sh.id)}
                         onDragEnd={(e) => patch(sh.id, { x: e.target.x() - sh.width / 2, y: e.target.y() - sh.height / 2 })}
                         onTransformEnd={(e) => {
@@ -249,10 +264,10 @@ export function MapAnnotator({
                     );
                   if (sh.type === 'arrow')
                     return (
-                      <Arrow key={sh.id} points={sh.points} stroke={sh.stroke} fill={sh.stroke} strokeWidth={sw} pointerLength={sw * 3} pointerWidth={sw * 3} onClick={() => setSelectedId(sh.id)} onTap={() => setSelectedId(sh.id)} />
+                      <Arrow key={sh.id} points={sh.points} stroke={sh.stroke} fill={sh.stroke} strokeWidth={sw} hitStrokeWidth={20} pointerLength={sw * 3} pointerWidth={sw * 3} onClick={() => setSelectedId(sh.id)} onTap={() => setSelectedId(sh.id)} />
                     );
                   return (
-                    <Line key={sh.id} points={sh.points} stroke={sh.stroke} strokeWidth={sw} lineCap="round" lineJoin="round" tension={0.3} onClick={() => setSelectedId(sh.id)} onTap={() => setSelectedId(sh.id)} />
+                    <Line key={sh.id} points={sh.points} stroke={sh.stroke} strokeWidth={sw} hitStrokeWidth={20} lineCap="round" lineJoin="round" tension={0.3} onClick={() => setSelectedId(sh.id)} onTap={() => setSelectedId(sh.id)} />
                   );
                 })}
                 <Transformer ref={trRef} rotateEnabled={false} ignoreStroke borderStroke="#2563eb" anchorStroke="#2563eb" />

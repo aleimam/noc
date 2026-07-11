@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
@@ -10,6 +10,8 @@ function safeNext(raw: string | null): string {
   if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw;
   return '/account';
 }
+
+const RESEND_SECONDS = 60;
 
 export default function CustomerLogin() {
   const locale = useLocale();
@@ -22,13 +24,16 @@ export default function CustomerLogin() {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0); // seconds until "resend" unlocks
 
-  async function sendCode(e: FormEvent) {
-    e.preventDefault();
-    if (!isValidPhone(phone)) {
-      setError(L('أدخل رقم موبايل صحيح: 11 رقمًا يبدأ بـ 01، أو رقمًا دوليًا يبدأ بعلامة +', 'Enter a valid phone: 11 digits starting with 01, or an international number starting with +'));
-      return;
-    }
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  /** Request an OTP; used by the phone step and the resend button on the code step. */
+  async function requestCode(): Promise<void> {
     setLoading(true);
     setError('');
     const res = await fetch('/api/auth/otp/request', {
@@ -36,27 +41,67 @@ export default function CustomerLogin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, locale }),
     });
+    const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
     setLoading(false);
-    if (res.ok) setStep('code');
-    else setError(L('تعذّر إرسال الرمز، تأكد من الرقم', 'Could not send the code'));
+    if (res.ok) {
+      setStep('code');
+      setCooldown(RESEND_SECONDS);
+      return;
+    }
+    if (j?.error === 'rate_limited' || j?.error === 'cooldown') {
+      setError(L('حاولت كثيرًا — انتظر دقائق ثم أعد المحاولة', 'Too many attempts — wait a few minutes then try again'));
+    } else {
+      setError(L('تعذّر إرسال الرمز، تأكد من الرقم', 'Could not send the code — check the number'));
+    }
+  }
+
+  async function sendCode(e: FormEvent) {
+    e.preventDefault();
+    if (!isValidPhone(phone)) {
+      setError(L('أدخل رقم موبايل صحيح: 11 رقمًا يبدأ بـ 01، أو رقمًا دوليًا يبدأ بعلامة +', 'Enter a valid phone: 11 digits starting with 01, or an international number starting with +'));
+      return;
+    }
+    await requestCode();
+  }
+
+  /** Turn a failed sign-in into an invalid-code or lockout-cooldown message (mirrors the portal). */
+  async function failureMessage(): Promise<string> {
+    try {
+      const r = await fetch('/api/login-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: 'customer', identifier: phone }),
+      }).then((res) => res.json());
+      if (r?.retryAfter > 0) {
+        const m = Math.ceil(r.retryAfter / 60);
+        return L(`محاولات كثيرة. انتظر ${m} دقيقة ثم حاول مجددًا.`, `Too many attempts. Wait ${m} min and try again.`);
+      }
+    } catch { /* ignore */ }
+    return L('رمز غير صحيح', 'Invalid code');
   }
 
   async function verify(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const res = await signIn('otp', { phone, code, redirect: false });
-    if (res?.ok) {
-      router.push(next);
-      return;
+    try {
+      // Auth.js v5 may resolve with { ok:false } OR throw on a bad code — handle both.
+      const res = await signIn('otp', { phone, code, redirect: false });
+      if (res?.ok && !res.error) {
+        router.push(next);
+        return;
+      }
+      setError(await failureMessage());
+    } catch {
+      setError(await failureMessage());
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    setError(L('رمز غير صحيح', 'Invalid code'));
   }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-soft p-6">
-      <div className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-md">
+      <div className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 text-navy-800 shadow-md">
         <a href="/" className="block text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/logo" alt="الصواري" className="mx-auto h-12 w-auto" />
@@ -77,6 +122,16 @@ export default function CustomerLogin() {
             <input type="text" inputMode="numeric" dir="ltr" value={code} onChange={(e) => setCode(e.target.value)} required maxLength={6} className="w-full rounded-xl border border-ink-200 px-3 py-2.5 tracking-[0.4em]" />
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button disabled={loading} className="w-full rounded-xl bg-gold px-3 py-2.5 font-bold text-navy-900 disabled:opacity-60">{L('دخول', 'Verify')}{loading ? '…' : ''}</button>
+            <button
+              type="button"
+              onClick={() => { if (cooldown <= 0 && !loading) void requestCode(); }}
+              disabled={cooldown > 0 || loading}
+              className="w-full rounded-xl border border-ink-200 px-3 py-2.5 text-sm font-semibold text-navy-700 disabled:opacity-60"
+            >
+              {cooldown > 0
+                ? L(`إعادة الإرسال بعد ${cooldown} ثانية`, `Resend in ${cooldown}s`)
+                : L('إعادة إرسال الرمز', 'Resend code')}
+            </button>
             <button type="button" onClick={() => { setStep('phone'); setCode(''); setError(''); }} className="w-full text-sm text-ink-500">{L('تغيير الرقم', 'Change number')}</button>
           </form>
         )}

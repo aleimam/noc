@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { isValidPhone } from '@noc/config';
@@ -39,8 +39,26 @@ export function FollowForm({
     cityId: defaults.cityId ?? '',
   });
   const upd = (k: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
+  const [resendIn, setResendIn] = useState(0);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const id = setInterval(() => setResendIn((s) => s - 1), 1000);
+    return () => clearInterval(id);
+  }, [resendIn]);
 
   const payload = { kind, sheetId, ...f };
+
+  // Re-send the OTP (same phone) with a 60s cooldown.
+  function resend() {
+    if (resendIn > 0 || pending) return;
+    setError('');
+    setResendIn(60);
+    start(async () => {
+      const r = await startFollow({ ...payload, phone: phone.trim() });
+      if (!r.ok) setError(errText(r.error));
+    });
+  }
 
   function errText(err: string): string {
     if (err === 'phone_required') return t('phoneRequired');
@@ -79,11 +97,14 @@ export function FollowForm({
         <label className="text-sm">{t('otpLabel')}
           <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" dir="ltr" maxLength={6} className={`${inp} tracking-[0.4em]`} required />
         </label>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button disabled={pending} className="rounded-xl bg-gold px-6 py-2.5 font-bold text-navy-900 disabled:opacity-50">
             {pending ? t('submitting') : t('otpVerify')}
           </button>
-          <button type="button" onClick={() => { setStep('form'); setCode(''); setError(''); }} className="text-sm text-navy-600">
+          <button type="button" disabled={pending || resendIn > 0} onClick={resend} className="text-sm text-navy-600 disabled:opacity-50">
+            {resendIn > 0 ? t('otpResendWait', { s: resendIn }) : t('otpResendNow')}
+          </button>
+          <button type="button" onClick={() => { setStep('form'); setCode(''); setError(''); setResendIn(0); }} className="text-sm text-navy-600">
             {t('otpResend')}
           </button>
         </div>

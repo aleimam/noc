@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { track, nocEvent } from '@noc/ui';
+import { toast, track, nocEvent } from '@noc/ui';
 import { toggleWishlist } from '../account/actions';
 
-export function WishlistButton({ listingId, initialSaved, size = 'sm' }: { listingId: string; initialSaved: boolean; size?: 'sm' | 'lg' }) {
+export function WishlistButton({ listingId, initialSaved, size = 'sm', locale = 'ar' }: { listingId: string; initialSaved: boolean; size?: 'sm' | 'lg'; locale?: 'ar' | 'en' }) {
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const [saved, setSaved] = useState(initialSaved);
   const [pending, start] = useTransition();
 
@@ -16,6 +17,8 @@ export function WishlistButton({ listingId, initialSaved, size = 'sm' }: { listi
       if (r.ok) {
         setSaved(r.saved);
         if (r.saved) { track('wishlist_add', { listingId }); nocEvent('wishlist', listingId); }
+      } else {
+        toast(L('تعذّر الحفظ، حاول مرة أخرى', 'Could not save, try again'), 'error');
       }
     });
   }
@@ -25,7 +28,7 @@ export function WishlistButton({ listingId, initialSaved, size = 'sm' }: { listi
     <button
       onClick={toggle}
       disabled={pending}
-      aria-label={saved ? 'Remove from wishlist' : 'Add to wishlist'}
+      aria-label={saved ? L('إزالة من المفضلة', 'Remove from wishlist') : L('إضافة إلى المفضلة', 'Add to wishlist')}
       aria-pressed={saved}
       className={`flex ${cls} items-center justify-center rounded-full bg-white/90 shadow-md transition hover:bg-white disabled:opacity-60`}
     >

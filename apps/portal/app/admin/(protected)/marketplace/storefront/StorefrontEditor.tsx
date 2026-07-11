@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from '@noc/ui';
 import type { Loc, StoreLink, StoreSectionKey, StorefrontContent } from '@noc/config';
 import { saveStorefront } from './actions';
 
@@ -36,6 +37,8 @@ export function StorefrontEditor({ initial }: { initial: StorefrontContent }) {
       if (r.ok) {
         setSaved(true);
         router.refresh();
+      } else {
+        toast('تعذّر الحفظ / Save failed', 'error');
       }
     });
   }

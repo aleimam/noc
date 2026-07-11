@@ -41,6 +41,10 @@ export function ImageAttachment({
   async function upload(input: File | null | undefined) {
     if (!input) return;
     setError('');
+    // iPhone HEIC/HEIF photos can't be decoded by browsers or our pipeline — catch up front.
+    if (input.type.startsWith('image/hei') || /\.(heic|heif)$/i.test(input.name)) {
+      return setError(t('heicUnsupported'));
+    }
     if (!input.type.startsWith('image/')) return setError(t('invalidType'));
     setBusy(true);
     try {
@@ -55,28 +59,38 @@ export function ImageAttachment({
       const res = await fetch(url, { method: 'POST', body: fd });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
-        return setError(json?.error === 'too_large' ? t('tooLarge') : t('invalidType'));
+        return setError(
+          json?.error === 'too_large' ? t('tooLarge')
+          : json?.error === 'rate_limited' ? t('rateLimited')
+          : json?.error === 'invalid_type' ? t('invalidType')
+          : t('failed'),
+        );
       }
       onChange?.(json.attachment as UploadedAttachment);
     } catch {
-      setError(t('invalidType'));
+      setError(t('failed'));
     } finally {
       setBusy(false);
     }
   }
 
+  async function uploadMany(list: Iterable<File>) {
+    for (const f of list) await upload(f);
+  }
+
   function onDrop(e: DragEvent) {
     e.preventDefault();
     setDragOver(false);
-    void upload(e.dataTransfer.files?.[0]);
+    void uploadMany(Array.from(e.dataTransfer.files ?? []));
   }
   function onPaste(e: ClipboardEvent) {
     const item = Array.from(e.clipboardData.items).find((i) => i.type.startsWith('image/'));
     if (item) void upload(item.getAsFile());
   }
   function onPick(e: ChangeEvent<HTMLInputElement>) {
-    void upload(e.target.files?.[0]);
+    const files = Array.from(e.target.files ?? []);
     e.target.value = '';
+    void uploadMany(files);
   }
 
   return (
@@ -94,7 +108,8 @@ export function ImageAttachment({
           <button
             type="button"
             onClick={() => onChange?.(null)}
-            className="text-sm text-red-600 hover:underline"
+            aria-label={t('remove')}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-lg text-red-600 hover:bg-red-600/10"
           >
             ✕
           </button>
@@ -121,7 +136,7 @@ export function ImageAttachment({
           {busy ? t('uploading') : t('drop')}
         </div>
       )}
-      <input ref={inputRef} type="file" accept="image/*" hidden onChange={onPick} />
+      <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={onPick} />
       {error && <p className="text-sm text-red-600">{error}</p>}
       {zoom && value && (
         <Lightbox src={value.path} alt={value.originalName} onClose={() => setZoom(false)} />

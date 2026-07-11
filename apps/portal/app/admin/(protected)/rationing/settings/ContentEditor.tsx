@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { toast } from '@noc/ui';
 import { saveConfig } from './actions';
 import type { RationingConfig, WatermarkPosition } from '../../../../../lib/rationing/settings';
 
@@ -57,6 +58,8 @@ export function ContentEditor({ config }: { config: RationingConfig }) {
       if (r.ok) {
         setSaved(true);
         router.refresh();
+      } else {
+        toast(tc('saveFailed'), 'error');
       }
     });
   }

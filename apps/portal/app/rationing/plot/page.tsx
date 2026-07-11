@@ -1,11 +1,14 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { SiteShell } from '../../_components/SiteShell';
+import { LimitCard } from '../LimitCard';
 import { RationingTabs } from '../RationingTabs';
 import { SearchBar } from '../SearchBar';
 import { getRationingConfig } from '../../../lib/rationing/settings';
+import { consumeRationingQuota } from '../../../lib/rationing/quota';
+import { getSiteConfig } from '../../../lib/site';
 
 export const dynamic = 'force-dynamic';
 const str = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '').trim();
@@ -13,8 +16,24 @@ const str = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '
 export default async function PlotDetail({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const ref = str(sp.ref);
+  const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('rationing');
   if (!ref) notFound();
+
+  // A plot page lists every applicant on the plot — meter it against the same anti-scrape
+  // quota as searches/record views so the register can't be enumerated plot by plot.
+  const quota = await consumeRationingQuota(true);
+  if (!quota.ok) {
+    const site = await getSiteConfig();
+    return (
+      <SiteShell active="rationing">
+        <div className="mx-auto max-w-3xl space-y-5 p-4 sm:p-6">
+          <Link href="/rationing/plots" className="inline-block text-sm text-navy-600">‹ {t('tabPlots')}</Link>
+          <LimitCard locale={locale} loggedIn={quota.loggedIn} whatsapp={site.whatsappHelp} />
+        </div>
+      </SiteShell>
+    );
+  }
 
   const [sheets, config, cities] = await Promise.all([
     prisma.rationingSheet.findMany({
@@ -53,7 +72,9 @@ export default async function PlotDetail({ searchParams }: { searchParams: Promi
               href={`/rationing/${s.id}`}
               className="flex items-center gap-3.5 rounded-xl border border-ink-200 bg-white p-4 transition hover:border-gold hover:shadow-md"
             >
-              <div className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-navy-50 text-xl text-navy-600" aria-hidden>☻</div>
+              <div className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-navy-50 text-navy-600" aria-hidden>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
+              </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-xl font-bold text-navy-800">{s.applicantName}</div>
               </div>

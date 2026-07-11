@@ -59,7 +59,7 @@ export default async function MyListings() {
               <div className="font-semibold">{l.title}</div>
               <div className="text-xs opacity-70">
                 {L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
-                {l.price != null ? ` · ${String(l.price)} ${currency(locale)}` : ''}
+                {l.price != null ? ` · ${Number(l.price).toLocaleString('en-US')} ${currency(locale)}` : ''}
               </div>
               <span className={`inline-block rounded px-2 py-0.5 text-xs ${STATUS_COLOR[l.status] ?? ''}`}>
                 {t(`status${l.status}`)}

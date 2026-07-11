@@ -19,18 +19,6 @@ export async function setOfferStatus(id: string, status: Status): Promise<{ ok: 
   }
 }
 
-export async function saveOfferNote(id: string, note: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  await requirePermission('marketplace', 'UPDATE');
-  try {
-    await prisma.landOffer.update({ where: { id }, data: { note: note.trim() || null } });
-    revalidatePath(`/admin/marketplace/offers/${id}`);
-    return { ok: true };
-  } catch (e) {
-    console.error('saveOfferNote failed', e);
-    return { ok: false, error: 'failed' };
-  }
-}
-
 export async function deleteOffer(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
   await requirePermission('marketplace', 'DELETE');
   try {

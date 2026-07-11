@@ -38,7 +38,7 @@ export async function PartnerBrowse() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-black text-navy-800">{L('جميع العروض', 'All offers')}</h1>
+        <h1 className="text-2xl font-black text-navy-800 dark:text-soft">{L('جميع العروض', 'All offers')}</h1>
         <p className="mt-1 text-sm text-ink-500">{L('تصفّح كل عروضنا المنشورة — للاطّلاع فقط.', 'Browse all our published offers — view only.')} ({listings.length})</p>
       </div>
 
@@ -68,7 +68,7 @@ export async function PartnerBrowse() {
                   <span className="font-num font-bold text-navy-800">
                     {l.price != null ? `${formatMoneyEgp(Number(l.price), locale)}${perLabel(l.priceUnit) ? ` / ${perLabel(l.priceUnit)}` : ''}` : L('السعر عند الطلب', 'Price on request')}
                   </span>
-                  <span className="text-sm font-semibold text-gold-700">{L('عرض التفاصيل ←', 'View details ←')}</span>
+                  <span className="text-sm font-semibold text-gold-700">{L('عرض التفاصيل ←', 'View details →')}</span>
                 </div>
               </a>
             );
@@ -111,7 +111,7 @@ export async function PartnerBrowseDetail({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-5">
-      <a href="/partner/browse" className="text-sm font-semibold text-gold-700">← {L('كل العروض', 'All offers')}</a>
+      <a href="/partner/browse" className="text-sm font-semibold text-gold-700">{L('→ كل العروض', '← All offers')}</a>
 
       <div className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-2">

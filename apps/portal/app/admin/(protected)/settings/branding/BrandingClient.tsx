@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ImageAttachment, type UploadedAttachment } from '@noc/ui';
+import { ImageAttachment, toast, type UploadedAttachment } from '@noc/ui';
 import { saveBrandAsset } from './actions';
 
 type Field = { key: string; label: string };
@@ -28,10 +28,17 @@ const BRANDS: { title: string; fields: Field[] }[] = [
 export function BrandingClient({ values }: { values: Record<string, string> }) {
   const [state, setState] = useState<Record<string, string | null>>(values);
 
-  function onChange(key: string, att: UploadedAttachment | null) {
+  async function onChange(key: string, att: UploadedAttachment | null) {
+    const prev = state[key] ?? null;
     const path = att?.path ?? null;
     setState((s) => ({ ...s, [key]: path }));
-    void saveBrandAsset(key, path);
+    try {
+      const r = await saveBrandAsset(key, path);
+      if (!r.ok) throw new Error(r.error);
+    } catch {
+      setState((s) => ({ ...s, [key]: prev }));
+      toast('تعذّر الحفظ / Save failed', 'error');
+    }
   }
 
   return (

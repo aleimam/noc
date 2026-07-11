@@ -119,7 +119,7 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
     <SiteShell active="explore">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(crumbsLd) }} />
       <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <a href="/explore" className="text-sm text-accent">← {t('exploreTitle')}</a>
+      <a href="/explore" className="text-sm text-accent">‹ {t('exploreTitle')}</a>
       <div>
         <a href={`/explore/district/${n.districtId}`} className="inline-block rounded bg-graphite/10 px-2 py-0.5 text-xs text-accent hover:underline">{L(n.district.nameAr, n.district.nameEn)}</a>
         <h1 className="mt-2 text-2xl font-bold text-primary">{L(n.nameAr, n.nameEn)}</h1>
@@ -128,7 +128,7 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1">
           <div className="text-sm font-semibold opacity-70">{t('areas')}</div>
-          <div className="text-sm">{n.assortedAreas ? t('assorted') : areas.length ? `${areas.join('، ')} ${m2}` : '—'}</div>
+          <div className="text-sm">{n.assortedAreas ? t('assorted') : areas.length ? `${areas.join(locale === 'ar' ? '، ' : ', ')} ${m2}` : '—'}</div>
         </div>
         {buildingTypes.length > 0 && (
           <div className="space-y-1">

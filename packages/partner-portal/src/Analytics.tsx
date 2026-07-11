@@ -52,7 +52,7 @@ export async function PartnerAnalytics() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-black text-navy-800">📊 {L('الإحصائيات', 'Analytics')}</h1>
+      <h1 className="text-xl font-black text-navy-800 dark:text-soft">📊 {L('الإحصائيات', 'Analytics')}</h1>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {totals.map((s) => (

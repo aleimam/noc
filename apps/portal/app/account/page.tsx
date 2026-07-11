@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { partnershipsEnabled } from '../../lib/modules';
@@ -17,6 +17,7 @@ export default async function CustomerHome() {
     select: { phone: true, name: true, phoneVerifiedAt: true },
   });
 
+  const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('account');
   const tm = await getTranslations('mp');
   const tp = await getTranslations('profile');
@@ -35,7 +36,7 @@ export default async function CustomerHome() {
     <div className="space-y-6">
       <div className="rounded-2xl border border-ink-200 p-5">
         <h1 className="text-2xl font-black text-primary">
-          {t('welcome')}{dbUser?.name ? `، ${dbUser.name}` : ''}
+          {t('welcome')}{dbUser?.name ? `${locale === 'ar' ? '،' : ','} ${dbUser.name}` : ''}
         </h1>
         <p className="mt-1 text-sm text-ink-600">
           {t('accountPhone')}: <strong dir="ltr">{dbUser?.phone ?? '—'}</strong>

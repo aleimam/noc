@@ -12,9 +12,16 @@ export type PartnerRow = {
   status: string;
   price: string; // decimal as string
   views: number;
+  rejectionReason: string | null;
 };
 
 const FAST = ['PUBLISHED', 'SOLD', 'ARCHIVED'];
+
+/** Normalize Arabic-Indic digits (٠-٩ / ۰-۹) to ASCII so Number() parses them. */
+const toAsciiDigits = (s: string) =>
+  s
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
 
 /** The partner's listings with inline fast edit: price + availability, one tap each. */
 export function PartnerListings({ rows, locale }: { rows: PartnerRow[]; locale: 'ar' | 'en' }) {
@@ -23,6 +30,9 @@ export function PartnerListings({ rows, locale }: { rows: PartnerRow[]; locale: 
   const [pending, start] = useTransition();
   const [prices, setPrices] = useState<Record<string, string>>(Object.fromEntries(rows.map((r) => [r.id, r.price])));
   const [busy, setBusy] = useState('');
+  // Inline "sold price" step: the row currently asking + its typed value (no window.prompt).
+  const [soldRow, setSoldRow] = useState('');
+  const [soldInput, setSoldInput] = useState('');
 
   const statusBadge = (s: string) => {
     const map: Record<string, { ar: string; en: string; cls: string }> = {
@@ -38,7 +48,7 @@ export function PartnerListings({ rows, locale }: { rows: PartnerRow[]; locale: 
   };
 
   function savePrice(id: string) {
-    const raw = (prices[id] ?? '').trim();
+    const raw = toAsciiDigits((prices[id] ?? '').trim());
     const price = raw === '' ? null : Number(raw);
     if (price != null && (Number.isNaN(price) || price < 0)) {
       toast(L('سعر غير صالح', 'Invalid price'), 'error');
@@ -53,24 +63,26 @@ export function PartnerListings({ rows, locale }: { rows: PartnerRow[]; locale: 
     });
   }
 
-  function setAvail(id: string, status: 'PUBLISHED' | 'SOLD' | 'ARCHIVED') {
-    let soldPrice: number | null | undefined;
-    if (status === 'SOLD') {
-      const raw = window.prompt(L('سعر البيع النهائي (اختياري):', 'Final sold price (optional):'), prices[id] ?? '');
-      if (raw === null) return; // cancelled
-      soldPrice = raw.trim() === '' ? null : Number(raw);
-      if (soldPrice != null && (Number.isNaN(soldPrice) || soldPrice < 0)) {
-        toast(L('سعر غير صالح', 'Invalid price'), 'error');
-        return;
-      }
-    }
+  function setAvail(id: string, status: 'PUBLISHED' | 'SOLD' | 'ARCHIVED', soldPrice: number | null = null) {
+    setSoldRow('');
     setBusy(id);
     start(async () => {
-      const r = await partnerSetAvailability(id, status, soldPrice ?? null);
+      const r = await partnerSetAvailability(id, status, soldPrice);
       setBusy('');
       if (r.ok) { toast(L('تم التحديث', 'Updated')); router.refresh(); }
       else toast(r.error === 'not_editable' ? L('هذا الإعلان قيد المراجعة', 'This listing is in review') : L('تعذّر الحفظ', 'Save failed'), 'error');
     });
+  }
+
+  /** SOLD asks for the final price inline (numeric keypad, Arabic digits accepted). */
+  function confirmSold(id: string) {
+    const raw = toAsciiDigits(soldInput.trim());
+    const soldPrice = raw === '' ? null : Number(raw);
+    if (soldPrice != null && (Number.isNaN(soldPrice) || soldPrice < 0)) {
+      toast(L('سعر غير صالح', 'Invalid price'), 'error');
+      return;
+    }
+    setAvail(id, 'SOLD', soldPrice);
   }
 
   if (rows.length === 0) {
@@ -121,7 +133,10 @@ export function PartnerListings({ rows, locale }: { rows: PartnerRow[]; locale: 
                   {(['PUBLISHED', 'SOLD', 'ARCHIVED'] as const).map((s) => (
                     <button
                       key={s}
-                      onClick={() => setAvail(r.id, s)}
+                      onClick={() => {
+                        if (s === 'SOLD') { setSoldRow(r.id); setSoldInput(prices[r.id] ?? ''); }
+                        else setAvail(r.id, s);
+                      }}
                       disabled={pending || r.status === s}
                       className={`rounded-lg px-4 py-2 text-sm font-bold ${r.status === s ? 'bg-navy-800 text-white' : 'border border-graphite/25 hover:bg-graphite/10'} disabled:cursor-default`}
                     >
@@ -130,8 +145,47 @@ export function PartnerListings({ rows, locale }: { rows: PartnerRow[]; locale: 
                   ))}
                 </div>
               </div>
+            ) : r.status === 'REJECTED' ? (
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-red-700">{L('مرفوض — عدّل البيانات وأعد الإرسال', 'Rejected — edit the details and resubmit')}</p>
+                {r.rejectionReason && (
+                  <p className="text-xs text-red-600">{L('سبب الرفض:', 'Rejection reason:')} {r.rejectionReason}</p>
+                )}
+              </div>
+            ) : r.status === 'DRAFT' ? (
+              <p className="text-xs text-ink-400">{L('مسودة', 'Draft')}</p>
             ) : (
               <p className="text-xs text-ink-400">{L('قيد مراجعة الإدارة — التعديل السريع غير متاح', 'Under staff review — fast edit unavailable')}</p>
+            )}
+
+            {/* Inline sold-price confirm (replaces window.prompt): big numeric input + explicit buttons. */}
+            {editable && soldRow === r.id && (
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gold/40 bg-gold-50 p-3">
+                <span className="text-sm font-semibold text-navy-800">{L('سعر البيع النهائي (اختياري):', 'Final sold price (optional):')}</span>
+                <input
+                  dir="ltr"
+                  inputMode="numeric"
+                  autoFocus
+                  value={soldInput}
+                  onChange={(e) => setSoldInput(e.target.value)}
+                  placeholder={L('السعر', 'Price')}
+                  className="w-36 rounded-md border border-graphite/25 bg-white px-3 py-2 text-sm font-bold text-navy-800"
+                />
+                <button
+                  onClick={() => confirmSold(r.id)}
+                  disabled={pending}
+                  className="rounded-md bg-navy-800 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                >
+                  {L('تأكيد البيع', 'Confirm sold')}
+                </button>
+                <button
+                  onClick={() => setSoldRow('')}
+                  disabled={pending}
+                  className="rounded-md border border-graphite/25 px-3 py-2 text-sm font-semibold"
+                >
+                  {L('إلغاء', 'Cancel')}
+                </button>
+              </div>
             )}
           </div>
         );

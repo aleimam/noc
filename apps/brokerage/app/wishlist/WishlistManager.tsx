@@ -16,6 +16,10 @@ export function WishlistManager({ lists, locale }: { lists: List[]; locale: 'ar'
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const [pending, start] = useTransition();
   const [newName, setNewName] = useState('');
+  // Inline rename / delete-confirm state (no window.prompt/confirm — Golden Rule).
+  const [editingId, setEditingId] = useState('');
+  const [editName, setEditName] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState('');
   const run = (fn: () => Promise<unknown>) => start(async () => { await fn(); router.refresh(); });
 
   return (
@@ -36,18 +40,55 @@ export function WishlistManager({ lists, locale }: { lists: List[]; locale: 'ar'
 
       {lists.map((list) => (
         <section key={list.id}>
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-lg font-bold text-navy-800 dark:text-soft">{list.name} <span className="text-sm font-normal text-ink-400">({list.items.length})</span></h2>
-            <div className="flex gap-2 text-sm">
-              <button
-                onClick={() => { const n = prompt(L('اسم جديد', 'New name'), list.name); if (n) run(() => renameList(list.id, n)); }}
-                className="text-navy-600 dark:text-white/70"
-              >{L('إعادة تسمية', 'Rename')}</button>
-              <button
-                onClick={() => { if (confirm(L('حذف القائمة؟', 'Delete list?'))) run(() => deleteList(list.id)); }}
-                className="text-red-600"
-              >{L('حذف', 'Delete')}</button>
-            </div>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            {editingId === list.id ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const n = editName.trim();
+                  if (n) run(async () => { await renameList(list.id, n); setEditingId(''); });
+                }}
+                className="flex flex-1 flex-wrap items-center gap-2"
+              >
+                <input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  autoFocus
+                  className="min-w-0 flex-1 rounded-xl border border-ink-200 bg-white px-3.5 py-2 text-navy-800 dark:bg-navy-800 dark:text-soft"
+                  aria-label={L('اسم القائمة', 'List name')}
+                />
+                <button disabled={pending || !editName.trim()} className="rounded-xl bg-navy px-4 py-2 text-sm font-bold text-soft disabled:opacity-50">{L('حفظ', 'Save')}</button>
+                <button type="button" onClick={() => setEditingId('')} className="rounded-xl border border-ink-200 px-3 py-2 text-sm text-navy-700 dark:text-white/70">{L('إلغاء', 'Cancel')}</button>
+              </form>
+            ) : (
+              <>
+                <h2 className="text-lg font-bold text-navy-800 dark:text-soft">{list.name} <span className="text-sm font-normal text-ink-400">({list.items.length})</span></h2>
+                <div className="flex items-center gap-2 text-sm">
+                  {confirmDeleteId === list.id ? (
+                    <>
+                      <span className="font-semibold text-red-600">{L('حذف القائمة؟', 'Delete list?')}</span>
+                      <button
+                        onClick={() => run(async () => { await deleteList(list.id); setConfirmDeleteId(''); })}
+                        disabled={pending}
+                        className="rounded-lg bg-red-600 px-3 py-1.5 font-bold text-white disabled:opacity-50"
+                      >{L('تأكيد الحذف', 'Confirm delete')}</button>
+                      <button onClick={() => setConfirmDeleteId('')} className="rounded-lg border border-ink-200 px-3 py-1.5 text-navy-700 dark:text-white/70">{L('إلغاء', 'Cancel')}</button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => { setEditingId(list.id); setEditName(list.name); setConfirmDeleteId(''); }}
+                        className="text-navy-600 dark:text-white/70"
+                      >{L('إعادة تسمية', 'Rename')}</button>
+                      <button
+                        onClick={() => { setConfirmDeleteId(list.id); setEditingId(''); }}
+                        className="text-red-600"
+                      >{L('حذف', 'Delete')}</button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {list.items.length === 0 ? (
@@ -56,7 +97,7 @@ export function WishlistManager({ lists, locale }: { lists: List[]; locale: 'ar'
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {list.items.map(({ itemId, card }) => (
                 <div key={itemId} className="relative flex flex-col overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-sm dark:border-white/10 dark:bg-navy-800">
-                  <button onClick={() => run(() => removeItem(itemId))} className="absolute end-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-ink-500 shadow" aria-label="remove">✕</button>
+                  <button onClick={() => run(() => removeItem(itemId))} className="absolute end-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-ink-500 shadow" aria-label={L('إزالة من القائمة', 'Remove from list')}>✕</button>
                   <Link href={card.href} className="flex flex-1 flex-col">
                     <div className="aspect-[16/10] bg-navy-100">
                       {card.cover ? (

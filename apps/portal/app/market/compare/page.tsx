@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { currency } from '@noc/i18n';
+import { marketHref } from '../../../lib/listings';
 import { SiteShell } from '../../_components/SiteShell';
 
 export const dynamic = 'force-dynamic';
@@ -37,7 +38,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
       <div className="mx-auto max-w-4xl space-y-5 p-4 sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-black text-navy-800 dark:text-soft">{t('compareTitle')}</h1>
-          <Link href="/market" className="text-sm text-accent">← {t('title')}</Link>
+          <Link href="/market" className="text-sm text-accent">‹ {t('title')}</Link>
         </div>
 
         {ordered.length < 2 ? (
@@ -50,7 +51,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
                   <th className="p-2" />
                   {ordered.map((l) => (
                     <th key={l.id} className="p-2 align-top">
-                      <Link href={`/market/${l.id}`} className="block">
+                      <Link href={marketHref({ id: l.id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null })} className="block">
                         <div className="aspect-[16/10] overflow-hidden rounded-lg bg-navy-100">
                           {covers.get(l.id) ? (
                             // eslint-disable-next-line @next/next/no-img-element

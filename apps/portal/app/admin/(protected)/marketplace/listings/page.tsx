@@ -49,7 +49,7 @@ export default async function ModerationPage() {
 
       <section className="space-y-3">
         <h2 className="font-semibold">{t('statusPENDING')} ({pending.length})</h2>
-        {pending.length === 0 && <p className="text-sm opacity-60">{t('noOffers')}</p>}
+        {pending.length === 0 && <p className="text-sm opacity-60">{L('لا توجد إعلانات بعد', 'No listings yet')}</p>}
         {pending.map((l) => (
           <div key={l.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gold/40 p-3">
             <div>

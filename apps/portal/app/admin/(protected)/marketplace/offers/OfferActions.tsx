@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from '@noc/ui';
 import { setOfferStatus, deleteOffer } from './actions';
 
 const STATUSES: { key: 'NEW' | 'REVIEWING' | 'ACCEPTED' | 'REJECTED'; ar: string }[] = [
@@ -20,7 +21,13 @@ export function OfferStatusButtons({ id, current }: { id: string; current: strin
         <button
           key={s.key}
           disabled={pending || current === s.key}
-          onClick={() => start(async () => { await setOfferStatus(id, s.key); router.refresh(); })}
+          onClick={() =>
+            start(async () => {
+              const r = await setOfferStatus(id, s.key);
+              if (!r.ok) { toast('تعذّر الحفظ / Save failed', 'error'); return; }
+              router.refresh();
+            })
+          }
           className={`rounded-md px-3 py-1.5 text-sm ${current === s.key ? 'bg-primary text-soft' : 'border border-graphite/25 hover:bg-graphite/10'} disabled:opacity-60`}
         >
           {s.ar}
@@ -43,6 +50,8 @@ export function DeleteOfferButton({ id, redirectTo }: { id: string; redirectTo?:
           if (r.ok) {
             if (redirectTo) router.push(redirectTo);
             else router.refresh();
+          } else {
+            toast('تعذّر الحذف / Delete failed', 'error');
           }
         });
       }}

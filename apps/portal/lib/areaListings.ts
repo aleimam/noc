@@ -22,7 +22,7 @@ export async function areaListings(where: Prisma.ListingWhereInput): Promise<Are
     id: l.id,
     href: marketHref({ id: l.id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null }),
     title: l.title,
-    price: l.price != null ? String(l.price) : null,
+    price: l.price != null ? Number(l.price).toLocaleString('en-US') : null,
     typeAr: l.typeOption?.nameAr ?? '',
     typeEn: l.typeOption?.nameEn ?? '',
     cover: cover.get(l.id) ?? null,

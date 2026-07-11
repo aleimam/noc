@@ -43,6 +43,8 @@ export function OrderableList({
       if (r.ok) {
         toast(t('savedOk'));
         router.refresh();
+      } else {
+        toast('تعذّر الحفظ / Save failed', 'error');
       }
     });
   }

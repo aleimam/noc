@@ -73,7 +73,7 @@ export function SearchBar({
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && submit()}
             placeholder={t('searchPlaceholder')}
-            className="flex-1 bg-transparent text-right text-2xl text-navy-800 outline-none placeholder:text-ink-400"
+            className="flex-1 bg-transparent text-start text-2xl text-navy-800 outline-none placeholder:text-ink-400"
             aria-label={t('search')}
           />
         </div>

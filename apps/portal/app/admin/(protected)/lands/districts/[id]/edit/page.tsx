@@ -11,7 +11,7 @@ import { EditSaveBar } from '@/app/_components/EditSaveBar';
 export const dynamic = 'force-dynamic';
 
 export default async function DistrictEdit({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission('lands', 'VIEW');
+  await requirePermission('lands', 'UPDATE');
   const { id } = await params;
   const district = await prisma.district.findUnique({ where: { id } });
   if (!district) notFound();

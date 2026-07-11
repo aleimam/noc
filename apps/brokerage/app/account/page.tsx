@@ -38,7 +38,7 @@ export default async function AccountPage() {
       <div className="mx-auto max-w-6xl px-4 py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-black text-navy-800">{L('حسابي', 'My account')}</h1>
+            <h1 className="text-2xl font-black text-navy-800 dark:text-soft">{L('حسابي', 'My account')}</h1>
             <p className="text-sm text-ink-500" dir="ltr">{dbUser?.phone ?? ''}</p>
           </div>
           <SignOutButton label={L('تسجيل الخروج', 'Sign out')} />
@@ -51,11 +51,11 @@ export default async function AccountPage() {
         </section>
 
         <section className="mt-10">
-          <h2 className="mb-3 text-lg font-bold text-navy-800">{L('طلباتي', 'My requests')}</h2>
+          <h2 className="mb-3 text-lg font-bold text-navy-800 dark:text-soft">{L('طلباتي', 'My requests')}</h2>
           {requests.length === 0 ? (
             <p className="rounded-2xl bg-white p-8 text-center text-ink-500 shadow-sm">{L('لا توجد طلبات بعد.', 'No requests yet.')}</p>
           ) : (
-            <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+            <div className="overflow-hidden rounded-2xl bg-white text-navy-800 shadow-sm">
               <table className="w-full text-sm">
                 <thead className="bg-navy-50 text-navy-700">
                   <tr>

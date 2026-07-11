@@ -5,7 +5,8 @@ import { Lightbox } from '@noc/ui';
 
 /** Listing hero: one large image + a horizontal, scrollable thumbnail strip (all photos
  *  reachable in-page). Tap the main image (or ⛶) to open the zoomable fullscreen viewer. */
-export function HeroGallery({ photos, alt }: { photos: string[]; alt?: string }) {
+export function HeroGallery({ photos, alt, locale = 'ar' }: { photos: string[]; alt?: string; locale?: 'ar' | 'en' }) {
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const [i, setI] = useState(0);
   const [open, setOpen] = useState(false);
   if (!photos.length) {
@@ -27,7 +28,7 @@ export function HeroGallery({ photos, alt }: { photos: string[]; alt?: string })
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="تكبير الصورة"
+          aria-label={L('تكبير الصورة', 'Zoom image')}
           className="absolute start-3 top-3 rounded-xl bg-navy/60 px-3 py-1.5 text-lg leading-none text-white hover:bg-navy/75"
         >
           ⛶
@@ -46,7 +47,7 @@ export function HeroGallery({ photos, alt }: { photos: string[]; alt?: string })
               key={k}
               type="button"
               onClick={() => setI(k)}
-              aria-label={`صورة ${k + 1}`}
+              aria-label={L(`صورة ${k + 1}`, `Photo ${k + 1}`)}
               className={`h-16 w-20 flex-none overflow-hidden rounded-lg ring-2 transition ${k === i ? 'ring-gold-600' : 'ring-transparent hover:ring-graphite/25'}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

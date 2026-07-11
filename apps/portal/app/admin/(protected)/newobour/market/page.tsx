@@ -40,7 +40,7 @@ export default async function NewObourMarket() {
       </div>
 
       {listings.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-graphite/25 p-8 text-center text-sm opacity-60">{t('noOffers')}</p>
+        <p className="rounded-lg border border-dashed border-graphite/25 p-8 text-center text-sm opacity-60">{L('لا توجد إعلانات بعد', 'No listings yet')}</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-graphite/15">
           <table className="w-full text-sm">

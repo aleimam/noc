@@ -41,7 +41,9 @@
     "loggedInAs": "Signed in as",
     "phonePlaceholder": "01XXXXXXXXX",
     "codeSentTo": "Code sent to",
-    "myProfile": "My profile"
+    "myProfile": "My profile",
+    "resendWait": "Resend in {s}s",
+    "changeNumber": "Change number"
   },
   "profile": {
     "title": "My profile",
@@ -157,7 +159,11 @@
     "drop": "Drag an image here, paste, or click to upload",
     "tooLarge": "Image exceeds the 32 MB limit",
     "invalidType": "Unsupported file type",
-    "uploading": "Uploading…"
+    "uploading": "Uploading…",
+    "rateLimited": "Too many uploads — wait a moment and retry",
+    "failed": "Upload failed — try again",
+    "heicUnsupported": "Photo format not supported — pick from your gallery",
+    "remove": "Remove photo"
   },
   "nav": {
     "brand": "New Obour",
@@ -171,7 +177,10 @@
     "news": "News",
     "guide": "Guide",
     "priceIndex": "Price Index",
-    "login": "Login"
+    "login": "Login",
+    "account": "My account",
+    "menu": "Menu",
+    "close": "Close"
   },
   "calculator": {
     "title": "Calculators",
@@ -812,7 +821,9 @@
     "otpSent": "We sent a confirmation code by SMS to",
     "otpLabel": "Enter the code",
     "otpVerify": "Confirm code",
-    "otpResend": "Change number / resend",
+    "otpResend": "Change number",
+    "otpResendNow": "Resend code",
+    "otpResendWait": "Resend in {s}s",
     "otpInvalid": "Wrong code, please try again",
     "submitting": "Saving…",
     "registerError": "Something went wrong, please try again",
@@ -960,7 +971,10 @@
     "otpLabel": "Enter the code",
     "otpVerify": "Confirm code",
     "otpResend": "Change number",
+    "otpResendNow": "Resend code",
+    "otpResendWait": "Resend in {s}s",
     "otpInvalid": "Wrong code, please try again",
+    "phoneInvalid": "Invalid mobile number",
     "annotateMap": "Mark on map",
     "annotRect": "Square/rectangle",
     "annotCircle": "Circle",

@@ -20,6 +20,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
   const ident = typeof body?.identifier === 'string' ? body.identifier.trim() : '';
   const channel = body?.channel === 'email' ? 'email' : 'sms';
+  // Send the code in the requester's language (body wins, cookie falls back — mirrors the customer OTP route).
+  const fromBody = body?.locale === 'en' || body?.locale === 'ar' ? (body.locale as 'ar' | 'en') : null;
+  const cookieLocale: 'ar' | 'en' = req.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'ar';
+  const locale = fromBody ?? cookieLocale;
   if (!ident) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 400 });
 
   const lower = ident.toLowerCase();
@@ -36,13 +40,13 @@ export async function POST(req: NextRequest) {
 
   if (channel === 'email') {
     if (!user.email) return NextResponse.json({ ok: false, error: 'no_email' }, { status: 400 });
-    const result = await requestEmailOtp(user.email, 'ar');
+    const result = await requestEmailOtp(user.email, locale);
     if (!result.ok) return NextResponse.json(result, { status: 429 });
     return NextResponse.json({ ok: true, sentTo: maskEmail(user.email), channel: 'email' });
   }
 
   if (!user.phone) return NextResponse.json({ ok: false, error: 'no_phone' }, { status: 400 });
-  const result = await requestOtp(user.phone, 'ar');
+  const result = await requestOtp(user.phone, locale);
   if (!result.ok) return NextResponse.json(result, { status: 429 });
   const masked = user.phone.replace(/^(.*)(\d{3})$/, (_, a: string, tail: string) => '•'.repeat(Math.max(a.length - 1, 3)) + tail);
   return NextResponse.json({ ok: true, sentTo: masked, channel: 'sms' });

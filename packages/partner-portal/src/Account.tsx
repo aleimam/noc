@@ -16,7 +16,7 @@ export async function PartnerAccount() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-black text-navy-800">{L('حسابي', 'My account')}</h1>
+        <h1 className="text-xl font-black text-navy-800 dark:text-soft">{L('حسابي', 'My account')}</h1>
         <p className="mt-1 text-sm text-ink-500">
           {L('وسائل الدخول الخاصة بك — أبقِ واحدة على الأقل.', 'Your login identifiers — keep at least one.')}
         </p>

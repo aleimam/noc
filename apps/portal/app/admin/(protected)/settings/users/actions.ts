@@ -89,36 +89,6 @@ export async function setCustomerVerified(id: string, verified: boolean): Promis
   }
 }
 
-export async function upsertPartner(input: {
-  id?: string;
-  name: string;
-  phone?: string;
-  email?: string;
-  partnerKind: 'BROKER' | 'COMPANY';
-  isActive?: boolean;
-}): Promise<Result> {
-  await requirePermission('partners', input.id ? 'UPDATE' : 'CREATE');
-  const name = input.name.trim();
-  if (!name) return { ok: false, error: 'name_required' };
-  if (input.phone?.trim() && !isValidPhone(input.phone)) return { ok: false, error: 'invalid_phone' };
-  try {
-    const data = {
-      type: 'PARTNER' as const,
-      name,
-      phone: input.phone?.trim() ? normalizePhone(input.phone) : null,
-      email: input.email?.trim().toLowerCase() || null,
-      partnerKind: input.partnerKind,
-      isActive: input.isActive ?? true,
-    };
-    if (input.id) await prisma.user.update({ where: { id: input.id }, data });
-    else await prisma.user.create({ data });
-    revalidatePath('/admin/settings/partners');
-    return { ok: true };
-  } catch (e) {
-    return fail(e);
-  }
-}
-
 export async function deleteUser(id: string): Promise<Result> {
   const u = await prisma.user.findUnique({ where: { id }, select: { type: true } });
   if (!u) return { ok: false, error: 'not_found' };
@@ -130,7 +100,6 @@ export async function deleteUser(id: string): Promise<Result> {
     await prisma.user.delete({ where: { id } });
     revalidatePath('/admin/settings/users');
     revalidatePath('/admin/settings/customers');
-    revalidatePath('/admin/settings/partners');
     return { ok: true };
   } catch (e) {
     return fail(e);

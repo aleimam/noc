@@ -12,7 +12,7 @@ import { EditSaveBar } from '@/app/_components/EditSaveBar';
 export const dynamic = 'force-dynamic';
 
 export default async function NeighborhoodEdit({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission('lands', 'VIEW');
+  await requirePermission('lands', 'UPDATE');
   const { id } = await params;
   const n = await prisma.neighborhood.findUnique({ where: { id }, include: { district: true, blocks: { orderBy: { order: 'asc' } } } });
   if (!n) notFound();

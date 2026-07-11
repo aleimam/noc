@@ -283,7 +283,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([listingLd, crumbsLd]) }} />
       <TrackView item={{ id: listing.id, title: listing.title, cover: galleryPaths[0] ?? null, price: listing.price != null ? String(listing.price) : null, href: canonicalPath }} />
       <div className="flex justify-end"><MarketCardActions listingId={listing.id} initialSaved={saved} compareLabel={t('compare')} /></div>
-      <a href="/market" className="text-sm text-accent">← {t('title')}</a>
+      <a href="/market" className="text-sm text-accent">‹ {t('title')}</a>
       <PhotoGallery photos={galleryPaths} />
 
       <div>

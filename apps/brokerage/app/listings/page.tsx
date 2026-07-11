@@ -52,13 +52,15 @@ export default async function Catalogue({
   const corner = str(sp.corner) === '1';
   const main = str(sp.main) === '1';
   const services = str(sp.services) === '1';
+  const garden = str(sp.view) === 'garden';
   const featured = str(sp.featured) === '1';
   const statusSold = str(sp.status) === 'sold';
   const sort = str(sp.sort);
   const page = Math.max(1, num(sp.page) ?? 1);
 
   const and: Prisma.ListingWhereInput[] = [];
-  if (q) and.push({ title: { contains: q } });
+  // Posters print the ad number — let people search by it, not just the title.
+  if (q) and.push({ OR: [{ title: { contains: q } }, { adNumber: { contains: q } }] });
   if (area != null) and.push(attr(ATTR.area, { number: area }));
   else if (areaMin != null || areaMax != null) {
     and.push(attr(ATTR.area, { number: { ...(areaMin != null ? { gte: areaMin } : {}), ...(areaMax != null ? { lte: areaMax } : {}) } }));
@@ -83,6 +85,8 @@ export default async function Catalogue({
   if (corner) and.push(attr(ATTR.corner, { bool: true }));
   if (main) and.push(attr(ATTR.mainStreet, { bool: true }));
   if (services) and.push(attr('electricity', { option: { key: 'connected' } }));
+  // "على حديقة" banner/pill (?view=garden): lands near a park via the near_landmark multi-select.
+  if (garden) and.push(attr('near_landmark', { option: { key: 'park' } }));
   if (featured) and.push({ featured: true });
   if (statusSold) and.push({ status: 'SOLD' });
 
@@ -106,15 +110,16 @@ export default async function Catalogue({
     return `/listings?${p.toString()}`;
   };
 
-  const chip = 'rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm hover:border-gold';
+  // Explicit text colors on the white chips/panels so dark mode can't render white-on-white.
+  const chip = 'rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-navy-800 hover:border-gold';
   const chipOn = 'rounded-lg border-2 border-gold bg-gold-50 px-3 py-1.5 text-sm font-bold text-gold-800';
   const rangeActive = rangeAttrs.some((fa) => str(sp[`fmin_${fa.key}`]) || str(sp[`fmax_${fa.key}`]));
-  const noFilters = !corner && !main && !services && !featured && area == null && areaMin == null && areaMax == null && priceMin == null && priceMax == null && !statusSold && !rangeActive;
+  const noFilters = !corner && !main && !services && !garden && !featured && area == null && areaMin == null && areaMax == null && priceMin == null && priceMax == null && !statusSold && !rangeActive;
 
   return (
     <StoreShell>
       <div className="mx-auto max-w-6xl px-4 py-6">
-        <h1 className="text-2xl font-black text-navy-800">{L('الأراضي المتاحة', 'Available lands')}</h1>
+        <h1 className="text-2xl font-black text-navy-800 dark:text-soft">{L('الأراضي المتاحة', 'Available lands')}</h1>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Link href="/listings" className={noFilters ? chipOn : chip}>{L('الكل', 'All')}</Link>
@@ -122,6 +127,7 @@ export default async function Catalogue({
           <Link href={withParam('corner', '1')} className={corner ? chipOn : chip}>{L('ناصية', 'Corner')}</Link>
           <Link href={withParam('main', '1')} className={main ? chipOn : chip}>{L('شارع رئيسي', 'Main road')}</Link>
           <Link href={withParam('services', '1')} className={services ? chipOn : chip}>{L('بالمرافق', 'Services')}</Link>
+          <Link href={withParam('view', 'garden')} className={garden ? chipOn : chip}>{L('على حديقة', 'Garden')}</Link>
           {[209, 276, 350, 400, 450, 500].map((a) => (
             <Link key={a} href={withParam('area', String(a))} className={area === a ? chipOn : chip}>{a} {L('م²', 'm²')}</Link>
           ))}
@@ -130,7 +136,7 @@ export default async function Catalogue({
 
         {/* Price + spec range filters (GET form; preserves the active chips above) */}
         <details
-          className="mt-3 rounded-lg border border-ink-200 bg-white px-4 py-3"
+          className="mt-3 rounded-lg border border-ink-200 bg-white px-4 py-3 text-navy-800"
           open={priceMin != null || priceMax != null || rangeAttrs.some((fa) => str(sp[`fmin_${fa.key}`]) || str(sp[`fmax_${fa.key}`]))}
         >
           <summary className="cursor-pointer text-sm font-bold text-navy-800">{L('فلترة بالسعر والمواصفات', 'Filter by price & specs')}</summary>
@@ -139,6 +145,7 @@ export default async function Catalogue({
             {corner && <input type="hidden" name="corner" value="1" />}
             {main && <input type="hidden" name="main" value="1" />}
             {services && <input type="hidden" name="services" value="1" />}
+            {garden && <input type="hidden" name="view" value="garden" />}
             {featured && <input type="hidden" name="featured" value="1" />}
             {statusSold && <input type="hidden" name="status" value="sold" />}
             {area != null && <input type="hidden" name="area" value={String(area)} />}

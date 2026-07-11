@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { currency } from '@noc/i18n';
 import { ownerKeyForRead } from '@/lib/wishlist';
+import { marketHref } from '@/lib/listings';
 import { WishlistRemove } from './WishlistRemove';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +18,7 @@ export default async function WishlistPage() {
     ? await prisma.wishlistItem.findMany({
         where: { list: { ownerKey }, listing: { status: 'PUBLISHED' } },
         orderBy: { createdAt: 'desc' },
-        include: { listing: { select: { id: true, title: true, price: true, typeOption: { select: { nameAr: true, nameEn: true } } } } },
+        include: { listing: { select: { id: true, title: true, price: true, adNumber: true, area: true, typeOption: { select: { nameAr: true, nameEn: true } } } } },
       })
     : [];
   const covers = new Map<string, string>();
@@ -33,9 +34,11 @@ export default async function WishlistPage() {
         <p className="rounded-2xl border border-ink-200 p-6 text-center text-ink-600">{t('wishlistEmpty')}</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((it) => (
+          {items.map((it) => {
+            const href = marketHref({ id: it.listing.id, adNumber: it.listing.adNumber, typeEn: it.listing.typeOption?.nameEn ?? null, area: it.listing.area != null ? Number(it.listing.area) : null });
+            return (
             <div key={it.id} className="overflow-hidden rounded-lg border border-ink-200 bg-white shadow-sm">
-              <Link href={`/market/${it.listing.id}`} className="block">
+              <Link href={href} className="block">
                 <div className="aspect-[16/10] bg-navy-100">
                   {covers.get(it.listing.id) ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -44,7 +47,7 @@ export default async function WishlistPage() {
                 </div>
               </Link>
               <div className="space-y-1 p-3">
-                <Link href={`/market/${it.listing.id}`} className="block font-bold text-navy-800 hover:underline">{it.listing.title}</Link>
+                <Link href={href} className="block font-bold text-navy-800 hover:underline">{it.listing.title}</Link>
                 <div className="text-xs text-ink-500">{L(it.listing.typeOption?.nameAr ?? '', it.listing.typeOption?.nameEn ?? '')}</div>
                 <div className="flex items-center justify-between">
                   {it.listing.price != null && <span className="font-num text-gold-700" dir="ltr">{Number(it.listing.price).toLocaleString('en')} {currency(locale)}</span>}
@@ -52,7 +55,8 @@ export default async function WishlistPage() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

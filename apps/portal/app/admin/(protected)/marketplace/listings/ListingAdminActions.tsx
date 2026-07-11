@@ -3,6 +3,7 @@
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { toast } from '@noc/ui';
 import { setListingArchived, deleteListing } from '../actions';
 
 /** Admin row controls: deactivate (archive) / reactivate a listing, or delete it for good. */
@@ -15,7 +16,13 @@ export function ListingAdminActions({ id, archived }: { id: string; archived: bo
     <div className="flex items-center justify-end gap-3">
       <button
         disabled={pending}
-        onClick={() => start(async () => { await setListingArchived(id, !archived); router.refresh(); })}
+        onClick={() =>
+          start(async () => {
+            const r = await setListingArchived(id, !archived);
+            if (!r.ok) { toast('تعذّر الحفظ / Save failed', 'error'); return; }
+            router.refresh();
+          })
+        }
         className="text-accent disabled:opacity-50"
       >
         {archived ? t('activate') : t('deactivate')}
@@ -24,7 +31,11 @@ export function ListingAdminActions({ id, archived }: { id: string; archived: bo
         disabled={pending}
         onClick={() => {
           if (!confirm(t('confirmDeleteListing'))) return;
-          start(async () => { await deleteListing(id); router.refresh(); });
+          start(async () => {
+            const r = await deleteListing(id);
+            if (!r.ok) { toast('تعذّر الحذف / Delete failed', 'error'); return; }
+            router.refresh();
+          });
         }}
         className="text-red-600 disabled:opacity-50"
       >

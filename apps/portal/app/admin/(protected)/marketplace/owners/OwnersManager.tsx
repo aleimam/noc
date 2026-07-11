@@ -39,6 +39,7 @@ export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; taken
     });
   }
   function del(id: string) {
+    if (!window.confirm('حذف نهائيًا؟ / Delete permanently?')) return;
     start(async () => {
       const r = await deleteOwner(id);
       if (r.ok) { router.refresh(); toast(t('deleted')); }
@@ -48,7 +49,7 @@ export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; taken
 
   return (
     <div className="space-y-4">
-      {error && <p className="text-sm text-red-600">{error === 'owner_code_taken' ? t('ownerCodeTaken') : error === 'owner_code_range' ? t('ownerCodesHint') : error === 'invalid_phone' ? tc('phoneInvalid') : t('none')}</p>}
+      {error && <p className="text-sm text-red-600">{error === 'owner_code_taken' ? t('ownerCodeTaken') : error === 'owner_code_range' ? t('ownerCodesHint') : error === 'invalid_phone' ? tc('phoneInvalid') : 'تعذّر الحفظ / Save failed'}</p>}
 
       {draft ? (
         <div className="space-y-3 rounded-lg border border-graphite/15 p-4">

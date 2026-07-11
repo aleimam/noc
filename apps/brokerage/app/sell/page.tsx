@@ -52,13 +52,13 @@ export default async function SellPage() {
       <div className="mx-auto max-w-3xl space-y-8 px-4 py-8">
         {/* Registration form FIRST */}
         <section id="offer-form">
-          <h2 className="mb-4 text-xl font-bold text-navy-800">سجّل بيانات أرضك</h2>
+          <h2 className="mb-4 text-xl font-bold text-navy-800 dark:text-soft">سجّل بيانات أرضك</h2>
           <SellForm cities={cities} districts={districts} neighborhoods={neighborhoods} policyHref={policyHref} />
         </section>
 
         {/* Services strip */}
         <section>
-          <h2 className="mb-4 text-xl font-bold text-navy-800">الخدمات التي نقدّمها عند بيع أرضك</h2>
+          <h2 className="mb-4 text-xl font-bold text-navy-800 dark:text-soft">الخدمات التي نقدّمها عند بيع أرضك</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {content.services.map((s) => (
               <div key={s} className="flex items-center gap-2.5 rounded-xl border border-ink-200 bg-white px-4 py-3 text-navy-700">

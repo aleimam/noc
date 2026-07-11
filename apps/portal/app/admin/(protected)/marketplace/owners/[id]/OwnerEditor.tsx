@@ -32,6 +32,7 @@ export function OwnerEditor({ initial, takenCodes }: { initial: OwnerDraft; take
   }
   function del() {
     if (!draft.id) return;
+    if (!window.confirm('حذف نهائيًا؟ / Delete permanently?')) return;
     start(async () => {
       const r = await deleteOwner(draft.id!);
       if (r.ok) { toast(t('deleted')); router.push('/admin/marketplace/owners'); }
@@ -43,7 +44,7 @@ export function OwnerEditor({ initial, takenCodes }: { initial: OwnerDraft; take
     <div className="space-y-3 rounded-lg border border-graphite/15 p-4">
       {error && (
         <p className="text-sm text-red-600">
-          {error === 'owner_code_taken' ? t('ownerCodeTaken') : error === 'owner_code_range' ? t('ownerCodesHint') : error === 'invalid_phone' ? tc('phoneInvalid') : t('none')}
+          {error === 'owner_code_taken' ? t('ownerCodeTaken') : error === 'owner_code_range' ? t('ownerCodesHint') : error === 'invalid_phone' ? tc('phoneInvalid') : 'تعذّر الحفظ / Save failed'}
         </p>
       )}
       <OwnerFields draft={draft} setDraft={setDraft} taken={taken} />

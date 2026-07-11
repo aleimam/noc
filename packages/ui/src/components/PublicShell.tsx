@@ -28,7 +28,7 @@ export function PublicShell({
   tagline,
   mobileMenuMode = 'full',
   loggedIn = false,
-  accountLabel = 'حسابي',
+  accountLabel,
   accountHref = '/account',
   partners,
 }: {
@@ -50,7 +50,7 @@ export function PublicShell({
     loggedIn ? (
       <a href={accountHref} className={big ? 'mt-2 flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-4 text-center text-2xl font-bold text-navy-900' : 'flex items-center gap-1.5 rounded-md bg-gold px-3.5 py-2 text-sm font-bold text-navy-900 shadow-gold transition hover:brightness-95'}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
-        {accountLabel}
+        {accountLabel ?? t('account')}
       </a>
     ) : (
       <a href="/account/login" className={big ? 'mt-2 rounded-xl bg-gold px-5 py-4 text-center text-2xl font-bold text-navy-900' : 'rounded-md bg-gold px-3.5 py-2 text-sm font-bold text-navy-900 shadow-gold transition hover:brightness-95'}>
@@ -93,7 +93,7 @@ export function PublicShell({
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
-              aria-label="menu"
+              aria-label={t('menu')}
               aria-expanded={open}
               className="rounded-lg p-2.5 text-soft hover:bg-white/10 lg:hidden"
             >
@@ -110,6 +110,13 @@ export function PublicShell({
                 {t(n.key)}
               </a>
             ))}
+            {partners && (
+              <a href={partners.href} className="block rounded-md px-3 py-3 text-lg font-semibold text-soft/90 hover:bg-white/10">
+                {partners.label}
+              </a>
+            )}
+            <div className="px-3 py-2 sm:hidden"><LanguageSwitcher /></div>
+            <div onClick={() => setOpen(false)}><AccountLink big /></div>
           </nav>
         )}
       </header>
@@ -119,7 +126,7 @@ export function PublicShell({
         <div className="fixed inset-0 z-50 flex flex-col bg-navy text-soft lg:hidden">
           <div className="flex h-navbar flex-none items-center justify-between gap-4 border-b border-white/10 px-4">
             <span className="text-lg font-extrabold text-gold">{t('brand')}</span>
-            <button type="button" onClick={() => setOpen(false)} aria-label="close" className="rounded-lg p-2.5 text-soft hover:bg-white/10">
+            <button type="button" onClick={() => setOpen(false)} aria-label={t('close')} className="rounded-lg p-2.5 text-soft hover:bg-white/10">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
             </button>
           </div>
@@ -138,6 +145,7 @@ export function PublicShell({
               </a>
             ))}
             {partners && <a href={partners.href} onClick={() => setOpen(false)} className="rounded-xl px-5 py-4 text-2xl font-bold text-soft hover:bg-white/10">{partners.label}</a>}
+            <div className="px-5 py-2"><LanguageSwitcher /></div>
             <div onClick={() => setOpen(false)}><AccountLink big /></div>
           </nav>
         </div>

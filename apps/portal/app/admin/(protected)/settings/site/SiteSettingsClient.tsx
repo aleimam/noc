@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from '@noc/ui';
 import { saveSiteSettings } from './actions';
 
 type Initial = { mobileMenu: string; sloganNewobour: string; sloganNewobourEn: string; copyrightNewobour: string; copyrightNewobourEn: string; copyrightAlsawarey: string; copyrightAlsawareyEn: string; whatsappHelp: string };
@@ -29,6 +30,8 @@ export function SiteSettingsClient({ initial }: { initial: Initial }) {
       if (r.ok) {
         setSaved(true);
         router.refresh();
+      } else {
+        toast('تعذّر الحفظ / Save failed', 'error');
       }
     });
   }

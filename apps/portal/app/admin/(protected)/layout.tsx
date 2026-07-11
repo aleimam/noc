@@ -29,6 +29,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
       items: [
         { href: '/admin/rationing', label: t('rationing'), section: 'sheets' },
         { href: '/admin/lands', label: t('lands'), section: 'lands' },
+        { href: '/admin/lands/lands', label: L('قطع الأراضي', 'Land plots'), section: 'lands' },
         { href: '/admin/newobour/market', label: L('سوق العبور — العروض', 'New Obour market'), section: 'marketplace' },
         { href: '/admin/marketplace/price-index', label: L('مؤشر الأسعار', 'Price index'), section: 'marketplace' },
         { href: '/admin/settings/calculator', label: L('حاسبة التصالح', 'Calculator'), section: 'settings' },
@@ -86,6 +87,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
         { href: '/admin/settings/security', label: L('الأمان والحماية', 'Security'), section: 'settings' },
         { href: '/admin/settings/analytics', label: L('التحليلات والتتبّع', 'Analytics'), section: 'settings' },
         { href: '/admin/settings/site', label: L('إعدادات الموقع العامة', 'Site settings'), section: 'settings' },
+        { href: '/admin/settings/backups', label: L('النسخ الاحتياطية', 'Backups'), section: 'settings' },
         { href: '/admin/settings/account', label: L('حسابي', 'My account') },
       ],
     },
@@ -106,9 +108,9 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
       search={<AdminSearch pages={searchPages} action={adminSearch} />}
       backToSiteLabel={tc('backToSite')}
       storeLinks={[
-        { label: 'العبور الجديد', href: process.env.PORTAL_URL || '/' },
+        { label: L('العبور الجديد', 'New Obour'), href: process.env.PORTAL_URL || '/' },
         // Opens alsawarey.com in staff "admin view" (owner details) via a signed token.
-        { label: 'الصواري (كمشرف)', href: '/admin/store-admin' },
+        { label: L('الصواري (كمشرف)', 'Al Sawarey (as admin)'), href: '/admin/store-admin' },
       ]}
       signOut={<SignOutButton />}
     >

@@ -23,7 +23,13 @@ export async function loadPartnerCatalog(ownerId: string) {
   const [classifiers, sections, attrs, grants, districts, neighborhoods] = await Promise.all([
     prisma.classifier.findMany({
       orderBy: { order: 'asc' },
-      include: { options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, key: true, nameAr: true, nameEn: true } } },
+      include: {
+        options: {
+          where: { isActive: true },
+          orderBy: { order: 'asc' },
+          select: { id: true, key: true, nameAr: true, nameEn: true, parentLinks: { select: { parentId: true } } },
+        },
+      },
     }),
     prisma.attributeSection.findMany({ where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true } }),
     prisma.attribute.findMany({
@@ -62,7 +68,14 @@ export async function loadPartnerCatalog(ownerId: string) {
       key: c.key,
       nameAr: c.nameAr,
       nameEn: c.nameEn,
-      options: c.options.map((o) => ({ id: o.id, nameAr: o.nameAr, nameEn: o.nameEn, granted: c.key !== 'type' || grantedTypeIds.has(o.id) })),
+      options: c.options.map((o) => ({
+        id: o.id,
+        nameAr: o.nameAr,
+        nameEn: o.nameEn,
+        granted: c.key !== 'type' || grantedTypeIds.has(o.id),
+        // Hard nesting Type → Purpose → Condition (same rule as the staff form).
+        parentIds: o.parentLinks.map((l) => l.parentId),
+      })),
     })),
     sections,
     attributes,

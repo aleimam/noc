@@ -13,7 +13,8 @@ export async function compressImage(
   if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return file;
 
   try {
-    const bitmap = await createImageBitmap(file);
+    // Respect the photo's EXIF orientation — otherwise phone photos upload sideways.
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
     let { width, height } = bitmap;
     const longest = Math.max(width, height);
     if (longest > maxDim) {

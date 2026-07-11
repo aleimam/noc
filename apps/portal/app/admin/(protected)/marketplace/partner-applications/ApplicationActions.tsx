@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@noc/ui';
+import { runAction } from '@/app/admin/(protected)/runAction';
 import { setApplicationStatus, deleteApplication } from './actions';
 
 type Status = 'PENDING' | 'REVIEWING' | 'APPROVED' | 'REJECTED';
@@ -21,8 +22,12 @@ export function ApplicationActions({ id, status, note, locale }: { id: string; s
     });
   const del = () =>
     start(async () => {
-      const r = await deleteApplication(id);
-      if (r.ok) { router.refresh(); toast(L('تم الحذف', 'Deleted')); }
+      const ok = await runAction(() => deleteApplication(id), {
+        confirmText: L('حذف نهائيًا؟', 'Delete permanently?'),
+        successText: L('تم الحذف', 'Deleted'),
+        errorText: L('تعذّر الحذف', 'Delete failed'),
+      });
+      if (ok) router.refresh();
     });
 
   const btn = (s: Status, label: string, cls: string) => (

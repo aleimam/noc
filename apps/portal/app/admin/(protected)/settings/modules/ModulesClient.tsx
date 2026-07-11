@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from '@noc/ui';
 import { setModules } from './actions';
 
 export function ModulesClient({ initial, labels }: { initial: Record<string, boolean>; labels: Record<string, string> }) {
@@ -17,6 +18,8 @@ export function ModulesClient({ initial, labels }: { initial: Record<string, boo
       if (r.ok) {
         setSaved(true);
         router.refresh();
+      } else {
+        toast('تعذّر الحفظ / Save failed', 'error');
       }
     });
   }

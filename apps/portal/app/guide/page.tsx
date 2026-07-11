@@ -52,6 +52,15 @@ export default async function GuidePage() {
           <h1 className="text-3xl font-extrabold text-navy-800">{t('title')}</h1>
           <p className="mt-2 text-ink-500">{t('subtitle')}</p>
         </div>
+
+        {/* Building-conditions pages live under /guide/conditions — surface them here. */}
+        <a href="/guide/conditions" className="block rounded-lg border border-ink-200 bg-white p-5 shadow-sm transition hover:border-gold hover:shadow-md">
+          <h3 className="text-lg font-bold text-navy-800">🏗️ {L('اشتراطات البناء', 'Building conditions')}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-ink-700">
+            {L('اشتراطات ومسطحات البناء لكل وحدة أرض — مدينة العبور الجديدة.', 'Building requirements & areas per land unit — New Obour City.')}
+          </p>
+        </a>
+
         {rows.length === 0 && <p className="text-ink-500">{t('none')}</p>}
         {SECS.map((s) => {
           const items = bySec.get(s);

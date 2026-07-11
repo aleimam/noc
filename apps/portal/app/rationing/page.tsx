@@ -231,8 +231,8 @@ function ResultsList({ rows, ownerLabel }: { rows: SheetCard[]; ownerLabel: stri
           href={`/rationing/${r.id}`}
           className="flex items-center gap-3.5 rounded-xl border border-ink-200 bg-white p-4 transition hover:border-gold hover:shadow-md"
         >
-          <div className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-navy-50 text-xl text-navy-600" aria-hidden>
-            ☻
+          <div className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-navy-50 text-navy-600" aria-hidden>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-xl font-bold text-navy-800 dark:text-soft">{r.applicantName}</div>

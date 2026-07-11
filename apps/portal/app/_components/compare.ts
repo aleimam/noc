@@ -21,7 +21,9 @@ function write(ids: string[]) {
   window.dispatchEvent(new Event(COMPARE_EVENT));
 }
 
-export function toggleCompare(id: string): boolean {
+/** Toggle a listing in the compare set. Returns the new membership, or 'max' when the
+ *  set is already full so callers can tell the user instead of failing silently. */
+export function toggleCompare(id: string): boolean | 'max' {
   const ids = getCompare();
   const i = ids.indexOf(id);
   if (i >= 0) {
@@ -29,7 +31,7 @@ export function toggleCompare(id: string): boolean {
     write(ids);
     return false;
   }
-  if (ids.length >= COMPARE_MAX) return ids.includes(id);
+  if (ids.length >= COMPARE_MAX) return 'max';
   ids.push(id);
   write(ids);
   return true;

@@ -2,12 +2,15 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { uploadRoot } from '../../../lib/uploads';
 import { rateLimit, clientIp } from '../../../lib/rateLimit';
 
 // Public upload for the "sell your land" form (visitors aren't logged in). Accepts images,
 // plus documents (PDF/DOCX/XLSX) when kind=document. Bytes are sniffed, not trusted.
+// Logged-in users (partners) get uploaderId set so the partner listing save can claim
+// their photos (it filters by uploaderId — without it partner photos were silently dropped).
 const MAX_BYTES = 32 * 1024 * 1024;
 const EXT: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/avif': 'avif' };
 const DOC_EXT: Record<string, string> = {
@@ -37,8 +40,13 @@ function sniffDoc(buf: Buffer, name: string): string | null {
 }
 
 export async function POST(req: NextRequest) {
-  // Public/unauthenticated endpoint — key by IP so the sell form can't be abused to fill disk (F1).
-  if (!rateLimit(`upload:${clientIp(req.headers)}`, 20, 60 * 1000)) {
+  // Optional session: partner pages upload logged-in; the public sell form doesn't.
+  const session = await auth();
+  const userId = session?.user?.id ?? null;
+  // Anonymous callers are keyed by IP so the sell form can't be abused to fill disk (F1);
+  // logged-in users get the same per-user allowance as the portal upload route.
+  const rlKey = userId ? `upload:u:${userId}` : `upload:${clientIp(req.headers)}`;
+  if (!rateLimit(rlKey, userId ? 40 : 20, 60 * 1000)) {
     return NextResponse.json({ ok: false, error: 'rate_limited' }, { status: 429 });
   }
   const form = await req.formData();
@@ -63,9 +71,25 @@ export async function POST(req: NextRequest) {
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, filename), buf);
 
-  // ownerType left null (draft) until the offer action links it.
+  const purePath = `/uploads/${sub}/${filename}`;
+  // Honor the ?stamp=<category> tag the shared partner form sends (mirrors the portal upload
+  // route): keep the pure original in originalPath + record the stamping category, so the
+  // portal-side re-stamp pipeline (restampListingPhotos on staff save) bakes the watermark
+  // from the untouched original. This app has no stamping engine, so no rendition is baked here.
+  const category = !isDoc ? req.nextUrl.searchParams.get('stamp') : null;
+
+  // ownerType left null (draft) until the offer / partner listing action links it.
   const attachment = await prisma.attachment.create({
-    data: { filename, originalName: file.name || filename, path: `/uploads/${sub}/${filename}`, mime, size: file.size },
+    data: {
+      filename,
+      originalName: file.name || filename,
+      path: purePath,
+      originalPath: purePath,
+      stampCategory: category,
+      mime,
+      size: file.size,
+      ...(userId ? { uploaderId: userId } : {}),
+    },
   });
   return NextResponse.json({ ok: true, attachment: { id: attachment.id, path: attachment.path, originalName: attachment.originalName, mime } });
 }

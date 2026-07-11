@@ -111,8 +111,8 @@ export function SellForm({
 
       {/* Both phones — same line */}
       <div className="grid gap-3.5 sm:grid-cols-2">
-        <label className={lbl}>{L('رقم الهاتف', 'Phone number')}<input value={f.phone1} onChange={set('phone1')} dir="ltr" className={inp} required /></label>
-        <label className={lbl}>{L('رقم هاتف آخر (اختياري)', 'Another phone (optional)')}<input value={f.phone2 ?? ''} onChange={set('phone2')} dir="ltr" className={inp} /></label>
+        <label className={lbl}>{L('رقم الهاتف', 'Phone number')}<input type="tel" inputMode="tel" autoComplete="tel" value={f.phone1} onChange={set('phone1')} dir="ltr" className={inp} required /></label>
+        <label className={lbl}>{L('رقم هاتف آخر (اختياري)', 'Another phone (optional)')}<input type="tel" inputMode="tel" autoComplete="tel" value={f.phone2 ?? ''} onChange={set('phone2')} dir="ltr" className={inp} /></label>
       </div>
 
       {mode === 'SHEET' ? (
@@ -124,14 +124,14 @@ export function SellForm({
               {cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
-          <label className={lbl}>{L('المساحة الفعلية (م²)', 'Actual area (m²)')}<input value={f.area ?? ''} onChange={set('area')} dir="ltr" className={inp} /></label>
+          <label className={lbl}>{L('المساحة الفعلية (م²)', 'Actual area (m²)')}<input inputMode="decimal" value={f.area ?? ''} onChange={set('area')} dir="ltr" className={inp} /></label>
         </div>
       ) : (
         <>
           {/* Original + Actual area — one row */}
           <div className="grid gap-3.5 sm:grid-cols-2">
-            <label className={lbl}>{L('المساحة الأصلية (م²)', 'Original area (m²)')}<input value={f.originalArea ?? ''} onChange={set('originalArea')} dir="ltr" className={inp} /></label>
-            <label className={lbl}>{L('المساحة الفعلية (م²)', 'Actual area (m²)')}<input value={f.area ?? ''} onChange={set('area')} dir="ltr" className={inp} /></label>
+            <label className={lbl}>{L('المساحة الأصلية (م²)', 'Original area (m²)')}<input inputMode="decimal" value={f.originalArea ?? ''} onChange={set('originalArea')} dir="ltr" className={inp} /></label>
+            <label className={lbl}>{L('المساحة الفعلية (م²)', 'Actual area (m²)')}<input inputMode="decimal" value={f.area ?? ''} onChange={set('area')} dir="ltr" className={inp} /></label>
           </div>
           {/* District + Neighborhood — one row */}
           <div className="grid gap-3.5 sm:grid-cols-2">
@@ -158,7 +158,7 @@ export function SellForm({
 
       {/* Price — single row + fair-price note */}
       <div>
-        <label className="block text-base font-bold text-navy-800">{L('السعر المطلوب (ج.م)', 'Asking price (EGP)')}<input value={f.requiredPrice ?? ''} onChange={set('requiredPrice')} dir="ltr" className={`mt-1 ${inpHi}`} placeholder="0" /></label>
+        <label className="block text-base font-bold text-navy-800">{L('السعر المطلوب (ج.م)', 'Asking price (EGP)')}<input inputMode="numeric" value={f.requiredPrice ?? ''} onChange={set('requiredPrice')} dir="ltr" className={`mt-1 ${inpHi}`} placeholder="0" /></label>
         <p className="mt-1.5 text-xs text-ink-500">
           {L('سنبيع بالسعر الذي تحدده، لكن السعر العادل يساعد على بيع أرضك بشكل أسرع.', "We'll sell at the price you set, but a fair price helps your land sell faster.")}{' '}
           {policyHref

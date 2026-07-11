@@ -84,7 +84,7 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
     <SiteShell active="explore">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(crumbsLd) }} />
       <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <a href="/explore" className="text-sm text-accent">← {t('exploreTitle')}</a>
+      <a href="/explore" className="text-sm text-accent">‹ {t('exploreTitle')}</a>
       <h1 className="text-2xl font-bold text-primary">{L(d.nameAr, d.nameEn)}</h1>
 
       {d.neighborhoods.length > 0 && (
@@ -96,7 +96,7 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
               return (
                 <a key={n.id} href={`/explore/${n.id}`} className="rounded-lg border border-graphite/15 p-4 transition-colors hover:border-accent">
                   <div className="font-semibold">{L(n.nameAr, n.nameEn)}</div>
-                  <div className="mt-1 text-xs opacity-70">{n.assortedAreas ? t('assorted') : areas.length ? `${areas.join('، ')} ${m2}` : '—'}</div>
+                  <div className="mt-1 text-xs opacity-70">{n.assortedAreas ? t('assorted') : areas.length ? `${areas.join(locale === 'ar' ? '، ' : ', ')} ${m2}` : '—'}</div>
                 </a>
               );
             })}

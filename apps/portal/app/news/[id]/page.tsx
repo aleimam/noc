@@ -60,7 +60,7 @@ export default async function NewsDetail({ params }: { params: Promise<{ id: str
     <SiteShell active="news">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([articleLd, crumbsLd]) }} />
       <article className="mx-auto max-w-[820px] space-y-5 px-6 py-10">
-        <a href="/news" className="text-sm text-accent">← {t('title')}</a>
+        <a href="/news" className="text-sm text-accent">‹ {t('title')}</a>
         <div className="flex items-center gap-2">
           <Badge tone="navy" size="sm">{t(`cat${n.category}`)}</Badge>
           <span className="text-xs text-ink-400">{fmt(n.publishedAt)}</span>

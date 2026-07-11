@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from '@noc/ui';
 import type { SellContent } from '@noc/config';
 import { saveSellContent } from './actions';
 
@@ -46,6 +47,7 @@ export function SellContentEditor({ initial }: { initial: SellContent }) {
     start(async () => {
       const r = await saveSellContent(content);
       if (r.ok) { setSaved(true); router.refresh(); }
+      else toast('تعذّر الحفظ / Save failed', 'error');
     });
   }
 

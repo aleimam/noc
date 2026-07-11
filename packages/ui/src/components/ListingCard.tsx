@@ -42,8 +42,8 @@ export function ListingCard({
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="font-bold text-navy-800">{title}</div>
-        {subtitle ? <div className="text-xs text-ink-500">{subtitle}</div> : null}
-        {meta ? <div className="text-xs text-ink-500">{meta}</div> : null}
+        {subtitle ? <div className="text-sm text-ink-500">{subtitle}</div> : null}
+        {meta ? <div className="text-sm text-ink-500">{meta}</div> : null}
         {price != null && price !== '' ? (
           <div className="mt-auto flex items-baseline gap-1.5 pt-1">
             <span className="font-num text-2xl font-bold text-navy-800">{price}</span>

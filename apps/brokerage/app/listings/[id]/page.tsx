@@ -141,7 +141,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
 
         <div className="mt-3 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div>
-            <HeroGallery photos={land.gallery} alt={land.title} />
+            <HeroGallery photos={land.gallery} alt={land.title} locale={locale} />
           </div>
 
           <aside className="space-y-4">
@@ -152,7 +152,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
                   {land.adNumber && <div className="font-num text-sm text-ink-400" dir="ltr">#{land.adNumber}</div>}
                   <h1 className="text-2xl font-black text-navy-800">{land.title}</h1>
                 </div>
-                <WishlistButton listingId={land.id} initialSaved={wished.has(land.id)} size="lg" />
+                <WishlistButton listingId={land.id} initialSaved={wished.has(land.id)} size="lg" locale={locale} />
               </div>
               {land.typeAr && <p className="mt-1 text-ink-500">{land.typeAr}</p>}
               {land.actualArea != null && (
@@ -188,7 +188,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
 
               <div className="mt-4 border-t border-ink-100 pt-3">
                 <span className="text-xs text-ink-500">{L('شارك هذا الإعلان', 'Share this listing')}</span>
-                <ShareButtons url={listingUrl} title={land.title} whatsapp={store.contact.whatsapp} />
+                <ShareButtons url={listingUrl} title={land.title} whatsapp={store.contact.whatsapp} locale={locale} />
               </div>
             </div>
           </aside>
@@ -246,7 +246,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
         {land.locationMap && (
           <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
             <h2 className="mb-3 text-lg font-bold text-navy-800">{L('الموقع على الخريطة', 'Location on the map')}</h2>
-            <HeroGallery photos={[land.locationMap]} alt={L('موقع القطعة على المخطط', 'Plot location on the masterplan')} />
+            <HeroGallery photos={[land.locationMap]} alt={L('موقع القطعة على المخطط', 'Plot location on the masterplan')} locale={locale} />
             <p className="mt-2 text-center text-sm text-ink-500">{L('خريطة المجاورة موضّح عليها موقع القطعة', 'Neighborhood masterplan with the plot marked')}</p>
           </section>
         )}
