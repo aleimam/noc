@@ -6,6 +6,7 @@ import { prisma } from '@noc/db';
 export type LeanOption = { id: string; labelAr: string; labelEn: string; districtId?: string };
 export type LeanAttr = {
   id: string;
+  key: string;
   sectionId: string;
   labelAr: string;
   labelEn: string;
@@ -52,6 +53,7 @@ export async function loadPartnerCatalog(ownerId: string) {
 
   const attributes: LeanAttr[] = attrs.map((a) => ({
     id: a.id,
+    key: a.key,
     sectionId: a.sectionId,
     labelAr: a.labelAr,
     labelEn: a.labelEn,

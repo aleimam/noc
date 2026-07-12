@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ImageAttachment, Lightbox, type UploadedAttachment } from '@noc/ui';
 import { localizeUnit } from '@noc/i18n';
-import { roundToStandardArea, formatMoneyThousands, formatMoneyEgp, formatArea, isValidPhone } from '@noc/config';
+import { roundToStandardArea, formatMoneyThousands, formatMoneyEgp, formatArea, isValidPhone, REQUIRED_LISTING_ATTR_KEYS } from '@noc/config';
 import { RichEditor } from '../../admin/(protected)/pages/RichEditor';
 import { setAreaMap } from '../../admin/(protected)/lands/actions';
 import type { Shape } from '../../admin/(protected)/lands/MapAnnotator';
@@ -21,7 +21,9 @@ type AttrType =
   | 'DISTRICT' | 'NEIGHBORHOOD';
 type AttrCfg = { yesLabelAr?: string; yesLabelEn?: string; noLabelAr?: string; noLabelEn?: string; multiple?: boolean };
 type Opt = { id: string; labelAr: string; labelEn: string; districtId?: string };
-type Attr = { id: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; config?: AttrCfg; order: number; options: Opt[]; optionIds: string[] };
+type Attr = { id: string; key: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; config?: AttrCfg; order: number; options: Opt[]; optionIds: string[] };
+
+const REQUIRED_ATTR_KEYS = new Set<string>(REQUIRED_LISTING_ATTR_KEYS);
 
 const NUMERIC_TYPES = new Set(['NUMBER', 'MONEY', 'MONEY_THOUSANDS', 'AREA_ORIGINAL', 'AREA_ALLOCATED']);
 type Section = { id: string; nameAr: string; nameEn: string; order: number };
@@ -249,6 +251,41 @@ export function ListingForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attributes, sections, selected, optCls]);
 
+  // Mandatory basic details (e.g. the city): required on every listing. A single-option
+  // required SELECT auto-selects its one choice so a locked field (one city) never blocks save.
+  const isRequiredAttr = (a: Attr) => REQUIRED_ATTR_KEYS.has(a.key);
+  useEffect(() => {
+    for (const a of attributes) {
+      if (!isRequiredAttr(a) || a.type !== 'SELECT' || !applies(a)) continue;
+      const cur = vals[a.id];
+      if ((typeof cur !== 'string' || !cur) && a.options.length === 1) setVal(a.id, a.options[0]!.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attributes, selected, vals]);
+
+  // Keyword-rich saved filename for listing photos (image SEO): type + district + neighborhood
+  // + city + title. The upload route slugifies (Arabic-safe) and caps at ~60 chars.
+  const photoNameHint = useMemo(() => {
+    const optName = (a?: Attr) => {
+      if (!a) return '';
+      const v = vals[a.id];
+      if (typeof v !== 'string' || !v) return '';
+      const o = a.options.find((x) => x.id === v);
+      return o ? L(o.labelAr, o.labelEn) : '';
+    };
+    const typeC = clsByKey.get('type');
+    const typeOpt = typeC?.options.find((o) => o.id === (typeC ? selected[typeC.id] : ''));
+    const parts = [
+      typeOpt ? L(typeOpt.nameAr, typeOpt.nameEn) : '',
+      optName(attributes.find((a) => a.type === 'DISTRICT' && applies(a))),
+      optName(attributes.find((a) => a.type === 'NEIGHBORHOOD' && applies(a))),
+      optName(attributes.find((a) => a.key === 'city' && applies(a))),
+      title.trim(),
+    ].filter(Boolean);
+    return parts.join(' ').trim();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attributes, selected, vals, title, locale]);
+
   async function uploadDoc(file: File, attrId: string) {
     setError('');
     const fd = new FormData();
@@ -289,6 +326,16 @@ export function ListingForm({
       return;
     }
     if (!isValidPhone(contactPhone)) { setError(tc('phoneInvalid')); return; }
+    // Mandatory basic details (e.g. the city) must be filled before publishing.
+    const missingRequired = attributes.find((a) => {
+      if (!isRequiredAttr(a) || !applies(a)) return false;
+      const v = vals[a.id];
+      return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : !v;
+    });
+    if (missingRequired) {
+      setError(`${tc('fillRequired')} — ${L(missingRequired.labelAr, missingRequired.labelEn)}`);
+      return;
+    }
     const input: ListingInput = {
       id: initial.id,
       typeOptionId: selOf('type'),
@@ -715,9 +762,10 @@ export function ListingForm({
               </div>
             ))}
             <div className="w-48">
-              {/* nameHint → keyword-rich saved filename (image SEO); title may be empty when
-                  photos are added first, in which case the route falls back to a uuid. */}
-              <ImageAttachment stampCategory="listing" nameHint={title} value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} />
+              {/* nameHint → keyword-rich saved filename (image SEO): type + geo (district,
+                  neighborhood, city) + title. Empty before anything is picked → route falls
+                  back to a uuid. */}
+              <ImageAttachment stampCategory="listing" nameHint={photoNameHint} value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} />
             </div>
           </div>
         </div>
@@ -744,7 +792,10 @@ export function ListingForm({
               <div className="grid gap-3 sm:grid-cols-2">
                 {g.attrs.map((a) => (
                   <label key={a.id} className="text-sm">
-                    <span className="mb-1 block opacity-80">{L(a.labelAr, a.labelEn)}</span>
+                    <span className="mb-1 block opacity-80">
+                      {L(a.labelAr, a.labelEn)}
+                      {isRequiredAttr(a) && <span className="text-red-600"> *</span>}
+                    </span>
                     {control(a)}
                   </label>
                 ))}

@@ -4,12 +4,15 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ImageAttachment, type UploadedAttachment } from '@noc/ui';
+import { REQUIRED_LISTING_ATTR_KEYS } from '@noc/config';
 import { savePartnerListing, type LeanListingInput, type LeanValueInput } from './listingSave';
 
 type COption = { id: string; nameAr: string; nameEn: string; granted: boolean; parentIds: string[] };
 type Classifier = { id: string; key: string; nameAr: string; nameEn: string; options: COption[] };
 type AttrOption = { id: string; labelAr: string; labelEn: string; districtId?: string };
-type Attr = { id: string; sectionId: string; labelAr: string; labelEn: string; type: string; unit: string | null; options: AttrOption[]; usesList: boolean; optionIds: string[] };
+type Attr = { id: string; key: string; sectionId: string; labelAr: string; labelEn: string; type: string; unit: string | null; options: AttrOption[]; usesList: boolean; optionIds: string[] };
+
+const REQUIRED_ATTR_KEYS = new Set<string>(REQUIRED_LISTING_ATTR_KEYS);
 type Section = { id: string; nameAr: string; nameEn: string };
 
 export type LeanCatalog = { classifiers: Classifier[]; sections: Section[]; attributes: Attr[] };
@@ -99,6 +102,39 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
   const setVal = (id: string, v: string | boolean | string[]) => setVals((p) => ({ ...p, [id]: v }));
   const label = (o: { nameAr?: string; nameEn?: string; labelAr?: string; labelEn?: string }) => L(o.nameAr ?? o.labelAr ?? '', o.nameEn ?? o.labelEn ?? '');
 
+  // Mandatory basic details (e.g. the city). A single-option required SELECT auto-selects its one
+  // choice so a locked field (one city) never blocks the seller.
+  const isRequiredAttr = (a: Attr) => REQUIRED_ATTR_KEYS.has(a.key);
+  useEffect(() => {
+    for (const a of applicable) {
+      if (!isRequiredAttr(a) || a.type !== 'SELECT') continue;
+      const cur = vals[a.id];
+      if ((typeof cur !== 'string' || !cur) && a.options.length === 1) setVal(a.id, a.options[0]!.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applicable, vals]);
+
+  // Keyword-rich saved filename for photos (image SEO): type + district + neighborhood + city + title.
+  const photoNameHint = useMemo(() => {
+    const optName = (a?: Attr) => {
+      if (!a) return '';
+      const v = vals[a.id];
+      if (typeof v !== 'string' || !v) return '';
+      const o = a.options.find((x) => x.id === v);
+      return o ? label(o) : '';
+    };
+    const typeOpt = typeC?.options.find((o) => o.id === typeId);
+    const parts = [
+      typeOpt ? label(typeOpt) : '',
+      optName(applicable.find((a) => a.type === 'DISTRICT')),
+      optName(applicable.find((a) => a.type === 'NEIGHBORHOOD')),
+      optName(applicable.find((a) => a.key === 'city')),
+      title.trim(),
+    ].filter(Boolean);
+    return parts.join(' ').trim();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applicable, vals, typeId, title, locale]);
+
   function buildValues(): LeanValueInput[] {
     const out: LeanValueInput[] = [];
     for (const a of applicable) {
@@ -133,6 +169,13 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!typeId || !purposeId || !condId || !title.trim() || !contactPhone.trim()) { setError(L('أكمل الحقول المطلوبة', 'Fill the required fields')); return; }
+    // Mandatory basic details (e.g. the city) must be filled.
+    const missingRequired = applicable.find((a) => {
+      if (!isRequiredAttr(a)) return false;
+      const v = vals[a.id];
+      return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : !v;
+    });
+    if (missingRequired) { setError(`${L('أكمل الحقول المطلوبة', 'Fill the required fields')} — ${label(missingRequired)}`); return; }
     setError('');
     start(async () => {
       const input: LeanListingInput = {
@@ -297,7 +340,7 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
           <div className="grid gap-3 sm:grid-cols-2">
             {attrs.map((a) => (
               <div key={a.id} className="text-sm">
-                <div className="mb-1 font-semibold">{label(a)}{a.unit ? ` (${a.unit})` : ''}</div>
+                <div className="mb-1 font-semibold">{label(a)}{a.unit ? ` (${a.unit})` : ''}{isRequiredAttr(a) && <span className="text-red-600"> *</span>}</div>
                 {renderAttr(a)}
               </div>
             ))}
@@ -322,7 +365,7 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
             ))}
           </div>
         )}
-        <ImageAttachment key={photos.length} value={null} onChange={(a) => a && setPhotos((s) => [...s, a])} stampCategory="listing" />
+        <ImageAttachment key={photos.length} value={null} nameHint={photoNameHint} onChange={(a) => a && setPhotos((s) => [...s, a])} stampCategory="listing" />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">

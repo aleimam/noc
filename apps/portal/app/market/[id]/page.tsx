@@ -119,6 +119,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       type: listing.typeOption ? L(listing.typeOption.nameAr, listing.typeOption.nameEn) : null,
       area: listing.area != null ? Number(listing.area) : null,
       purpose: listing.purposeOption ? L(listing.purposeOption.nameAr, listing.purposeOption.nameEn) : null,
+      city: listing.neighborhood?.district?.city ? L(listing.neighborhood.district.city.nameAr, listing.neighborhood.district.city.nameEn) : null,
       district: listing.neighborhood ? L(listing.neighborhood.district.nameAr, listing.neighborhood.district.nameEn) : null,
       neighborhood: areaName,
     },

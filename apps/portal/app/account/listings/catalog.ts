@@ -70,6 +70,7 @@ export async function loadCatalog() {
 
   const attributes = attrs.map((a) => ({
     id: a.id,
+    key: a.key,
     sectionId: a.sectionId,
     labelAr: a.labelAr,
     labelEn: a.labelEn,

@@ -165,6 +165,17 @@ export type Section = (typeof SECTIONS)[number];
 export const PERM_ACTIONS = ['VIEW', 'CREATE', 'UPDATE', 'DELETE', 'MANAGE'] as const;
 export type PermActionKey = (typeof PERM_ACTIONS)[number];
 
+// ── Marketplace: listing detail rules ───────────────────────────────────────────────
+
+/**
+ * Attribute keys that are MANDATORY on every listing (basic details). Enforced client-side in
+ * both listing forms (staff/customer full form + partner lean form) and used to render a
+ * required marker. When such an attribute has exactly one active option it is auto-selected, so
+ * a single-choice field (e.g. one city) never blocks the seller. Currently: the city
+ * (`city`) — every listing must record its city (only New Obour City today).
+ */
+export const REQUIRED_LISTING_ATTR_KEYS = ['city'] as const;
+
 // ── Module 2: land / neighborhood option lists (bilingual where shown to users) ──
 
 /** Common plot-area presets (m²) in New Obour. Default "standard areas" for rounding. */

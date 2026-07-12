@@ -15,6 +15,8 @@ export type ListingAltParts = {
   area?: number | null;
   /** Localized purpose, e.g. "للبيع" / "for sale" (optional). */
   purpose?: string | null;
+  /** Localized city name, e.g. "العبور الجديدة" / "New Obour". */
+  city?: string | null;
   /** Localized district name. */
   district?: string | null;
   /** Localized neighborhood name. */
@@ -24,12 +26,13 @@ export type ListingAltParts = {
 /**
  * Descriptive alt text for a listing's photos. Every part is optional and missing parts
  * are dropped with no dangling separators. Examples:
- *   AR: "أرض 500 م² للبيع — الحي العاشر، مجاورة 5"
- *   EN: "500 m² land for sale — District 10, Neighborhood 5"
+ *   AR: "أرض 500 م² للبيع — العبور الجديدة، الحي العاشر، مجاورة 5"
+ *   EN: "500 m² land for sale — New Obour, District 10, Neighborhood 5"
  */
 export function listingAlt(l: ListingAltParts, locale: 'ar' | 'en'): string {
   const type = clean(l.type);
   const purpose = clean(l.purpose);
+  const city = clean(l.city);
   const district = clean(l.district);
   const neighborhood = clean(l.neighborhood);
   const areaStr =
@@ -39,7 +42,8 @@ export function listingAlt(l: ListingAltParts, locale: 'ar' | 'en'): string {
 
   // The lead reads naturally per language: AR "أرض 500 م² للبيع", EN "500 m² land for sale".
   const lead = (locale === 'ar' ? [type, areaStr, purpose] : [areaStr, type, purpose]).filter(Boolean).join(' ');
-  const where = [district, neighborhood].filter(Boolean).join(locale === 'ar' ? '، ' : ', ');
+  // Location goes broad → specific: city, district, neighborhood.
+  const where = [city, district, neighborhood].filter(Boolean).join(locale === 'ar' ? '، ' : ', ');
 
   return [lead, where].filter(Boolean).join(' — ');
 }

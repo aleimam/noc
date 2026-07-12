@@ -29,6 +29,7 @@ The big picture (deploy runbook, server map, gotchas) lives in the repo root **C
 | `cloudflare-realip.sh` | Regenerate Nginx real-IP + CSF ignore from Cloudflare's published ranges (already applied; rerun a few times/year) | — |
 | `mail-relay-brevo.sh` | (Re)configure Postfix→Brevo relay creds (`/etc/postfix/sasl_passwd`). Use after rotating the Brevo key | — |
 | `audit.sh` | Read-only security/ops snapshot; changes nothing | — |
+| `city-mandatory.sh` → `.ts` | Make the listing city (المدينة) mandatory + New-Obour-only: activates the `city` attribute, links it to every Type, keeps only New Obour active, backfills the value on old listings. Idempotent; run once after the city-mandatory deploy | — |
 
 ## Config files (server-side, gitignored where secret)
 

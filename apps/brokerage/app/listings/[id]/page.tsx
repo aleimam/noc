@@ -90,7 +90,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
       allocationLetterDate: true,
       hasSaleMandate: true,
       saleMandateDate: true,
-      neighborhood: { select: { nameAr: true, nameEn: true, district: { select: { nameAr: true, nameEn: true } } } },
+      neighborhood: { select: { nameAr: true, nameEn: true, district: { select: { nameAr: true, nameEn: true, city: { select: { nameAr: true, nameEn: true } } } } } },
     },
   });
   // Descriptive alt text for every public photo of this land (image SEO).
@@ -100,6 +100,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
       {
         type: land.typeAr,
         area: land.actualArea,
+        city: nb?.neighborhood?.district?.city ? L(nb.neighborhood.district.city.nameAr, nb.neighborhood.district.city.nameEn) : null,
         district: nb?.neighborhood?.district ? L(nb.neighborhood.district.nameAr, nb.neighborhood.district.nameEn) : null,
         neighborhood: areaName,
       },
