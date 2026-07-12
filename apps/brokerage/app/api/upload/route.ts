@@ -19,6 +19,24 @@ const DOC_EXT: Record<string, string> = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
 };
 
+// Optional descriptive slug hint (image SEO): when the uploader passes ?name=<hint> the saved
+// file becomes `<slug>-<shortid>.<ext>` instead of a bare uuid. Uniqueness is preserved by the
+// shortid; absent hint keeps the original random-uuid behavior. Mirrors the portal upload route.
+function slugifyHint(raw: string | null | undefined): string {
+  if (!raw) return '';
+  return raw
+    .normalize('NFKC')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-')
+    .slice(0, 60)
+    .replace(/-+$/g, '');
+}
+function fileStem(hint: string | null | undefined): string {
+  const slug = slugifyHint(hint);
+  return slug ? `${slug}-${randomUUID().slice(0, 8)}` : randomUUID();
+}
+
 function sniff(buf: Buffer): string | null {
   if (buf.length < 12) return null;
   if (buf[0] === 0x89 && buf[1] === 0x50) return 'image/png';
@@ -66,7 +84,8 @@ export async function POST(req: NextRequest) {
 
   const now = new Date();
   const sub = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const filename = `${randomUUID()}.${ext}`;
+  // Descriptive stem from the optional ?name hint (images only; internal docs stay uuid).
+  const filename = `${fileStem(isDoc ? null : req.nextUrl.searchParams.get('name'))}.${ext}`;
   const dir = path.join(uploadRoot(), sub);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, filename), buf);

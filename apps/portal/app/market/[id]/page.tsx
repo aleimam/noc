@@ -19,6 +19,7 @@ import { trackListingView } from '../../../lib/views';
 import { partnershipsEnabled } from '../../../lib/modules';
 import { SiteShell } from '../../_components/SiteShell';
 import { pageMeta, breadcrumbLd, ldJson, abs } from '../../../lib/seo';
+import { listingAlt, geoPhotoAlt } from '../../../lib/imageAlt';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id: param } = await params;
@@ -96,6 +97,19 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('mp');
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
+
+  // Descriptive alt text for every public photo of this listing (image SEO).
+  const areaName = listing.neighborhood ? L(listing.neighborhood.nameAr, listing.neighborhood.nameEn) : null;
+  const photoAlt = listingAlt(
+    {
+      type: listing.typeOption ? L(listing.typeOption.nameAr, listing.typeOption.nameEn) : null,
+      area: listing.area != null ? Number(listing.area) : null,
+      purpose: listing.purposeOption ? L(listing.purposeOption.nameAr, listing.purposeOption.nameEn) : null,
+      district: listing.neighborhood ? L(listing.neighborhood.district.nameAr, listing.neighborhood.district.nameEn) : null,
+      neighborhood: areaName,
+    },
+    locale,
+  ) || listing.title;
 
   // Peer negotiation: a logged-in customer (not the seller) can make/track price offers.
   const session = await auth();
@@ -274,7 +288,15 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     '@context': 'https://schema.org',
     '@type': ['Product', 'RealEstateListing'],
     name: listing.title,
-    image: galleryPaths.map((p) => abs(p)),
+    // ImageObject entries (contentUrl + caption = the photo's alt); the first is flagged
+    // representativeOfPage. schema.org accepts ImageObject in the `image` field.
+    image: galleryPaths.map((p, i) => ({
+      '@type': 'ImageObject',
+      contentUrl: abs(p),
+      url: abs(p),
+      caption: galleryPaths.length > 1 ? `${photoAlt} — ${L('صورة', 'photo')} ${i + 1}` : photoAlt,
+      ...(i === 0 ? { representativeOfPage: true } : {}),
+    })),
     ...(plainDesc ? { description: plainDesc.slice(0, 500) } : {}),
     category: 'Real Estate Land',
     url: abs(canonicalPath),
@@ -296,7 +318,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       <TrackView item={{ id: listing.id, title: listing.title, cover: galleryPaths[0] ?? null, price: listing.price != null ? String(listing.price) : null, href: canonicalPath }} />
       <div className="flex justify-end"><MarketCardActions listingId={listing.id} initialSaved={saved} compareLabel={t('compare')} /></div>
       <a href="/market" className="text-sm text-accent">‹ {t('title')}</a>
-      <PhotoGallery photos={galleryPaths} />
+      <PhotoGallery photos={galleryPaths} alt={photoAlt} locale={locale} />
 
       <div>
         <div className="flex flex-wrap gap-1">
@@ -391,7 +413,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
               it.photos ? (
                 <div key={i} className="space-y-1 py-1.5 sm:col-span-2">
                   <div className="text-sm opacity-70">{it.label}</div>
-                  <PhotoGallery photos={it.photos} />
+                  <PhotoGallery photos={it.photos} alt={`${photoAlt} — ${it.label}`} locale={locale} />
                 </div>
               ) : (
                 <div key={i} className="flex justify-between gap-3 border-b border-graphite/10 py-1.5 text-sm">
@@ -452,7 +474,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
                 {areaPhotos.map((p) => (
                   <div key={p.kind} className="space-y-1">
                     {p.title && <div className="text-sm font-medium">{p.title}</div>}
-                    <PhotoGallery photos={[p.path]} />
+                    <PhotoGallery photos={[p.path]} alt={geoPhotoAlt(areaName, p.title, locale)} locale={locale} />
                   </div>
                 ))}
               </div>
@@ -482,7 +504,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       {genImgs.length > 0 && (
         <section className="space-y-2">
           <h2 className="font-semibold text-primary">{L('صور العرض', 'Listing posters')}</h2>
-          <PhotoGallery photos={genImgs.map((g) => g.path)} />
+          <PhotoGallery photos={genImgs.map((g) => g.path)} alt={photoAlt} locale={locale} />
         </section>
       )}
 
@@ -506,7 +528,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
           <h2 className="text-lg font-bold text-navy-800 dark:text-soft">{t('similarListings')}</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {similar.map((s) => (
-              <ListingCard key={s.id} href={marketHref({ id: s.id, adNumber: s.adNumber, typeEn: s.typeOption?.nameEn ?? null, area: s.area != null ? Number(s.area) : null })} cover={simCovers.get(s.id) ?? null} title={s.title} subtitle={L(s.typeOption?.nameAr ?? '', s.typeOption?.nameEn ?? '')} price={s.price != null ? Number(s.price).toLocaleString('en-US') : null} currency={currency(locale)} />
+              <ListingCard key={s.id} href={marketHref({ id: s.id, adNumber: s.adNumber, typeEn: s.typeOption?.nameEn ?? null, area: s.area != null ? Number(s.area) : null })} cover={simCovers.get(s.id) ?? null} title={s.title} subtitle={L(s.typeOption?.nameAr ?? '', s.typeOption?.nameEn ?? '')} price={s.price != null ? Number(s.price).toLocaleString('en-US') : null} currency={currency(locale)} alt={listingAlt({ type: L(s.typeOption?.nameAr ?? '', s.typeOption?.nameEn ?? ''), area: s.area != null ? Number(s.area) : null }, locale) || s.title} />
             ))}
           </div>
         </section>

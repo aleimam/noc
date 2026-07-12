@@ -66,7 +66,7 @@ export default async function ConditionPage({ params }: { params: Promise<{ slug
         {images.length > 0 && (
           <div className="mt-8 space-y-3">
             <h2 className="text-xl font-bold text-navy-800 dark:text-soft">{locale === 'en' ? 'Official sheet' : 'الكشف الرسمي'}</h2>
-            <PhotoGallery photos={images} />
+            <PhotoGallery photos={images} alt={`${title} — ${locale === 'en' ? 'Official sheet' : 'الكشف الرسمي'}`} locale={locale} />
           </div>
         )}
       </article>

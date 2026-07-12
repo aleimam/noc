@@ -25,11 +25,13 @@ export function ImageAttachment({
   onChange,
   uploadUrl = '/api/upload',
   stampCategory,
+  nameHint,
 }: {
   value?: UploadedAttachment | null;
   onChange?: (a: UploadedAttachment | null) => void;
   uploadUrl?: string;
   stampCategory?: string; // tags the upload's stamping category/module (e.g. 'listing', 'none')
+  nameHint?: string; // descriptive slug hint → keyword-rich saved filename (image SEO)
 }) {
   const t = useTranslations('attachment');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -55,7 +57,11 @@ export function ImageAttachment({
       }
       const fd = new FormData();
       fd.append('file', file);
-      const url = stampCategory ? `${uploadUrl}${uploadUrl.includes('?') ? '&' : '?'}stamp=${encodeURIComponent(stampCategory)}` : uploadUrl;
+      const params = new URLSearchParams();
+      if (stampCategory) params.set('stamp', stampCategory);
+      if (nameHint?.trim()) params.set('name', nameHint.trim());
+      const qs = params.toString();
+      const url = qs ? `${uploadUrl}${uploadUrl.includes('?') ? '&' : '?'}${qs}` : uploadUrl;
       const res = await fetch(url, { method: 'POST', body: fd });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {

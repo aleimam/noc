@@ -21,6 +21,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
   const on = (key: string) => vis[key as keyof typeof vis] !== false;
 
+  // Image sitemap (Google image extension): up to a few public gallery photos per listing.
+  // Next 15 renders each entry's `images: string[]` as <image:image><image:loc>…. URLs must
+  // be absolute; attachment paths are root-relative (/uploads/…).
+  const listingIds = on('market') ? listings.map((l) => l.id) : [];
+  const photoRows = listingIds.length
+    ? await prisma.attachment.findMany({
+        where: { ownerType: 'Listing', ownerId: { in: listingIds }, attributeId: null },
+        orderBy: { createdAt: 'asc' },
+        select: { ownerId: true, path: true },
+      })
+    : [];
+  const imagesByListing = new Map<string, string[]>();
+  for (const r of photoRows) {
+    if (!r.ownerId) continue;
+    const arr = imagesByListing.get(r.ownerId) ?? [];
+    if (arr.length < 3) arr.push(`${base}${r.path}`);
+    imagesByListing.set(r.ownerId, arr);
+  }
+
   const entries: MetadataRoute.Sitemap = [{ url: base, changeFrequency: 'daily', priority: 1 }];
   // module landing pages (only the enabled ones)
   const modulePaths: [string, string][] = [
@@ -28,8 +47,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
   for (const [key, path] of modulePaths) if (on(key)) entries.push({ url: `${base}${path}`, changeFrequency: 'weekly', priority: 0.8 });
 
-  // Individual market listings
-  if (on('market')) for (const l of listings) entries.push({ url: `${base}${marketHref({ id: l.id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null })}`, lastModified: l.updatedAt, changeFrequency: 'weekly', priority: 0.7 });
+  // Individual market listings (with their gallery photos as image-sitemap entries)
+  if (on('market'))
+    for (const l of listings) {
+      const images = imagesByListing.get(l.id);
+      entries.push({
+        url: `${base}${marketHref({ id: l.id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null })}`,
+        lastModified: l.updatedAt,
+        changeFrequency: 'weekly',
+        priority: 0.7,
+        ...(images?.length ? { images } : {}),
+      });
+    }
   // Explore: cities + districts + neighborhoods (canonical SEO URLs)
   if (on('explore')) {
     for (const c of cities) entries.push({ url: `${base}${cityHref(c)}`, lastModified: c.updatedAt, changeFrequency: 'weekly', priority: 0.6 });

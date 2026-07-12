@@ -51,7 +51,7 @@ export function HeroGallery({ photos, alt, locale = 'ar' }: { photos: string[]; 
               className={`h-16 w-20 flex-none overflow-hidden rounded-lg ring-2 transition ${k === i ? 'ring-gold-600' : 'ring-transparent hover:ring-graphite/25'}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p} alt="" loading="lazy" className="h-full w-full object-cover" />
+              <img src={p} alt={alt ? `${alt} — ${L('صورة', 'photo')} ${k + 1}` : ''} loading="lazy" className="h-full w-full object-cover" />
             </button>
           ))}
         </div>

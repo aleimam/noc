@@ -6,6 +6,7 @@ import { PhotoGallery } from '@noc/ui';
 import { SiteShell } from '../../../_components/SiteShell';
 import { updatesForCity } from '../../../../lib/geoInheritance';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
+import { geoPhotoAlt } from '../../../../lib/imageAlt';
 import { cityHref, districtHref, resolveCityId } from '../../../../lib/geoHref';
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,7 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
   if (!city || !city.isActive) notFound();
   // Canonicalize: permanently redirect legacy cuids to the key-based SEO URL (308).
   if (decodeURIComponent(param) !== resolved.canonicalParam) permanentRedirect(cityHref(city));
+  const areaName = L(city.nameAr, city.nameEn); // for photo alt text (image SEO)
 
   const [maps, updates] = await Promise.all([
     prisma.areaMap.findMany({ where: { level: 'city', areaId: id } }),
@@ -94,7 +96,7 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
           return (
             <section key={m.key} className="space-y-2">
               <h2 className="font-semibold text-primary">{r.title || m.label}</h2>
-              <PhotoGallery photos={[r.newobourPath || r.cleanPath]} />
+              <PhotoGallery photos={[r.newobourPath || r.cleanPath]} alt={geoPhotoAlt(areaName, r.title || m.label, locale)} locale={locale} />
             </section>
           );
         })}
@@ -103,7 +105,7 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
         {customPhotos.map((c) => (
           <section key={c.kind} className="space-y-2">
             <h2 className="font-semibold text-primary">{c.title || L('صورة', 'Photo')}</h2>
-            <PhotoGallery photos={[c.newobourPath || c.cleanPath]} />
+            <PhotoGallery photos={[c.newobourPath || c.cleanPath]} alt={geoPhotoAlt(areaName, c.title, locale)} locale={locale} />
           </section>
         ))}
 
@@ -116,7 +118,7 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
                 <div className="text-xs opacity-60" dir="ltr">{fmt(u.happenedAt)}</div>
                 {u.title && <div className="mt-1 font-bold text-primary">{u.title}</div>}
                 <div className="page-content mt-1 text-sm" dangerouslySetInnerHTML={{ __html: u.body }} />
-                {u.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={u.photos} /></div>}
+                {u.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={u.photos} alt={geoPhotoAlt(areaName, u.title, locale)} locale={locale} /></div>}
               </li>
             ))}
           </ul>

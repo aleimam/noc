@@ -715,7 +715,9 @@ export function ListingForm({
               </div>
             ))}
             <div className="w-48">
-              <ImageAttachment stampCategory="listing" value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} />
+              {/* nameHint → keyword-rich saved filename (image SEO); title may be empty when
+                  photos are added first, in which case the route falls back to a uuid. */}
+              <ImageAttachment stampCategory="listing" nameHint={title} value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} />
             </div>
           </div>
         </div>

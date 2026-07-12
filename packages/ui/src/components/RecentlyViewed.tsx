@@ -57,7 +57,7 @@ export function RecentlyViewed({ title, excludeId, currency = 'ج.م' }: { title
             <div className="aspect-[16/10] bg-navy-100 dark:bg-navy-900">
               {it.cover ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={it.cover} alt="" className="h-full w-full object-cover" />
+                <img src={it.cover} alt={it.title} className="h-full w-full object-cover" />
               ) : null}
             </div>
             <div className="p-2">

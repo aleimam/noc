@@ -52,6 +52,9 @@ export function SellForm({
         const fd = new FormData();
         if (isImg) fd.append('file', await compressImage(file));
         else { fd.append('file', file); fd.append('kind', 'document'); }
+        // No ?name= slug hint here on purpose: these are private paper/document scans kept
+        // with the admin (never public), so a keyword-rich filename adds no SEO value. The
+        // upload route supports ?name= for public listing photos elsewhere.
         const res = await fetch('/api/upload', { method: 'POST', body: fd });
         const j = await res.json().catch(() => ({}));
         if (res.ok && j?.attachment) setAtt((p) => [...p, { id: j.attachment.id, path: j.attachment.path, name: j.attachment.originalName || file.name, isDoc: !isImg }]);

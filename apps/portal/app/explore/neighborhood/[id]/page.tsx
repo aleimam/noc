@@ -11,6 +11,7 @@ import { amenitiesForNeighborhood } from '../../../../lib/amenities';
 import { getGeoInheritance, updatesForNeighborhood, customPhotosForNeighborhood } from '../../../../lib/geoInheritance';
 import { SiteShell } from '../../../_components/SiteShell';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
+import { geoPhotoAlt } from '../../../../lib/imageAlt';
 import { districtHref, neighborhoodHref, neighborhoodParam, resolveNeighborhoodId } from '../../../../lib/geoHref';
 
 export const dynamic = 'force-dynamic';
@@ -59,6 +60,7 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
   const t = await getTranslations('lands');
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const m2 = localizeUnit('م²', locale);
+  const areaName = L(n.nameAr, n.nameEn); // for photo alt text (image SEO)
 
   const matrix = await getGeoInheritance();
   const [advantages, areaMaps, updates, amenityRows] = await Promise.all([
@@ -166,7 +168,7 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
                 {a.category && <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{L(a.category.ar, a.category.en)}</span>}
                 <span className="ms-2 font-semibold">{L(a.titleAr, a.titleEn || a.titleAr)}</span>
                 {(a.detailsAr || a.detailsEn) && <p className="mt-1 whitespace-pre-line text-sm opacity-80">{locale === 'ar' ? a.detailsAr : a.detailsEn || a.detailsAr}</p>}
-                {a.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={a.photos} /></div>}
+                {a.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={a.photos} alt={geoPhotoAlt(areaName, L(a.titleAr, a.titleEn || a.titleAr), locale)} locale={locale} /></div>}
               </li>
             ))}
           </ul>
@@ -176,13 +178,13 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
       {locationMap && (
         <section className="space-y-2">
           <h2 className="font-semibold text-primary">{locationTitle || t('locationMap')}</h2>
-          <PhotoGallery photos={[locationMap]} />
+          <PhotoGallery photos={[locationMap]} alt={geoPhotoAlt(areaName, locationTitle || t('locationMap'), locale)} locale={locale} />
         </section>
       )}
       {masterplanMap && (
         <section className="space-y-2">
           <h2 className="font-semibold text-primary">{masterplanRow?.title || t('masterplan')}</h2>
-          <PhotoGallery photos={[masterplanMap]} />
+          <PhotoGallery photos={[masterplanMap]} alt={geoPhotoAlt(areaName, masterplanRow?.title || t('masterplan'), locale)} locale={locale} />
         </section>
       )}
 
@@ -193,7 +195,7 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
             {c.title || L('صورة', 'Photo')}
             {c.source !== 'neighborhood' && <span className="rounded bg-gold/20 px-2 py-0.5 text-xs font-semibold text-primary">{photoChip(c.source)}</span>}
           </h2>
-          <PhotoGallery photos={[c.path]} />
+          <PhotoGallery photos={[c.path]} alt={geoPhotoAlt(areaName, c.title, locale)} locale={locale} />
         </section>
       ))}
 
@@ -211,7 +213,7 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
               </div>
               {u.title && <div className="mt-1 font-bold text-primary">{u.title}</div>}
               <div className="page-content mt-1 text-sm" dangerouslySetInnerHTML={{ __html: u.body }} />
-              {u.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={u.photos} /></div>}
+              {u.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={u.photos} alt={geoPhotoAlt(areaName, u.title, locale)} locale={locale} /></div>}
             </li>
           ))}
         </ul>

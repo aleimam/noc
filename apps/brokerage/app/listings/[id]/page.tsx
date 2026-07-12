@@ -14,6 +14,7 @@ import { wishlistListingIds } from '../../../lib/wishlist';
 import { trackListingView } from '../../../lib/views';
 import { getStorefront } from '../../../lib/storefront';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../lib/seo';
+import { listingAlt, geoPhotoAlt } from '../../../lib/imageAlt';
 import { BuyButton } from './BuyButton';
 import { HeroGallery } from './HeroGallery';
 import { ShareButtons } from './ShareButtons';
@@ -70,8 +71,27 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   const [wished, similar, store] = await Promise.all([wishlistListingIds(), similarLands(listingId, 4), getStorefront()]);
   const nb = await prisma.listing.findUnique({
     where: { id: listingId },
-    select: { neighborhoodId: true, hasAllocationLetter: true, allocationLetterDate: true, hasSaleMandate: true, saleMandateDate: true },
+    select: {
+      neighborhoodId: true,
+      hasAllocationLetter: true,
+      allocationLetterDate: true,
+      hasSaleMandate: true,
+      saleMandateDate: true,
+      neighborhood: { select: { nameAr: true, nameEn: true, district: { select: { nameAr: true, nameEn: true } } } },
+    },
   });
+  // Descriptive alt text for every public photo of this land (image SEO).
+  const areaName = nb?.neighborhood ? L(nb.neighborhood.nameAr, nb.neighborhood.nameEn) : null;
+  const photoAlt =
+    listingAlt(
+      {
+        type: land.typeAr,
+        area: land.actualArea,
+        district: nb?.neighborhood?.district ? L(nb.neighborhood.district.nameAr, nb.neighborhood.district.nameEn) : null,
+        neighborhood: areaName,
+      },
+      locale,
+    ) || land.title;
   const advGroups = await advantagesForNeighborhood(nb?.neighborhoodId, locale);
   const areaUpdates = await updatesForListing(nb?.neighborhoodId);
   const areaPhotos = await customPhotosForListing(nb?.neighborhoodId);
@@ -117,7 +137,14 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: land.title,
-    image: land.gallery.map((g) => `${BASE}${g}`),
+    // ImageObject entries (contentUrl + caption = the photo's alt); first is representativeOfPage.
+    image: land.gallery.map((g, i) => ({
+      '@type': 'ImageObject',
+      contentUrl: `${BASE}${g}`,
+      url: `${BASE}${g}`,
+      caption: land.gallery.length > 1 ? `${photoAlt} — ${L('صورة', 'photo')} ${i + 1}` : photoAlt,
+      ...(i === 0 ? { representativeOfPage: true } : {}),
+    })),
     description: land.specs.map((s) => `${s.label}: ${s.value}`).join(' · '),
     category: 'Real Estate Land',
     offers: {
@@ -144,7 +171,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
 
         <div className="mt-3 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div>
-            <HeroGallery photos={land.gallery} alt={land.title} locale={locale} />
+            <HeroGallery photos={land.gallery} alt={photoAlt} locale={locale} />
           </div>
 
           <aside className="space-y-4">
@@ -249,7 +276,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
         {land.locationMap && (
           <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
             <h2 className="mb-3 text-lg font-bold text-navy-800">{L('الموقع على الخريطة', 'Location on the map')}</h2>
-            <HeroGallery photos={[land.locationMap]} alt={L('موقع القطعة على المخطط', 'Plot location on the masterplan')} locale={locale} />
+            <HeroGallery photos={[land.locationMap]} alt={geoPhotoAlt(areaName, L('موقع القطعة على المخطط', 'Plot location on the masterplan'), locale)} locale={locale} />
             <p className="mt-2 text-center text-sm text-ink-500">{L('خريطة المجاورة موضّح عليها موقع القطعة', 'Neighborhood masterplan with the plot marked')}</p>
           </section>
         )}
@@ -261,7 +288,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
               {areaPhotos.map((p) => (
                 <div key={p.kind} className="space-y-2">
                   {p.title && <div className="font-semibold text-navy-800">{p.title}</div>}
-                  <PhotoGallery photos={[p.path]} />
+                  <PhotoGallery photos={[p.path]} alt={geoPhotoAlt(areaName, p.title, locale)} locale={locale} />
                 </div>
               ))}
             </div>
@@ -298,7 +325,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
         {genRows.length > 0 && (
           <div className="mt-6 rounded-2xl bg-white p-5 shadow-md">
             <h2 className="mb-3 text-lg font-bold text-navy-800">{L('صور العرض', 'Listing posters')}</h2>
-            <PhotoGallery photos={genRows.map((r) => r.path)} />
+            <PhotoGallery photos={genRows.map((r) => r.path)} alt={photoAlt} locale={locale} />
           </div>
         )}
 
@@ -358,7 +385,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
                   <span className="rounded bg-navy-50 px-2 py-0.5 text-xs text-navy-700">{a.type}</span>
                   <span className="ms-2 font-semibold text-navy-800">{a.title}</span>
                   {a.details && <p className="mt-1 whitespace-pre-line text-sm text-ink-600">{a.details}</p>}
-                  {a.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={a.photos} /></div>}
+                  {a.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={a.photos} alt={geoPhotoAlt(areaName, a.title, locale)} locale={locale} /></div>}
                 </li>
               ))}
             </ul>

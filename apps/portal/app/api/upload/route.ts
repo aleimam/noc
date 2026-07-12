@@ -25,6 +25,26 @@ const DOC_EXT: Record<string, string> = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
 };
 
+// Optional descriptive slug hint (image SEO): when the uploader passes ?name=<hint> the saved
+// file becomes `<slug>-<shortid>.<ext>` (keyword-rich) instead of a bare uuid. Uniqueness is
+// preserved by the shortid; when the hint is absent we keep the original random-uuid behavior
+// (fully backward compatible). The slug keeps Arabic letters + digits, collapsing everything
+// else to dashes, capped at ~60 chars.
+function slugifyHint(raw: string | null | undefined): string {
+  if (!raw) return '';
+  return raw
+    .normalize('NFKC')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-')
+    .slice(0, 60)
+    .replace(/-+$/g, '');
+}
+function fileStem(hint: string | null | undefined): string {
+  const slug = slugifyHint(hint);
+  return slug ? `${slug}-${randomUUID().slice(0, 8)}` : randomUUID();
+}
+
 // Trust the bytes, not the client-declared type. (SVG is intentionally excluded.)
 function sniffMime(buf: Buffer): string | null {
   if (buf.length < 12) return null;
@@ -86,7 +106,9 @@ export async function POST(req: NextRequest) {
   await mkdir(dir, { recursive: true });
 
   // Always store the PURE original untouched (immutable — enables reversible stamping).
-  const pureName = `${randomUUID()}.${ext}`;
+  // Descriptive stem from the optional ?name hint (images only; internal docs stay uuid).
+  const stem = fileStem(isDoc ? null : req.nextUrl.searchParams.get('name'));
+  const pureName = `${stem}.${ext}`;
   await writeFile(path.join(dir, pureName), buf);
   const purePath = `/uploads/${sub}/${pureName}`;
 
@@ -97,7 +119,7 @@ export async function POST(req: NextRequest) {
   if (category && (BAKED_CATEGORIES as string[]).includes(category)) {
     const stamped = Buffer.from(await stampForCategory(buf, category as StampCategory));
     if (!stamped.equals(buf)) {
-      const stName = `${randomUUID()}.${ext}`;
+      const stName = `${stem}-b.${ext}`;
       await writeFile(path.join(dir, stName), stamped);
       displayPath = `/uploads/${sub}/${stName}`;
       displaySize = stamped.length;

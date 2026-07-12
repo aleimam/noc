@@ -66,7 +66,7 @@ export default async function NewsDetail({ params }: { params: Promise<{ id: str
           <span className="text-xs text-ink-400">{fmt(n.publishedAt)}</span>
         </div>
         <h1 className="text-3xl font-extrabold leading-tight text-navy-800">{L(n.titleAr, n.titleEn)}</h1>
-        {photos.length > 0 && <PhotoGallery photos={photos.map((p) => p.path)} />}
+        {photos.length > 0 && <PhotoGallery photos={photos.map((p) => p.path)} alt={title} locale={locale} />}
         <div className="whitespace-pre-wrap leading-relaxed text-ink-700">{L(n.bodyAr, n.bodyEn)}</div>
       </article>
     </SiteShell>
