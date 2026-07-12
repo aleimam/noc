@@ -6,7 +6,8 @@ import { auth, requirePermission, loadSmsConfig } from '@noc/auth';
 import { prisma, Prisma } from '@noc/db';
 import { sendSms } from '@noc/sms';
 import { stampMapCopy } from '../../../../lib/mapStamp';
-import { districtHref, neighborhoodHref } from '../../../../lib/geoHref';
+import { cityHref, districtHref, neighborhoodHref } from '../../../../lib/geoHref';
+import { pingIndexNow, portalOrigin } from '../../../../lib/indexnow';
 import { sanitizeRichHtml } from '../../../../lib/sanitize';
 import { markAreaListingsStale } from '../../../../lib/poster/generate';
 import {
@@ -34,6 +35,24 @@ function revDetail(level: GeoLevel, id: string) {
     revalidatePath('/explore/neighborhood/[id]', 'page');
   }
 }
+/** Absolute canonical /explore URL for a geo-update target — null for block/land
+ *  (no public page of their own) or a missing row. Used for IndexNow pings. */
+async function geoUpdateUrl(level: GeoLevel, targetId: string): Promise<string | null> {
+  if (level === 'city') {
+    const c = await prisma.city.findUnique({ where: { id: targetId }, select: { id: true, key: true } });
+    return c ? portalOrigin() + cityHref(c) : null;
+  }
+  if (level === 'district') {
+    const d = await prisma.district.findUnique({ where: { id: targetId }, select: { id: true, key: true } });
+    return d ? portalOrigin() + districtHref(d) : null;
+  }
+  if (level === 'neighborhood') {
+    const n = await prisma.neighborhood.findUnique({ where: { id: targetId }, select: { id: true, nameAr: true, district: { select: { nameAr: true } } } });
+    return n ? portalOrigin() + neighborhoodHref(n) : null;
+  }
+  return null;
+}
+
 function geoField(level: GeoLevel, id: string) {
   return level === 'city'
     ? { cityId: id }
@@ -243,6 +262,10 @@ export async function addGeoUpdate(input: {
       });
     }
     revDetail(input.level, input.targetId);
+    // IndexNow: the update surfaces on the target's public explore page — fire-and-forget.
+    void geoUpdateUrl(input.level, input.targetId)
+      .then((url) => (url ? pingIndexNow([url]) : undefined))
+      .catch((e) => console.warn('indexnow geo ping failed', e));
     return { ok: true, id: u.id };
   } catch (e) {
     return fail(e);
@@ -818,10 +841,22 @@ export async function updateGeoUpdate(input: { id: string; title?: string; body:
       const d = new Date(input.happenedAt);
       if (!isNaN(d.getTime())) happenedAt = d;
     }
-    await prisma.geoUpdate.update({ where: { id: input.id }, data: { title: input.title?.trim() || null, body, ...(happenedAt ? { happenedAt } : {}) } });
+    const u = await prisma.geoUpdate.update({
+      where: { id: input.id },
+      data: { title: input.title?.trim() || null, body, ...(happenedAt ? { happenedAt } : {}) },
+      select: { cityId: true, districtId: true, neighborhoodId: true },
+    });
     revalidatePath('/admin/lands/updates');
     revalidatePath('/admin/lands', 'layout');
     revalidatePath('/explore', 'layout');
+    // IndexNow: re-announce the target's public explore page (city/district/neighborhood only).
+    const level: GeoLevel | null = u.cityId ? 'city' : u.districtId ? 'district' : u.neighborhoodId ? 'neighborhood' : null;
+    const targetId = u.cityId ?? u.districtId ?? u.neighborhoodId;
+    if (level && targetId) {
+      void geoUpdateUrl(level, targetId)
+        .then((url) => (url ? pingIndexNow([url]) : undefined))
+        .catch((e) => console.warn('indexnow geo ping failed', e));
+    }
     return { ok: true };
   } catch (e) {
     return fail(e);

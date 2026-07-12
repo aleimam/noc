@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { pingIndexNow, portalOrigin, brokerageOrigin } from '../../../../lib/indexnow';
 import { sanitizeRichHtml } from '../../../../lib/sanitize';
 
 type Result = { ok: true; id?: string } | { ok: false; error: string };
@@ -37,10 +38,19 @@ export async function savePage(input: {
   };
   try {
     let id = input.id;
-    if (id) await prisma.page.update({ where: { id }, data });
-    else id = (await prisma.page.create({ data })).id;
+    let wasPublished = false;
+    if (id) {
+      const prev = await prisma.page.findUnique({ where: { id }, select: { published: true } });
+      wasPublished = !!prev?.published;
+      await prisma.page.update({ where: { id }, data });
+    } else id = (await prisma.page.create({ data })).id;
     revalidatePath('/admin/pages');
     revalidatePath('/p/' + slug, 'layout');
+    // IndexNow: only on first publish, on the page's own brand host.
+    if (data.published && !wasPublished) {
+      const origin = brand === 'alsawarey' ? brokerageOrigin() : portalOrigin();
+      void pingIndexNow([`${origin}/p/${slug}`]).catch((e) => console.warn('indexnow page ping failed', e));
+    }
     return { ok: true, id };
   } catch (e) {
     const code = (e as { code?: string })?.code;

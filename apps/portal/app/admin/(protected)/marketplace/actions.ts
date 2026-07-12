@@ -5,6 +5,8 @@ import { prisma, Prisma } from '@noc/db';
 import { requirePermission, hashPassword } from '@noc/auth';
 import { isValidPhone } from '@noc/config';
 import { ensureAdNumber } from '../../../../lib/adNumber';
+import { marketHref } from '../../../../lib/listings';
+import { pingIndexNow, portalOrigin, brokerageOrigin, brokerageListingPath } from '../../../../lib/indexnow';
 import { regenerateListingImages } from '../../../../lib/poster/generate';
 import { snapshotPrices } from '../../../../lib/priceIndex';
 import { isPosterIcon } from '../../../../lib/poster/icons';
@@ -543,6 +545,19 @@ export async function approveListing(id: string): Promise<Result> {
     // Auto-generate the listing's image set (poster/cards/advantages) — fire-and-forget so
     // publishing stays snappy; failures are logged, not surfaced.
     void regenerateListingImages(id).catch((e) => console.error('auto-generate posters failed', e));
+    // IndexNow: announce the fresh canonical URLs (both brands) + home pages — fire-and-forget.
+    // Fetched after ensureAdNumber so the SEO slug carries the freshly assigned ad number.
+    void (async () => {
+      const l = await prisma.listing.findUnique({
+        where: { id },
+        select: { id: true, adNumber: true, area: true, showOnBrokerage: true, typeOption: { select: { nameEn: true } } },
+      });
+      if (!l) return;
+      const seo = { id: l.id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null };
+      const urls = [portalOrigin() + marketHref(seo), portalOrigin(), brokerageOrigin()];
+      if (l.showOnBrokerage) urls.push(brokerageOrigin() + brokerageListingPath(seo));
+      await pingIndexNow(urls);
+    })().catch((e) => console.warn('indexnow listing ping failed', e));
     revalidatePath('/admin/marketplace/listings', 'page');
     return { ok: true };
   } catch (e) {

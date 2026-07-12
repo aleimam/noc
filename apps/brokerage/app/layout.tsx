@@ -30,7 +30,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as Locale;
   const messages = await getMessages();
-  const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_alsawarey', 'pixel_alsawarey', 'gsc_alsawarey', 'alswarey_phone'] } } });
+  const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_alsawarey', 'pixel_alsawarey', 'gsc_alsawarey', 'bing_alsawarey', 'yandex_alsawarey', 'alswarey_phone'] } } });
   const s = Object.fromEntries(ids.map((r) => [r.key, r.value]));
   const themeCss = buildThemeCss(await getBrandTheme('alsawarey'));
   const siteUrl = (process.env.BROKERAGE_URL || 'https://alsawarey.com').replace(/\/$/, '');
@@ -61,6 +61,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeScript />
         {themeCss && <style id="brand-theme" dangerouslySetInnerHTML={{ __html: themeCss }} />}
         {s.gsc_alsawarey && <meta name="google-site-verification" content={s.gsc_alsawarey} />}
+        {s.bing_alsawarey && <meta name="msvalidate.01" content={s.bing_alsawarey} />}
+        {s.yandex_alsawarey && <meta name="yandex-verification" content={s.yandex_alsawarey} />}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
       <body className="min-h-screen font-sans antialiased">

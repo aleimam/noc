@@ -31,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as Locale;
   const messages = await getMessages();
-  const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_newobour', 'pixel_newobour', 'gsc_newobour'] } } });
+  const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_newobour', 'pixel_newobour', 'gsc_newobour', 'bing_newobour', 'yandex_newobour'] } } });
   const s = Object.fromEntries(ids.map((r) => [r.key, r.value]));
   const themeCss = buildThemeCss(await getBrandTheme('newobour'));
   const siteUrl = (process.env.PORTAL_URL || 'https://newobour.com').replace(/\/$/, '');
@@ -51,6 +51,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeScript />
         {themeCss && <style id="brand-theme" dangerouslySetInnerHTML={{ __html: themeCss }} />}
         {s.gsc_newobour && <meta name="google-site-verification" content={s.gsc_newobour} />}
+        {s.bing_newobour && <meta name="msvalidate.01" content={s.bing_newobour} />}
+        {s.yandex_newobour && <meta name="yandex-verification" content={s.yandex_newobour} />}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
       <body className="min-h-screen font-sans antialiased">

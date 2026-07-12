@@ -4,7 +4,10 @@ import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 
-const KEYS = ['ga4_newobour', 'pixel_newobour', 'ga4_alsawarey', 'pixel_alsawarey', 'gsc_newobour', 'gsc_alsawarey'];
+const KEYS = [
+  'ga4_newobour', 'pixel_newobour', 'ga4_alsawarey', 'pixel_alsawarey',
+  'gsc_newobour', 'gsc_alsawarey', 'bing_newobour', 'bing_alsawarey', 'yandex_newobour', 'yandex_alsawarey',
+];
 
 export async function saveAnalytics(values: Record<string, string>): Promise<{ ok: true } | { ok: false; error: string }> {
   await requirePermission('settings', 'UPDATE');

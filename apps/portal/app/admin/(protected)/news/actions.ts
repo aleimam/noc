@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { auth, requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { pingIndexNow, portalOrigin } from '../../../../lib/indexnow';
 import { sanitizeRichHtml } from '../../../../lib/sanitize';
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -25,9 +26,10 @@ export async function upsertNews(input: {
   if (!input.titleAr.trim() || !input.bodyAr.trim()) return { ok: false, error: 'failed' };
 
   let publishedAt: Date | null = input.published ? new Date() : null;
+  let wasPublished = false;
   if (input.id && input.published) {
     const ex = await prisma.news.findUnique({ where: { id: input.id }, select: { publishedAt: true } });
-    if (ex?.publishedAt) publishedAt = ex.publishedAt; // keep the original publish date on edits
+    if (ex?.publishedAt) { publishedAt = ex.publishedAt; wasPublished = true; } // keep the original publish date on edits
   }
   const data = {
     titleAr: input.titleAr.trim(),
@@ -54,6 +56,10 @@ export async function upsertNews(input: {
 
     revalidatePath('/admin/news');
     revalidatePath('/news');
+    // IndexNow: only on first publish (not on edits of already-published items).
+    if (input.published && !wasPublished) {
+      void pingIndexNow([`${portalOrigin()}/news`, `${portalOrigin()}/news/${id}`]).catch((e) => console.warn('indexnow news ping failed', e));
+    }
     return { ok: true };
   } catch {
     return { ok: false, error: 'failed' };

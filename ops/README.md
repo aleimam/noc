@@ -12,6 +12,7 @@ The big picture (deploy runbook, server map, gotchas) lives in the repo root **C
 | `OFFSITE.md` | One-time off-site backup setup (owner enters details in `/admin/settings/backups` or here) |
 | `RESTORE.md` | How to restore DB / uploads / .env from a backup (deliberately CLI-only) |
 | `MAIL-DELIVERABILITY.md` | Outbound mail: Postfix→Brevo relay, SPF/DKIM/DMARC state, testing |
+| `SEO-REGISTRATION.md` | One-time search-engine registration: GSC/Bing/Yandex verify via admin Settings, sitemaps, GA4, Business Profile, Egyptian portals (IndexNow pings are automatic) |
 | `HARDENING.md` | SSH/firewall hardening (applied; kept as reference) |
 
 ## Scripts
