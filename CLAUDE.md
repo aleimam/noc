@@ -2,7 +2,7 @@
 
 Master onboarding for anyone (human or Claude session) picking up this repo. It captures the
 architecture, the production runbook, and every hard-won gotcha. Deeper docs are linked at the
-bottom. Last full update: **2026-07-11**.
+bottom. Last full update: **2026-07-12**.
 
 ## What this is
 
@@ -150,11 +150,12 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 | Calculator | portal `/calculator` | area + تصالح cost calc, admin-editable rates |
 | News / Guide / Price index / Owner profiles | portal | public surfaces |
 | Web analytics | admin `/admin/analytics` | first-party: sessions, events, funnel, Web Vitals, cohorts, rollups, saved views |
+| **Search Intelligence** | public search on market/storefront/rationing · admin `/admin/analytics/search` | every search logged to `SearchLog` (Arabic-normalized, zeroResult, usedFastSearch) + select/convert attribution via `/api/search-event` beacons (heuristic recency — no server session id). Dashboard (funnel, top/zero/converting terms, filter by window·site·surface, RBAC `analytics`) hosts the **synonym dictionary** (`SearchSynonym` groups expand query tokens: term AND kept, variants OR'd) and the **zero-result lead inbox** (`SearchLead` — leads carry a phone, so inbox + editors need `analytics:MANAGE`). Public extras: zero-result "leave your number" card (`ZeroResultLead` → rate-limited `/api/search-lead`) and autocomplete (`SearchAutocomplete` → `/api/search-suggest`: cached corpus of types + geo names, trending when empty; picked suggestion sets `fast=1` → `usedFastSearch`). ⚠️ `apps/{portal,brokerage}/lib/search.ts` are MIRRORS — keep identical |
 | Backups | admin `/admin/settings/backups` | see server map above |
 | Appearance/theming | admin settings | per-site colors/fonts via Setting `theme.<brand>` |
 | Security posture | admin settings | `security.level` LIGHT/MEDIUM/HIGH gates scans/maps/quotas |
 
-## Current state & pending (as of 2026-07-11)
+## Current state & pending (as of 2026-07-12)
 
 **Owner-blocked (waiting on the owner, everything else is prepped):**
 1. **Cloudflare proxy flip (Part C)** — pure dashboard task now; ordered checklist in
@@ -171,6 +172,17 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 5. `/code-review ultra` — owner-triggered, billed; fold findings into `security.md` §7.
 6. **Enable the Price Index module** (Settings → Modules → مؤشر الأسعار) when the owner wants
    `/price-index` public — the page + monthly snapshot cron are live but hidden by this toggle.
+
+**2026-07-12: Search Intelligence COMPLETE (S1→S3c, all deployed+verified):** S1 logging + fuzzy
+per-token Arabic matching · S2 select/convert beacons · S3a dashboard + rationing wired into the
+unified log + storefront geo-haystack fix (cards now carry District/Neighborhood names — «الحى
+العاشر» used to return 0 on Al Sawarey) · S3b admin synonym dictionary + query expansion ·
+S3c zero-result lead capture (+ manager-only inbox) + autocomplete/trending on the market search,
+Al Sawarey hero + header. Same day: numerical district/neighborhood ordering everywhere (+
+`ops/backfill-neighborhood-order.ts`), staff land-plots admin UI removed (Land model + customer
+My-Lands kept), city now a mandatory auto-selected basic detail on every listing
+(`REQUIRED_LISTING_ATTR_KEYS` in @noc/config + `ops/city-mandatory.ts`, ran on prod), and photo
+SEO enriched (alt text + upload filenames lead with city → district → neighborhood).
 
 **2026-07-11 sweep (see ROADMAP "Current status"):** full UI/UX review fixed+deployed (~80
 findings incl. wa.me links via shared `waPhone()`, Toaster in both apps, partner photo-drop,
