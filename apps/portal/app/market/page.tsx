@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma, Prisma } from '@noc/db';
+import { auth } from '@noc/auth';
 import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { ListingCard, RecentlyViewed, TrackEvent } from '@noc/ui';
 import { SiteShell } from '../_components/SiteShell';
@@ -14,6 +15,7 @@ import { SeoIntro } from '../_components/SeoText';
 import { getSeoIntro } from '../../lib/seoContent';
 import { partnershipsEnabled } from '../../lib/modules';
 import { marketHref } from '../../lib/listings';
+import { logSearch, normalizeSearch } from '../../lib/search';
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
@@ -35,6 +37,7 @@ export default async function MarketPage({
   const t = await getTranslations('mp');
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const get = (k: string) => (typeof sp[k] === 'string' ? (sp[k] as string) : '');
+  const q = get('q').trim();
   const partnershipsOn = await partnershipsEnabled();
   const intro = await getSeoIntro('market', locale);
 
@@ -77,12 +80,44 @@ export default async function MarketPage({
     }
   }
 
-  const listings = await prisma.listing.findMany({
+  // Free-text search is Arabic-normalized + multi-term (every term must appear in the
+  // listing's haystack). We can't express that in Prisma, so with a query we pull a capped
+  // candidate pool (facets/visibility still applied in SQL) and match in JS.
+  // NOTE: fine at current inventory; if listings grow past a few thousand, move `normalized`
+  // to a stored column + prefix index instead of scanning the pool in JS.
+  const CANDIDATE_CAP = 500;
+  const pool = await prisma.listing.findMany({
     where: { AND: and },
     orderBy: { publishedAt: 'desc' },
-    take: 60,
-    include: { typeOption: true },
+    take: q ? CANDIDATE_CAP : 60,
+    include: {
+      typeOption: true,
+      neighborhood: { select: { nameAr: true, nameEn: true, district: { select: { nameAr: true, nameEn: true } } } },
+    },
   });
+
+  let listings = pool;
+  if (q) {
+    const terms = normalizeSearch(q).split(' ').filter(Boolean);
+    const matched = pool.filter((l) => {
+      const hay = normalizeSearch(
+        [
+          l.title,
+          l.typeOption?.nameAr, l.typeOption?.nameEn,
+          l.neighborhood?.district?.nameAr, l.neighborhood?.district?.nameEn,
+          l.neighborhood?.nameAr, l.neighborhood?.nameEn,
+          l.adNumber,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      );
+      return terms.every((t) => hay.includes(t));
+    });
+    const userId = (await auth())?.user?.id ?? null;
+    logSearch({ site: 'newobour', surface: 'market', query: q, resultsCount: matched.length, userId });
+    listings = matched.slice(0, 60);
+  }
+
   const ids = listings.map((l) => l.id);
   const covers = ids.length
     ? await prisma.attachment.findMany({
@@ -100,6 +135,24 @@ export default async function MarketPage({
       <div className="mx-auto max-w-5xl space-y-5 p-6">
       <h1 className="text-2xl font-extrabold text-navy-800">{t('title')}</h1>
       <SeoIntro text={intro} />
+
+      {/* Free-text search (Arabic-normalized, multi-term). Preserves the active type/partnership
+          facets via hidden fields; the instant/autocomplete box is a later phase (S2/S3). */}
+      <form action="/market" method="get" className="flex items-center gap-2 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-graphite/15">
+        {typeKey && <input type="hidden" name="type" value={typeKey} />}
+        {partnershipsOn && get('partnership') === '1' && <input type="hidden" name="partnership" value="1" />}
+        <span className="ps-2 text-gold" aria-hidden>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
+        </span>
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder={L('ابحث بالعنوان أو المنطقة أو رقم الإعلان…', 'Search by title, area or ad number…')}
+          aria-label={L('ابحث في السوق', 'Search the marketplace')}
+          className="min-w-0 flex-1 bg-transparent px-1 py-2.5 text-lg text-navy-800 outline-none placeholder:text-ink-400"
+        />
+        <button type="submit" className="flex-none rounded-xl bg-gold px-5 py-2.5 text-lg font-bold text-navy-900 transition hover:brightness-105">{L('بحث', 'Search')}</button>
+      </form>
 
       <MarketFilters
         partnershipsEnabled={partnershipsOn}

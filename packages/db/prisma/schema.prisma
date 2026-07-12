@@ -1118,6 +1118,30 @@ model SheetSearchLog {
   @@index([matched])
 }
 
+/// Search Intelligence (2026-07): one row per public search on market/storefront/rationing.
+/// Feeds the admin search-analytics dashboard (top terms, zero-result terms, refinement,
+/// fast-search usage, term→selection→conversion). No FKs — logs guest sessions too.
+model SearchLog {
+  id                String   @id @default(cuid())
+  site              String // 'newobour' | 'alsawarey'
+  surface           String // 'market' | 'storefront' | 'rationing'
+  sessionId         String? // analytics VisitSession id — refinement (multi-search) detection
+  userId            String?
+  query             String   @db.Text // raw as typed
+  normalized        String   @db.VarChar(191) // Arabic-normalized, for grouping/top-terms
+  resultsCount      Int      @default(0)
+  zeroResult        Boolean  @default(false)
+  usedFastSearch    Boolean  @default(false) // came from the instant/autocomplete box
+  selectedListingId String? // the result the user opened (soft ref)
+  converted         Boolean  @default(false) // a contact/offer followed in the same session
+  createdAt         DateTime @default(now())
+
+  @@index([site, createdAt])
+  @@index([normalized])
+  @@index([zeroResult, createdAt])
+  @@index([selectedListingId])
+}
+
 // ─────────────────── Module 2: Lands & community database ───────────────────
 
 enum LandType {

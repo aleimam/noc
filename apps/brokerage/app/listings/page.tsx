@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { Prisma, prisma } from '@noc/db';
+import { auth } from '@noc/auth';
 import { StoreShell } from '../_components/StoreShell';
 import { RecentlyViewed } from '@noc/ui';
 import { StoreLandCard } from '../_components/StoreLandCard';
@@ -9,6 +10,7 @@ import { listLands, ATTR } from '../../lib/listings';
 import { getAdminViewer, ownerBadges } from '../../lib/adminView';
 import { wishlistListingIds } from '../../lib/wishlist';
 import { pageMeta } from '../../lib/seo';
+import { logSearch, normalizeSearch } from '../../lib/search';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,8 +61,9 @@ export default async function Catalogue({
   const page = Math.max(1, num(sp.page) ?? 1);
 
   const and: Prisma.ListingWhereInput[] = [];
-  // Posters print the ad number — let people search by it, not just the title.
-  if (q) and.push({ OR: [{ title: { contains: q } }, { adNumber: { contains: q } }] });
+  // Free-text `q` is matched in JS below (Arabic-normalized, multi-term over the card's
+  // title/type/district/city/ad-number) — not a raw SQL `contains` — so it's forgiving of
+  // spelling/diacritics and word order. The facet filters below still run in SQL.
   if (area != null) and.push(attr(ATTR.area, { number: area }));
   else if (areaMin != null || areaMax != null) {
     and.push(attr(ATTR.area, { number: { ...(areaMin != null ? { gte: areaMin } : {}), ...(areaMax != null ? { lte: areaMax } : {}) } }));
@@ -93,10 +96,32 @@ export default async function Catalogue({
   const orderBy: Prisma.ListingOrderByWithRelationInput[] =
     sort === 'price_asc' ? [{ price: 'asc' }] : sort === 'price_desc' ? [{ price: 'desc' }] : [{ status: 'asc' }, { publishedAt: 'desc' }];
 
-  const [{ cards, total }, wished] = await Promise.all([
-    listLands({ where: and.length ? { AND: and } : {}, orderBy, take: PAGE, skip: (page - 1) * PAGE }),
-    wishlistListingIds(),
-  ]);
+  const where: Prisma.ListingWhereInput = and.length ? { AND: and } : {};
+  let cards: Awaited<ReturnType<typeof listLands>>['cards'];
+  let total: number;
+  if (q) {
+    // With a text query, pull a capped candidate pool (facets applied in SQL), match in JS,
+    // then paginate the matches. Fine at current inventory; if lands grow past a few thousand,
+    // move the `normalized` haystack to a stored column + prefix index instead of scanning here.
+    const CANDIDATE_CAP = 500;
+    const pool = await listLands({ where, orderBy, take: CANDIDATE_CAP, skip: 0 });
+    const terms = normalizeSearch(q).split(' ').filter(Boolean);
+    const matched = pool.cards.filter((land) => {
+      const hay = normalizeSearch(
+        [land.title, land.typeAr, land.typeEn, land.districtAr, land.cityAr, land.adNumber].filter(Boolean).join(' '),
+      );
+      return terms.every((t) => hay.includes(t));
+    });
+    const userId = (await auth())?.user?.id ?? null;
+    logSearch({ site: 'alsawarey', surface: 'storefront', query: q, resultsCount: matched.length, userId });
+    total = matched.length;
+    cards = matched.slice((page - 1) * PAGE, page * PAGE);
+  } else {
+    const res = await listLands({ where, orderBy, take: PAGE, skip: (page - 1) * PAGE });
+    cards = res.cards;
+    total = res.total;
+  }
+  const wished = await wishlistListingIds();
   const totalPages = Math.ceil(total / PAGE);
   // Staff admin view: owner badge on each card.
   const owners = (await getAdminViewer()) ? await ownerBadges(cards.map((c) => c.id)) : null;
