@@ -79,7 +79,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
       <header className="sticky top-0 z-40 bg-navy-800 text-white shadow-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4">
           <StoreMobileMenu
             locale={locale}
             brand={L('الصواري', 'Al Sawarey')}
@@ -96,12 +96,14 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
             <img src="/brand/logo" alt="الصواري للاستثمار العقاري" className="h-10 w-auto" />
           </Link>
 
-          <nav className="hidden flex-1 items-center gap-1 md:flex">
-            <Link href={content.nav.allLands.href} className="rounded-lg px-3 py-2 text-sm hover:bg-white/10">{Lc(content.nav.allLands.label)}</Link>
-            <Link href={content.nav.featured.href} className="rounded-lg px-3 py-2 text-sm font-bold text-gold hover:bg-white/10">★ {Lc(content.nav.featured.label)}</Link>
+          {/* Desktop nav appears at lg (≥1024) only — below that the hamburger holds it, so
+              the busy row never overflows at tablet widths. */}
+          <nav className="hidden items-center gap-0.5 lg:flex">
+            <Link href={content.nav.allLands.href} className="whitespace-nowrap rounded-lg px-2.5 py-2 text-sm hover:bg-white/10">{Lc(content.nav.allLands.label)}</Link>
+            <Link href={content.nav.featured.href} className="whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-bold text-gold hover:bg-white/10">★ {Lc(content.nav.featured.label)}</Link>
             {content.nav.groups.map((group, gi) => (
               <div key={gi} className="group relative">
-                <button className="rounded-lg px-3 py-2 text-sm hover:bg-white/10">{Lc(group.title)} ▾</button>
+                <button className="whitespace-nowrap rounded-lg px-2.5 py-2 text-sm hover:bg-white/10">{Lc(group.title)} ▾</button>
                 <div className="invisible absolute start-0 top-full z-50 min-w-44 rounded-xl bg-white p-2 text-navy-800 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 dark:bg-navy-800 dark:text-soft">
                   {group.links.map((link, li) => (
                     <Link key={li} href={link.href} className="block rounded-lg px-3 py-1.5 text-sm hover:bg-navy-50">{Lc(link.label)}</Link>
@@ -109,18 +111,21 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             ))}
-            <Link href={content.nav.sell.href} className="rounded-lg px-3 py-2 text-sm font-bold text-gold hover:bg-white/10">{Lc(content.nav.sell.label)}</Link>
-            <Link href="/partner/login" className="rounded-lg px-3 py-2 text-sm hover:bg-white/10">{L('الشركاء', 'Partners')}</Link>
+            <Link href={content.nav.sell.href} className="whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-bold text-gold hover:bg-white/10">{Lc(content.nav.sell.label)}</Link>
+            <Link href="/partner/login" className="whitespace-nowrap rounded-lg px-2.5 py-2 text-sm hover:bg-white/10">{L('الشركاء', 'Partners')}</Link>
           </nav>
 
-          <div className="ms-auto flex items-center gap-2">
-            <SearchBox placeholder={L('ابحث عن أرض…', 'Search lands…')} />
-            <div className="hidden items-center gap-2 md:flex">
-              <Link href="/wishlist" aria-label={L('المفضلة', 'Wishlist')} className="rounded-lg px-2 py-1.5 text-lg hover:bg-white/10">♥</Link>
-              <Link href="/account" className="rounded-lg border border-white/20 px-3 py-1.5 text-sm hover:bg-white/10">{L('حسابي', 'Account')}</Link>
-              <LanguageSwitcher />
-              <ThemeToggle />
-            </div>
+          {/* Flexible spacer holding the search — grows to fill, shrinks first so the row
+              stays one line at every width. */}
+          <div className="flex min-w-0 flex-1 justify-end lg:justify-start">
+            <SearchBox className="w-full max-w-[13rem]" placeholder={L('ابحث عن أرض…', 'Search lands…')} />
+          </div>
+
+          <div className="hidden flex-none items-center gap-2 lg:flex">
+            <Link href="/wishlist" aria-label={L('المفضلة', 'Wishlist')} className="rounded-lg px-2 py-1.5 text-lg hover:bg-white/10">♥</Link>
+            <Link href="/account" className="whitespace-nowrap rounded-lg border border-white/20 px-3 py-1.5 text-sm hover:bg-white/10">{L('حسابي', 'Account')}</Link>
+            <LanguageSwitcher />
+            <ThemeToggle />
           </div>
         </div>
       </header>

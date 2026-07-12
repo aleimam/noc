@@ -297,7 +297,11 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
   for (const v of l.values) {
     if (!v.attribute.isActive) continue;
     const label = L(v.attribute.labelAr, v.attribute.labelEn);
-    const geo = (v.attribute.type === 'DISTRICT' || v.attribute.type === 'NEIGHBORHOOD') && v.text ? geoName.get(v.text) : null;
+    const isGeo = v.attribute.type === 'DISTRICT' || v.attribute.type === 'NEIGHBORHOOD';
+    const geo = isGeo && v.text ? geoName.get(v.text) : null;
+    // A geo value that no longer resolves (deleted/stale district or neighborhood) must NOT
+    // fall through to formatDetailValue, which would print the raw id — drop the row instead.
+    if (isGeo && !geo) continue;
     const value = geo
       ? L(geo.ar, geo.en)
       : v.listItem
