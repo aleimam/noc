@@ -299,15 +299,18 @@ export function UpdatesEditor({ level, targetId, updates, followerCount, locale 
                 ))}
               </div>
             )}
-            <div className="mt-2">
-              {u.notifiedAt ? (
-                <span className="text-xs text-green">📣 {t('sent')} · <span dir="ltr">{fmt(u.notifiedAt)}</span></span>
-              ) : (
-                <button disabled={pending} onClick={() => notify(u.id)} className="rounded border border-green/40 px-3 py-1 text-xs font-bold text-green hover:bg-green/10">
-                  📣 {t('notifyFollowers')} ({followerCount})
-                </button>
-              )}
-            </div>
+            {/* City updates have no SMS audience (LandFollow has no cityId) → no notify UI. */}
+            {level !== 'city' && (
+              <div className="mt-2">
+                {u.notifiedAt ? (
+                  <span className="text-xs text-green">📣 {t('sent')} · <span dir="ltr">{fmt(u.notifiedAt)}</span></span>
+                ) : (
+                  <button disabled={pending} onClick={() => notify(u.id)} className="rounded border border-green/40 px-3 py-1 text-xs font-bold text-green hover:bg-green/10">
+                    📣 {t('notifyFollowers')} ({followerCount})
+                  </button>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ul>

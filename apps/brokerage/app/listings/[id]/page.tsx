@@ -6,6 +6,7 @@ import { prisma } from '@noc/db';
 import { PhotoGallery, TrackView, AreaAdvantages } from '@noc/ui';
 import { StoreShell } from '../../_components/StoreShell';
 import { advantagesForNeighborhood } from '../../../lib/advantages';
+import { updatesForListing } from '../../../lib/geoInheritance';
 import { StoreLandCard } from '../../_components/StoreLandCard';
 import { getLandDetail, resolveListingId, similarLands } from '../../../lib/listings';
 import { getAdminViewer, ownerDetailFor } from '../../../lib/adminView';
@@ -72,6 +73,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     select: { neighborhoodId: true, hasAllocationLetter: true, allocationLetterDate: true, hasSaleMandate: true, saleMandateDate: true },
   });
   const advGroups = await advantagesForNeighborhood(nb?.neighborhoodId, locale);
+  const areaUpdates = await updatesForListing(nb?.neighborhoodId);
   const genRows = await prisma.attachment.findMany({
     where: { ownerType: 'ListingPoster', ownerId: listingId, stampCategory: { contains: 'alsawarey' } },
     orderBy: { stampCategory: 'asc' },
@@ -255,6 +257,27 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
           <div className="mt-6 rounded-2xl bg-white p-5 shadow-md">
             <AreaAdvantages heading={L('مميزات المنطقة', 'Area advantages')} groups={advGroups} />
           </div>
+        )}
+
+        {/* Inherited area updates (geo.inheritance matrix — updates.toListing). Collapsed by
+            default so the listing itself stays the star. */}
+        {areaUpdates.length > 0 && (
+          <details className="mt-6 rounded-2xl bg-white p-5 shadow-md">
+            <summary className="cursor-pointer text-lg font-bold text-navy-800">{L('عن المنطقة — آخر التحديثات', 'About the area — latest updates')}</summary>
+            <ul className="mt-3 space-y-2">
+              {areaUpdates.map((u) => (
+                <li key={u.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-ink-100 p-3 text-sm">
+                  <span className="rounded bg-gold/15 px-2 py-0.5 text-xs font-semibold text-navy-700">
+                    {u.source === 'city' ? L('المدينة', 'City') : u.source === 'district' ? L('الحي', 'District') : L('المجاورة', 'Neighborhood')}
+                  </span>
+                  <span className="font-semibold text-navy-800">{u.title || L('تحديث', 'Update')}</span>
+                  <span className="ms-auto font-num text-xs text-ink-500" dir="ltr">
+                    {new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(u.happenedAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
 
         {genRows.length > 0 && (

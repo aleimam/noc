@@ -1,10 +1,12 @@
 import { prisma, Prisma } from '@noc/db';
+import { getGeoInheritance, type GeoInheritanceMatrix } from './geoInheritance';
 
 // Reusable amenity library + placement helpers. An amenity is built once and attached to
-// neighborhoods / districts / listings; public surfaces gather by inheritance:
-//   neighborhood → its own placements + its district's
-//   district     → its own placements
-//   listing      → its own + its neighborhood's + its district's
+// neighborhoods / districts / listings; public surfaces gather by inheritance, gated by
+// the admin matrix (Setting 'geo.inheritance' — see lib/geoInheritance.ts):
+//   neighborhood → its own placements + its district's (amenities.districtToNeighborhood)
+//   district     → its own placements (AmenityPlacement has no cityId → no city amenities)
+//   listing      → its own + (amenities.toListing) its neighborhood's + its district's
 
 export type AmenityCard = {
   id: string;
@@ -49,14 +51,40 @@ async function loadCards(where: Prisma.AmenityPlacementWhereInput): Promise<Amen
   }));
 }
 
-export function amenitiesForNeighborhood(neighborhoodId: string, districtId: string | null) {
+export async function amenitiesForNeighborhood(
+  neighborhoodId: string,
+  districtId: string | null,
+  matrix?: GeoInheritanceMatrix,
+) {
+  const m = matrix ?? (await getGeoInheritance());
   const or: Prisma.AmenityPlacementWhereInput[] = [{ neighborhoodId }];
-  if (districtId) or.push({ districtId });
+  if (districtId && m.amenities.districtToNeighborhood) or.push({ districtId });
   return loadCards({ OR: or });
 }
 
+// City amenities are not supported (AmenityPlacement has no cityId) — a district shows
+// only its own placements, so the matrix has nothing to gate here.
 export function amenitiesForDistrict(districtId: string) {
   return loadCards({ districtId });
+}
+
+/** Amenities for a LISTING page: its own placements always; area placements only when
+ *  amenities.toListing is on (district hop additionally needs districtToNeighborhood). */
+export async function amenitiesForListing(
+  listingId: string,
+  neighborhoodId: string | null | undefined,
+  matrix?: GeoInheritanceMatrix,
+) {
+  const m = matrix ?? (await getGeoInheritance());
+  const or: Prisma.AmenityPlacementWhereInput[] = [{ listingId }];
+  if (neighborhoodId && m.amenities.toListing) {
+    or.push({ neighborhoodId });
+    if (m.amenities.districtToNeighborhood) {
+      const n = await prisma.neighborhood.findUnique({ where: { id: neighborhoodId }, select: { districtId: true } });
+      if (n?.districtId) or.push({ districtId: n.districtId });
+    }
+  }
+  return loadCards({ OR: or });
 }
 
 // ── Admin helpers ──

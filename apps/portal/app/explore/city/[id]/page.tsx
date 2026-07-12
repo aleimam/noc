@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { PhotoGallery } from '@noc/ui';
 import { SiteShell } from '../../../_components/SiteShell';
+import { updatesForCity } from '../../../../lib/geoInheritance';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -39,11 +40,15 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
   });
   if (!city || !city.isActive) notFound();
 
-  const maps = await prisma.areaMap.findMany({ where: { level: 'city', areaId: id } });
+  const [maps, updates] = await Promise.all([
+    prisma.areaMap.findMany({ where: { level: 'city', areaId: id } }),
+    updatesForCity(id),
+  ]);
   const pick = (kind: string) => {
     const r = maps.find((x) => x.kind === kind);
     return r ? r.newobourPath || r.cleanPath : null;
   };
+  const fmt = (dt: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(dt);
   // Owner decision (2026-07-11): the geo explorer — details, maps, advantages — is fully public.
   const mapSections: { key: string; label: string }[] = [
     { key: 'masterplan', label: t('masterplan') },
@@ -86,6 +91,21 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
             </section>
           );
         })}
+
+        <section className="space-y-2">
+          <h2 className="font-semibold text-primary">{t('updates')}</h2>
+          {updates.length === 0 && <p className="text-sm opacity-60">{t('noUpdates')}</p>}
+          <ul className="space-y-2">
+            {updates.map((u) => (
+              <li key={u.id} className="rounded-lg border border-graphite/15 p-3">
+                <div className="text-xs opacity-60" dir="ltr">{fmt(u.happenedAt)}</div>
+                {u.title && <div className="mt-1 font-bold text-primary">{u.title}</div>}
+                <div className="page-content mt-1 text-sm" dangerouslySetInnerHTML={{ __html: u.body }} />
+                {u.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={u.photos} /></div>}
+              </li>
+            ))}
+          </ul>
+        </section>
 
         {city.districts.length > 0 && (
           <section className="space-y-2">

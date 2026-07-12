@@ -13,6 +13,7 @@ export type UpdateRow = {
 
 /** Load a geographic entity's updates (newest first) with their photo paths. */
 export async function loadUpdates(where: {
+  cityId?: string;
   districtId?: string;
   neighborhoodId?: string;
   blockId?: string;

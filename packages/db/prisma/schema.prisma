@@ -1154,6 +1154,7 @@ model City {
 
   districts  District[]
   advantages Advantage[]
+  updates    GeoUpdate[]
 
   @@index([isActive, order])
 }
@@ -1289,6 +1290,7 @@ model Land {
 /// A dated update on any geographic level; inherited downward at query time. Photos via Attachment.
 model GeoUpdate {
   id             String   @id @default(cuid())
+  cityId         String? // city-level update (2026-07-12): inherits down per Setting geo.inheritance
   districtId     String?
   neighborhoodId String?
   blockId        String?
@@ -1300,12 +1302,14 @@ model GeoUpdate {
   createdAt      DateTime @default(now())
   notifiedAt     DateTime? // set when followers have been SMS-notified
 
+  city         City?         @relation(fields: [cityId], references: [id], onDelete: Cascade)
   district     District?     @relation(fields: [districtId], references: [id], onDelete: Cascade)
   neighborhood Neighborhood? @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
   block        Block?        @relation(fields: [blockId], references: [id], onDelete: Cascade)
   land         Land?         @relation(fields: [landId], references: [id], onDelete: Cascade)
   createdBy    User?         @relation("GeoUpdateAuthor", fields: [createdById], references: [id], onDelete: SetNull)
 
+  @@index([cityId, happenedAt])
   @@index([districtId, happenedAt])
   @@index([neighborhoodId, happenedAt])
   @@index([blockId, happenedAt])

@@ -8,18 +8,27 @@ import { RichEditor } from '../../pages/RichEditor';
 import { addGeoUpdate, updateGeoUpdate, deleteGeoUpdate, notifyGeoUpdate } from '../actions';
 
 type Option = { value: string; label: string };
-type Row = { id: string; title: string | null; body: string; happenedAt: string; notifiedAt: string | null; author: string | null; area: string };
+type Level = 'city' | 'district' | 'neighborhood';
+type Row = { id: string; title: string | null; body: string; happenedAt: string; notifiedAt: string | null; author: string | null; area: string; isCity: boolean };
 const inp = 'w-full rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm';
 
-export function UpdatesManager({ options, rows, locale }: { options: Option[]; rows: Row[]; locale: 'ar' | 'en' }) {
+export function UpdatesManager({ targets, rows, locale }: { targets: Record<Level, Option[]>; rows: Row[]; locale: 'ar' | 'en' }) {
   const t = useTranslations('lands');
   const router = useRouter();
   const [pending, start] = useTransition();
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const fmt = (s: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
   const plain = (html: string) => html.replace(/<[^>]+>/g, '').trim();
 
-  // create state
-  const [target, setTarget] = useState(options[0]?.value ?? '');
+  const levels: { key: Level; label: string }[] = [
+    { key: 'city', label: L('المدينة', 'City') },
+    { key: 'district', label: L('الحي', 'District') },
+    { key: 'neighborhood', label: L('المجاورة', 'Neighborhood') },
+  ];
+
+  // create state — level picker + a target select filtered by level
+  const [level, setLevel] = useState<Level>('district');
+  const [targetId, setTargetId] = useState(targets.district[0]?.value ?? '');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [happenedAt, setHappenedAt] = useState('');
@@ -27,11 +36,14 @@ export function UpdatesManager({ options, rows, locale }: { options: Option[]; r
   // edit state
   const [edit, setEdit] = useState<{ id: string; title: string; body: string; happenedAt: string } | null>(null);
 
+  function pickLevel(l: Level) {
+    setLevel(l);
+    setTargetId(targets[l][0]?.value ?? '');
+  }
   function create() {
-    if (!target || !plain(body)) return;
-    const [level, targetId] = target.split(':');
+    if (!targetId || !plain(body)) return;
     start(async () => {
-      const r = await addGeoUpdate({ level: level as 'district' | 'neighborhood', targetId: targetId!, title: title || undefined, body, happenedAt: happenedAt || undefined, photoIds: photos.map((p) => p.id) });
+      const r = await addGeoUpdate({ level, targetId, title: title || undefined, body, happenedAt: happenedAt || undefined, photoIds: photos.map((p) => p.id) });
       if (!r.ok) { toast(locale === 'ar' ? 'تعذّر الحفظ' : 'Save failed', 'error'); return; }
       setTitle('');
       setBody('');
@@ -69,9 +81,15 @@ export function UpdatesManager({ options, rows, locale }: { options: Option[]; r
       {/* create */}
       <div className="space-y-2 rounded-lg border border-graphite/15 p-3">
         <h2 className="font-semibold text-primary">{t('addUpdate')}</h2>
-        <select value={target} onChange={(e) => setTarget(e.target.value)} className={inp}>
-          {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <select value={level} onChange={(e) => pickLevel(e.target.value as Level)} className={inp}>
+            {levels.map((l) => <option key={l.key} value={l.key}>{l.label}</option>)}
+          </select>
+          <select value={targetId} onChange={(e) => setTargetId(e.target.value)} className={inp}>
+            {targets[level].length === 0 && <option value="">{t('none')}</option>}
+            {targets[level].map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('updateTitle')} className={inp} />
         <RichEditor value={body} onChange={setBody} />
         <div className="flex flex-wrap items-center gap-2">
@@ -84,7 +102,7 @@ export function UpdatesManager({ options, rows, locale }: { options: Option[]; r
             </span>
           ))}
           <div className="w-28"><ImageAttachment stampCategory="area-update" value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} /></div>
-          <button disabled={pending || !plain(body)} onClick={create} className="rounded bg-primary px-3 py-1.5 text-sm text-soft disabled:opacity-50">+ {t('add')}</button>
+          <button disabled={pending || !targetId || !plain(body)} onClick={create} className="rounded bg-primary px-3 py-1.5 text-sm text-soft disabled:opacity-50">+ {t('add')}</button>
         </div>
       </div>
 
@@ -114,13 +132,16 @@ export function UpdatesManager({ options, rows, locale }: { options: Option[]; r
                 </div>
                 {u.title && <div className="mt-1 font-bold text-primary">{u.title}</div>}
                 <div className="page-content mt-1 text-sm" dangerouslySetInnerHTML={{ __html: u.body }} />
-                <div className="mt-2">
-                  {u.notifiedAt ? (
-                    <span className="text-xs text-green">📣 {t('sent')} · <span dir="ltr">{fmt(u.notifiedAt)}</span></span>
-                  ) : (
-                    <button disabled={pending} onClick={() => notify(u.id)} className="rounded border border-green/40 px-3 py-1 text-xs font-bold text-green hover:bg-green/10">📣 {t('notifyFollowers')}</button>
-                  )}
-                </div>
+                {/* City updates have no SMS audience (LandFollow has no cityId) → no notify UI. */}
+                {!u.isCity && (
+                  <div className="mt-2">
+                    {u.notifiedAt ? (
+                      <span className="text-xs text-green">📣 {t('sent')} · <span dir="ltr">{fmt(u.notifiedAt)}</span></span>
+                    ) : (
+                      <button disabled={pending} onClick={() => notify(u.id)} className="rounded border border-green/40 px-3 py-1 text-xs font-bold text-green hover:bg-green/10">📣 {t('notifyFollowers')}</button>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </li>

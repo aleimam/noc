@@ -6,6 +6,7 @@ import { PhotoGallery, ListingCard } from '@noc/ui';
 import { localizeUnit, currency, type Locale } from '@noc/i18n';
 import { areaListings } from '../../../../lib/areaListings';
 import { amenitiesForDistrict } from '../../../../lib/amenities';
+import { getGeoInheritance, updatesForDistrict } from '../../../../lib/geoInheritance';
 import { SiteShell } from '../../../_components/SiteShell';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
 
@@ -40,31 +41,30 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const m2 = localizeUnit('م²', locale);
 
+  const matrix = await getGeoInheritance();
   const [advantages, areaMaps, updates, amenityRows] = await Promise.all([
     prisma.advantage.findMany({ where: { districtId: id }, orderBy: { order: 'asc' } }),
     prisma.areaMap.findMany({ where: { level: 'district', areaId: id } }),
-    prisma.geoUpdate.findMany({ where: { districtId: id, neighborhoodId: null }, orderBy: { happenedAt: 'desc' }, take: 50 }),
+    // own updates + inherited city updates (per the inheritance matrix), source-tagged
+    updatesForDistrict(id, d.cityId, matrix),
     amenitiesForDistrict(id),
   ]);
   const listingCards = await areaListings({ neighborhood: { districtId: id } });
 
-  const updIds = updates.map((u) => u.id);
-  const photos = updIds.length
-    ? await prisma.attachment.findMany({ where: { ownerType: 'GeoUpdate', ownerId: { in: updIds } }, orderBy: { createdAt: 'asc' }, select: { ownerId: true, path: true } })
-    : [];
-  const photosByUpdate = new Map<string, string[]>();
-  for (const p of photos) {
-    if (!p.ownerId) continue;
-    const arr = photosByUpdate.get(p.ownerId) ?? [];
-    arr.push(p.path);
-    photosByUpdate.set(p.ownerId, arr);
-  }
   const fmt = (dt: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(dt);
   const pickMap = (kind: string) => {
     const r = areaMaps.find((x) => x.kind === kind);
     return r ? r.newobourPath || r.cleanPath : null;
   };
-  const locationMap = pickMap('location');
+  let locationMap = pickMap('location');
+  // Inherit the city's location map when the district has none of its own (matrix-gated).
+  if (!locationMap && d.cityId && matrix.maps.cityToDistrict) {
+    const cm = await prisma.areaMap.findFirst({
+      where: { level: 'city', areaId: d.cityId, kind: 'location' },
+      select: { newobourPath: true, cleanPath: true },
+    });
+    locationMap = cm?.newobourPath || cm?.cleanPath || null;
+  }
   const masterplanMap = pickMap('masterplan');
 
   // Owner decision (2026-07-11): the geo explorer — details, maps, advantages — is fully public.
@@ -140,17 +140,19 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
         <h2 className="font-semibold text-primary">{t('updates')}</h2>
         {updates.length === 0 && <p className="text-sm opacity-60">{t('noUpdates')}</p>}
         <ul className="space-y-2">
-          {updates.map((u) => {
-            const pics = photosByUpdate.get(u.id) ?? [];
-            return (
-              <li key={u.id} className="rounded-lg border border-graphite/15 p-3">
-                <div className="text-xs opacity-60" dir="ltr">{fmt(u.happenedAt)}</div>
-                {u.title && <div className="mt-1 font-bold text-primary">{u.title}</div>}
-                <div className="page-content mt-1 text-sm" dangerouslySetInnerHTML={{ __html: u.body }} />
-                {pics.length > 0 && <div className="mt-2"><PhotoGallery photos={pics} /></div>}
-              </li>
-            );
-          })}
+          {updates.map((u) => (
+            <li key={u.id} className="rounded-lg border border-graphite/15 p-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs opacity-60" dir="ltr">{fmt(u.happenedAt)}</span>
+                {u.source === 'city' && (
+                  <span className="rounded bg-gold/20 px-2 py-0.5 text-xs font-semibold text-primary">{L('من المدينة', 'From the city')}</span>
+                )}
+              </div>
+              {u.title && <div className="mt-1 font-bold text-primary">{u.title}</div>}
+              <div className="page-content mt-1 text-sm" dangerouslySetInnerHTML={{ __html: u.body }} />
+              {u.photos.length > 0 && <div className="mt-2"><PhotoGallery photos={u.photos} /></div>}
+            </li>
+          ))}
         </ul>
       </section>
 

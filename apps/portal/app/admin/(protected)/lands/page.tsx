@@ -1,19 +1,24 @@
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { getGeoInheritance } from '@/lib/geoInheritance';
+import { InheritanceMatrix } from './InheritanceMatrix';
 
 export const dynamic = 'force-dynamic';
 
 export default async function LandsHub() {
   await requirePermission('lands', 'VIEW');
   const t = await getTranslations('lands');
-  const [cities, districts, neighborhoods, blocks, follows, updates] = await Promise.all([
+  const locale = (await getLocale()) as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
+  const [cities, districts, neighborhoods, blocks, follows, updates, inheritance] = await Promise.all([
     prisma.city.count(),
     prisma.district.count(),
     prisma.neighborhood.count(),
     prisma.block.count(),
     prisma.landFollow.count(),
-    prisma.geoUpdate.count({ where: { OR: [{ districtId: { not: null } }, { neighborhoodId: { not: null } }] } }),
+    prisma.geoUpdate.count({ where: { OR: [{ cityId: { not: null } }, { districtId: { not: null } }, { neighborhoodId: { not: null } }] } }),
+    getGeoInheritance(),
   ]);
 
   // Land plots live in their own top-level section now; this hub is the geographic DB.
@@ -47,6 +52,20 @@ export default async function LandsHub() {
           </div>
         ))}
       </div>
+
+      {/* Which content flows down City → District → Neighborhood → Listing. */}
+      <section className="space-y-3 rounded-lg border border-graphite/15 p-5">
+        <div>
+          <h2 className="text-lg font-bold text-primary">{L('الوراثة بين المستويات', 'Inheritance')}</h2>
+          <p className="text-sm opacity-70">
+            {L(
+              'حدّد أي محتوى ينتقل تلقائياً من المدينة إلى الحي إلى المجاورة، وما يظهر منه على صفحات الإعلانات.',
+              'Choose which content flows automatically from city to district to neighborhood, and what shows on listing pages.',
+            )}
+          </p>
+        </div>
+        <InheritanceMatrix initial={inheritance} locale={locale} />
+      </section>
     </div>
   );
 }

@@ -7,18 +7,28 @@ import { sendSms } from '@noc/sms';
 import { stampMapCopy } from '../../../../lib/mapStamp';
 import { sanitizeRichHtml } from '../../../../lib/sanitize';
 import { markAreaListingsStale } from '../../../../lib/poster/generate';
+import {
+  defaultGeoInheritance,
+  GEO_INHERITANCE_KEY,
+  GEO_INHERIT_CATEGORIES,
+  GEO_INHERIT_TRANSITIONS,
+  type GeoInheritanceMatrix,
+} from '../../../../lib/geoInheritance';
 
 type GeoLevel = 'city' | 'district' | 'neighborhood' | 'block' | 'land';
 function revDetail(level: GeoLevel, id: string) {
   if (level === 'city') {
     revalidatePath(`/admin/lands/cities/${id}`);
     revalidatePath(`/admin/lands/cities/${id}/edit`);
+    revalidatePath(`/explore/city/${id}`);
   } else if (level === 'district') {
     revalidatePath(`/admin/lands/districts/${id}`);
     revalidatePath(`/admin/lands/districts/${id}/edit`);
+    revalidatePath(`/explore/district/${id}`);
   } else if (level === 'neighborhood') {
     revalidatePath(`/admin/lands/neighborhoods/${id}`);
     revalidatePath(`/admin/lands/neighborhoods/${id}/edit`);
+    revalidatePath(`/explore/${id}`);
   }
 }
 function geoField(level: GeoLevel, id: string) {
@@ -242,6 +252,7 @@ export async function deleteGeoUpdate(id: string): Promise<Result> {
     await prisma.attachment.updateMany({ where: { ownerType: 'GeoUpdate', ownerId: id }, data: { ownerType: null, ownerId: null } });
     await prisma.geoUpdate.delete({ where: { id } });
     revalidatePath('/admin/lands', 'layout');
+    revalidatePath('/explore', 'layout');
     return { ok: true };
   } catch (e) {
     return fail(e);
@@ -570,7 +581,8 @@ export async function notifyGeoUpdate(id: string): Promise<{ ok: true; count: nu
   try {
     const u = await prisma.geoUpdate.findUnique({ where: { id } });
     if (!u) return { ok: false, error: 'failed' };
-    const where = await followWhere(u);
+    // City-level updates: LandFollow has no cityId (no city follows exist) → the SMS step is skipped.
+    const where = u.cityId ? null : await followWhere(u);
     const follows = where ? await prisma.landFollow.findMany({ where: where as never, select: { phone: true } }) : [];
     const phones = [...new Set(follows.map((f) => f.phone).filter(Boolean))];
 
@@ -742,6 +754,29 @@ export async function updateGeoUpdate(input: { id: string; title?: string; body:
     await prisma.geoUpdate.update({ where: { id: input.id }, data: { title: input.title?.trim() || null, body, ...(happenedAt ? { happenedAt } : {}) } });
     revalidatePath('/admin/lands/updates');
     revalidatePath('/admin/lands', 'layout');
+    revalidatePath('/explore', 'layout');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ── Geo inheritance matrix (which content flows City→District→Neighborhood→Listing) ──
+export async function saveGeoInheritance(input: GeoInheritanceMatrix): Promise<Result> {
+  await requirePermission('lands', 'UPDATE');
+  try {
+    // Sanitize: only known category/transition keys, booleans only, over all-on defaults.
+    const clean = defaultGeoInheritance();
+    for (const c of GEO_INHERIT_CATEGORIES) {
+      for (const tr of GEO_INHERIT_TRANSITIONS) {
+        const v = input?.[c]?.[tr];
+        if (typeof v === 'boolean') clean[c][tr] = v;
+      }
+    }
+    const value = JSON.stringify(clean);
+    await prisma.setting.upsert({ where: { key: GEO_INHERITANCE_KEY }, update: { value }, create: { key: GEO_INHERITANCE_KEY, value } });
+    revalidatePath('/admin/lands');
+    revalidatePath('/explore', 'layout');
     return { ok: true };
   } catch (e) {
     return fail(e);

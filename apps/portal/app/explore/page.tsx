@@ -4,6 +4,7 @@ import { prisma } from '@noc/db';
 import { SiteShell } from '../_components/SiteShell';
 import { localizeUnit } from '@noc/i18n';
 import { pageMeta } from '../../lib/seo';
+import { GeoTree, type TreeCity } from './GeoTree';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,25 @@ export default async function ExplorePage() {
     groups[idx.get(key)!]!.districts.push(d);
   }
 
+  // Family-tree data: ALL active districts (even without neighborhoods) grouped by city.
+  const treeCities: TreeCity[] = [];
+  {
+    const tIdx = new Map<string, number>();
+    for (const d of districts) {
+      if (!d.city) continue;
+      if (!tIdx.has(d.city.id)) {
+        tIdx.set(d.city.id, treeCities.length);
+        treeCities.push({ id: d.city.id, nameAr: d.city.nameAr, nameEn: d.city.nameEn, districts: [] });
+      }
+      treeCities[tIdx.get(d.city.id)!]!.districts.push({
+        id: d.id,
+        nameAr: d.nameAr,
+        nameEn: d.nameEn,
+        neighborhoods: d.neighborhoods.map((n) => ({ id: n.id, nameAr: n.nameAr, nameEn: n.nameEn })),
+      });
+    }
+  }
+
   return (
     <SiteShell active="explore">
       <div className="mx-auto max-w-5xl space-y-10 p-6">
@@ -51,6 +71,8 @@ export default async function ExplorePage() {
         <h1 className="text-2xl font-extrabold text-navy-800">{t('exploreTitle')}</h1>
         <p className="text-sm text-ink-500">{t('exploreManage')}</p>
       </div>
+
+      <GeoTree cities={treeCities} locale={locale} />
 
       {withNb.length === 0 && <p className="py-12 text-center opacity-60">{t('noNeighborhoods')}</p>}
 

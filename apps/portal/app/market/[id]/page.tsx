@@ -11,6 +11,8 @@ import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { auth } from '@noc/auth';
 import { getStandardAreas } from '../../../lib/marketplace';
 import { advantagesForNeighborhood } from '../../../lib/advantages';
+import { getGeoInheritance, updatesForListing } from '../../../lib/geoInheritance';
+import { amenitiesForListing } from '../../../lib/amenities';
 import { listListingImages } from '../../../lib/poster/generate';
 import { trackListingView } from '../../../lib/views';
 import { partnershipsEnabled } from '../../../lib/modules';
@@ -78,7 +80,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const listing = resolvedId
     ? await prisma.listing.findUnique({
         where: { id: resolvedId },
-        include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: { include: { portalUser: { select: { id: true } } } }, buildingConditions: { include: { condition: true } }, neighborhood: { include: { district: true } } },
+        include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: { include: { portalUser: { select: { id: true } } } }, buildingConditions: { include: { condition: true } }, neighborhood: { include: { district: { include: { city: { select: { id: true, nameAr: true, nameEn: true } } } } } } },
       })
     : null;
   if (!listing || listing.status !== 'PUBLISHED') notFound();
@@ -146,7 +148,15 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     : [];
   const attrById = new Map(attrs.map((a) => [a.id, a]));
   const standardAreas = await getStandardAreas();
-  const advGroups = await advantagesForNeighborhood(listing.neighborhoodId, locale);
+  // Area content flows onto the listing per the admin inheritance matrix ('geo.inheritance').
+  const geoMatrix = await getGeoInheritance();
+  const advGroups = await advantagesForNeighborhood(listing.neighborhoodId, locale, geoMatrix);
+  const [areaUpdates, areaAmenities] = await Promise.all([
+    updatesForListing(listing.neighborhoodId, geoMatrix),
+    amenitiesForListing(listing.id, listing.neighborhoodId, geoMatrix),
+  ]);
+  const showAreaLinks = geoMatrix.maps.toListing && !!listing.neighborhood;
+  const fmtDate = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
   const genImgs = await listListingImages(listing.id, 'newobour');
 
   // Recommendations: other published listings of the same type ("like what you're viewing").
@@ -401,6 +411,60 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       ))}
 
       <AreaAdvantages heading={L('مميزات المنطقة', 'Area advantages')} groups={advGroups} />
+
+      {/* About the area — inherited area content (matrix-gated), closed by default so it
+          never buries the listing itself. */}
+      {listing.neighborhood && (areaUpdates.length > 0 || areaAmenities.length > 0 || showAreaLinks) && (
+        <details className="rounded-lg border border-graphite/15 p-4">
+          <summary className="cursor-pointer text-lg font-semibold text-primary">{L('عن المنطقة', 'About the area')}</summary>
+          <div className="mt-3 space-y-5">
+            {areaUpdates.length > 0 && (
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-primary">{L('آخر تحديثات المنطقة', 'Latest area updates')}</h3>
+                <ul>
+                  {areaUpdates.map((u) => (
+                    <li key={u.id} className="flex items-baseline justify-between gap-3 border-b border-graphite/10 py-2 text-sm">
+                      <span className="font-medium">{u.title || L('تحديث', 'Update')}</span>
+                      <span className="shrink-0 text-xs opacity-60" dir="ltr">{fmtDate(u.happenedAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {areaAmenities.length > 0 && (
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-primary">{L('مرافق المنطقة', 'Area amenities')}</h3>
+                <ul className="flex flex-wrap gap-2">
+                  {areaAmenities.map((a) => (
+                    <li key={a.id} className="rounded-full bg-graphite/10 px-3 py-1.5 text-sm">
+                      {a.category ? `${L(a.category.ar, a.category.en)} · ` : ''}
+                      {L(a.titleAr, a.titleEn || a.titleAr)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {showAreaLinks && listing.neighborhood && (
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-primary">{L('خرائط المنطقة', 'Area maps')}</h3>
+                <div className="flex flex-wrap gap-2">
+                  <a href={`/explore/${listing.neighborhood.id}`} className="rounded-lg border border-accent/40 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/5">
+                    {L(listing.neighborhood.nameAr, listing.neighborhood.nameEn)}
+                  </a>
+                  <a href={`/explore/district/${listing.neighborhood.districtId}`} className="rounded-lg border border-accent/40 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/5">
+                    {L(listing.neighborhood.district.nameAr, listing.neighborhood.district.nameEn)}
+                  </a>
+                  {listing.neighborhood.district.city && (
+                    <a href={`/explore/city/${listing.neighborhood.district.city.id}`} className="rounded-lg border border-accent/40 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/5">
+                      {L(listing.neighborhood.district.city.nameAr, listing.neighborhood.district.city.nameEn)}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </details>
+      )}
 
       {genImgs.length > 0 && (
         <section className="space-y-2">
