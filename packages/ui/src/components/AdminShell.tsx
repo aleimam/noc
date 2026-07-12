@@ -1,9 +1,12 @@
 import type { ReactNode } from 'react';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { AdminSidebar } from './AdminSidebar';
 
 export interface AdminNavItem {
   href: string;
   label: string;
+  /** Icon KEY resolved by AdminSidebar's ICONS map (unknown/absent → `dot`). */
+  icon?: string;
 }
 
 export interface AdminNavGroup {
@@ -24,6 +27,8 @@ export function AdminShell({
   storeLinks,
   signOut,
   search,
+  collapseLabel = 'Collapse menu',
+  expandLabel = 'Expand menu',
   children,
 }: {
   brand: string;
@@ -34,33 +39,19 @@ export function AdminShell({
   signOut?: ReactNode;
   /** Optional global-search box rendered in the topbar. */
   search?: ReactNode;
+  /** aria-label/tooltip for the sidebar toggle (pass localized copy). */
+  collapseLabel?: string;
+  expandLabel?: string;
   children: ReactNode;
 }) {
+  // Flex layout: the sidebar owns its own width (rail vs 15rem, or a fixed mobile overlay),
+  // and the content column simply fills whatever space is left — so it adapts to collapse
+  // without a hardcoded column width.
   return (
-    <div className="grid min-h-screen grid-cols-[15rem_1fr]">
-      <aside className="flex flex-col gap-1 border-e border-graphite/15 bg-navy p-3 text-soft">
-        <div className="px-2 py-3 text-lg font-bold text-gold">{brand}</div>
-        <nav className="flex flex-col gap-1">
-          {nav.map((group, gi) => (
-            <div key={gi} className="flex flex-col gap-0.5">
-              {group.title && (
-                <div className="px-3 pb-1 pt-3 text-xs font-bold uppercase tracking-wide text-gold/70">{group.title}</div>
-              )}
-              {group.items.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  className="rounded-md px-3 py-2 text-sm text-soft/90 hover:bg-soft/10"
-                >
-                  {item.label}
-                </a>
-              ))}
-            </div>
-          ))}
-        </nav>
-      </aside>
+    <div className="flex min-h-screen">
+      <AdminSidebar brand={brand} nav={nav} collapseLabel={collapseLabel} expandLabel={expandLabel} />
 
-      <div className="flex min-h-screen flex-col">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-graphite/15 px-4 py-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             {search && <div className="min-w-0 flex-1">{search}</div>}
