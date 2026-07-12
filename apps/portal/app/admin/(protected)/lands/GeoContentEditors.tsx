@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { ImageAttachment, Lightbox, toast, type UploadedAttachment } from '@noc/ui';
 import { RichEditor } from '../pages/RichEditor';
@@ -12,6 +12,8 @@ import {
   upsertAdvantage,
   deleteAdvantage,
   setAreaMap,
+  setAreaMapTitle,
+  addCustomAreaPhoto,
   clearAreaMap,
   notifyGeoUpdate,
   setDistrictAdjacency,
@@ -85,7 +87,8 @@ export function AdvantagesEditor({
   );
 }
 
-type MapTriplet = { clean: string; alswarey: string | null; newobour: string | null };
+type MapTriplet = { clean: string; alswarey: string | null; newobour: string | null; title: string | null };
+type CustomPhoto = { kind: string; title: string | null; clean: string; alswarey: string | null; newobour: string | null };
 
 // react-konva touches the DOM/canvas at import — load the annotator client-only.
 const MapAnnotator = dynamic(() => import('./MapAnnotator').then((m) => m.MapAnnotator), { ssr: false });
@@ -114,19 +117,33 @@ export function AreaMapEditor({
   annotatable?: boolean; // city location maps are uploaded, not annotated → false
 }) {
   const t = useTranslations('lands');
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const router = useRouter();
   const [, start] = useTransition();
   const [annotating, setAnnotating] = useState(false);
+  const [title, setTitle] = useState(map?.title ?? '');
   const canAnnotate = kind === 'location' && annotatable && !!parentMasterplan;
 
   return (
     <div className="space-y-2">
       <p className="text-xs opacity-60">{t('mapHint')}</p>
+      {/* Editable heading: overrides the default map label on the public page. Saved on
+          blur when a map already exists; otherwise it rides along with the next upload. */}
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onBlur={() => {
+          if (map && title.trim() !== (map.title ?? '')) start(async () => { await setAreaMapTitle({ level, targetId, kind, title }); router.refresh(); });
+        }}
+        placeholder={L('عنوان الخريطة (اختياري)', 'Map title (optional)')}
+        className={inp}
+      />
       <ImageAttachment
         value={map ? { id: '', path: map.clean, originalName: '' } : null}
         onChange={(a) =>
           start(async () => {
-            if (a) await setAreaMap({ level, targetId, kind, attachmentId: a.id });
+            if (a) await setAreaMap({ level, targetId, kind, attachmentId: a.id, title });
             else await clearAreaMap({ level, targetId, kind });
             router.refresh();
           })
@@ -169,6 +186,68 @@ function MapThumb({ label, src }: { label: string; src: string }) {
       <img src={src} alt={label} className="h-24 w-32 rounded object-cover ring-1 ring-graphite/20" />
       <figcaption className="mt-1 text-xs opacity-70">{label}</figcaption>
     </figure>
+  );
+}
+
+/**
+ * Arbitrary extra branded photos for an area. Each is stored as its own AreaMap row
+ * (kind 'custom:<id>') — dual-brand stamped like a map, and inherited down the chain per
+ * the 'maps' inheritance matrix. Admin can add (image + title) and delete each.
+ */
+export function CustomPhotosEditor({ level, targetId, photos }: { level: Level; targetId: string; photos: CustomPhoto[] }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftPhoto, setDraftPhoto] = useState<UploadedAttachment | null>(null);
+
+  function add() {
+    if (!draftPhoto) return;
+    start(async () => {
+      const r = await addCustomAreaPhoto({ level, targetId, attachmentId: draftPhoto.id, title: draftTitle || null });
+      if (!r.ok) { toast(L('تعذّر الحفظ', 'Save failed'), 'error'); return; }
+      setDraftTitle('');
+      setDraftPhoto(null);
+      router.refresh();
+    });
+  }
+  function del(kind: string) {
+    if (!confirm(L('حذف هذه الصورة؟', 'Delete this photo?'))) return;
+    start(async () => {
+      await clearAreaMap({ level, targetId, kind });
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs opacity-60">{L('صور إضافية للمنطقة، مختومة بالعلامتين، وتظهر أيضاً في المستويات الأدنى.', 'Extra area photos — dual-brand stamped and inherited to lower levels.')}</p>
+      <ul className="space-y-2">
+        {photos.length === 0 && <li className="text-sm opacity-60">{L('لا توجد صور', 'No photos yet')}</li>}
+        {photos.map((p) => (
+          <li key={p.kind} className="flex items-center gap-3 rounded-lg border border-graphite/15 p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={p.clean} alt="" className="h-16 w-20 shrink-0 rounded object-cover ring-1 ring-graphite/20" />
+            <span className="flex-1 text-sm font-medium">{p.title || <span className="opacity-50">{L('بدون عنوان', 'Untitled')}</span>}</span>
+            <button disabled={pending} onClick={() => del(p.kind)} className="rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-600/10 disabled:opacity-50">{L('حذف', 'Delete')}</button>
+          </li>
+        ))}
+      </ul>
+      <div className="space-y-2 rounded-lg border border-dashed border-graphite/25 p-3">
+        <input value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)} placeholder={L('عنوان الصورة', 'Photo title')} className={inp} />
+        {draftPhoto ? (
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={draftPhoto.path} alt="" className="h-16 w-20 rounded object-cover ring-1 ring-graphite/20" />
+            <button type="button" onClick={() => setDraftPhoto(null)} aria-label={L('إزالة', 'Remove')} className="flex h-10 w-10 items-center justify-center rounded-full text-lg text-red-600 hover:bg-red-600/10">✕</button>
+          </div>
+        ) : (
+          <ImageAttachment value={null} onChange={(a) => a && setDraftPhoto(a)} />
+        )}
+        <button disabled={pending || !draftPhoto} onClick={add} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-soft disabled:opacity-50">+ {L('إضافة صورة', 'Add photo')}</button>
+      </div>
+    </div>
   );
 }
 

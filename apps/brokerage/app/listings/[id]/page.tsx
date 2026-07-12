@@ -6,7 +6,7 @@ import { prisma } from '@noc/db';
 import { PhotoGallery, TrackView, AreaAdvantages } from '@noc/ui';
 import { StoreShell } from '../../_components/StoreShell';
 import { advantagesForNeighborhood } from '../../../lib/advantages';
-import { updatesForListing } from '../../../lib/geoInheritance';
+import { updatesForListing, customPhotosForListing } from '../../../lib/geoInheritance';
 import { StoreLandCard } from '../../_components/StoreLandCard';
 import { getLandDetail, resolveListingId, similarLands } from '../../../lib/listings';
 import { getAdminViewer, ownerDetailFor } from '../../../lib/adminView';
@@ -74,6 +74,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   });
   const advGroups = await advantagesForNeighborhood(nb?.neighborhoodId, locale);
   const areaUpdates = await updatesForListing(nb?.neighborhoodId);
+  const areaPhotos = await customPhotosForListing(nb?.neighborhoodId);
   const genRows = await prisma.attachment.findMany({
     where: { ownerType: 'ListingPoster', ownerId: listingId, stampCategory: { contains: 'alsawarey' } },
     orderBy: { stampCategory: 'asc' },
@@ -250,6 +251,20 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
             <h2 className="mb-3 text-lg font-bold text-navy-800">{L('الموقع على الخريطة', 'Location on the map')}</h2>
             <HeroGallery photos={[land.locationMap]} alt={L('موقع القطعة على المخطط', 'Plot location on the masterplan')} locale={locale} />
             <p className="mt-2 text-center text-sm text-ink-500">{L('خريطة المجاورة موضّح عليها موقع القطعة', 'Neighborhood masterplan with the plot marked')}</p>
+          </section>
+        )}
+
+        {areaPhotos.length > 0 && (
+          <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
+            <h2 className="mb-3 text-lg font-bold text-navy-800">{L('صور المنطقة', 'Area photos')}</h2>
+            <div className="space-y-4">
+              {areaPhotos.map((p) => (
+                <div key={p.kind} className="space-y-2">
+                  {p.title && <div className="font-semibold text-navy-800">{p.title}</div>}
+                  <PhotoGallery photos={[p.path]} />
+                </div>
+              ))}
+            </div>
           </section>
         )}
 

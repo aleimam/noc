@@ -44,10 +44,8 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
     prisma.areaMap.findMany({ where: { level: 'city', areaId: id } }),
     updatesForCity(id),
   ]);
-  const pick = (kind: string) => {
-    const r = maps.find((x) => x.kind === kind);
-    return r ? r.newobourPath || r.cleanPath : null;
-  };
+  const pickRow = (kind: string) => maps.find((x) => x.kind === kind) ?? null;
+  const customPhotos = maps.filter((x) => x.kind.startsWith('custom:'));
   const fmt = (dt: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(dt);
   // Owner decision (2026-07-11): the geo explorer — details, maps, advantages — is fully public.
   const mapSections: { key: string; label: string }[] = [
@@ -82,15 +80,23 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
         )}
 
         {mapSections.map((m) => {
-          const src = pick(m.key);
-          if (!src) return null;
+          const r = pickRow(m.key);
+          if (!r) return null;
           return (
             <section key={m.key} className="space-y-2">
-              <h2 className="font-semibold text-primary">{m.label}</h2>
-              <PhotoGallery photos={[src]} />
+              <h2 className="font-semibold text-primary">{r.title || m.label}</h2>
+              <PhotoGallery photos={[r.newobourPath || r.cleanPath]} />
             </section>
           );
         })}
+
+        {/* Extra branded photos for this city (own; nothing to inherit at the top). */}
+        {customPhotos.map((c) => (
+          <section key={c.kind} className="space-y-2">
+            <h2 className="font-semibold text-primary">{c.title || L('صورة', 'Photo')}</h2>
+            <PhotoGallery photos={[c.newobourPath || c.cleanPath]} />
+          </section>
+        ))}
 
         <section className="space-y-2">
           <h2 className="font-semibold text-primary">{t('updates')}</h2>

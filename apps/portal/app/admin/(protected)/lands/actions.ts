@@ -1,5 +1,6 @@
 'use server';
 
+import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { auth, requirePermission, loadSmsConfig } from '@noc/auth';
 import { prisma, Prisma } from '@noc/db';
@@ -484,45 +485,77 @@ function revMap(level: MapLevel, id: string) {
   }
 }
 
+// Shared: dual-brand-stamp an uploaded image and upsert its AreaMap row (one `kind`).
+// Used by both the 4 fixed maps (setAreaMap) and arbitrary custom photos (addCustomAreaPhoto).
+async function stampAndUpsertAreaMap(input: {
+  level: MapLevel;
+  targetId: string;
+  kind: string;
+  attachmentId: string;
+  title?: string | null;
+  annotation?: unknown; // editable annotator shapes (location maps)
+  sourcePath?: string | null; // parent masterplan the location was annotated on
+}): Promise<Result> {
+  const att = await prisma.attachment.findUnique({ where: { id: input.attachmentId } });
+  if (!att) return { ok: false, error: 'failed' };
+  await prisma.attachment.update({ where: { id: att.id }, data: { ownerType: 'AreaMap', ownerId: input.targetId } });
+
+  const logos = await prisma.setting.findMany({ where: { key: { in: ['brand_alsawarey_logo', 'brand_newobour_logo'] } } });
+  const lm = Object.fromEntries(logos.map((s) => [s.key, s.value]));
+  const [alswareyPath, newobourPath] = await Promise.all([
+    stampMapCopy(att.path, lm['brand_alsawarey_logo'] ?? null),
+    stampMapCopy(att.path, lm['brand_newobour_logo'] ?? null),
+  ]);
+
+  const annPatch = input.annotation === undefined ? {} : { annotation: (input.annotation ?? Prisma.JsonNull) as Prisma.InputJsonValue };
+  const srcPatch = input.sourcePath === undefined ? {} : { sourcePath: input.sourcePath };
+  const titlePatch = input.title === undefined ? {} : { title: input.title?.trim() || null };
+
+  await prisma.areaMap.upsert({
+    where: { level_areaId_kind: { level: input.level, areaId: input.targetId, kind: input.kind } },
+    update: { cleanPath: att.path, alswareyPath, newobourPath, ...annPatch, ...srcPatch, ...titlePatch },
+    create: {
+      level: input.level,
+      areaId: input.targetId,
+      kind: input.kind,
+      title: input.title?.trim() || null,
+      cleanPath: att.path,
+      alswareyPath,
+      newobourPath,
+      annotation: (input.annotation ?? Prisma.JsonNull) as Prisma.InputJsonValue,
+      sourcePath: input.sourcePath ?? null,
+    },
+  });
+  if (input.level === 'listing') await prisma.listing.update({ where: { id: input.targetId }, data: { postersStale: true } }).catch(() => {});
+  revMap(input.level, input.targetId);
+  return { ok: true };
+}
+
 export async function setAreaMap(input: {
   level: MapLevel;
   targetId: string;
-  kind: MapKind;
+  kind: string; // MapKind for the 4 fixed slots; 'custom:<id>' via addCustomAreaPhoto
   attachmentId: string;
+  title?: string | null; // editable heading (persisted on the row)
   annotation?: unknown; // editable annotator shapes (location maps)
   sourcePath?: string | null; // parent masterplan the location was annotated on
 }): Promise<Result> {
   await requirePermission(input.level === 'listing' ? 'marketplace' : 'lands', 'UPDATE');
   try {
-    const att = await prisma.attachment.findUnique({ where: { id: input.attachmentId } });
-    if (!att) return { ok: false, error: 'failed' };
-    await prisma.attachment.update({ where: { id: att.id }, data: { ownerType: 'AreaMap', ownerId: input.targetId } });
+    return await stampAndUpsertAreaMap(input);
+  } catch (e) {
+    return fail(e);
+  }
+}
 
-    const logos = await prisma.setting.findMany({ where: { key: { in: ['brand_alsawarey_logo', 'brand_newobour_logo'] } } });
-    const lm = Object.fromEntries(logos.map((s) => [s.key, s.value]));
-    const [alswareyPath, newobourPath] = await Promise.all([
-      stampMapCopy(att.path, lm['brand_alsawarey_logo'] ?? null),
-      stampMapCopy(att.path, lm['brand_newobour_logo'] ?? null),
-    ]);
-
-    const annPatch = input.annotation === undefined ? {} : { annotation: (input.annotation ?? Prisma.JsonNull) as Prisma.InputJsonValue };
-    const srcPatch = input.sourcePath === undefined ? {} : { sourcePath: input.sourcePath };
-
-    await prisma.areaMap.upsert({
-      where: { level_areaId_kind: { level: input.level, areaId: input.targetId, kind: input.kind } },
-      update: { cleanPath: att.path, alswareyPath, newobourPath, ...annPatch, ...srcPatch },
-      create: {
-        level: input.level,
-        areaId: input.targetId,
-        kind: input.kind,
-        cleanPath: att.path,
-        alswareyPath,
-        newobourPath,
-        annotation: (input.annotation ?? Prisma.JsonNull) as Prisma.InputJsonValue,
-        sourcePath: input.sourcePath ?? null,
-      },
+/** Rename a map (fixed or custom) without re-uploading — title only. */
+export async function setAreaMapTitle(input: { level: MapLevel; targetId: string; kind: string; title: string | null }): Promise<Result> {
+  await requirePermission(input.level === 'listing' ? 'marketplace' : 'lands', 'UPDATE');
+  try {
+    await prisma.areaMap.updateMany({
+      where: { level: input.level, areaId: input.targetId, kind: input.kind },
+      data: { title: input.title?.trim() || null },
     });
-    if (input.level === 'listing') await prisma.listing.update({ where: { id: input.targetId }, data: { postersStale: true } }).catch(() => {});
     revMap(input.level, input.targetId);
     return { ok: true };
   } catch (e) {
@@ -530,7 +563,26 @@ export async function setAreaMap(input: {
   }
 }
 
-export async function clearAreaMap(input: { level: MapLevel; targetId: string; kind: MapKind }): Promise<Result> {
+/** Add one arbitrary branded area photo (stored as an extra AreaMap row, unique `custom:` kind).
+ *  Behaves exactly like a map: dual-brand stamped + inheritable per the 'maps' matrix. */
+export async function addCustomAreaPhoto(input: {
+  level: MapLevel;
+  targetId: string;
+  attachmentId: string;
+  title?: string | null;
+}): Promise<Result> {
+  await requirePermission(input.level === 'listing' ? 'marketplace' : 'lands', 'UPDATE');
+  try {
+    const kind = `custom:${randomUUID()}`;
+    const r = await stampAndUpsertAreaMap({ level: input.level, targetId: input.targetId, kind, attachmentId: input.attachmentId, title: input.title });
+    return r.ok ? { ok: true, id: kind } : r;
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// Delete a custom area photo = clear its AreaMap row by kind (reuses clearAreaMap).
+export async function clearAreaMap(input: { level: MapLevel; targetId: string; kind: string }): Promise<Result> {
   await requirePermission(input.level === 'listing' ? 'marketplace' : 'lands', 'UPDATE');
   try {
     await prisma.areaMap.deleteMany({ where: { level: input.level, areaId: input.targetId, kind: input.kind } });

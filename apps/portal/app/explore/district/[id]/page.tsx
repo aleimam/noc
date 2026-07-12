@@ -6,7 +6,7 @@ import { PhotoGallery, ListingCard } from '@noc/ui';
 import { localizeUnit, currency, type Locale } from '@noc/i18n';
 import { areaListings } from '../../../../lib/areaListings';
 import { amenitiesForDistrict } from '../../../../lib/amenities';
-import { getGeoInheritance, updatesForDistrict } from '../../../../lib/geoInheritance';
+import { getGeoInheritance, updatesForDistrict, customPhotosForDistrict } from '../../../../lib/geoInheritance';
 import { SiteShell } from '../../../_components/SiteShell';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
 
@@ -52,20 +52,25 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
   const listingCards = await areaListings({ neighborhood: { districtId: id } });
 
   const fmt = (dt: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(dt);
-  const pickMap = (kind: string) => {
-    const r = areaMaps.find((x) => x.kind === kind);
-    return r ? r.newobourPath || r.cleanPath : null;
-  };
-  let locationMap = pickMap('location');
+  const pickRow = (kind: string) => areaMaps.find((x) => x.kind === kind) ?? null;
+  const locationRow = pickRow('location');
+  let locationMap = locationRow ? locationRow.newobourPath || locationRow.cleanPath : null;
+  let locationTitle = locationRow?.title ?? null;
   // Inherit the city's location map when the district has none of its own (matrix-gated).
   if (!locationMap && d.cityId && matrix.maps.cityToDistrict) {
     const cm = await prisma.areaMap.findFirst({
       where: { level: 'city', areaId: d.cityId, kind: 'location' },
-      select: { newobourPath: true, cleanPath: true },
+      select: { newobourPath: true, cleanPath: true, title: true },
     });
     locationMap = cm?.newobourPath || cm?.cleanPath || null;
+    locationTitle = cm?.title ?? null;
   }
-  const masterplanMap = pickMap('masterplan');
+  const masterplanRow = pickRow('masterplan');
+  const masterplanMap = masterplanRow ? masterplanRow.newobourPath || masterplanRow.cleanPath : null;
+  // Own custom photos + inherited city photos (additive, matrix-gated); own first.
+  const customPhotos = await customPhotosForDistrict(id, d.cityId, matrix);
+  const photoChip = (s: 'city' | 'district' | 'neighborhood') =>
+    s === 'city' ? L('من المدينة', 'From the city') : s === 'district' ? L('من الحي', 'From the district') : '';
 
   // Owner decision (2026-07-11): the geo explorer — details, maps, advantages — is fully public.
   const crumbsLd = breadcrumbLd([
@@ -125,16 +130,27 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
 
       {locationMap && (
         <section className="space-y-2">
-          <h2 className="font-semibold text-primary">{t('locationMap')}</h2>
+          <h2 className="font-semibold text-primary">{locationTitle || t('locationMap')}</h2>
           <PhotoGallery photos={[locationMap]} />
         </section>
       )}
       {masterplanMap && (
         <section className="space-y-2">
-          <h2 className="font-semibold text-primary">{t('masterplan')}</h2>
+          <h2 className="font-semibold text-primary">{masterplanRow?.title || t('masterplan')}</h2>
           <PhotoGallery photos={[masterplanMap]} />
         </section>
       )}
+
+      {/* Extra branded photos: this district's own + inherited from the city (additive). */}
+      {customPhotos.map((c) => (
+        <section key={c.kind} className="space-y-2">
+          <h2 className="flex flex-wrap items-center gap-2 font-semibold text-primary">
+            {c.title || L('صورة', 'Photo')}
+            {c.source !== 'district' && <span className="rounded bg-gold/20 px-2 py-0.5 text-xs font-semibold text-primary">{photoChip(c.source)}</span>}
+          </h2>
+          <PhotoGallery photos={[c.path]} />
+        </section>
+      ))}
 
       <section className="space-y-2">
         <h2 className="font-semibold text-primary">{t('updates')}</h2>

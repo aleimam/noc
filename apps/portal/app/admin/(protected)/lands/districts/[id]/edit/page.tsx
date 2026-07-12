@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, UpdatesEditor } from '../../../GeoContentEditors';
+import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, UpdatesEditor, CustomPhotosEditor } from '../../../GeoContentEditors';
 import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency, masterplanClean } from '../../../geo';
 import { AmenityAttachPicker } from '../../../AmenityAttachPicker';
 import { amenityPickOptions, placedAmenityIds } from '@/lib/amenities';
@@ -64,6 +64,11 @@ export default async function DistrictEdit({ params }: { params: Promise<{ id: s
           <AreaMapEditor level="district" targetId={id} kind="masterplan" map={maps.masterplan} />
         </section>
       </div>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold text-primary">{L('صور إضافية', 'Extra photos')}</h2>
+        <CustomPhotosEditor level="district" targetId={id} photos={maps.custom} />
+      </section>
 
       <section className="space-y-2">
         <h2 className="font-semibold text-primary">{t('adjacency')}</h2>

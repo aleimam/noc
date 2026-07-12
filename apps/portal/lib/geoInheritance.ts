@@ -129,6 +129,81 @@ export async function updatesForNeighborhood(
   return withPhotos(rows);
 }
 
+// ── Custom area photos that APPLY the 'maps' matrix ────────────────────────────
+// Arbitrary branded photos live as extra AreaMap rows (kind 'custom:<id>'). Unlike the
+// 4 fixed maps (which only fall back), custom photos inherit ADDITIVELY down the chain,
+// exactly like updates: a city's show on its districts/neighborhoods, a district's on its
+// neighborhoods — each hop gated by the 'maps' transitions. The area's own photos come first.
+export type AreaPhoto = { kind: string; title: string | null; path: string; source: GeoSourceLevel };
+const CUSTOM_SELECT = { kind: true, title: true, cleanPath: true, newobourPath: true } as const;
+type CustomRow = { kind: string; title: string | null; cleanPath: string; newobourPath: string | null };
+
+function toPhotos(rows: CustomRow[], source: GeoSourceLevel): AreaPhoto[] {
+  // Public portal surfaces show the New Obour brand copy (fall back to the clean image).
+  return rows
+    .filter((r) => r.kind.startsWith('custom:'))
+    .map((r) => ({ kind: r.kind, title: r.title, path: r.newobourPath || r.cleanPath, source }));
+}
+async function customRows(level: GeoSourceLevel, areaId: string): Promise<CustomRow[]> {
+  return prisma.areaMap.findMany({ where: { level, areaId }, orderBy: { createdAt: 'asc' }, select: CUSTOM_SELECT });
+}
+
+/** A city's own custom photos (top of the chain — nothing to inherit). */
+export async function customPhotosForCity(cityId: string): Promise<AreaPhoto[]> {
+  return toPhotos(await customRows('city', cityId), 'city');
+}
+
+/** A district's own custom photos + (per matrix) inherited city photos, own first. */
+export async function customPhotosForDistrict(
+  districtId: string,
+  cityId: string | null | undefined,
+  matrix?: GeoInheritanceMatrix,
+): Promise<AreaPhoto[]> {
+  const m = matrix ?? (await getGeoInheritance());
+  const out = toPhotos(await customRows('district', districtId), 'district');
+  if (cityId && m.maps.cityToDistrict) out.push(...toPhotos(await customRows('city', cityId), 'city'));
+  return out;
+}
+
+/** A neighborhood's own custom photos + (per matrix) inherited district & city photos, own first.
+ *  City photos only reach here when BOTH hops are on (they arrive via the district). */
+export async function customPhotosForNeighborhood(
+  neighborhoodId: string,
+  districtId: string,
+  cityId: string | null | undefined,
+  matrix?: GeoInheritanceMatrix,
+): Promise<AreaPhoto[]> {
+  const m = matrix ?? (await getGeoInheritance());
+  const out = toPhotos(await customRows('neighborhood', neighborhoodId), 'neighborhood');
+  if (m.maps.districtToNeighborhood) {
+    out.push(...toPhotos(await customRows('district', districtId), 'district'));
+    if (cityId && m.maps.cityToDistrict) out.push(...toPhotos(await customRows('city', cityId), 'city'));
+  }
+  return out;
+}
+
+/** Custom area photos for a LISTING page (gated by maps.toListing; chained from the
+ *  listing's neighborhood up the hierarchy per the hop toggles). Own (neighborhood) first. */
+export async function customPhotosForListing(
+  neighborhoodId: string | null | undefined,
+  matrix?: GeoInheritanceMatrix,
+): Promise<AreaPhoto[]> {
+  if (!neighborhoodId) return [];
+  const m = matrix ?? (await getGeoInheritance());
+  if (!m.maps.toListing) return [];
+  const n = await prisma.neighborhood.findUnique({
+    where: { id: neighborhoodId },
+    select: { districtId: true, district: { select: { cityId: true } } },
+  });
+  if (!n) return [];
+  const out = toPhotos(await customRows('neighborhood', neighborhoodId), 'neighborhood');
+  if (m.maps.districtToNeighborhood) {
+    out.push(...toPhotos(await customRows('district', n.districtId), 'district'));
+    if (n.district.cityId && m.maps.cityToDistrict) out.push(...toPhotos(await customRows('city', n.district.cityId), 'city'));
+  }
+  return out;
+}
+
 /** Area updates for a LISTING page (gated by updates.toListing; chained per the hop
  *  toggles from the listing's neighborhood). Lean rows — title + date, no photos. */
 export async function updatesForListing(

@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { AdvantagesEditor, AreaMapEditor, UpdatesEditor } from '../../GeoContentEditors';
+import { AdvantagesEditor, AreaMapEditor, UpdatesEditor, CustomPhotosEditor } from '../../GeoContentEditors';
 import { loadAreaMaps, loadUpdates } from '../../geo';
 import { EditSaveBar } from '@/app/_components/EditSaveBar';
 
@@ -64,6 +64,11 @@ export default async function CityEdit({ params }: { params: Promise<{ id: strin
           <AreaMapEditor level="city" targetId={id} kind="mainroads" map={maps.mainroads} annotatable={false} />
         </section>
       </div>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold text-primary">{L('صور إضافية', 'Extra photos')}</h2>
+        <CustomPhotosEditor level="city" targetId={id} photos={maps.custom} />
+      </section>
 
       <div className="flex justify-end border-t border-graphite/15 pt-4"><EditSaveBar /></div>
     </div>

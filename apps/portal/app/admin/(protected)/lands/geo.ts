@@ -50,11 +50,14 @@ export async function loadUpdates(where: {
   }));
 }
 
-export type MapTriplet = { clean: string; alswarey: string | null; newobour: string | null };
+export type MapTriplet = { clean: string; alswarey: string | null; newobour: string | null; title: string | null };
+/** An arbitrary branded area photo (an extra AreaMap row keyed by a `custom:<id>` kind). */
+export type CustomPhoto = { kind: string; title: string | null; clean: string; alswarey: string | null; newobour: string | null };
 export type MapLevel = 'city' | 'district' | 'neighborhood' | 'listing';
 
 /** All maps for an area (location / masterplan / services / mainroads), each with its
- *  brand copies, plus the location map's editable annotation shapes for re-tweaking. */
+ *  brand copies + editable title, plus any custom photos and the location map's editable
+ *  annotation shapes for re-tweaking. */
 export async function loadAreaMaps(
   level: MapLevel,
   areaId: string,
@@ -64,19 +67,24 @@ export async function loadAreaMaps(
   services: MapTriplet | null;
   mainroads: MapTriplet | null;
   locationAnnotation: Shape[] | null;
+  custom: CustomPhoto[];
 }> {
-  const rows = await prisma.areaMap.findMany({ where: { level, areaId } });
+  const rows = await prisma.areaMap.findMany({ where: { level, areaId }, orderBy: { createdAt: 'asc' } });
   const pick = (kind: string): MapTriplet | null => {
     const r = rows.find((x) => x.kind === kind);
-    return r ? { clean: r.cleanPath, alswarey: r.alswareyPath, newobour: r.newobourPath } : null;
+    return r ? { clean: r.cleanPath, alswarey: r.alswareyPath, newobour: r.newobourPath, title: r.title } : null;
   };
   const loc = rows.find((x) => x.kind === 'location');
+  const custom = rows
+    .filter((x) => x.kind.startsWith('custom:'))
+    .map((r) => ({ kind: r.kind, title: r.title, clean: r.cleanPath, alswarey: r.alswareyPath, newobour: r.newobourPath }));
   return {
     location: pick('location'),
     masterplan: pick('masterplan'),
     services: pick('services'),
     mainroads: pick('mainroads'),
     locationAnnotation: (loc?.annotation as Shape[] | null) ?? null,
+    custom,
   };
 }
 

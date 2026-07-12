@@ -11,7 +11,7 @@ import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { auth } from '@noc/auth';
 import { getStandardAreas } from '../../../lib/marketplace';
 import { advantagesForNeighborhood } from '../../../lib/advantages';
-import { getGeoInheritance, updatesForListing } from '../../../lib/geoInheritance';
+import { getGeoInheritance, updatesForListing, customPhotosForListing } from '../../../lib/geoInheritance';
 import { amenitiesForListing } from '../../../lib/amenities';
 import { listListingImages } from '../../../lib/poster/generate';
 import { trackListingView } from '../../../lib/views';
@@ -151,9 +151,10 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   // Area content flows onto the listing per the admin inheritance matrix ('geo.inheritance').
   const geoMatrix = await getGeoInheritance();
   const advGroups = await advantagesForNeighborhood(listing.neighborhoodId, locale, geoMatrix);
-  const [areaUpdates, areaAmenities] = await Promise.all([
+  const [areaUpdates, areaAmenities, areaPhotos] = await Promise.all([
     updatesForListing(listing.neighborhoodId, geoMatrix),
     amenitiesForListing(listing.id, listing.neighborhoodId, geoMatrix),
+    customPhotosForListing(listing.neighborhoodId, geoMatrix),
   ]);
   const showAreaLinks = geoMatrix.maps.toListing && !!listing.neighborhood;
   const fmtDate = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
@@ -414,7 +415,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
 
       {/* About the area — inherited area content (matrix-gated), closed by default so it
           never buries the listing itself. */}
-      {listing.neighborhood && (areaUpdates.length > 0 || areaAmenities.length > 0 || showAreaLinks) && (
+      {listing.neighborhood && (areaUpdates.length > 0 || areaAmenities.length > 0 || areaPhotos.length > 0 || showAreaLinks) && (
         <details className="rounded-lg border border-graphite/15 p-4">
           <summary className="cursor-pointer text-lg font-semibold text-primary">{L('عن المنطقة', 'About the area')}</summary>
           <div className="mt-3 space-y-5">
@@ -442,6 +443,17 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+            {areaPhotos.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-primary">{L('صور المنطقة', 'Area photos')}</h3>
+                {areaPhotos.map((p) => (
+                  <div key={p.kind} className="space-y-1">
+                    {p.title && <div className="text-sm font-medium">{p.title}</div>}
+                    <PhotoGallery photos={[p.path]} />
+                  </div>
+                ))}
               </div>
             )}
             {showAreaLinks && listing.neighborhood && (

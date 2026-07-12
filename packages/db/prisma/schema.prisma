@@ -1343,7 +1343,8 @@ model AreaMap {
   id           String   @id @default(cuid())
   level        String // 'city' | 'district' | 'neighborhood' | 'listing'
   areaId       String
-  kind         String // 'location' | 'masterplan' | 'services' | 'mainroads'
+  kind         String // 'location' | 'masterplan' | 'services' | 'mainroads' | 'custom:<cuid>'
+  title        String? // editable heading; custom photos always set it, fixed maps optionally override the default
   cleanPath    String   @db.Text
   alswareyPath String?  @db.Text
   newobourPath String?  @db.Text

@@ -39,6 +39,44 @@ export async function getGeoInheritance(): Promise<GeoInheritanceMatrix> {
   return matrix;
 }
 
+type GeoSourceLevel = 'city' | 'district' | 'neighborhood';
+export type AreaPhoto = { kind: string; title: string | null; path: string; source: GeoSourceLevel };
+const CUSTOM_SELECT = { kind: true, title: true, cleanPath: true, alswareyPath: true } as const;
+type CustomRow = { kind: string; title: string | null; cleanPath: string; alswareyPath: string | null };
+
+function toPhotos(rows: CustomRow[], source: GeoSourceLevel): AreaPhoto[] {
+  // alsawarey.com shows the Al Sawarey brand copy (fall back to the clean image).
+  return rows
+    .filter((r) => r.kind.startsWith('custom:'))
+    .map((r) => ({ kind: r.kind, title: r.title, path: r.alswareyPath || r.cleanPath, source }));
+}
+async function customRows(level: GeoSourceLevel, areaId: string): Promise<CustomRow[]> {
+  return prisma.areaMap.findMany({ where: { level, areaId }, orderBy: { createdAt: 'asc' }, select: CUSTOM_SELECT });
+}
+
+/** Custom area photos for a LISTING page (gated by maps.toListing; chained from the
+ *  listing's neighborhood up the hierarchy per the hop toggles). Own (neighborhood) first.
+ *  Mirror of apps/portal/lib/geoInheritance.ts (brand copy differs). */
+export async function customPhotosForListing(
+  neighborhoodId: string | null | undefined,
+  matrix?: GeoInheritanceMatrix,
+): Promise<AreaPhoto[]> {
+  if (!neighborhoodId) return [];
+  const m = matrix ?? (await getGeoInheritance());
+  if (!m.maps.toListing) return [];
+  const n = await prisma.neighborhood.findUnique({
+    where: { id: neighborhoodId },
+    select: { districtId: true, district: { select: { cityId: true } } },
+  });
+  if (!n) return [];
+  const out = toPhotos(await customRows('neighborhood', neighborhoodId), 'neighborhood');
+  if (m.maps.districtToNeighborhood) {
+    out.push(...toPhotos(await customRows('district', n.districtId), 'district'));
+    if (n.district.cityId && m.maps.cityToDistrict) out.push(...toPhotos(await customRows('city', n.district.cityId), 'city'));
+  }
+  return out;
+}
+
 export type TaggedUpdate = { id: string; title: string | null; happenedAt: Date; source: 'city' | 'district' | 'neighborhood' };
 
 /** Latest area updates for a LISTING page (gated by updates.toListing; chained per the
