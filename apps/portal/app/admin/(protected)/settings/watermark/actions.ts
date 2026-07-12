@@ -39,7 +39,7 @@ async function saveBuffer(buf: Buffer, ext: string): Promise<string> {
 }
 
 export async function saveStamp(s: StampSettings): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('appearance', 'UPDATE');
   try {
     await saveStampSettings(s);
     revalidatePath('/admin/settings/watermark');
@@ -56,7 +56,7 @@ export async function saveStamp(s: StampSettings): Promise<Result> {
  * stamping, each photo's current rendition is reset back to its pure original.
  */
 export async function restampCategory(cat: StampCategory): Promise<CountResult> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('appearance', 'UPDATE');
   if (cat === 'map') return restampMaps();
   // Listing photos re-stamp PER LISTING so each picks up its category's (Type) rule.
   if (cat === 'listing') {
@@ -120,7 +120,7 @@ export async function restampCategory(cat: StampCategory): Promise<CountResult> 
 
 /** Revert a category's photos to their pure originals (no stamp), leaving config untouched. */
 export async function revertCategory(cat: StampCategory): Promise<CountResult> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('appearance', 'UPDATE');
   try {
     if (cat === 'map') {
       const maps = await prisma.areaMap.findMany();
@@ -148,7 +148,7 @@ export async function revertCategory(cat: StampCategory): Promise<CountResult> {
 
 /** Re-generate every area map's brand copies from the CLEAN originals (safe to re-run). */
 export async function restampMaps(): Promise<CountResult> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('appearance', 'UPDATE');
   try {
     const logos = await prisma.setting.findMany({ where: { key: { in: ['brand_alsawarey_logo', 'brand_newobour_logo'] } } });
     const lm = Object.fromEntries(logos.map((s) => [s.key, s.value]));
@@ -173,7 +173,7 @@ export async function restampMaps(): Promise<CountResult> {
 export type ContactInput = { id?: string; brand: string; type: string; value: string; isActive?: boolean };
 
 export async function saveBrandContact(input: ContactInput): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('appearance', 'UPDATE');
   const brand = input.brand === 'alsawarey' ? 'alsawarey' : 'newobour';
   const value = (input.value ?? '').trim().slice(0, 190);
   if (!value) return { ok: false, error: 'empty' };
@@ -192,7 +192,7 @@ export async function saveBrandContact(input: ContactInput): Promise<Result> {
 }
 
 export async function deleteBrandContact(id: string): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('appearance', 'UPDATE');
   try {
     await prisma.brandContact.delete({ where: { id } });
     revalidatePath('/admin/settings/watermark');

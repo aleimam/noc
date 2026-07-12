@@ -18,7 +18,7 @@ export async function upsertGuideEntry(input: {
   order?: number;
   isActive?: boolean;
 }): Promise<Result> {
-  await requirePermission('guide', input.id ? 'UPDATE' : 'CREATE');
+  await requirePermission('content', input.id ? 'UPDATE' : 'CREATE');
   if (!input.titleAr.trim() || !input.bodyAr.trim()) return { ok: false, error: 'failed' };
   const data = {
     section: input.section,
@@ -41,7 +41,7 @@ export async function upsertGuideEntry(input: {
 }
 
 export async function deleteGuideEntry(id: string): Promise<Result> {
-  await requirePermission('guide', 'DELETE');
+  await requirePermission('content', 'DELETE');
   try {
     await prisma.guideEntry.delete({ where: { id } });
     revalidatePath('/admin/guide');

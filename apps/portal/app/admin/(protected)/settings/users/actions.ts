@@ -92,7 +92,9 @@ export async function setCustomerVerified(id: string, verified: boolean): Promis
 export async function deleteUser(id: string): Promise<Result> {
   const u = await prisma.user.findUnique({ where: { id }, select: { type: true } });
   if (!u) return { ok: false, error: 'not_found' };
-  const section = u.type === 'CUSTOMER' ? 'customers' : u.type === 'PARTNER' ? 'partners' : 'staff';
+  // Partner logins belong to Owner records → gated by the `owners` section (the old
+  // `partners` key was retired in the 2026-07 RBAC restructure).
+  const section = u.type === 'CUSTOMER' ? 'customers' : u.type === 'PARTNER' ? 'owners' : 'staff';
   await requirePermission(section, 'DELETE');
   const session = await auth();
   if (session?.user?.id === id) return { ok: false, error: 'cant_delete_self' };

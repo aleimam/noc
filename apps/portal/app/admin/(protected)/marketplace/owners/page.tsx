@@ -5,7 +5,7 @@ import { OwnersManager } from './OwnersManager';
 import { PartnerBrowseGlobalToggle } from './PartnerBrowseGlobalToggle';
 
 export default async function OwnersPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('owners', 'VIEW');
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const owners = await prisma.owner.findMany({

@@ -19,7 +19,7 @@ export async function upsertNews(input: {
   published?: boolean;
   photoIds?: string[];
 }): Promise<Result> {
-  await requirePermission('news', input.id ? 'UPDATE' : 'CREATE');
+  await requirePermission('content', input.id ? 'UPDATE' : 'CREATE');
   const session = await auth();
   const uid = session?.user?.id ?? null;
   if (!input.titleAr.trim() || !input.bodyAr.trim()) return { ok: false, error: 'failed' };
@@ -61,7 +61,7 @@ export async function upsertNews(input: {
 }
 
 export async function deleteNews(id: string): Promise<Result> {
-  await requirePermission('news', 'DELETE');
+  await requirePermission('content', 'DELETE');
   try {
     await prisma.news.delete({ where: { id } });
     revalidatePath('/admin/news');

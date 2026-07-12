@@ -16,7 +16,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default async function ModerationPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('listings', 'VIEW');
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);

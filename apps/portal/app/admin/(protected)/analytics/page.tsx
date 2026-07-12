@@ -9,7 +9,7 @@ const fmtDur = (s: number) => (s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `
 const fmtDate = (d: Date, locale: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' }).format(d);
 
 export default async function VisitorAnalyticsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  await requirePermission('settings', 'VIEW');
+  await requirePermission('analytics', 'VIEW');
   const sp = await searchParams;
   const range = parseRange(sp);
   const locale = (await getLocale()) as 'ar' | 'en';

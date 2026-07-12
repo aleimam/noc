@@ -25,7 +25,7 @@ const HEX = /^#[0-9a-fA-F]{6}$/;
 /** Save one brand's generated-image identity; flags published listings stale so a
  *  regenerate picks the new identity up. */
 export async function savePosterTheme(brand: 'newobour' | 'alsawarey', input: PosterThemeInput): Promise<Result> {
-  await requirePermission('settings', 'UPDATE');
+  await requirePermission('appearance', 'UPDATE');
   for (const k of ['navy', 'gold', 'cream', 'tint', 'ink'] as const) {
     if (!HEX.test(input[k])) return { ok: false, error: 'bad_color' };
   }

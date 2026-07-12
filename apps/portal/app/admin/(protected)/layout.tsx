@@ -18,75 +18,75 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);
 
   // Grouped, permission-filtered navigation. Items with no `section` are always shown;
-  // empty groups are dropped. All Al Sawarey management lives in one group.
+  // empty groups are dropped. URLs are unchanged — only grouping + permission keys evolve.
   type NavItem = { href: string; label: string; section?: string };
-  // Brand-first structure: New Obour services · Al Sawarey (store ops + setup) · shared
-  // Content · People & access · System. URLs are unchanged — this only regroups the nav.
+  // 7 approved groups (2026-07 RBAC restructure): dashboard/analytics · New Obour ·
+  // Al Sawarey · shared market (manage) · shared market (setup) · appearance · system.
   const groups: { title?: string; items: NavItem[] }[] = [
-    { items: [{ href: '/admin', label: t('dashboard') }, { href: '/admin/analytics', label: L('تحليلات الزوّار', 'Visitor analytics'), section: 'settings' }] },
+    { items: [{ href: '/admin', label: t('dashboard') }, { href: '/admin/analytics', label: L('تحليلات الزوّار', 'Visitor analytics'), section: 'analytics' }] },
     {
-      title: L('العبور الجديد — الخدمات', 'New Obour — services'),
+      title: L('العبور الجديد', 'New Obour'),
       items: [
-        { href: '/admin/rationing', label: t('rationing'), section: 'sheets' },
-        { href: '/admin/lands', label: t('lands'), section: 'lands' },
+        { href: '/admin/rationing', label: L('كشوف التقنين', 'Rationing sheets'), section: 'sheets' },
+        { href: '/admin/lands', label: L('الدليل الجغرافي', 'Geo directory'), section: 'lands' },
         { href: '/admin/lands/lands', label: L('قطع الأراضي', 'Land plots'), section: 'lands' },
-        { href: '/admin/newobour/market', label: L('سوق العبور — العروض', 'New Obour market'), section: 'marketplace' },
-        { href: '/admin/marketplace/price-index', label: L('مؤشر الأسعار', 'Price index'), section: 'marketplace' },
+        { href: '/admin/newobour/market', label: L('سوق العبور — العروض', 'New Obour market'), section: 'listings' },
+        { href: '/admin/marketplace/price-index', label: L('مؤشر الأسعار', 'Price index'), section: 'listings' },
         { href: '/admin/settings/calculator', label: L('حاسبة التصالح', 'Calculator'), section: 'settings' },
+        { href: '/admin/news', label: L('الأخبار', 'News'), section: 'content' },
+        { href: '/admin/guide', label: L('الدليل', 'Guide'), section: 'content' },
+        { href: '/admin/guide/conditions', label: L('اشتراطات البناء', 'Building conditions'), section: 'content' },
       ],
     },
     {
-      title: L('الصواري — المتجر', 'Al Sawarey — store'),
+      title: L('الصواري', 'Al Sawarey'),
       items: [
-        { href: '/admin/marketplace', label: L('نظرة عامة', 'Overview'), section: 'marketplace' },
-        { href: '/admin/marketplace/listings', label: L('الأراضي والعروض', 'Lands & listings'), section: 'marketplace' },
-        { href: '/admin/marketplace/offers', label: L('عروض البيع (الوارد)', 'Sell offers'), section: 'marketplace' },
-        { href: '/admin/marketplace/owners', label: L('الملاك وجهات الاتصال', 'Owners & contacts'), section: 'marketplace' },
-        { href: '/admin/marketplace/partner-applications', label: L('طلبات الشراكة', 'Partner applications'), section: 'marketplace' },
-        { href: '/admin/marketplace/wishlists', label: L('قوائم المفضلة', 'Wishlists'), section: 'marketplace' },
+        { href: '/admin/marketplace', label: L('نظرة عامة على المتجر', 'Store overview'), section: 'storefront' },
+        { href: '/admin/marketplace/offers', label: L('عروض البيع (الوارد)', 'Sell offers (inbox)'), section: 'listings' },
+        { href: '/admin/marketplace/storefront', label: L('واجهة المتجر', 'Storefront'), section: 'storefront' },
+        { href: '/admin/marketplace/sell-content', label: L('محتوى صفحة البيع', 'Sell-page content'), section: 'storefront' },
       ],
     },
     {
-      title: L('الصواري — الإعداد', 'Al Sawarey — setup'),
+      title: L('السوق المشترك — الإدارة', 'Shared market — manage'),
       items: [
-        { href: '/admin/marketplace/storefront', label: L('واجهة المتجر', 'Storefront'), section: 'marketplace' },
-        { href: '/admin/marketplace/sell-content', label: L('محتوى صفحة البيع', 'Sell-page content'), section: 'marketplace' },
-        { href: '/admin/marketplace/classifiers', label: L('التصنيفات', 'Classifiers'), section: 'marketplace' },
-        { href: '/admin/marketplace/attributes', label: L('التفاصيل', 'Details'), section: 'marketplace' },
-        { href: '/admin/marketplace/sections', label: L('مجموعات التفاصيل', 'Detail groups'), section: 'marketplace' },
-        { href: '/admin/marketplace/category-attributes', label: L('الفئات والتفاصيل', 'Categories & details'), section: 'marketplace' },
-        { href: '/admin/marketplace/option-lists', label: L('قوائم الاختيارات', 'Option lists'), section: 'marketplace' },
+        { href: '/admin/marketplace/listings', label: L('الأراضي والعروض', 'Lands & listings'), section: 'listings' },
+        { href: '/admin/marketplace/wishlists', label: L('قوائم المفضلة', 'Wishlists'), section: 'listings' },
+        { href: '/admin/marketplace/owners', label: L('الملاك وجهات الاتصال', 'Owners & contacts'), section: 'owners' },
+        { href: '/admin/marketplace/partner-applications', label: L('طلبات الشراكة', 'Partner applications'), section: 'owners' },
       ],
     },
     {
-      title: L('المحتوى', 'Content'),
+      title: L('السوق المشترك — الإعداد', 'Shared market — setup'),
       items: [
-        { href: '/admin/news', label: t('news'), section: 'news' },
-        { href: '/admin/guide', label: t('guide'), section: 'guide' },
-        { href: '/admin/guide/conditions', label: L('اشتراطات البناء', 'Building conditions'), section: 'guide' },
-        { href: '/admin/pages', label: t('pages'), section: 'pages' },
+        { href: '/admin/marketplace/classifiers', label: L('التصنيفات', 'Classifiers'), section: 'catalog' },
+        { href: '/admin/marketplace/attributes', label: L('التفاصيل', 'Details'), section: 'catalog' },
+        { href: '/admin/marketplace/sections', label: L('مجموعات التفاصيل', 'Detail groups'), section: 'catalog' },
+        { href: '/admin/marketplace/category-attributes', label: L('الفئات والتفاصيل', 'Categories & details'), section: 'catalog' },
+        { href: '/admin/marketplace/option-lists', label: L('قوائم الاختيارات', 'Option lists'), section: 'catalog' },
+        { href: '/admin/pages', label: L('الصفحات', 'Pages'), section: 'content' },
       ],
     },
     {
-      title: L('المستخدمون والصلاحيات', 'People & access'),
+      title: L('المظهر والهوية', 'Appearance & identity'),
+      items: [
+        { href: '/admin/settings/branding', label: L('الشعارات والهوية', 'Branding'), section: 'appearance' },
+        { href: '/admin/settings/theme', label: L('المظهر والألوان', 'Theme & colors'), section: 'appearance' },
+        { href: '/admin/settings/watermark', label: L('العلامة المائية', 'Watermark'), section: 'appearance' },
+        { href: '/admin/settings/poster-identity', label: L('هوية صور الإعلانات (البوستر)', 'Listing images (poster)'), section: 'appearance' },
+        { href: '/admin/settings/appearance', label: L('لغة اللوحة', 'Panel language') },
+      ],
+    },
+    {
+      title: L('النظام والصلاحيات', 'System & access'),
       items: [
         { href: '/admin/settings/users', label: L('فريق العمل', 'Staff & roles'), section: 'staff' },
         { href: '/admin/settings/customers', label: L('العملاء', 'Customers'), section: 'customers' },
-      ],
-    },
-    {
-      title: L('النظام والإعدادات', 'System & settings'),
-      items: [
         { href: '/admin/settings/modules', label: L('الخدمات الظاهرة', 'Modules'), section: 'settings' },
-        { href: '/admin/settings/branding', label: L('الشعارات والهوية', 'Branding'), section: 'settings' },
-        { href: '/admin/settings/theme', label: L('المظهر والألوان', 'Theme & colors'), section: 'settings' },
-        { href: '/admin/settings/appearance', label: L('اللغة', 'Language') },
-        { href: '/admin/settings/watermark', label: L('العلامة المائية', 'Watermark'), section: 'marketplace' },
-        { href: '/admin/settings/poster-identity', label: L('هوية صور الإعلانات (البوستر)', 'Listing images (poster)'), section: 'settings' },
         { href: '/admin/settings/apis', label: L('الرسائل والواجهات', 'SMS & APIs'), section: 'settings' },
-        { href: '/admin/settings/security', label: L('الأمان والحماية', 'Security'), section: 'settings' },
-        { href: '/admin/settings/analytics', label: L('التحليلات والتتبّع', 'Analytics'), section: 'settings' },
-        { href: '/admin/settings/site', label: L('إعدادات الموقع العامة', 'Site settings'), section: 'settings' },
+        { href: '/admin/settings/security', label: L('الأمان', 'Security'), section: 'settings' },
+        { href: '/admin/settings/analytics', label: L('التحليلات والتتبّع', 'Tracking config'), section: 'settings' },
+        { href: '/admin/settings/site', label: L('إعدادات الموقع', 'Site settings'), section: 'settings' },
         { href: '/admin/settings/backups', label: L('النسخ الاحتياطية', 'Backups'), section: 'settings' },
         { href: '/admin/settings/account', label: L('حسابي', 'My account') },
       ],

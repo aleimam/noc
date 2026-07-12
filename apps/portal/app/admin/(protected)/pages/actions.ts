@@ -20,7 +20,7 @@ export async function savePage(input: {
   published?: boolean;
   footerOrder?: number;
 }): Promise<Result> {
-  await requirePermission('pages', input.id ? 'UPDATE' : 'CREATE');
+  await requirePermission('content', input.id ? 'UPDATE' : 'CREATE');
   const brand = input.brand === 'alsawarey' ? 'alsawarey' : 'newobour';
   const slug = slugify(input.slug || input.titleEn || input.titleAr);
   const titleAr = input.titleAr.trim();
@@ -51,7 +51,7 @@ export async function savePage(input: {
 }
 
 export async function deletePage(id: string): Promise<Result> {
-  await requirePermission('pages', 'DELETE');
+  await requirePermission('content', 'DELETE');
   try {
     await prisma.page.delete({ where: { id } });
     revalidatePath('/admin/pages');

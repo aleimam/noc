@@ -8,7 +8,7 @@ import type { SellContent } from '@noc/config';
 const KEY = 'alsawarey.sell';
 
 export async function saveSellContent(content: SellContent): Promise<{ ok: true } | { ok: false; error: string }> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('storefront', 'UPDATE');
   try {
     await prisma.setting.upsert({
       where: { key: KEY },

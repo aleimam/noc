@@ -540,7 +540,7 @@ export async function setAreaMap(input: {
   annotation?: unknown; // editable annotator shapes (location maps)
   sourcePath?: string | null; // parent masterplan the location was annotated on
 }): Promise<Result> {
-  await requirePermission(input.level === 'listing' ? 'marketplace' : 'lands', 'UPDATE');
+  await requirePermission(input.level === 'listing' ? 'listings' : 'lands', 'UPDATE');
   try {
     return await stampAndUpsertAreaMap(input);
   } catch (e) {
@@ -550,7 +550,7 @@ export async function setAreaMap(input: {
 
 /** Rename a map (fixed or custom) without re-uploading — title only. */
 export async function setAreaMapTitle(input: { level: MapLevel; targetId: string; kind: string; title: string | null }): Promise<Result> {
-  await requirePermission(input.level === 'listing' ? 'marketplace' : 'lands', 'UPDATE');
+  await requirePermission(input.level === 'listing' ? 'listings' : 'lands', 'UPDATE');
   try {
     await prisma.areaMap.updateMany({
       where: { level: input.level, areaId: input.targetId, kind: input.kind },
@@ -571,7 +571,7 @@ export async function addCustomAreaPhoto(input: {
   attachmentId: string;
   title?: string | null;
 }): Promise<Result> {
-  await requirePermission(input.level === 'listing' ? 'marketplace' : 'lands', 'UPDATE');
+  await requirePermission(input.level === 'listing' ? 'listings' : 'lands', 'UPDATE');
   try {
     const kind = `custom:${randomUUID()}`;
     const r = await stampAndUpsertAreaMap({ level: input.level, targetId: input.targetId, kind, attachmentId: input.attachmentId, title: input.title });
@@ -583,7 +583,7 @@ export async function addCustomAreaPhoto(input: {
 
 // Delete a custom area photo = clear its AreaMap row by kind (reuses clearAreaMap).
 export async function clearAreaMap(input: { level: MapLevel; targetId: string; kind: string }): Promise<Result> {
-  await requirePermission(input.level === 'listing' ? 'marketplace' : 'lands', 'UPDATE');
+  await requirePermission(input.level === 'listing' ? 'listings' : 'lands', 'UPDATE');
   try {
     await prisma.areaMap.deleteMany({ where: { level: input.level, areaId: input.targetId, kind: input.kind } });
     if (input.level === 'listing') await prisma.listing.update({ where: { id: input.targetId }, data: { postersStale: true } }).catch(() => {});

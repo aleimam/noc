@@ -9,7 +9,7 @@ type Result = { ok: true } | { ok: false; error: string };
 
 /** (Re)generate the full image set (poster ×3, card per group ×2, advantages ×2) for a listing. */
 export async function generateListingPosters(listingId: string): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('listings', 'UPDATE');
   try {
     await regenerateListingImages(listingId);
     revalidatePath(`/admin/marketplace/listings/${listingId}/edit`);

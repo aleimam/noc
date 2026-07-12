@@ -33,6 +33,10 @@ packages/mail      sendMail via nodemailer → localhost:25 (Postfix → Brevo r
 packages/sms       SMS Misr integration (working in prod)
 packages/analytics first-party visitor analytics collector
 packages/config    constants, validators (isValidPhone/isValidEmail), SECTIONS for RBAC
+                   (12 keys since 2026-07: sheets/lands/listings/catalog/owners/storefront/
+                   content/appearance/analytics/staff/customers/settings — the old
+                   `marketplace` + fat `settings` god-sections were split; grants were
+                   copied by migration 20260712160000_rbac_sections, zero-lockout)
 packages/i18n      locale/currency/unit helpers
 ops/               server scripts + runbooks (see ops/README.md — each file documented)
 Identity/          brand assets. Real logos: ALSWARY = 1000X1000.png, New Obour = New Obour.png

@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 // The shared pool of PERSONAL owners (فرد) — they carry no allocated code and number
 // from the 800–999 monthly ad pool. Each links to its own owner detail page.
 export default async function PersonalOwnersPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('owners', 'VIEW');
   const t = await getTranslations('mp');
   const owners = await prisma.owner.findMany({
     where: { type: 'PERSONAL' },

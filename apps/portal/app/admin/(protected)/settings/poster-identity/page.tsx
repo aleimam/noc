@@ -8,7 +8,7 @@ import type { PosterThemeInput } from './actions';
 export const dynamic = 'force-dynamic';
 
 export default async function PosterIdentityPage() {
-  await requirePermission('settings', 'VIEW');
+  await requirePermission('appearance', 'VIEW');
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 

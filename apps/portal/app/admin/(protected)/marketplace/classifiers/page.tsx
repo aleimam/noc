@@ -3,7 +3,7 @@ import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 
 export default async function ClassifiersPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('catalog', 'VIEW');
   const t = await getTranslations('mp');
   const classifiers = await prisma.classifier.findMany({
     orderBy: { order: 'asc' },

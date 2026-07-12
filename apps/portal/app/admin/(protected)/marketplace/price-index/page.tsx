@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 // record) + the stored monthly snapshot history. The cron writes on the 1st of each month;
 // "Snapshot now" overwrites the current month on demand.
 export default async function AdminPriceIndexPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('listings', 'VIEW');
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const fmt = (n: number) => n.toLocaleString('en-US');

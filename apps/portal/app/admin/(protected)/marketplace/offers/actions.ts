@@ -7,7 +7,7 @@ import { prisma } from '@noc/db';
 type Status = 'NEW' | 'REVIEWING' | 'ACCEPTED' | 'REJECTED';
 
 export async function setOfferStatus(id: string, status: Status): Promise<{ ok: true } | { ok: false; error: string }> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('listings', 'UPDATE');
   try {
     await prisma.landOffer.update({ where: { id }, data: { status } });
     revalidatePath('/admin/marketplace/offers');
@@ -20,7 +20,7 @@ export async function setOfferStatus(id: string, status: Status): Promise<{ ok: 
 }
 
 export async function deleteOffer(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  await requirePermission('marketplace', 'DELETE');
+  await requirePermission('listings', 'DELETE');
   try {
     // Unlink the offer's photos (files stay on disk; rows become unowned drafts).
     await prisma.attachment.updateMany({

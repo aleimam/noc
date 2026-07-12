@@ -39,7 +39,7 @@ export async function upsertClassifierOption(
   classifierId: string,
   input: { id?: string; key: string; nameAr: string; nameEn: string; order?: number; isActive?: boolean; parentIds?: string[]; allowedOnAlsawarey?: boolean },
 ): Promise<Result> {
-  await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
+  await requirePermission('catalog', input.id ? 'UPDATE' : 'CREATE');
   const data = {
     nameAr: input.nameAr.trim(),
     nameEn: input.nameEn.trim(),
@@ -68,7 +68,7 @@ export async function upsertClassifierOption(
 }
 
 export async function saveStandardAreas(list: number[]): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('catalog', 'UPDATE');
   const clean = [...new Set(list.map(Number).filter((n) => Number.isFinite(n) && n > 0))].sort((a, b) => a - b);
   try {
     await prisma.setting.upsert({
@@ -85,7 +85,7 @@ export async function saveStandardAreas(list: number[]): Promise<Result> {
 
 // Persist a new display order (order = position in the given id list).
 async function reorderRows(ids: string[], update: (id: string, order: number) => Promise<unknown>): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('catalog', 'UPDATE');
   try {
     await prisma.$transaction(ids.map((id, i) => update(id, i) as Prisma.PrismaPromise<unknown>));
     revalidate();
@@ -106,7 +106,7 @@ export async function reorderSections(ids: string[]): Promise<Result> {
 }
 
 export async function deleteClassifierOption(id: string): Promise<Result> {
-  await requirePermission('marketplace', 'DELETE');
+  await requirePermission('catalog', 'DELETE');
   try {
     await prisma.classifierOption.delete({ where: { id } });
     revalidate();
@@ -122,7 +122,7 @@ export async function toggleClassifierOptionFlag(
   flag: 'isActive' | 'allowedOnAlsawarey',
   value: boolean,
 ): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('catalog', 'UPDATE');
   try {
     await prisma.classifierOption.update({ where: { id }, data: { [flag]: value } });
     revalidate();
@@ -143,7 +143,7 @@ export async function upsertSection(input: {
   order?: number;
   isActive?: boolean;
 }): Promise<Result> {
-  await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
+  await requirePermission('catalog', input.id ? 'UPDATE' : 'CREATE');
   const data = {
     nameAr: input.nameAr.trim(),
     nameEn: input.nameEn.trim(),
@@ -164,7 +164,7 @@ export async function upsertSection(input: {
 }
 
 export async function deleteSection(id: string): Promise<Result> {
-  await requirePermission('marketplace', 'DELETE');
+  await requirePermission('catalog', 'DELETE');
   try {
     await prisma.attributeSection.delete({ where: { id } });
     revalidate();
@@ -180,7 +180,7 @@ export async function deleteSection(id: string): Promise<Result> {
 
 /** Global master switch: may partners browse (view-only) all our published sell offers? */
 export async function setPartnerBrowseGlobal(enabled: boolean): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('owners', 'UPDATE');
   try {
     await prisma.setting.upsert({
       where: { key: 'partner.browseListings' },
@@ -225,7 +225,7 @@ export type OwnerFullInput = {
  *  A partner login is only CREATED when at least one identifier (username/email/phone) is
  *  entered; an existing login must keep at least one identifier. */
 export async function saveOwnerFull(input: OwnerFullInput): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('owners', 'UPDATE');
   const name = input.name.trim();
   if (!name) return { ok: false, error: 'failed' };
   if (input.phone1.trim() && !isValidPhone(input.phone1)) return { ok: false, error: 'invalid_phone' };
@@ -314,7 +314,7 @@ export async function setCategorySectionRender(
   optionId: string,
   marks: Array<{ sectionId: string; makeCard: boolean; onPoster: boolean }>,
 ): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('catalog', 'UPDATE');
   try {
     const rows = marks
       .filter((m) => !m.makeCard || m.onPoster)
@@ -332,7 +332,7 @@ export async function setCategorySectionRender(
 
 /** Assign the generated-photos icon for a section (null = auto cycle). */
 export async function setSectionIcon(id: string, icon: string | null): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('catalog', 'UPDATE');
   if (icon !== null && !isPosterIcon(icon)) return { ok: false, error: 'failed' };
   try {
     await prisma.attributeSection.update({ where: { id }, data: { icon } });
@@ -371,7 +371,7 @@ export async function upsertAttribute(input: {
   optionListId?: string | null; // shared OptionList for SELECT / MULTI_SELECT
   optionIds?: string[]; // ClassifierOption ids the attribute applies to (Type/Purpose/Condition)
 }): Promise<Result> {
-  await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
+  await requirePermission('catalog', input.id ? 'UPDATE' : 'CREATE');
   const cfg = input.config && Object.keys(input.config).length ? input.config : null;
   const usesList = input.type === 'SELECT' || input.type === 'MULTI_SELECT';
   const core = {
@@ -421,7 +421,7 @@ export async function upsertAttribute(input: {
 // Category-centric applicability: set which attributes apply to one classifier option
 // (the inverse of picking options inside the attribute form).
 export async function setOptionAttributes(optionId: string, attributeIds: string[]): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('catalog', 'UPDATE');
   try {
     const existing = await prisma.attributeClassifier.findMany({ where: { optionId }, select: { id: true, attributeId: true } });
     const want = new Set(attributeIds);
@@ -441,7 +441,7 @@ export async function setOptionAttributes(optionId: string, attributeIds: string
 }
 
 export async function deleteAttribute(id: string): Promise<Result> {
-  await requirePermission('marketplace', 'DELETE');
+  await requirePermission('catalog', 'DELETE');
   try {
     // Clear every dependent row first so ANY attribute can be removed — even one
     // linked to categories or with saved listing values. Schema cascades would
@@ -467,7 +467,7 @@ export async function deleteAttribute(id: string): Promise<Result> {
 export type OptionItemInput = { id?: string; key: string; labelAr: string; labelEn: string; order?: number; isActive?: boolean };
 
 export async function upsertOptionList(input: { id?: string; name: string; items: OptionItemInput[] }): Promise<Result> {
-  await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
+  await requirePermission('catalog', input.id ? 'UPDATE' : 'CREATE');
   const name = input.name.trim();
   if (!name) return { ok: false, error: 'failed' };
   try {
@@ -494,7 +494,7 @@ export async function upsertOptionList(input: { id?: string; name: string; items
 }
 
 export async function deleteOptionList(id: string): Promise<Result> {
-  await requirePermission('marketplace', 'DELETE');
+  await requirePermission('catalog', 'DELETE');
   const used = await prisma.attribute.count({ where: { optionListId: id } });
   if (used > 0) return { ok: false, error: 'in_use' };
   try {
@@ -510,7 +510,7 @@ export async function deleteOptionList(id: string): Promise<Result> {
  *  (run after a design change). Best-effort per listing; returns how many succeeded. */
 /** Regenerate images for all published listings — optionally only one category (Type option). */
 export async function regenerateAllListingImages(typeOptionId?: string): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('listings', 'UPDATE');
   try {
     const ids = (
       await prisma.listing.findMany({
@@ -532,7 +532,7 @@ export async function regenerateAllListingImages(typeOptionId?: string): Promise
 // ──────────────────────────── Moderation ────────────────────────────
 
 export async function approveListing(id: string): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('listings', 'UPDATE');
   try {
     await prisma.listing.update({
       where: { id },
@@ -551,7 +551,7 @@ export async function approveListing(id: string): Promise<Result> {
 }
 
 export async function toggleFeatured(id: string, featured: boolean): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('listings', 'UPDATE');
   try {
     await prisma.listing.update({ where: { id }, data: { featured } });
     revalidatePath('/admin/marketplace/listings', 'page');
@@ -562,7 +562,7 @@ export async function toggleFeatured(id: string, featured: boolean): Promise<Res
 }
 
 export async function rejectListing(id: string, reason: string): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('listings', 'UPDATE');
   // A rejection must carry a reason (the UI enforces this too — this is the server backstop).
   if (!reason.trim()) return { ok: false, error: 'reason_required' };
   try {
@@ -581,7 +581,7 @@ export async function rejectListing(id: string, reason: string): Promise<Result>
  *  market + storefront without deleting anything; reactivating republishes it (and
  *  assigns the public ad number if it never had one). */
 export async function setListingArchived(id: string, archived: boolean): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('listings', 'UPDATE');
   try {
     await prisma.listing.update({
       where: { id },
@@ -603,7 +603,7 @@ export async function setListingArchived(id: string, archived: boolean): Promise
  *  poster/card images as Attachment rows, and the listing location map as an AreaMap)
  *  carry no FK, so clear them explicitly first. */
 export async function deleteListing(id: string): Promise<Result> {
-  await requirePermission('marketplace', 'DELETE');
+  await requirePermission('listings', 'DELETE');
   try {
     await prisma.$transaction([
       prisma.attachment.deleteMany({ where: { ownerId: id, ownerType: { in: ['Listing', 'ListingPoster'] } } }),
@@ -632,7 +632,7 @@ export async function upsertOwner(input: {
   phone2Whatsapp?: boolean;
   details?: string;
 }): Promise<Result> {
-  await requirePermission('marketplace', input.id ? 'UPDATE' : 'CREATE');
+  await requirePermission('owners', input.id ? 'UPDATE' : 'CREATE');
   const name = input.name.trim();
   if (!name) return { ok: false, error: 'failed' };
   if (input.phone1?.trim() && !isValidPhone(input.phone1)) return { ok: false, error: 'invalid_phone' };
@@ -676,7 +676,7 @@ export async function upsertOwner(input: {
 }
 
 export async function deleteOwner(id: string): Promise<Result> {
-  await requirePermission('marketplace', 'DELETE');
+  await requirePermission('owners', 'DELETE');
   try {
     await prisma.owner.delete({ where: { id } });
     revalidatePath('/admin/marketplace/owners', 'page');
@@ -688,7 +688,7 @@ export async function deleteOwner(id: string): Promise<Result> {
 
 /** Write this month's per-district price snapshot on demand (same as the monthly cron). */
 export async function snapshotPricesNow(): Promise<Result | { ok: true; count: number }> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('listings', 'UPDATE');
   try {
     const count = await snapshotPrices();
     revalidatePath('/admin/marketplace/price-index', 'page');
@@ -698,13 +698,13 @@ export async function snapshotPricesNow(): Promise<Result | { ok: true; count: n
   }
 }
 
-// Only the storefront contact keys may be written through this marketplace-gated action —
-// an open key would let marketplace staff bypass the `settings` RBAC (security.level, theme.*).
-const MARKETPLACE_SETTING_KEYS = new Set(['alswarey_phone', 'alswarey_whatsapp']);
+// Only the storefront contact keys may be written through this storefront-gated action —
+// an open key would let storefront staff bypass the `settings` RBAC (security.level, theme.*).
+const STOREFRONT_SETTING_KEYS = new Set(['alswarey_phone', 'alswarey_whatsapp']);
 
 export async function updateSetting(key: string, value: string): Promise<Result> {
-  await requirePermission('marketplace', 'UPDATE');
-  if (!MARKETPLACE_SETTING_KEYS.has(key)) return { ok: false, error: 'forbidden' };
+  await requirePermission('storefront', 'UPDATE');
+  if (!STOREFRONT_SETTING_KEYS.has(key)) return { ok: false, error: 'forbidden' };
   // Phone-type settings must satisfy the shared phone rule when non-empty.
   if (/_phone$/.test(key) && value.trim() && !isValidPhone(value)) {
     return { ok: false, error: 'invalid_phone' };

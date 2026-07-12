@@ -4,7 +4,7 @@ import { PageEditor } from '../PageEditor';
 export const dynamic = 'force-dynamic';
 
 export default async function NewPage() {
-  await requirePermission('pages', 'CREATE');
+  await requirePermission('content', 'CREATE');
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">

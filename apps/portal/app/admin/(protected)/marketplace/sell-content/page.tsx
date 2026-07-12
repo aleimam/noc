@@ -6,7 +6,7 @@ import { SellContentEditor } from './SellContentEditor';
 export const dynamic = 'force-dynamic';
 
 export default async function SellContentPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('storefront', 'VIEW');
   const row = await prisma.setting.findUnique({ where: { key: 'alsawarey.sell' } });
   let initial: SellContent = DEFAULT_SELL_CONTENT;
   if (row?.value) {

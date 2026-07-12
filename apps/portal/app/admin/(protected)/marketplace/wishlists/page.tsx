@@ -4,7 +4,7 @@ import { prisma } from '@noc/db';
 export const dynamic = 'force-dynamic';
 
 export default async function WishlistsAdmin() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('listings', 'VIEW');
 
   const [lists, top] = await Promise.all([
     prisma.wishlistList.findMany({

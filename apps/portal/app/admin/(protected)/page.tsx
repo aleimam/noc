@@ -12,6 +12,16 @@ export default async function AdminDashboard() {
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);
   const can = (section: string) => hasPermission(user.perms, section, 'VIEW');
 
+  // Every KPI is gated by the viewer's section permission — both the query (skipped
+  // entirely when not visible) and the tile render below.
+  const canSheets = can('sheets');
+  const canLands = can('lands');
+  const canListings = can('listings');
+  const canOwners = can('owners');
+  const canCustomers = can('customers');
+  const canStaff = can('staff');
+  const count = (allowed: boolean, fn: () => Promise<number>) => (allowed ? fn() : Promise.resolve(0));
+
   const [
     sheets, ratFollows, searches, scans, cities,
     districts, neighborhoods, lands, landFollows,
@@ -20,29 +30,33 @@ export default async function AdminDashboard() {
     customers, customersVerified, staff,
     recentPending, recentOffers,
   ] = await Promise.all([
-    prisma.rationingSheet.count(),
-    prisma.rationingFollow.count(),
-    prisma.sheetSearchLog.count(),
-    prisma.rationingScan.count(),
-    prisma.rationingCity.count(),
-    prisma.district.count(),
-    prisma.neighborhood.count(),
-    prisma.land.count(),
-    prisma.landFollow.count(),
-    prisma.listing.count(),
-    prisma.listing.count({ where: { status: 'PENDING' } }),
-    prisma.listing.count({ where: { status: 'PUBLISHED' } }),
-    prisma.listing.count({ where: { status: 'SOLD' } }),
-    prisma.listing.count({ where: { showOnBrokerage: true } }),
-    prisma.landOffer.count({ where: { status: { in: ['NEW', 'REVIEWING'] } } }),
-    prisma.owner.count(),
-    prisma.wishlistList.count(),
-    prisma.contactRequest.count(),
-    prisma.user.count({ where: { type: 'CUSTOMER' } }),
-    prisma.user.count({ where: { type: 'CUSTOMER', phoneVerifiedAt: { not: null } } }),
-    prisma.user.count({ where: { type: 'STAFF' } }),
-    prisma.listing.findMany({ where: { status: 'PENDING' }, orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, title: true } }),
-    prisma.landOffer.findMany({ where: { status: { in: ['NEW', 'REVIEWING'] } }, orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, ownerName: true, createdAt: true } }),
+    count(canSheets, () => prisma.rationingSheet.count()),
+    count(canSheets, () => prisma.rationingFollow.count()),
+    count(canSheets, () => prisma.sheetSearchLog.count()),
+    count(canSheets, () => prisma.rationingScan.count()),
+    count(canSheets, () => prisma.rationingCity.count()),
+    count(canLands, () => prisma.district.count()),
+    count(canLands, () => prisma.neighborhood.count()),
+    count(canLands, () => prisma.land.count()),
+    count(canLands, () => prisma.landFollow.count()),
+    count(canListings, () => prisma.listing.count()),
+    count(canListings, () => prisma.listing.count({ where: { status: 'PENDING' } })),
+    count(canListings, () => prisma.listing.count({ where: { status: 'PUBLISHED' } })),
+    count(canListings, () => prisma.listing.count({ where: { status: 'SOLD' } })),
+    count(canListings, () => prisma.listing.count({ where: { showOnBrokerage: true } })),
+    count(canListings, () => prisma.landOffer.count({ where: { status: { in: ['NEW', 'REVIEWING'] } } })),
+    count(canOwners, () => prisma.owner.count()),
+    count(canListings, () => prisma.wishlistList.count()),
+    count(canListings, () => prisma.contactRequest.count()),
+    count(canCustomers, () => prisma.user.count({ where: { type: 'CUSTOMER' } })),
+    count(canCustomers, () => prisma.user.count({ where: { type: 'CUSTOMER', phoneVerifiedAt: { not: null } } })),
+    count(canStaff, () => prisma.user.count({ where: { type: 'STAFF' } })),
+    canListings
+      ? prisma.listing.findMany({ where: { status: 'PENDING' }, orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, title: true } })
+      : Promise.resolve([]),
+    canListings
+      ? prisma.landOffer.findMany({ where: { status: { in: ['NEW', 'REVIEWING'] } }, orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, ownerName: true, createdAt: true } })
+      : Promise.resolve([]),
   ]);
 
   type Kpi = { label: string; value: number; href?: string; alert?: boolean };
@@ -71,7 +85,7 @@ export default async function AdminDashboard() {
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-primary">{t('dashboard')}</h1>
 
-      {can('sheets') && (
+      {canSheets && (
         <Section
           title={L('كشوف التقنين', 'Rationing')}
           kpis={[
@@ -84,7 +98,7 @@ export default async function AdminDashboard() {
         />
       )}
 
-      {can('lands') && (
+      {canLands && (
         <Section
           title={L('الأراضي والمناطق', 'Lands & areas')}
           kpis={[
@@ -96,40 +110,48 @@ export default async function AdminDashboard() {
         />
       )}
 
-      {can('marketplace') && (
+      {(canListings || canOwners) && (
         <Section
           title={L('السوق والصواري', 'Marketplace & Al Sawarey')}
           kpis={[
-            { label: L('إجمالي العروض', 'Total listings'), value: listingsTotal, href: '/admin/marketplace/listings' },
-            { label: L('بانتظار المراجعة', 'Pending review'), value: listingsPending, href: '/admin/marketplace/listings', alert: listingsPending > 0 },
-            { label: L('منشورة', 'Published'), value: listingsPublished },
-            { label: L('على الصواري', 'On Al Sawarey'), value: onBrokerage },
-            { label: L('مباعة', 'Sold'), value: listingsSold },
-            { label: L('عروض بيع واردة', 'Incoming offers'), value: offersOpen, href: '/admin/marketplace/offers', alert: offersOpen > 0 },
-            { label: L('الملاك', 'Owners'), value: owners, href: '/admin/marketplace/owners' },
-            { label: L('طلبات التواصل', 'Leads'), value: leads },
-            { label: L('قوائم المفضلة', 'Wishlists'), value: wishlists, href: '/admin/marketplace/wishlists' },
+            ...(canListings
+              ? ([
+                  { label: L('إجمالي العروض', 'Total listings'), value: listingsTotal, href: '/admin/marketplace/listings' },
+                  { label: L('بانتظار المراجعة', 'Pending review'), value: listingsPending, href: '/admin/marketplace/listings', alert: listingsPending > 0 },
+                  { label: L('منشورة', 'Published'), value: listingsPublished },
+                  { label: L('على الصواري', 'On Al Sawarey'), value: onBrokerage },
+                  { label: L('مباعة', 'Sold'), value: listingsSold },
+                  { label: L('عروض بيع واردة', 'Incoming offers'), value: offersOpen, href: '/admin/marketplace/offers', alert: offersOpen > 0 },
+                ] as Kpi[])
+              : []),
+            ...(canOwners ? ([{ label: L('الملاك', 'Owners'), value: owners, href: '/admin/marketplace/owners' }] as Kpi[]) : []),
+            ...(canListings
+              ? ([
+                  { label: L('طلبات التواصل', 'Leads'), value: leads },
+                  { label: L('قوائم المفضلة', 'Wishlists'), value: wishlists, href: '/admin/marketplace/wishlists' },
+                ] as Kpi[])
+              : []),
           ]}
         />
       )}
 
-      {(can('customers') || can('staff')) && (
+      {(canCustomers || canStaff) && (
         <Section
           title={L('المستخدمون', 'People')}
           kpis={[
-            ...(can('customers')
+            ...(canCustomers
               ? ([
                   { label: L('العملاء', 'Customers'), value: customers, href: '/admin/settings/customers' },
                   { label: L('مؤكَّدون', 'Verified'), value: customersVerified },
                   { label: L('غير مؤكَّدين', 'Unverified'), value: customers - customersVerified, alert: customers - customersVerified > 0 },
                 ] as Kpi[])
               : []),
-            ...(can('staff') ? ([{ label: L('فريق العمل', 'Staff'), value: staff, href: '/admin/settings/users' }] as Kpi[]) : []),
+            ...(canStaff ? ([{ label: L('فريق العمل', 'Staff'), value: staff, href: '/admin/settings/users' }] as Kpi[]) : []),
           ]}
         />
       )}
 
-      {can('marketplace') && (recentPending.length > 0 || recentOffers.length > 0) && (
+      {canListings && (recentPending.length > 0 || recentOffers.length > 0) && (
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2 rounded-xl border border-graphite/15 p-4">
             <h3 className="font-semibold text-primary">{L('عروض بانتظار المراجعة', 'Listings awaiting review')}</h3>

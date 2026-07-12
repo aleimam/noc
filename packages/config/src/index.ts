@@ -139,23 +139,25 @@ export function isValidEmail(input: string | null | undefined): boolean {
   return EMAIL_RE.test((input ?? '').trim());
 }
 
-/** RBAC section keys. Add a new key when a new module is introduced. */
+/** RBAC section keys. Add a new key when a new module is introduced.
+ *  2026-07 restructure: the old god-sections `marketplace` (split into
+ *  listings/catalog/owners/storefront) and parts of `settings` (split out
+ *  appearance/analytics) were re-keyed; news/guide/pages merged into `content`.
+ *  Migration 20260712160000_rbac_sections copied every role/user grant before
+ *  deleting the old Permission rows (zero-lockout). */
 export const SECTIONS = [
-  'homepage',
+  'sheets', // rationing (كشوف التقنين)
+  'lands', // geo directory + land plots
+  'listings', // market offers: moderation, offers inbox, wishlists, price index
+  'catalog', // market setup: classifiers, attributes, sections, option lists
+  'owners', // owners & partner accounts/applications
+  'storefront', // Al Sawarey storefront overview + editors
+  'content', // news, guide, building conditions, static pages
+  'appearance', // branding, theme, watermark, poster identity
+  'analytics', // visitor analytics dashboard + exports
   'staff',
   'customers',
-  'partners',
-  'media',
-  'settings',
-  // business modules (wired in later milestones)
-  'sheets',
-  'lands',
-  'districts',
-  'owners',
-  'commissions',
-  'marketplace',
-  'news',
-  'guide',
+  'settings', // system-only: modules, SMS/APIs, security, tracking config, site, backups
 ] as const;
 export type Section = (typeof SECTIONS)[number];
 

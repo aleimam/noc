@@ -6,7 +6,7 @@ import { AttributeForm, type AttrData } from '../AttributeForm';
 import { upsertAttribute, deleteAttribute } from '../../actions';
 
 export default async function EditAttribute({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('catalog', 'UPDATE');
   const { id } = await params;
   const [attr, sections, classifiers, lists] = await Promise.all([
     prisma.attribute.findUnique({

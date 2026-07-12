@@ -5,7 +5,7 @@ import { ListingForm } from '@/app/account/listings/ListingForm';
 import { loadCatalog } from '@/app/account/listings/catalog';
 
 export default async function StaffNewListing() {
-  await requirePermission('marketplace', 'CREATE');
+  await requirePermission('listings', 'CREATE');
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();

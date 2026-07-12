@@ -6,7 +6,7 @@ import { CategoryAttributesManager } from './CategoryAttributesManager';
 export const dynamic = 'force-dynamic';
 
 export default async function CategoryAttributesPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('catalog', 'VIEW');
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);

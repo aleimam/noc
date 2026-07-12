@@ -22,7 +22,7 @@ export async function saveBuildingCondition(input: {
   order?: number;
   published?: boolean;
 }): Promise<Result> {
-  await requirePermission('guide', input.id ? 'UPDATE' : 'CREATE');
+  await requirePermission('content', input.id ? 'UPDATE' : 'CREATE');
   const slug = slugify(input.slug || input.unitLabelEn || input.titleAr);
   const unitLabelAr = input.unitLabelAr.trim();
   const titleAr = input.titleAr.trim();
@@ -55,7 +55,7 @@ export async function saveBuildingCondition(input: {
 }
 
 export async function deleteBuildingCondition(id: string): Promise<Result> {
-  await requirePermission('guide', 'DELETE');
+  await requirePermission('content', 'DELETE');
   try {
     await prisma.buildingCondition.delete({ where: { id } });
     revalidatePath('/admin/guide/conditions');

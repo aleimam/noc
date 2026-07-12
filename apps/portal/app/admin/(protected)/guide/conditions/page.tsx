@@ -5,7 +5,7 @@ import { DeleteConditionButton } from './DeleteConditionButton';
 export const dynamic = 'force-dynamic';
 
 export default async function BuildingConditionsAdmin() {
-  await requirePermission('guide', 'VIEW');
+  await requirePermission('content', 'VIEW');
   const rows = await prisma.buildingCondition.findMany({ orderBy: { order: 'asc' } });
 
   return (

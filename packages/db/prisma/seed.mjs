@@ -5,51 +5,50 @@ import { prisma } from './db-client.mjs';
 import bcrypt from 'bcryptjs';
 
 
+// Keep in sync with SECTIONS in packages/config/src/index.ts (12-key model, 2026-07
+// restructure — migration 20260712160000_rbac_sections re-keyed existing grants).
 const SECTIONS = [
-  'homepage',
-  'staff',
-  'customers',
-  'partners',
-  'media',
-  'settings',
   'sheets',
   'lands',
-  'districts',
+  'listings',
+  'catalog',
   'owners',
-  'commissions',
-  'marketplace',
-  'news',
-  'guide',
-  'pages',
+  'storefront',
+  'content',
+  'appearance',
+  'analytics',
+  'staff',
+  'customers',
+  'settings',
 ];
 const ACTIONS = ['VIEW', 'CREATE', 'UPDATE', 'DELETE', 'MANAGE'];
 
 // Fixed role presets (Super Admin is seeded separately with every permission).
 const ROLE_PRESETS = [
   {
-    key: 'SALES_MANAGER',
-    name: 'Sales Manager',
-    perms: [['marketplace', 'MANAGE'], ['owners', 'MANAGE'], ['commissions', 'MANAGE'], ['lands', 'VIEW'], ['sheets', 'VIEW'], ['customers', 'VIEW']],
+    key: 'LISTINGS_MODERATOR',
+    name: 'مشرف عروض / Listings moderator',
+    perms: [['listings', 'VIEW'], ['listings', 'UPDATE']],
   },
   {
-    key: 'SALES_REP',
-    name: 'Sales Rep',
-    perms: [['marketplace', 'VIEW'], ['marketplace', 'UPDATE'], ['owners', 'VIEW'], ['customers', 'VIEW']],
+    key: 'CONTENT_EDITOR',
+    name: 'محرر محتوى / Content editor',
+    perms: [['content', 'MANAGE']],
   },
   {
-    key: 'EDITOR',
-    name: 'Editor',
-    perms: [['news', 'MANAGE'], ['guide', 'MANAGE'], ['pages', 'MANAGE'], ['homepage', 'MANAGE'], ['media', 'MANAGE'], ['marketplace', 'VIEW'], ['marketplace', 'UPDATE']],
+    key: 'STORE_MANAGER',
+    name: 'مدير المتجر / Store manager',
+    perms: [['storefront', 'MANAGE'], ['listings', 'VIEW']],
   },
   {
-    key: 'DATA_ENTRY',
-    name: 'Data Entry',
-    perms: [
-      ['sheets', 'VIEW'], ['sheets', 'CREATE'], ['sheets', 'UPDATE'],
-      ['lands', 'VIEW'], ['lands', 'CREATE'], ['lands', 'UPDATE'], ['districts', 'VIEW'],
-      ['marketplace', 'VIEW'], ['marketplace', 'CREATE'], ['marketplace', 'UPDATE'],
-      ['owners', 'VIEW'], ['owners', 'CREATE'],
-    ],
+    key: 'RATIONING_CLERK',
+    name: 'مسؤول التقنين / Rationing clerk',
+    perms: [['sheets', 'MANAGE']],
+  },
+  {
+    key: 'GEO_EDITOR',
+    name: 'محرر الدليل الجغرافي / Geo editor',
+    perms: [['lands', 'MANAGE']],
   },
 ];
 

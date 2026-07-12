@@ -5,7 +5,7 @@ import { ThemeEditor } from './ThemeEditor';
 export const dynamic = 'force-dynamic';
 
 export default async function ThemePage() {
-  await requirePermission('settings', 'VIEW');
+  await requirePermission('appearance', 'VIEW');
   const [newobour, alsawarey] = await Promise.all([getBrandTheme('newobour'), getBrandTheme('alsawarey')]);
 
   return (

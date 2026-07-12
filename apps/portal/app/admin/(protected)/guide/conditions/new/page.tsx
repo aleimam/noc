@@ -2,7 +2,7 @@ import { requirePermission } from '@noc/auth';
 import { ConditionEditor } from '../ConditionEditor';
 
 export default async function NewBuildingCondition() {
-  await requirePermission('guide', 'CREATE');
+  await requirePermission('content', 'CREATE');
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">

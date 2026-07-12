@@ -6,7 +6,7 @@ import { OptionListsManager } from './OptionListsManager';
 export const dynamic = 'force-dynamic';
 
 export default async function OptionListsPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('catalog', 'VIEW');
   const t = await getTranslations('mp');
   const lists = await prisma.optionList.findMany({
     orderBy: { name: 'asc' },

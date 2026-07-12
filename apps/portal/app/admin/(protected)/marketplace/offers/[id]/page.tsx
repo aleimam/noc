@@ -8,7 +8,7 @@ import { OfferStatusButtons, DeleteOfferButton } from '../OfferActions';
 export const dynamic = 'force-dynamic';
 
 export default async function OfferDetail({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('listings', 'VIEW');
   const { id } = await params;
   const locale = (await getLocale()) as 'ar' | 'en';
 

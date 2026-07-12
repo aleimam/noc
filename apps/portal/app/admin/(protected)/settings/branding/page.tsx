@@ -15,7 +15,7 @@ const KEYS = [
 ];
 
 export default async function BrandingPage() {
-  await requirePermission('settings', 'VIEW');
+  await requirePermission('appearance', 'VIEW');
   const rows = await prisma.setting.findMany({ where: { key: { in: KEYS } } });
   const values = Object.fromEntries(rows.map((r) => [r.key, r.value]));
 

@@ -8,7 +8,7 @@ import type { StorefrontContent } from '@noc/config';
 const KEY = 'alsawarey.storefront';
 
 export async function saveStorefront(content: StorefrontContent): Promise<{ ok: true } | { ok: false; error: string }> {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('storefront', 'UPDATE');
   try {
     await prisma.setting.upsert({
       where: { key: KEY },

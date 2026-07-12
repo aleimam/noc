@@ -9,7 +9,7 @@ type Status = 'PENDING' | 'REVIEWING' | 'APPROVED' | 'REJECTED';
 const STATUSES: Status[] = ['PENDING', 'REVIEWING', 'APPROVED', 'REJECTED'];
 
 export default async function PartnerApplicationsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('owners', 'VIEW');
   const sp = await searchParams;
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);

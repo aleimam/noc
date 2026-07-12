@@ -10,7 +10,7 @@ import { PosterPanel } from '../PosterPanel';
 import { listListingPosters } from '../poster-actions';
 
 export default async function StaffEditListing({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission('marketplace', 'UPDATE');
+  await requirePermission('listings', 'UPDATE');
   const { id } = await params;
   const listing = await prisma.listing.findUnique({ where: { id }, include: { values: true, buildingConditions: { select: { conditionId: true } } } });
   if (!listing) notFound();

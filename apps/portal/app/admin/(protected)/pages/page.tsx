@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 const BRAND = { newobour: 'العبور الجديد', alsawarey: 'الصواري' } as Record<string, string>;
 
 export default async function PagesAdmin() {
-  await requirePermission('pages', 'VIEW');
+  await requirePermission('content', 'VIEW');
   const pages = await prisma.page.findMany({ orderBy: [{ brand: 'asc' }, { footerOrder: 'asc' }] });
 
   return (

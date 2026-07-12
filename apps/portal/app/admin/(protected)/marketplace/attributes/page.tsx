@@ -7,7 +7,7 @@ import { OrderableList } from '../OrderableList';
 import { reorderAttributes } from '../actions';
 
 export default async function AttributesPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('catalog', 'VIEW');
   const t = await getTranslations('mp');
   const standardAreas = await getStandardAreas();
   // "Categories" = the Type classifier's options; count how many each attribute applies to.

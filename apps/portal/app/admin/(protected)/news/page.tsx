@@ -6,7 +6,7 @@ import { NewsManager } from './NewsManager';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminNewsPage() {
-  await requirePermission('news', 'VIEW');
+  await requirePermission('content', 'VIEW');
   const t = await getTranslations('news');
   const rows = await prisma.news.findMany({ orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }], take: 200 });
   const ids = rows.map((r) => r.id);

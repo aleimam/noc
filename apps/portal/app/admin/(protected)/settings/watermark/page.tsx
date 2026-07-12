@@ -6,7 +6,7 @@ import { WatermarkClient } from './WatermarkClient';
 export const dynamic = 'force-dynamic';
 
 export default async function StampPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('appearance', 'VIEW');
   const [initial, contacts, typeOptions] = await Promise.all([
     getStampSettings(),
     prisma.brandContact.findMany({ orderBy: [{ brand: 'asc' }, { order: 'asc' }], select: { id: true, brand: true, type: true, value: true, isActive: true } }),

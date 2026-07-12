@@ -18,7 +18,7 @@ const STATUS_COLOR: Record<string, string> = {
 // shows on Al Sawarey only when showOnBrokerage is on); this section is the New-Obour-
 // branded entry point for adding/managing them.
 export default async function NewObourMarket() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('listings', 'VIEW');
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);

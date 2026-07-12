@@ -7,7 +7,7 @@ import { upsertSection, deleteSection, reorderSections } from '../actions';
 import { SectionIconPicker } from './SectionIconPicker';
 
 export default async function SectionsPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('catalog', 'VIEW');
   const t = await getTranslations('mp');
   const rows = await prisma.attributeSection.findMany({
     orderBy: { order: 'asc' },

@@ -8,7 +8,7 @@ type Status = 'PENDING' | 'REVIEWING' | 'APPROVED' | 'REJECTED';
 type Result = { ok: true } | { ok: false; error: string };
 
 export async function setApplicationStatus(id: string, status: Status, note?: string): Promise<Result> {
-  const user = await requirePermission('marketplace', 'UPDATE');
+  const user = await requirePermission('owners', 'UPDATE');
   try {
     await prisma.partnerApplication.update({
       where: { id },
@@ -22,7 +22,7 @@ export async function setApplicationStatus(id: string, status: Status, note?: st
 }
 
 export async function deleteApplication(id: string): Promise<Result> {
-  await requirePermission('marketplace', 'DELETE');
+  await requirePermission('owners', 'DELETE');
   try {
     await prisma.partnerApplication.delete({ where: { id } });
     revalidatePath('/admin/marketplace/partner-applications');

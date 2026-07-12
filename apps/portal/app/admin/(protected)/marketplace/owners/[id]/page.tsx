@@ -8,7 +8,7 @@ import { OwnerEditor } from './OwnerEditor';
 export const dynamic = 'force-dynamic';
 
 export default async function OwnerDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('owners', 'VIEW');
   const { id } = await params;
   const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('mp');

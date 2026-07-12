@@ -6,7 +6,7 @@ import { ConditionEditor } from '../ConditionEditor';
 export const dynamic = 'force-dynamic';
 
 export default async function EditBuildingCondition({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission('guide', 'VIEW');
+  await requirePermission('content', 'VIEW');
   const { id } = await params;
   const c = await prisma.buildingCondition.findUnique({ where: { id } });
   if (!c) notFound();

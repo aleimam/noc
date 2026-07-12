@@ -95,6 +95,14 @@ calculator, marketplace) are never metered.
 - Every server action / route handler that **writes**, or reads **non-public** data, calls
   `requirePermission(section, action)` (staff) or verifies `auth()` **plus row ownership**
   (customer). Client-supplied role/id is never trusted.
+- **RBAC model (2026-07 restructure):** 12 purpose-built section keys × 5 actions
+  (VIEW/CREATE/UPDATE/DELETE/MANAGE; MANAGE implies all): `sheets`, `lands`, `listings`,
+  `catalog`, `owners`, `storefront`, `content`, `appearance`, `analytics`, `staff`,
+  `customers`, `settings` (system-only). The old god-sections were split — `marketplace` →
+  listings/catalog/owners/storefront, `settings` spun off appearance + analytics — and
+  news/guide/pages merged into `content`. Migration `20260712160000_rbac_sections` copied
+  every existing role/user grant onto the new keys before deleting the old Permission rows
+  (zero-lockout, no URL changes).
 - **IDOR guard:** any by-id customer operation confirms the row's `userId` / `sellerId`
   equals the session user, else STAFF. Applies to listings, follows, lands, offers.
 - Staff area sits behind middleware; the cross-app "view ALSWARY as admin" token is HMAC-

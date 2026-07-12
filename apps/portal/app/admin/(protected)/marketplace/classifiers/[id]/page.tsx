@@ -10,7 +10,7 @@ import { upsertClassifierOption, deleteClassifierOption, reorderClassifierOption
 const PARENT_KEY: Record<string, string | undefined> = { purpose: 'type', condition: 'purpose' };
 
 export default async function ClassifierOptionsPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('catalog', 'VIEW');
   const { id } = await params;
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';

@@ -6,7 +6,7 @@ import { PageEditor } from '../PageEditor';
 export const dynamic = 'force-dynamic';
 
 export default async function EditPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission('pages', 'UPDATE');
+  await requirePermission('content', 'UPDATE');
   const { id } = await params;
   const p = await prisma.page.findUnique({ where: { id } });
   if (!p) notFound();

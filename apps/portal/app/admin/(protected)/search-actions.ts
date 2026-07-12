@@ -23,7 +23,7 @@ export async function adminSearch(qRaw: string): Promise<AdminSearchHit[]> {
   const out: AdminSearchHit[] = [];
   const tasks: Promise<void>[] = [];
 
-  if (can('marketplace')) {
+  if (can('catalog')) {
     tasks.push(
       (async () => {
         const [attrs, classifiers, options, sections, lists] = await Promise.all([
@@ -49,7 +49,7 @@ export async function adminSearch(qRaw: string): Promise<AdminSearchHit[]> {
       })(),
     );
   }
-  if (can('guide')) {
+  if (can('content')) {
     tasks.push(
       (async () => {
         const conds = await prisma.buildingCondition.findMany({ where: { OR: [{ titleAr: like }, { titleEn: like }] }, select: { id: true, titleAr: true, titleEn: true }, take: LIMIT });

@@ -11,7 +11,7 @@ const SITES = ['all', 'newobour', 'alsawarey'];
 
 /** Save the current dashboard filters (days + site) as a named, staff-shared preset. */
 export async function saveAnalyticsView(name: string, days: number, site: string): Promise<Result> {
-  await requirePermission('settings', 'VIEW');
+  await requirePermission('analytics', 'VIEW');
   const n = name.trim().slice(0, 60);
   if (!n) return { ok: false, error: 'name_required' };
   const session = await auth();
@@ -29,7 +29,7 @@ export async function saveAnalyticsView(name: string, days: number, site: string
 
 /** Delete a saved view. */
 export async function deleteAnalyticsView(id: string): Promise<Result> {
-  await requirePermission('settings', 'VIEW');
+  await requirePermission('analytics', 'VIEW');
   await prisma.analyticsSavedView.delete({ where: { id } }).catch(() => {});
   revalidatePath('/admin/analytics');
   return { ok: true };

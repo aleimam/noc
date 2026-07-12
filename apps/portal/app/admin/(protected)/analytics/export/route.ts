@@ -11,7 +11,7 @@ const esc = (v: unknown) => {
 
 /** CSV export of the sessions in the current filter window (bots excluded). */
 export async function GET(req: NextRequest): Promise<Response> {
-  await requirePermission('settings', 'VIEW');
+  await requirePermission('analytics', 'VIEW');
   const sp = Object.fromEntries(new URL(req.url).searchParams.entries());
   const range = parseRange(sp);
   const rows = await getRecentSessions(range, 50000);

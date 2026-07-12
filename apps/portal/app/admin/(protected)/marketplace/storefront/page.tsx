@@ -6,7 +6,7 @@ import { StorefrontEditor } from './StorefrontEditor';
 export const dynamic = 'force-dynamic';
 
 export default async function StorefrontPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('storefront', 'VIEW');
   const row = await prisma.setting.findUnique({ where: { key: 'alsawarey.storefront' } });
   const initial = row?.value ? safeMerge(row.value) : DEFAULT_STOREFRONT;
 

@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 // to New-Obour-only (showOnBrokerage off — staff can still toggle it on to also publish
 // to Al Sawarey). Returns to the New Obour market after saving.
 export default async function NewObourNewListing() {
-  await requirePermission('marketplace', 'CREATE');
+  await requirePermission('listings', 'CREATE');
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);

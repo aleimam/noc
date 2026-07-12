@@ -15,7 +15,7 @@ const ALLOWED = new Set([
 ]);
 
 export async function saveBrandAsset(key: string, value: string | null): Promise<{ ok: true } | { ok: false; error: string }> {
-  await requirePermission('settings', 'UPDATE');
+  await requirePermission('appearance', 'UPDATE');
   if (!ALLOWED.has(key)) return { ok: false, error: 'bad_key' };
   try {
     if (value) {

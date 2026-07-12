@@ -7,7 +7,7 @@ import { RegenAllButton } from './RegenAllButton';
 export const dynamic = 'force-dynamic';
 
 export default async function MarketplaceHub() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('storefront', 'VIEW');
   const t = await getTranslations('mp');
   const locale = await getLocale();
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);

@@ -6,7 +6,7 @@ import { GuideManager } from './GuideManager';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminGuidePage() {
-  await requirePermission('guide', 'VIEW');
+  await requirePermission('content', 'VIEW');
   const t = await getTranslations('guide');
   const rows = await prisma.guideEntry.findMany({ orderBy: [{ section: 'asc' }, { order: 'asc' }] });
   const initial = rows.map((r) => ({

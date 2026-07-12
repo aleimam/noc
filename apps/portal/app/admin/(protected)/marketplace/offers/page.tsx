@@ -10,7 +10,7 @@ const STATUS: Record<string, string> = { NEW: 'جديد', REVIEWING: 'قيد ا�
 const TONE: Record<string, string> = { NEW: 'bg-gold/20 text-graphite', REVIEWING: 'bg-info/15 text-info', ACCEPTED: 'bg-green/15 text-green', REJECTED: 'bg-graphite/10 opacity-70' };
 
 export default async function OffersPage() {
-  await requirePermission('marketplace', 'VIEW');
+  await requirePermission('listings', 'VIEW');
   const locale = (await getLocale()) as 'ar' | 'en';
   const offers = await prisma.landOffer.findMany({
     orderBy: { createdAt: 'desc' },

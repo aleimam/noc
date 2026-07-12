@@ -5,7 +5,7 @@ import { AttributeForm, type AttrData } from '../AttributeForm';
 import { upsertAttribute } from '../../actions';
 
 export default async function NewAttribute() {
-  await requirePermission('marketplace', 'CREATE');
+  await requirePermission('catalog', 'CREATE');
   const [sections, classifiers, lists] = await Promise.all([
     prisma.attributeSection.findMany({ orderBy: { order: 'asc' } }),
     prisma.classifier.findMany({
