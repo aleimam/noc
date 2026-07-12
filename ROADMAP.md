@@ -11,7 +11,22 @@ SMS gateway, and next-intl ar/en.
 
 ---
 
-## 📌 Current status (2026-07-11, end of day)
+## 📌 Current status (2026-07-12)
+
+**Shipped 2026-07-12 (commits `9e5364d`, `877d565`):**
+- **Geo Directory (الدليل الجغرافي)** — section renamed; **city-level updates** (GeoUpdate.cityId,
+  editable from the City page or the central Updates section; no SMS notify — no city follows);
+  **inheritance matrix** (Setting `geo.inheritance`: updates/amenities/advantages/maps ×
+  City→District→Neighborhood→Listing toggles, all-on defaults, matrix card on the hub);
+  inherited content tagged with source chips; collapsible "عن المنطقة" on listing pages of
+  BOTH sites; **expandable family-tree** (GeoTree) atop /explore linking every unit.
+- **Per-map titles + custom branded area photos** (AreaMap.title + `custom:<uuid>` kinds) at all
+  three geo levels — dual-brand stamped, matrix-inherited, shown on explore + listing pages.
+- IN FLIGHT: **RBAC restructure** — 7-group sidebar; `marketplace`/`settings` god-sections split
+  into 13 purpose keys (listings/catalog/owners/storefront/content/appearance/analytics + kept
+  keys); zero-lockout copy-then-delete migration; role presets refresh; gated dashboard tiles.
+
+## 📌 Previous status (2026-07-11, end of day)
 
 > The always-current pending list + server runbook live in **[CLAUDE.md](CLAUDE.md)** — this
 > block is a snapshot.
