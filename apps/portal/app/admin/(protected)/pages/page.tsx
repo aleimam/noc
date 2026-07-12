@@ -4,7 +4,7 @@ import { prisma } from '@noc/db';
 import { DeletePageButton } from './DeletePageButton';
 
 export const dynamic = 'force-dynamic';
-const BRAND = { newobour: 'العبور الجديد', alsawarey: 'الصواري' } as Record<string, string>;
+const BRAND = { newobour: 'العبور الجديدة', alsawarey: 'الصواري' } as Record<string, string>;
 
 export default async function PagesAdmin() {
   await requirePermission('content', 'VIEW');

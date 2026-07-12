@@ -35,7 +35,7 @@ export function pageMeta({ title, description, path, images, type = 'website', l
       title,
       description,
       url,
-      siteName: 'العبور الجديد',
+      siteName: 'العبور الجديدة',
       type,
       images: imgs,
       locale: locale === 'en' ? 'en_US' : 'ar_EG',

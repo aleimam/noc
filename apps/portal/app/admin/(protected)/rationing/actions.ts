@@ -223,7 +223,7 @@ export async function commitImport(formData: FormData): Promise<CommitResult> {
 
 function watchSmsBody(locale: 'ar' | 'en', url: string | null): string {
   if (locale === 'en') return `New Obour: your name appeared in a new rationing sheet.${url ? ' ' + url : ''}`;
-  return `العبور الجديد: ظهر اسمك في كشف تقنين جديد.${url ? ' ' + url : ''}`;
+  return `العبور الجديدة: ظهر اسمك في كشف تقنين جديد.${url ? ' ' + url : ''}`;
 }
 
 /** For each active WATCH follow, see if this batch contains a matching row; if so, SMS the customer. */

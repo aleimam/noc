@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const d = resolved
     ? await prisma.district.findUnique({ where: { id: resolved.id }, select: { id: true, key: true, nameAr: true, nameEn: true, isActive: true } })
     : null;
-  if (!d || !d.isActive) return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديد' };
+  if (!d || !d.isActive) return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديدة' };
   const name = locale === 'ar' ? d.nameAr : d.nameEn;
   return pageMeta({
     title: `${name} — ${locale === 'en' ? 'New Obour districts' : 'مناطق العبور الجديدة'}`,

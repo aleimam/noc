@@ -25,7 +25,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
   const groups: { title?: string; items: NavItem[] }[] = [
     { items: [{ href: '/admin', label: t('dashboard') }, { href: '/admin/analytics', label: L('تحليلات الزوّار', 'Visitor analytics'), section: 'analytics' }] },
     {
-      title: L('العبور الجديد', 'New Obour'),
+      title: L('العبور الجديدة', 'New Obour'),
       items: [
         { href: '/admin/rationing', label: L('كشوف التقنين', 'Rationing sheets'), section: 'sheets' },
         { href: '/admin/lands', label: L('الدليل الجغرافي', 'Geo directory'), section: 'lands' },
@@ -108,7 +108,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
       search={<AdminSearch pages={searchPages} action={adminSearch} />}
       backToSiteLabel={tc('backToSite')}
       storeLinks={[
-        { label: L('العبور الجديد', 'New Obour'), href: process.env.PORTAL_URL || '/' },
+        { label: L('العبور الجديدة', 'New Obour'), href: process.env.PORTAL_URL || '/' },
         // Opens alsawarey.com in staff "admin view" (owner details) via a signed token.
         { label: L('الصواري (كمشرف)', 'Al Sawarey (as admin)'), href: '/admin/store-admin' },
       ]}

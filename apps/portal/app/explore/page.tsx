@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
   return pageMeta({
-    title: locale === 'en' ? 'Explore districts & neighborhoods — New Obour' : 'استكشف المناطق والمجاورات — العبور الجديد',
+    title: locale === 'en' ? 'Explore districts & neighborhoods — New Obour' : 'استكشف المناطق والمجاورات — العبور الجديدة',
     description: locale === 'en' ? 'Browse New Obour City districts and neighborhoods: plot areas, advantages, public realm, maps and lands for sale.' : 'تصفّح مناطق ومجاورات مدينة العبور الجديدة: مساحات القطع والمميزات والمرافق والخرائط والأراضي المعروضة.',
     path: '/explore',
     locale,

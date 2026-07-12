@@ -39,7 +39,7 @@ export function SiteSettingsClient({ initial }: { initial: Initial }) {
   return (
     <div className="space-y-5">
       <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
-        <h2 className="font-semibold text-primary">قائمة الجوال (العبور الجديد)</h2>
+        <h2 className="font-semibold text-primary">قائمة الجوال (العبور الجديدة)</h2>
         <div className="flex gap-2">
           {(['full', 'compact'] as const).map((m) => (
             <button
@@ -55,7 +55,7 @@ export function SiteSettingsClient({ initial }: { initial: Initial }) {
       </section>
 
       <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
-        <h2 className="font-semibold text-primary">شعار الموقع (السطر التعريفي) — العبور الجديد</h2>
+        <h2 className="font-semibold text-primary">شعار الموقع (السطر التعريفي) — العبور الجديدة</h2>
         <label className="block text-sm">بالعربية<input value={s.sloganNewobour} onChange={(e) => setS((x) => ({ ...x, sloganNewobour: e.target.value }))} className={inp} /></label>
         <label className="block text-sm">English<input dir="ltr" value={s.sloganNewobourEn} onChange={(e) => setS((x) => ({ ...x, sloganNewobourEn: e.target.value }))} className={inp} /></label>
         <p className="text-xs opacity-60">شعار الصواري (alsawarey.com) يُحرَّر من «واجهة موقع الصواري» ← سطر التذييل.</p>
@@ -64,7 +64,7 @@ export function SiteSettingsClient({ initial }: { initial: Initial }) {
       <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
         <h2 className="font-semibold text-primary">حقوق النشر (التذييل)</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm">العبور الجديد — بالعربية<input value={s.copyrightNewobour} onChange={(e) => setS((x) => ({ ...x, copyrightNewobour: e.target.value }))} className={inp} /></label>
+          <label className="block text-sm">العبور الجديدة — بالعربية<input value={s.copyrightNewobour} onChange={(e) => setS((x) => ({ ...x, copyrightNewobour: e.target.value }))} className={inp} /></label>
           <label className="block text-sm">New Obour — English<input dir="ltr" value={s.copyrightNewobourEn} onChange={(e) => setS((x) => ({ ...x, copyrightNewobourEn: e.target.value }))} className={inp} /></label>
           <label className="block text-sm">الصواري — بالعربية<input value={s.copyrightAlsawarey} onChange={(e) => setS((x) => ({ ...x, copyrightAlsawarey: e.target.value }))} className={inp} /></label>
           <label className="block text-sm">Al Sawarey — English<input dir="ltr" value={s.copyrightAlsawareyEn} onChange={(e) => setS((x) => ({ ...x, copyrightAlsawareyEn: e.target.value }))} className={inp} /></label>

@@ -12,12 +12,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const locale = (await getLocale()) as 'ar' | 'en';
   const n = await prisma.news.findUnique({ where: { id } });
-  if (!n || !n.publishedAt) return { title: locale === 'en' ? 'News — New Obour' : 'أخبار — العبور الجديد' };
+  if (!n || !n.publishedAt) return { title: locale === 'en' ? 'News — New Obour' : 'أخبار — العبور الجديدة' };
   const title = locale === 'ar' ? n.titleAr : n.titleEn || n.titleAr;
   const body = (locale === 'ar' ? n.bodyAr : n.bodyEn || n.bodyAr) ?? '';
   const cover = await prisma.attachment.findFirst({ where: { ownerType: 'News', ownerId: id }, orderBy: { createdAt: 'asc' }, select: { path: true } });
   return pageMeta({
-    title: `${title} — ${locale === 'en' ? 'New Obour' : 'العبور الجديد'}`,
+    title: `${title} — ${locale === 'en' ? 'New Obour' : 'العبور الجديدة'}`,
     description: body.replace(/\s+/g, ' ').trim().slice(0, 160),
     path: `/news/${id}`,
     images: cover ? [cover.path] : [],
@@ -46,8 +46,8 @@ export default async function NewsDetail({ params }: { params: Promise<{ id: str
     datePublished: n.publishedAt.toISOString(),
     dateModified: n.updatedAt.toISOString(),
     inLanguage: locale,
-    author: { '@type': 'Organization', name: 'العبور الجديد' },
-    publisher: { '@type': 'Organization', name: 'العبور الجديد', logo: { '@type': 'ImageObject', url: abs('/brand/logo') } },
+    author: { '@type': 'Organization', name: 'العبور الجديدة' },
+    publisher: { '@type': 'Organization', name: 'العبور الجديدة', logo: { '@type': 'ImageObject', url: abs('/brand/logo') } },
     mainEntityOfPage: abs(`/news/${id}`),
   };
   const crumbsLd = breadcrumbLd([

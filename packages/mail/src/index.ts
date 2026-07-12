@@ -12,7 +12,7 @@ export type MailConfig = {
   port?: number; // default 25
   user?: string; // set only if the transport requires auth
   pass?: string;
-  from?: string; // default 'العبور الجديد <no-reply@newobour.com>'
+  from?: string; // default 'العبور الجديدة <no-reply@newobour.com>'
   secure?: boolean; // default false (opportunistic STARTTLS)
 };
 
@@ -29,7 +29,7 @@ export interface MailResult {
   error?: string;
 }
 
-const DEFAULT_FROM = 'العبور الجديد <no-reply@newobour.com>';
+const DEFAULT_FROM = 'العبور الجديدة <no-reply@newobour.com>';
 
 function logConsole(m: MailMessage): MailResult {
   // eslint-disable-next-line no-console

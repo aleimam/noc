@@ -10,7 +10,7 @@ const SECS = ['LICENSING', 'HANDOVER', 'COMPANIES', 'COSTS'] as const;
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
   return pageMeta({
-    title: locale === 'en' ? 'Guide — New Obour' : 'الدليل — العبور الجديد',
+    title: locale === 'en' ? 'Guide — New Obour' : 'الدليل — العبور الجديدة',
     description: locale === 'en'
       ? 'Licensing, handover, developers and costs — answers to common questions about New Obour City.'
       : 'التراخيص والاستلام والشركات والتكاليف — إجابات لأكثر الأسئلة شيوعًا حول مدينة العبور الجديدة.',

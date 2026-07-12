@@ -10,7 +10,7 @@ One Turborepo monorepo → **two live sites sharing one MariaDB backend**:
 
 | App | Domain | Brand | Port (dev+prod) |
 |---|---|---|---|
-| `apps/portal` | **newobour.com** | العبور الجديد (New Obour) — free community portal | 3001 |
+| `apps/portal` | **newobour.com** | العبور الجديدة (New Obour) — free community portal | 3001 |
 | `apps/brokerage` | **alsawarey.com** | الصواري (Al Sawarey) — commercial land brokerage | 3002 |
 
 Stack: Next.js 15 App Router · React 19 · Tailwind v4 · Prisma 7 (MariaDB, Rust-free client) ·

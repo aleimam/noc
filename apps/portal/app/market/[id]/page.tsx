@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         select: { title: true, status: true, price: true, area: true, adNumber: true, description: true, typeOption: { select: { nameAr: true, nameEn: true } } },
       })
     : null;
-  if (!id || !l || l.status !== 'PUBLISHED') return { title: locale === 'en' ? 'Listing — New Obour' : 'إعلان — العبور الجديد' };
+  if (!id || !l || l.status !== 'PUBLISHED') return { title: locale === 'en' ? 'Listing — New Obour' : 'إعلان — العبور الجديدة' };
   const cover = await prisma.attachment.findFirst({
     where: { ownerType: 'Listing', ownerId: id, attributeId: null },
     orderBy: { createdAt: 'asc' },
@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   ].filter(Boolean);
   const desc = ((l.description ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || parts.join(' · ')).slice(0, 160);
   return pageMeta({
-    title: `${l.title} — ${locale === 'en' ? 'New Obour' : 'العبور الجديد'}`,
+    title: `${l.title} — ${locale === 'en' ? 'New Obour' : 'العبور الجديدة'}`,
     description: desc,
     path: marketHref({ id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null }),
     images: cover ? [cover.path] : [],

@@ -14,12 +14,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const locale = (await getLocale()) as 'ar' | 'en';
   const c = await prisma.buildingCondition.findUnique({ where: { slug } });
-  if (!c || !c.published) return { title: locale === 'en' ? 'Building conditions — New Obour' : 'اشتراطات البناء — العبور الجديد' };
+  if (!c || !c.published) return { title: locale === 'en' ? 'Building conditions — New Obour' : 'اشتراطات البناء — العبور الجديدة' };
   const title = pick(c.titleAr, c.titleEn, locale);
   const body = pick(c.bodyAr, c.bodyEn, locale).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   const imgs = Array.isArray(c.images) ? (c.images as string[]) : [];
   return pageMeta({
-    title: `${title} — ${locale === 'en' ? 'New Obour' : 'العبور الجديد'}`,
+    title: `${title} — ${locale === 'en' ? 'New Obour' : 'العبور الجديدة'}`,
     description: body.slice(0, 160),
     path: `/guide/conditions/${slug}`,
     images: imgs.slice(0, 1),
@@ -45,8 +45,8 @@ export default async function ConditionPage({ params }: { params: Promise<{ slug
     image: images.map((i) => abs(i)),
     dateModified: c.updatedAt.toISOString(),
     inLanguage: locale,
-    author: { '@type': 'Organization', name: 'العبور الجديد' },
-    publisher: { '@type': 'Organization', name: 'العبور الجديد', logo: { '@type': 'ImageObject', url: abs('/brand/logo') } },
+    author: { '@type': 'Organization', name: 'العبور الجديدة' },
+    publisher: { '@type': 'Organization', name: 'العبور الجديدة', logo: { '@type': 'ImageObject', url: abs('/brand/logo') } },
     mainEntityOfPage: abs(`/guide/conditions/${slug}`),
   };
   const crumbsLd = breadcrumbLd([

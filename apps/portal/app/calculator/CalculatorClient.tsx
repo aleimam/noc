@@ -392,7 +392,7 @@ async function renderStatement(
   const titleX = rtl ? W - M - (logo ? 70 : 0) : M + (logo ? 70 : 0);
   ctx.fillStyle = GOLD;
   ctx.font = 'bold 26px Tajawal, Arial, sans-serif';
-  ctx.fillText(locale === 'en' ? 'New Obour' : 'العبور الجديد', titleX, 38);
+  ctx.fillText(locale === 'en' ? 'New Obour' : 'العبور الجديدة', titleX, 38);
   ctx.fillStyle = '#ffffff';
   ctx.font = '16px Tajawal, Arial, sans-serif';
   ctx.fillText(t('imageTitle'), titleX, 66);

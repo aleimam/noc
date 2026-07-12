@@ -73,7 +73,7 @@ export default async function SecurityPage() {
       </div>
       <p className="max-w-2xl text-sm opacity-70">
         {L(
-          'يتحكّم هذا الإعداد في عدد عمليات البحث المسموحة للزائر في الساعة على موقع العبور الجديد (لا يؤثر على الصواري). المستوى «المتوسط» موصى به: كل شيء متاح للجميع، مع حدّ لطيف يمنع نسخ البيانات بالجملة. ارفعه إلى «عالٍ» مؤقتًا عند الاشتباه في محاولة نسخ — يسري التغيير مباشرةً بلا إعادة نشر.',
+          'يتحكّم هذا الإعداد في عدد عمليات البحث المسموحة للزائر في الساعة على موقع العبور الجديدة (لا يؤثر على الصواري). المستوى «المتوسط» موصى به: كل شيء متاح للجميع، مع حدّ لطيف يمنع نسخ البيانات بالجملة. ارفعه إلى «عالٍ» مؤقتًا عند الاشتباه في محاولة نسخ — يسري التغيير مباشرةً بلا إعادة نشر.',
           'This setting controls how many searches a visitor may do per hour on New Obour (it does not affect Al Sawarey). "Medium" is recommended: everything stays open to everyone, with a gentle quota that blocks bulk copying. Raise it to "High" temporarily if you suspect scraping — it takes effect at once, no redeploy.',
         )}
       </p>

@@ -45,7 +45,7 @@ export async function makeOffer(listingId: string, amount: number, note?: string
   });
   await prisma.negotiationOffer.create({ data: { negotiationId: neg.id, byRole: 'BUYER', amount, note: note?.trim() || null } });
 
-  await notify(listing.seller?.phone || listing.contactPhone, `العبور الجديد: عرض سعر جديد على «${listing.title}». راجعه في حسابك.`);
+  await notify(listing.seller?.phone || listing.contactPhone, `العبور الجديدة: عرض سعر جديد على «${listing.title}». راجعه في حسابك.`);
   revalidatePath(`/market/${listingId}`);
   revalidatePath('/account/offers');
   return { ok: true };
@@ -85,15 +85,15 @@ export async function respondNegotiation(
     await prisma.negotiation.update({ where: { id: neg.id }, data: { status: 'WITHDRAWN' } });
   } else if (action === 'accept') {
     await prisma.negotiation.update({ where: { id: neg.id }, data: { status: 'ACCEPTED' } });
-    await notify(other, `العبور الجديد: تم قبول العرض على «${title}». تواصلوا لإتمام البيع.`);
+    await notify(other, `العبور الجديدة: تم قبول العرض على «${title}». تواصلوا لإتمام البيع.`);
   } else if (action === 'reject') {
     await prisma.negotiation.update({ where: { id: neg.id }, data: { status: 'REJECTED' } });
-    await notify(other, `العبور الجديد: تم رفض العرض على «${title}».`);
+    await notify(other, `العبور الجديدة: تم رفض العرض على «${title}».`);
   } else if (action === 'counter') {
     if (!(amount && amount > 0) || amount > 1e11) return { ok: false, error: 'invalid_amount' };
     await prisma.negotiationOffer.create({ data: { negotiationId: neg.id, byRole: isSeller ? 'SELLER' : 'BUYER', amount, note: note?.trim() || null } });
     await prisma.negotiation.update({ where: { id: neg.id }, data: { status: 'OPEN' } });
-    await notify(other, `العبور الجديد: عرض مضاد جديد على «${title}». راجعه في حسابك.`);
+    await notify(other, `العبور الجديدة: عرض مضاد جديد على «${title}». راجعه في حسابك.`);
   }
 
   revalidatePath('/account/offers');

@@ -20,8 +20,8 @@ export default async function NewObourNewListing() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-primary">{L('سوق العبور الجديد — عرض جديد', 'New Obour market — new listing')}</h1>
-        <a href="/admin/newobour/market" className="text-sm text-accent">← {L('سوق العبور الجديد', 'New Obour market')}</a>
+        <h1 className="text-2xl font-bold text-primary">{L('سوق العبور الجديدة — عرض جديد', 'New Obour market — new listing')}</h1>
+        <a href="/admin/newobour/market" className="text-sm text-accent">← {L('سوق العبور الجديدة', 'New Obour market')}</a>
       </div>
       <ListingForm
         staffMode

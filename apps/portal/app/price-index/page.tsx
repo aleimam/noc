@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
   return pageMeta({
-    title: locale === 'en' ? 'Land price index — New Obour' : 'مؤشر أسعار الأراضي — العبور الجديد',
+    title: locale === 'en' ? 'Land price index — New Obour' : 'مؤشر أسعار الأراضي — العبور الجديدة',
     description: locale === 'en' ? 'Indicative land price ranges and trends across New Obour City districts.' : 'نطاقات ومؤشرات أسعار الأراضي التقريبية عبر مناطق مدينة العبور الجديدة.',
     path: '/price-index',
     locale,

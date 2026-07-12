@@ -26,11 +26,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         select: { id: true, nameAr: true, nameEn: true, isActive: true, district: { select: { nameAr: true, nameEn: true } } },
       })
     : null;
-  if (!n || !n.isActive) return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديد' };
+  if (!n || !n.isActive) return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديدة' };
   const name = locale === 'ar' ? n.nameAr : n.nameEn;
   const dist = locale === 'ar' ? n.district.nameAr : n.district.nameEn;
   return pageMeta({
-    title: `${name} — ${dist} — ${locale === 'en' ? 'New Obour' : 'العبور الجديد'}`,
+    title: `${name} — ${dist} — ${locale === 'en' ? 'New Obour' : 'العبور الجديدة'}`,
     description: locale === 'en'
       ? `${name} neighborhood in ${dist}, New Obour City: plot areas, building types, roads, public realm and lands for sale.`
       : `مجاورة ${name} في ${dist} بمدينة العبور الجديدة: مساحات القطع وأنواع البناء والطرق والمرافق والأراضي المعروضة.`,

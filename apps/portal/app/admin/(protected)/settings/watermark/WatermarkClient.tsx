@@ -22,7 +22,7 @@ const CAT_LABEL: Record<StampCategory, string> = {
 };
 const BRANDS: { brand: string; label: string; cats: StampCategory[] }[] = [
   { brand: 'alsawarey', label: 'الصواري', cats: STAMP_CATEGORIES.filter((c) => c === 'listing' || c === 'map') },
-  { brand: 'newobour', label: 'العبور الجديد', cats: STAMP_CATEGORIES.filter((c) => c !== 'listing' && c !== 'map') },
+  { brand: 'newobour', label: 'العبور الجديدة', cats: STAMP_CATEGORIES.filter((c) => c !== 'listing' && c !== 'map') },
 ];
 const inp = 'mt-1 w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
 

@@ -64,15 +64,15 @@ export type OtpRequestResult =
 function otpMessage(code: string, locale: 'ar' | 'en'): string {
   return locale === 'en'
     ? `New Obour verification code: ${code}`
-    : `العبور الجديد - رمز التحقق: ${code}`;
+    : `العبور الجديدة - رمز التحقق: ${code}`;
 }
 
 /** OTP email content (bilingual, big code — our users are low-tech, often on a relative's phone). */
 function otpEmail(code: string, locale: 'ar' | 'en'): { subject: string; text: string; html: string } {
   const ar = locale === 'ar';
-  const subject = ar ? `رمز الدخول: ${code} — العبور الجديد` : `Your login code: ${code} — New Obour`;
+  const subject = ar ? `رمز الدخول: ${code} — العبور الجديدة` : `Your login code: ${code} — New Obour`;
   const text = ar
-    ? `رمز الدخول الخاص بك هو: ${code}\nصالح لمدة 5 دقائق. إذا لم تطلبه، تجاهل هذه الرسالة.\n\nالعبور الجديد`
+    ? `رمز الدخول الخاص بك هو: ${code}\nصالح لمدة 5 دقائق. إذا لم تطلبه، تجاهل هذه الرسالة.\n\nالعبور الجديدة`
     : `Your login code is: ${code}\nValid for 5 minutes. If you didn't request it, ignore this message.\n\nNew Obour`;
   const dir = ar ? 'rtl' : 'ltr';
   const html =
@@ -80,7 +80,7 @@ function otpEmail(code: string, locale: 'ar' | 'en'): { subject: string; text: s
     `<p style="font-size:16px;color:#334">${ar ? 'رمز الدخول الخاص بك' : 'Your login code'}</p>` +
     `<p style="font-size:40px;font-weight:bold;letter-spacing:8px;color:#c39a3f;margin:12px 0">${code}</p>` +
     `<p style="font-size:13px;color:#889">${ar ? 'صالح لمدة 5 دقائق. إذا لم تطلبه، تجاهل هذه الرسالة.' : "Valid for 5 minutes. If you didn't request it, ignore this message."}</p>` +
-    `<p style="font-size:13px;color:#c39a3f;font-weight:bold;margin-top:20px">${ar ? 'العبور الجديد' : 'New Obour'}</p></div>`;
+    `<p style="font-size:13px;color:#c39a3f;font-weight:bold;margin-top:20px">${ar ? 'العبور الجديدة' : 'New Obour'}</p></div>`;
   return { subject, text, html };
 }
 

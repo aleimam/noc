@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(process.env.PORTAL_URL || 'https://newobour.com'),
     title: en
       ? 'New Obour | Free services portal'
-      : 'العبور الجديد | بوابة الخدمات المجانية',
+      : 'العبور الجديدة | بوابة الخدمات المجانية',
     description: en ? 'New Obour City — free community services portal' : 'بوابة الخدمات المجانية لمدينة العبور الجديدة',
     icons: { icon: '/brand/favicon' },
   };
@@ -36,8 +36,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const themeCss = buildThemeCss(await getBrandTheme('newobour'));
   const siteUrl = (process.env.PORTAL_URL || 'https://newobour.com').replace(/\/$/, '');
   const jsonLd = [
-    { '@context': 'https://schema.org', '@type': 'Organization', name: 'العبور الجديد', alternateName: 'New Obour', url: siteUrl, logo: `${siteUrl}/brand/logo` },
-    { '@context': 'https://schema.org', '@type': 'WebSite', name: 'العبور الجديد', alternateName: 'New Obour', url: siteUrl, inLanguage: ['ar', 'en'], potentialAction: { '@type': 'SearchAction', target: `${siteUrl}/rationing?q={search_term_string}`, 'query-input': 'required name=search_term_string' } },
+    { '@context': 'https://schema.org', '@type': 'Organization', name: 'العبور الجديدة', alternateName: 'New Obour', url: siteUrl, logo: `${siteUrl}/brand/logo` },
+    { '@context': 'https://schema.org', '@type': 'WebSite', name: 'العبور الجديدة', alternateName: 'New Obour', url: siteUrl, inLanguage: ['ar', 'en'], potentialAction: { '@type': 'SearchAction', target: `${siteUrl}/rationing?q={search_term_string}`, 'query-input': 'required name=search_term_string' } },
   ];
 
   return (

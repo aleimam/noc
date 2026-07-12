@@ -7,7 +7,7 @@ import { saveBrandAsset } from './actions';
 type Field = { key: string; label: string };
 const BRANDS: { title: string; fields: Field[] }[] = [
   {
-    title: 'العبور الجديد (newobour.com)',
+    title: 'العبور الجديدة (newobour.com)',
     fields: [
       { key: 'brand_newobour_logo', label: 'الشعار' },
       { key: 'brand_newobour_logo_dark', label: 'الشعار (الوضع الداكن)' },

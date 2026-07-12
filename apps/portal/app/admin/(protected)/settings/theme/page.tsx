@@ -18,7 +18,7 @@ export default async function ThemePage() {
         ألوان وخطوط وشكل كل موقع — تُطبَّق فورًا بعد الحفظ. اترك الحقل فارغًا لاستخدام الافتراضي.
         <span dir="ltr"> Colors, fonts and shape per site; blank = default.</span>
       </p>
-      <ThemeEditor brand="newobour" title="العبور الجديد — newobour.com" initial={newobour} />
+      <ThemeEditor brand="newobour" title="العبور الجديدة — newobour.com" initial={newobour} />
       <ThemeEditor brand="alsawarey" title="الصواري — alsawarey.com" initial={alsawarey} />
     </div>
   );

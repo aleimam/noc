@@ -18,10 +18,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const c = resolved
     ? await prisma.city.findUnique({ where: { id: resolved.id }, select: { id: true, key: true, nameAr: true, nameEn: true, isActive: true } })
     : null;
-  if (!c || !c.isActive) return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديد' };
+  if (!c || !c.isActive) return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديدة' };
   const name = locale === 'ar' ? c.nameAr : c.nameEn;
   return pageMeta({
-    title: `${name} — ${locale === 'en' ? 'New Obour' : 'العبور الجديد'}`,
+    title: `${name} — ${locale === 'en' ? 'New Obour' : 'العبور الجديدة'}`,
     description: locale === 'en'
       ? `${name}: masterplan, location, services and main-roads maps, city advantages and districts.`
       : `${name}: المخطط العام والموقع وخرائط الخدمات والمحاور، ومميزات المدينة وأحياؤها.`,

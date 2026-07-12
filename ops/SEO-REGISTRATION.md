@@ -25,7 +25,7 @@ Do this twice: once per domain.
 3. In the verification dialog pick **HTML tag**. Copy ONLY the long token inside
    `content="…"` — not the whole `<meta>` line.
 4. In the admin: **Settings → التحليلات والتتبّع** → paste the token into
-   **العبور الجديد — Google verification** (or **الصواري — Google verification** for
+   **العبور الجديدة — Google verification** (or **الصواري — Google verification** for
    alsawarey.com) → **حفظ (Save)**.
 5. Back in Search Console click **Verify**. (If it fails, hard-refresh the site home page
    once and retry — the layout renders the tag immediately after save.)

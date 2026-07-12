@@ -42,7 +42,7 @@ export function PageEditor({ initial }: { initial: Draft }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-sm">الموقع
           <select value={d.brand} onChange={(e) => set('brand', e.target.value)} className={inp} disabled={!!d.id}>
-            <option value="newobour">العبور الجديد</option>
+            <option value="newobour">العبور الجديدة</option>
             <option value="alsawarey">الصواري</option>
           </select>
         </label>

@@ -215,7 +215,7 @@ export function OwnerEditor({
             <div className="text-sm font-bold text-primary">{L('المواقع المتاحة للشريك', 'Sites this partner can access')}</div>
             <p className="text-xs opacity-70">{L('يحدّد أين يسجّل الشريك دخوله وأين تظهر إعلاناته.', 'Controls where the partner can sign in and where their listings appear.')}</p>
             <div className="flex flex-wrap gap-4">
-              {siteToggle(pf.siteNewObour, (v) => setPf({ ...pf, siteNewObour: v }), favicons.newObour, L('العبور الجديد', 'New Obour'))}
+              {siteToggle(pf.siteNewObour, (v) => setPf({ ...pf, siteNewObour: v }), favicons.newObour, L('العبور الجديدة', 'New Obour'))}
               {siteToggle(pf.siteAlsawary, (v) => setPf({ ...pf, siteAlsawary: v }), favicons.alsawarey, L('الصواري', 'Al Sawarey'))}
             </div>
           </div>

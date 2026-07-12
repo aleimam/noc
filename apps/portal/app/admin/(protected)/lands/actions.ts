@@ -683,7 +683,7 @@ export async function notifyGeoUpdate(id: string): Promise<{ ok: true; count: nu
           if (n) url = `${base}${neighborhoodHref(n)}`;
         }
       }
-      const body = `العبور الجديد: ${u.title || 'تحديث جديد عن أرضك'}${url ? ' ' + url : ''}`;
+      const body = `العبور الجديدة: ${u.title || 'تحديث جديد عن أرضك'}${url ? ' ' + url : ''}`;
       for (const phone of phones) {
         await sendSms(phone, body, cfg).catch((e) => console.error('geo update sms failed', e));
       }

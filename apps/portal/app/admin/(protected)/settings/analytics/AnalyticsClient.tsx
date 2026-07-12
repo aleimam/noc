@@ -4,11 +4,11 @@ import { useState, useTransition } from 'react';
 import { saveAnalytics } from './actions';
 
 const FIELDS: { key: string; ar: string; en: string; ph: string }[] = [
-  { key: 'ga4_newobour', ar: 'العبور الجديد — GA4 Measurement ID', en: 'New Obour — GA4 Measurement ID', ph: 'G-XXXXXXXXXX' },
-  { key: 'pixel_newobour', ar: 'العبور الجديد — Meta Pixel ID', en: 'New Obour — Meta Pixel ID', ph: '1234567890' },
-  { key: 'gsc_newobour', ar: 'العبور الجديد — Google verification', en: 'New Obour — Google verification', ph: 'google-site-verification token' },
-  { key: 'bing_newobour', ar: 'العبور الجديد — تحقق Bing (msvalidate.01)', en: 'New Obour — Bing verification (msvalidate.01)', ph: 'msvalidate.01 token' },
-  { key: 'yandex_newobour', ar: 'العبور الجديد — تحقق Yandex', en: 'New Obour — Yandex verification', ph: 'yandex-verification token' },
+  { key: 'ga4_newobour', ar: 'العبور الجديدة — GA4 Measurement ID', en: 'New Obour — GA4 Measurement ID', ph: 'G-XXXXXXXXXX' },
+  { key: 'pixel_newobour', ar: 'العبور الجديدة — Meta Pixel ID', en: 'New Obour — Meta Pixel ID', ph: '1234567890' },
+  { key: 'gsc_newobour', ar: 'العبور الجديدة — Google verification', en: 'New Obour — Google verification', ph: 'google-site-verification token' },
+  { key: 'bing_newobour', ar: 'العبور الجديدة — تحقق Bing (msvalidate.01)', en: 'New Obour — Bing verification (msvalidate.01)', ph: 'msvalidate.01 token' },
+  { key: 'yandex_newobour', ar: 'العبور الجديدة — تحقق Yandex', en: 'New Obour — Yandex verification', ph: 'yandex-verification token' },
   { key: 'ga4_alsawarey', ar: 'الصواري — GA4 Measurement ID', en: 'Al Sawarey — GA4 Measurement ID', ph: 'G-XXXXXXXXXX' },
   { key: 'pixel_alsawarey', ar: 'الصواري — Meta Pixel ID', en: 'Al Sawarey — Meta Pixel ID', ph: '1234567890' },
   { key: 'gsc_alsawarey', ar: 'الصواري — Google verification', en: 'Al Sawarey — Google verification', ph: 'google-site-verification token' },

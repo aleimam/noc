@@ -6,7 +6,7 @@ import { toast } from '@noc/ui';
 import { generateListingPosters, type GenImage } from './poster-actions';
 
 const BRAND_LABEL: Record<string, { ar: string; en: string }> = {
-  newobour: { ar: 'العبور الجديد', en: 'New Obour' },
+  newobour: { ar: 'العبور الجديدة', en: 'New Obour' },
   alsawarey: { ar: 'الصواري', en: 'Al Sawarey' },
   unbranded: { ar: 'بدون علامة (للشركاء)', en: 'Unbranded (partners)' },
 };

@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
-  return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديد' };
+  return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديدة' };
 }
 
 export default async function LegacyNeighborhoodRedirect({ params }: { params: Promise<{ id: string }> }) {

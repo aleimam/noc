@@ -44,7 +44,7 @@ export default async function PosterIdentityPage() {
           )}
         </p>
       </div>
-      <PosterIdentityForm brand="newobour" brandLabel={L('العبور الجديد', 'New Obour')} initial={load('posterTheme.newobour')} defaultLogo={m['brand_newobour_logo'] ?? null} locale={locale} />
+      <PosterIdentityForm brand="newobour" brandLabel={L('العبور الجديدة', 'New Obour')} initial={load('posterTheme.newobour')} defaultLogo={m['brand_newobour_logo'] ?? null} locale={locale} />
       <PosterIdentityForm brand="alsawarey" brandLabel={L('الصواري', 'Al Sawarey')} initial={load('posterTheme.alsawarey')} defaultLogo={m['brand_alsawarey_logo'] ?? null} locale={locale} />
     </div>
   );

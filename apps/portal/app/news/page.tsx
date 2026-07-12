@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
   return pageMeta({
-    title: locale === 'en' ? 'News — New Obour' : 'الأخبار — العبور الجديد',
+    title: locale === 'en' ? 'News — New Obour' : 'الأخبار — العبور الجديدة',
     description: locale === 'en' ? 'Latest news and updates about New Obour City services and development.' : 'آخر الأخبار والمستجدات عن خدمات وتطوير مدينة العبور الجديدة.',
     path: '/news',
     locale,

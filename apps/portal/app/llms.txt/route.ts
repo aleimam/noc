@@ -16,7 +16,7 @@ export async function GET() {
     ['priceIndex', '/price-index', 'مؤشر الأسعار / Price index — average price per m² by district'],
   ];
   const lines = [
-    '# العبور الجديد (New Obour) — newobour.com',
+    '# العبور الجديدة (New Obour) — newobour.com',
     '',
     '> Free, official-style services portal for New Obour City, Egypt. Fully bilingual (Arabic default, English available).',
     '',

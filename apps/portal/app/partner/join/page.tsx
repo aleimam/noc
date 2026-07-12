@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
-  return { title: locale === 'en' ? 'Partners — New Obour' : 'الشركاء — العبور الجديد' };
+  return { title: locale === 'en' ? 'Partners — New Obour' : 'الشركاء — العبور الجديدة' };
 }
 
 export default async function PartnersPage() {

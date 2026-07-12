@@ -16,7 +16,7 @@ import { marketHref } from '../../lib/listings';
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
   return pageMeta({
-    title: locale === 'en' ? 'Marketplace — New Obour' : 'سوق العبور — العبور الجديد',
+    title: locale === 'en' ? 'Marketplace — New Obour' : 'سوق العبور — العبور الجديدة',
     description: locale === 'en' ? 'Lands and properties for sale in New Obour City — browse, filter and contact owners directly.' : 'أراضٍ وعقارات للبيع في مدينة العبور الجديدة — تصفّح وفلتر وتواصل مع الملاك مباشرة.',
     path: '/market',
     locale,

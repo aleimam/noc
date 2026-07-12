@@ -52,7 +52,7 @@ SMS gateway, and next-intl ar/en.
   contact logos, Partners link moved to the header.
 - **Geo explorer fully public** (owner decision): city/district/neighborhood details, maps,
   advantages render without login; LoginToView removed there. Rationing gates untouched.
-- Homepage title shortened to «العبور الجديد | بوابة الخدمات المجانية».
+- Homepage title shortened to «العبور الجديدة | بوابة الخدمات المجانية».
 
 **Recently shipped & deployed (2026-07-10/11):**
 - **Multi-site partner portal — COMPLETE.** The whole partner portal was extracted into

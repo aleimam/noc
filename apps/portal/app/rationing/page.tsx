@@ -24,7 +24,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
   return pageMeta({
-    title: locale === 'en' ? 'Rationing lists search — New Obour' : 'البحث في كشوف التقنين — العبور الجديد',
+    title: locale === 'en' ? 'Rationing lists search — New Obour' : 'البحث في كشوف التقنين — العبور الجديدة',
     description: locale === 'en' ? 'Search the New Obour City rationing (تقنين) lists by applicant name or plot and view official source sheets.' : 'ابحث في كشوف تقنين مدينة العبور الجديدة بالاسم أو القطعة واطّلع على الكشوف الرسمية.',
     path: '/rationing',
     locale,

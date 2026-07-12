@@ -9,7 +9,7 @@ export default async function SettingsHub() {
   // System-only cards (2026-07 RBAC restructure): appearance and people pages have
   // their own sidebar groups now, so the hub keeps just the `settings`-gated surfaces.
   const cards = [
-    { href: '/admin/settings/modules', label: 'الخدمات الظاهرة', desc: 'تفعيل/إخفاء خدمات العبور الجديد' },
+    { href: '/admin/settings/modules', label: 'الخدمات الظاهرة', desc: 'تفعيل/إخفاء خدمات العبور الجديدة' },
     { href: '/admin/settings/apis', label: t('settingsApis'), desc: t('settingsApisDesc') },
     { href: '/admin/settings/security', label: 'الأمان والحماية', desc: 'مستوى حماية البيانات من النسخ' },
     { href: '/admin/settings/analytics', label: 'التحليلات والتتبّع', desc: 'GA4 و Meta Pixel و Search Console' },
