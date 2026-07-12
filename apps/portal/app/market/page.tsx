@@ -15,7 +15,7 @@ import { SeoIntro } from '../_components/SeoText';
 import { getSeoIntro } from '../../lib/seoContent';
 import { partnershipsEnabled } from '../../lib/modules';
 import { marketHref } from '../../lib/listings';
-import { logSearch, normalizeSearch } from '../../lib/search';
+import { logSearch, normalizeSearch, expandSearchTerms } from '../../lib/search';
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
@@ -99,6 +99,8 @@ export default async function MarketPage({
   let listings = pool;
   if (q) {
     const terms = normalizeSearch(q).split(' ').filter(Boolean);
+    // Expand each term to its synonym variants (admin dictionary) — term AND kept, variants OR'd.
+    const expanded = await expandSearchTerms(terms, { site: 'newobour', surface: 'market' });
     const matched = pool.filter((l) => {
       const hay = normalizeSearch(
         [
@@ -111,7 +113,7 @@ export default async function MarketPage({
           .filter(Boolean)
           .join(' '),
       );
-      return terms.every((t) => hay.includes(t));
+      return expanded.every((alts) => alts.some((v) => hay.includes(v)));
     });
     const userId = (await auth())?.user?.id ?? null;
     logSearch({ site: 'newobour', surface: 'market', query: q, resultsCount: matched.length, userId });

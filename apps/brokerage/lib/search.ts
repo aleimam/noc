@@ -93,3 +93,49 @@ export function logSearch(input: {
       /* fire-and-forget: analytics must never break search */
     });
 }
+
+// ── Synonym expansion (Search Intelligence S3) ───────────────────────────────────────────
+// Mirror of apps/portal/lib/search.ts. The admin-curated SearchSynonym dictionary: each row is an
+// equivalence GROUP of interchangeable terms (stored pre-normalized, one per line). A query token in
+// a group expands to match ANY term in that group. site/surface null = applies everywhere.
+
+/** normalized-token → set of normalized variants (itself + everyone in its group(s)). */
+async function loadSynonymVariants(opts: { site: SearchSite; surface: SearchSurface }): Promise<Map<string, Set<string>>> {
+  const map = new Map<string, Set<string>>();
+  try {
+    const rows = await prisma.searchSynonym.findMany({
+      where: {
+        isActive: true,
+        AND: [{ OR: [{ site: null }, { site: opts.site }] }, { OR: [{ surface: null }, { surface: opts.surface }] }],
+      },
+      select: { normalized: true },
+    });
+    for (const r of rows) {
+      const group = r.normalized.split('\n').map((s) => s.trim()).filter(Boolean);
+      if (group.length < 2) continue;
+      for (const term of group) {
+        const set = map.get(term) ?? new Set<string>();
+        for (const g of group) set.add(g);
+        map.set(term, set);
+      }
+    }
+  } catch {
+    /* dictionary is best-effort — a failure must never break search */
+  }
+  return map;
+}
+
+/**
+ * Expand each normalized query token to the list of variants it should match (itself + synonyms).
+ * Caller keeps multi-term AND with each term now an OR over its variants:
+ *   expanded.every((alts) => alts.some((v) => haystack.includes(v))).
+ */
+export async function expandSearchTerms(terms: string[], opts: { site: SearchSite; surface: SearchSurface }): Promise<string[][]> {
+  if (terms.length === 0) return [];
+  const map = await loadSynonymVariants(opts);
+  if (map.size === 0) return terms.map((t) => [t]);
+  return terms.map((t) => {
+    const variants = map.get(t);
+    return variants ? Array.from(variants) : [t];
+  });
+}

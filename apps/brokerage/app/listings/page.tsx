@@ -10,7 +10,7 @@ import { listLands, ATTR } from '../../lib/listings';
 import { getAdminViewer, ownerBadges } from '../../lib/adminView';
 import { wishlistListingIds } from '../../lib/wishlist';
 import { pageMeta } from '../../lib/seo';
-import { logSearch, normalizeSearch } from '../../lib/search';
+import { logSearch, normalizeSearch, expandSearchTerms } from '../../lib/search';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,11 +106,13 @@ export default async function Catalogue({
     const CANDIDATE_CAP = 500;
     const pool = await listLands({ where, orderBy, take: CANDIDATE_CAP, skip: 0 });
     const terms = normalizeSearch(q).split(' ').filter(Boolean);
+    // Expand each term to its synonym variants (admin dictionary) — term AND kept, variants OR'd.
+    const expanded = await expandSearchTerms(terms, { site: 'alsawarey', surface: 'storefront' });
     const matched = pool.cards.filter((land) => {
       const hay = normalizeSearch(
         [land.title, land.typeAr, land.typeEn, land.districtAr, land.cityAr, land.geoText, land.adNumber].filter(Boolean).join(' '),
       );
-      return terms.every((t) => hay.includes(t));
+      return expanded.every((alts) => alts.some((v) => hay.includes(v)));
     });
     const userId = (await auth())?.user?.id ?? null;
     logSearch({ site: 'alsawarey', surface: 'storefront', query: q, resultsCount: matched.length, userId });

@@ -1,6 +1,8 @@
 import { getLocale } from 'next-intl/server';
-import { requirePermission } from '@noc/auth';
+import { auth, requirePermission, hasPermission } from '@noc/auth';
+import { prisma } from '@noc/db';
 import { getSearchOverview, type SearchSurface, type TermRow } from '../../../../../lib/searchAnalytics';
+import { SynonymManager, type SynonymRow } from './SynonymManager';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,11 +25,13 @@ export default async function SearchIntelligencePage({ searchParams }: { searchP
   const site = (SITES.includes(one(sp.site) as SiteFilter) ? one(sp.site) : 'all') as SiteFilter;
   const surface = (SURFACES.includes(one(sp.surface) as SurfaceFilter) ? one(sp.surface) : 'all') as SurfaceFilter;
 
-  const ov = await getSearchOverview({
-    site: site === 'all' ? null : site,
-    surface: surface === 'all' ? null : surface,
-    days,
-  });
+  const [ov, session, synonymRows] = await Promise.all([
+    getSearchOverview({ site: site === 'all' ? null : site, surface: surface === 'all' ? null : surface, days }),
+    auth(),
+    prisma.searchSynonym.findMany({ orderBy: { updatedAt: 'desc' }, select: { id: true, terms: true, site: true, surface: true, note: true, isActive: true } }),
+  ]);
+  const canManage = !!session?.user && hasPermission(session.user.perms, 'analytics', 'MANAGE');
+  const synonyms: SynonymRow[] = synonymRows;
 
   const qs = (patch: Record<string, string | number>) => {
     const p = new URLSearchParams({ days: String(days), site, surface, ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, String(v)])) });
@@ -158,6 +162,9 @@ export default async function SearchIntelligencePage({ searchParams }: { searchP
         <TermTable title={L('بحث بلا نتائج', 'Zero-result terms')} rows={ov.zeroTerms} metric="zeroCount" />
         <TermTable title={L('كلمات أدّت لتحوّل', 'Terms that converted')} rows={ov.convertingTerms} metric="convertedCount" />
       </div>
+
+      {/* Synonym dictionary — fix the zero-result terms above by teaching the search equivalences. */}
+      <SynonymManager groups={synonyms} canManage={canManage} locale={locale} />
     </div>
   );
 }
