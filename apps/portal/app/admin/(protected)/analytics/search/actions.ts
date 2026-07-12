@@ -64,3 +64,21 @@ export async function deleteSynonym(id: string): Promise<{ ok: boolean }> {
   revalidatePath('/admin/analytics/search');
   return { ok: true };
 }
+
+// ── Zero-result leads (unmet demand) ────────────────────────────────────────────────────
+const LEAD_STATUSES = new Set(['NEW', 'CONTACTED', 'CLOSED']);
+
+export async function setLeadStatus(id: string, status: string): Promise<{ ok: boolean }> {
+  await requirePermission('analytics', 'MANAGE');
+  if (!LEAD_STATUSES.has(status)) return { ok: false };
+  await prisma.searchLead.update({ where: { id }, data: { status, handledAt: status === 'NEW' ? null : new Date() } });
+  revalidatePath('/admin/analytics/search');
+  return { ok: true };
+}
+
+export async function deleteLead(id: string): Promise<{ ok: boolean }> {
+  await requirePermission('analytics', 'MANAGE');
+  await prisma.searchLead.delete({ where: { id } });
+  revalidatePath('/admin/analytics/search');
+  return { ok: true };
+}

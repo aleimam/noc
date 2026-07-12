@@ -1161,6 +1161,27 @@ model SearchSynonym {
   @@index([isActive])
 }
 
+// Zero-result lead capture (Search Intelligence S3c): when a market/storefront search returns
+// nothing, the visitor can leave a phone + note ("what are you looking for?"). Turns a dead-end
+// search into a sales lead — the query is unmet demand. Staff work these from the search dashboard.
+model SearchLead {
+  id         String    @id @default(cuid())
+  site       String // 'newobour' | 'alsawarey'
+  surface    String // 'market' | 'storefront'
+  query      String    @db.Text // what they searched for (unmet demand)
+  normalized String    @db.VarChar(191)
+  phone      String    @db.VarChar(32)
+  name       String?
+  note       String?   @db.Text
+  status     String    @default("NEW") // NEW | CONTACTED | CLOSED
+  userId     String? // set when a signed-in customer left it
+  createdAt  DateTime  @default(now())
+  handledAt  DateTime?
+
+  @@index([status, createdAt])
+  @@index([site, createdAt])
+}
+
 // ─────────────────── Module 2: Lands & community database ───────────────────
 
 enum LandType {

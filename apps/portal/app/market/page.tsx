@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma, Prisma } from '@noc/db';
 import { auth } from '@noc/auth';
 import { newObourVisibility } from '@noc/partner-portal/visibility';
-import { ListingCard, RecentlyViewed, TrackEvent, SearchSelectTracker } from '@noc/ui';
+import { ListingCard, RecentlyViewed, TrackEvent, SearchSelectTracker, ZeroResultLead } from '@noc/ui';
 import { SiteShell } from '../_components/SiteShell';
 import { currency } from '@noc/i18n';
 import { MarketFilters } from './MarketFilters';
@@ -168,7 +168,12 @@ export default async function MarketPage({
       />
 
       {Object.keys(sp).length > 0 && <TrackEvent type="market_search" label={typeKey || 'all'} value={listings.length} />}
-      {listings.length === 0 && <p className="py-12 text-center opacity-60">{t('noResults')}</p>}
+      {listings.length === 0 && (
+        <div className="mx-auto max-w-md space-y-4 py-10">
+          <p className="text-center opacity-60">{t('noResults')}</p>
+          {q && <ZeroResultLead site="newobour" surface="market" query={q} locale={locale} />}
+        </div>
+      )}
       {/* Wrap the results grid so a click on any card beacons a search `select` event (S2).
           The wrapper is inert (display:contents) unless a query is present. */}
       <SearchSelectTracker site="newobour" query={q}>

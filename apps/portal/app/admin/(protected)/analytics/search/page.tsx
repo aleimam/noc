@@ -3,6 +3,7 @@ import { auth, requirePermission, hasPermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { getSearchOverview, type SearchSurface, type TermRow } from '../../../../../lib/searchAnalytics';
 import { SynonymManager, type SynonymRow } from './SynonymManager';
+import { LeadInbox, type LeadRow } from './LeadInbox';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,22 @@ export default async function SearchIntelligencePage({ searchParams }: { searchP
   ]);
   const canManage = !!session?.user && hasPermission(session.user.perms, 'analytics', 'MANAGE');
   const synonyms: SynonymRow[] = synonymRows;
+
+  // Leads carry a phone (PII) — only load + show them to managers.
+  const fmtDate = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' }).format(d);
+  const leads: LeadRow[] = canManage
+    ? (await prisma.searchLead.findMany({ orderBy: { createdAt: 'desc' }, take: 200 })).map((l) => ({
+        id: l.id,
+        site: l.site,
+        surface: l.surface,
+        query: l.query,
+        phone: l.phone,
+        name: l.name,
+        note: l.note,
+        status: l.status,
+        createdAt: fmtDate(l.createdAt),
+      }))
+    : [];
 
   const qs = (patch: Record<string, string | number>) => {
     const p = new URLSearchParams({ days: String(days), site, surface, ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, String(v)])) });
@@ -162,6 +179,9 @@ export default async function SearchIntelligencePage({ searchParams }: { searchP
         <TermTable title={L('بحث بلا نتائج', 'Zero-result terms')} rows={ov.zeroTerms} metric="zeroCount" />
         <TermTable title={L('كلمات أدّت لتحوّل', 'Terms that converted')} rows={ov.convertingTerms} metric="convertedCount" />
       </div>
+
+      {/* Zero-result leads — visitors who found nothing and left a number (managers only; PII). */}
+      {canManage && <LeadInbox leads={leads} locale={locale} />}
 
       {/* Synonym dictionary — fix the zero-result terms above by teaching the search equivalences. */}
       <SynonymManager groups={synonyms} canManage={canManage} locale={locale} />

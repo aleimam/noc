@@ -4,7 +4,7 @@ import { getLocale } from 'next-intl/server';
 import { Prisma, prisma } from '@noc/db';
 import { auth } from '@noc/auth';
 import { StoreShell } from '../_components/StoreShell';
-import { RecentlyViewed, SearchSelectTracker } from '@noc/ui';
+import { RecentlyViewed, SearchSelectTracker, ZeroResultLead } from '@noc/ui';
 import { StoreLandCard } from '../_components/StoreLandCard';
 import { listLands, ATTR } from '../../lib/listings';
 import { getAdminViewer, ownerBadges } from '../../lib/adminView';
@@ -213,7 +213,10 @@ export default async function Catalogue({
         </div>
 
         {cards.length === 0 ? (
-          <p className="py-16 text-center text-ink-500">{L('لا توجد نتائج مطابقة', 'No matching lands')}</p>
+          <div className="mx-auto max-w-md space-y-4 py-12">
+            <p className="text-center text-ink-500">{L('لا توجد نتائج مطابقة', 'No matching lands')}</p>
+            {q && <ZeroResultLead site="alsawarey" surface="storefront" query={q} locale={locale} />}
+          </div>
         ) : (
           // Wrap the results grid so a click on any card beacons a search `select` event (S2).
           // The wrapper is inert (display:contents) unless a query is present.
