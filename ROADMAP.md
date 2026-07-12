@@ -13,7 +13,22 @@ SMS gateway, and next-intl ar/en.
 
 ## 📌 Current status (2026-07-12)
 
-**Shipped 2026-07-12 (commits `9e5364d`, `877d565`):**
+**Shipped 2026-07-12, later batches (commits `d3c8e94` → `28be3e7`):**
+- **Search Intelligence — COMPLETE, S1→S3c** (#8 below): unified search logging + fuzzy Arabic
+  matching, select/convert attribution, admin dashboard `/admin/analytics/search`, synonym
+  dictionary, zero-result lead capture + inbox, autocomplete/trending on market + Al Sawarey
+  hero/header. All six phases deployed + verified same day.
+- **Geo ordering + land-UI removal** — every district/neighborhood list sorts numerically
+  (`order` asc; `ops/backfill-neighborhood-order.ts` ran on prod); staff land-plots admin UI
+  deleted (Land model + customer My-Lands/follow/price-index kept).
+- **City mandatory on listings** — the existing `city` detail is now required + auto-selected
+  (single active choice = New Obour) via `REQUIRED_LISTING_ATTR_KEYS` (@noc/config) in both
+  listing forms; `ops/city-mandatory.ts` linked it to all types + backfilled prod.
+- **Photo SEO** — alt text + upload filename hints now lead with city → district → neighborhood
+  on both sites (ImageObject captions inherit automatically); lean partner form now passes a
+  filename hint (was bare UUIDs).
+
+**Shipped 2026-07-12, morning (commits `9e5364d`, `877d565`):**
 - **Geo Directory (الدليل الجغرافي)** — section renamed; **city-level updates** (GeoUpdate.cityId,
   editable from the City page or the central Updates section; no SMS notify — no city follows);
   **inheritance matrix** (Setting `geo.inheritance`: updates/amenities/advantages/maps ×
@@ -22,9 +37,9 @@ SMS gateway, and next-intl ar/en.
   BOTH sites; **expandable family-tree** (GeoTree) atop /explore linking every unit.
 - **Per-map titles + custom branded area photos** (AreaMap.title + `custom:<uuid>` kinds) at all
   three geo levels — dual-brand stamped, matrix-inherited, shown on explore + listing pages.
-- IN FLIGHT: **RBAC restructure** — 7-group sidebar; `marketplace`/`settings` god-sections split
-  into 13 purpose keys (listings/catalog/owners/storefront/content/appearance/analytics + kept
-  keys); zero-lockout copy-then-delete migration; role presets refresh; gated dashboard tiles.
+- **RBAC restructure — SHIPPED** (migration `20260712160000_rbac_sections`): 7-group sidebar;
+  `marketplace`/`settings` god-sections split into 12 purpose keys (see @noc/config SECTIONS);
+  zero-lockout copy-then-delete migration; role presets refresh; gated dashboard tiles.
 - **Portal URL restructure (SEO)** — canonical geo URLs (`/explore/city|district/<key>`,
   `/explore/neighborhood/<arabic-slug>--<id>` via `lib/geoHref.ts`), `/partners` → `/partner/join`,
   `/rationing/plot?ref=` → `/rationing/plots/<ref>`; every legacy URL 308-redirects; sitemap +
@@ -207,6 +222,43 @@ slugs to the canonical URL — the ad number (trailing digits) is the stable loo
 Canonical tag, sitemap, and every browse surface (market grid, home, owner profile, explore,
 similar) emit the pretty href. Verified live with multiple listings (distinct slugs, 308s,
 sitemap). Secondary logged-in links (wishlist/offers/compare) keep cuids and rely on the 308.
+
+---
+
+## 8. ✅ Search Intelligence — SHIPPED 2026-07-12 (complete, S1→S3c)
+
+**Owner-approved scope:** surfaces = market + storefront + rationing · conversion = contact
+**or** offer · fuzzy = per-token Arabic normalization + multi-term AND · extras = zero-result
+lead capture + admin synonym dictionary + autocomplete/trending.
+
+**Delivered** (commits `d3c8e94` → `28be3e7`; migrations `20260712170000_search_log`,
+`…180000_search_synonym`, `…190000_search_lead`), all deployed + verified on prod:
+- **S1 — logging + fuzzy:** every public search writes a `SearchLog` row (raw query,
+  `normalized` via per-token `normalizeSearch`, resultsCount, zeroResult, usedFastSearch);
+  matchers do multi-term AND over a normalized haystack.
+- **S2 — select/convert attribution:** `SearchSelectTracker` (delegated `data-listing-id`
+  click capture) + convert beacons (BuyButton / NegotiationThread / ListingContactBar) →
+  `/api/search-event`, attributed by **heuristic recency** (30min select / 2h convert windows —
+  the analytics session id is client-localStorage-only, so no session join is possible).
+- **S3a — dashboard:** `/admin/analytics/search` (RBAC `analytics`): funnel
+  search→results→opened→converted, zero-result + refinement rates, top / zero-result /
+  converting terms; filters days×site×surface. Rationing now also feeds the unified log
+  (alongside its own `SheetSearchLog`). Fixed the storefront geo gap: `LandCard.geoText`
+  carries District/Neighborhood names for search («الحى العاشر» used to return 0 on Al Sawarey).
+- **S3b — synonym dictionary:** `SearchSynonym` equivalence groups (one term per line, stored
+  raw + normalized, scoped site/surface or global); `expandSearchTerms()` keeps the term AND
+  while OR-ing each term's variants. Editor lives on the dashboard, gated `analytics:MANAGE`.
+- **S3c — leads + autocomplete:** zero-result searches show a mobile-first "سيب رقمك" card
+  (`ZeroResultLead` → rate-limited `/api/search-lead` → `SearchLead` NEW|CONTACTED|CLOSED);
+  manager-only inbox on the dashboard (leads carry phones — PII). `SearchAutocomplete`
+  (debounced, keyboard nav) on market + Al Sawarey hero/header → `/api/search-suggest`
+  (~5-min cached corpus of types + geo names, trending when empty); picked suggestions
+  navigate with `fast=1` → `usedFastSearch`.
+
+**Notes:** `apps/{portal,brokerage}/lib/search.ts` are **mirrors — keep identical**. Rationing
+deliberately has **no typeahead** (would leak register names) and keeps its own
+did-you-mean layer. The visitor-analytics "Top searches" tile reads `AnalyticsEvent`, not
+`SearchLog` — separate systems.
 
 ---
 
