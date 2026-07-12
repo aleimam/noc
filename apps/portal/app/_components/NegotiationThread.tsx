@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { formatMoneyEgp } from '@noc/config';
+import { trackConvert } from '@noc/ui';
 import { makeOffer, respondNegotiation } from '../account/offers/actions';
 
 type Offer = { byRole: string; amount: number; note: string | null };
@@ -47,7 +48,11 @@ export function NegotiationThread({
       const r = negotiation && negotiation.status === 'OPEN'
         ? await respondNegotiation(negotiation.id, 'counter', n, note)
         : await makeOffer(listingId, n, note);
-      if (r.ok) { setAmount(''); setNote(''); router.refresh(); } else setError(t('negoError'));
+      if (r.ok) {
+        // S2: a submitted offer converts the search that led the buyer to this listing.
+        if (role === 'buyer') trackConvert('newobour', listingId);
+        setAmount(''); setNote(''); router.refresh();
+      } else setError(t('negoError'));
     });
   }
   function act(action: 'accept' | 'reject' | 'withdraw') {

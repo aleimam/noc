@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma, Prisma } from '@noc/db';
 import { auth } from '@noc/auth';
 import { newObourVisibility } from '@noc/partner-portal/visibility';
-import { ListingCard, RecentlyViewed, TrackEvent } from '@noc/ui';
+import { ListingCard, RecentlyViewed, TrackEvent, SearchSelectTracker } from '@noc/ui';
 import { SiteShell } from '../_components/SiteShell';
 import { currency } from '@noc/i18n';
 import { MarketFilters } from './MarketFilters';
@@ -167,10 +167,14 @@ export default async function MarketPage({
 
       {Object.keys(sp).length > 0 && <TrackEvent type="market_search" label={typeKey || 'all'} value={listings.length} />}
       {listings.length === 0 && <p className="py-12 text-center opacity-60">{t('noResults')}</p>}
+      {/* Wrap the results grid so a click on any card beacons a search `select` event (S2).
+          The wrapper is inert (display:contents) unless a query is present. */}
+      <SearchSelectTracker site="newobour" query={q}>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {listings.map((l) => (
           <ListingCard
             key={l.id}
+            listingId={l.id}
             href={marketHref({ id: l.id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null })}
             cover={cover.get(l.id) ?? null}
             title={l.title}
@@ -184,6 +188,7 @@ export default async function MarketPage({
           />
         ))}
       </div>
+      </SearchSelectTracker>
       <div className="mt-8"><RecentlyViewed title={t('recentlyViewed')} currency={currency(locale)} /></div>
       </div>
       <CompareBar labels={{ compare: t('compare'), clear: t('clear'), items: t('compareItems') }} />

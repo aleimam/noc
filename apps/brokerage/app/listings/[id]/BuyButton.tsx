@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { track, nocEvent } from '@noc/ui';
+import { track, nocEvent, trackConvert } from '@noc/ui';
 import { createContactRequest } from './actions';
 import { waLink } from '../../../lib/store';
 
@@ -14,6 +14,7 @@ export function BuyButton({ listingId, waText, whatsapp, label, labelShort, sent
     window.open(waLink(waText, whatsapp), '_blank', 'noopener');
     track('lead_buy', { listingId });
     nocEvent('contact_whatsapp', listingId);
+    trackConvert('alsawarey', listingId); // S2: attribute this contact to the search that led here
     start(async () => {
       await createContactRequest({ listingId, message: waText });
       setSent(true);

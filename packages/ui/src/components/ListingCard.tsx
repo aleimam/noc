@@ -12,6 +12,7 @@ export function ListingCard({
   badge,
   meta,
   alt,
+  listingId,
 }: {
   href: string;
   cover?: string | null;
@@ -22,10 +23,12 @@ export function ListingCard({
   badge?: ReactNode; // e.g. a <Badge> overlaid on the media
   meta?: ReactNode; // a small line under the title (location, etc.)
   alt?: string; // cover alt text (image SEO); defaults to the listing title
+  listingId?: string; // when set, exposes data-listing-id for search select-tracking
 }) {
   return (
     <a
       href={href}
+      data-listing-id={listingId}
       className="group flex flex-col overflow-hidden rounded-lg border border-ink-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-navy-100">

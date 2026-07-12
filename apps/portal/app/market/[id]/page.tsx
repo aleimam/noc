@@ -55,6 +55,7 @@ import { getBuyerNegotiation } from '../../../lib/negotiation';
 import { wishedSet } from '../../../lib/wishlist';
 import { NegotiationThread } from '../../_components/NegotiationThread';
 import { MarketCardActions } from '../../_components/MarketCardActions';
+import { ListingContactBar } from '../../_components/ListingContactBar';
 
 /** "YYYY-MM" → localized "Month Year". */
 function formatMonthYear(s: string, locale: string): string {
@@ -579,16 +580,14 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         </div>
       )}
 
-      <div className="fixed inset-x-0 bottom-0 mx-auto flex max-w-3xl gap-3 border-t border-graphite/15 bg-bg p-3">
-        {contactWhatsapp && (
-          <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer" className="flex-1 rounded-md bg-green px-4 py-3 text-center font-semibold text-white">
-            {t('whatsapp')}
-          </a>
-        )}
-        <a href={`tel:${contactPhone}`} className="flex-1 rounded-md bg-primary px-4 py-3 text-center font-semibold text-soft">
-          {t('callNow')}
-        </a>
-      </div>
+      <ListingContactBar
+        listingId={listing.id}
+        waNumber={waNumber}
+        contactPhone={contactPhone}
+        contactWhatsapp={contactWhatsapp}
+        whatsappLabel={t('whatsapp')}
+        callLabel={t('callNow')}
+      />
       </main>
     </SiteShell>
   );

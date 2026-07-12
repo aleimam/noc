@@ -4,7 +4,7 @@ import { getLocale } from 'next-intl/server';
 import { Prisma, prisma } from '@noc/db';
 import { auth } from '@noc/auth';
 import { StoreShell } from '../_components/StoreShell';
-import { RecentlyViewed } from '@noc/ui';
+import { RecentlyViewed, SearchSelectTracker } from '@noc/ui';
 import { StoreLandCard } from '../_components/StoreLandCard';
 import { listLands, ATTR } from '../../lib/listings';
 import { getAdminViewer, ownerBadges } from '../../lib/adminView';
@@ -213,9 +213,13 @@ export default async function Catalogue({
         {cards.length === 0 ? (
           <p className="py-16 text-center text-ink-500">{L('لا توجد نتائج مطابقة', 'No matching lands')}</p>
         ) : (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {cards.map((land) => <StoreLandCard key={land.id} land={land} locale={locale} wishlisted={wished.has(land.id)} owner={owners?.get(land.id)} />)}
-          </div>
+          // Wrap the results grid so a click on any card beacons a search `select` event (S2).
+          // The wrapper is inert (display:contents) unless a query is present.
+          <SearchSelectTracker site="alsawarey" query={q}>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {cards.map((land) => <StoreLandCard key={land.id} land={land} locale={locale} wishlisted={wished.has(land.id)} owner={owners?.get(land.id)} />)}
+            </div>
+          </SearchSelectTracker>
         )}
 
         {totalPages > 1 && (

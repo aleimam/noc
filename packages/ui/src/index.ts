@@ -15,6 +15,8 @@ export { FileDropzone } from './components/FileDropzone';
 export { Lightbox } from './components/Lightbox';
 export { PhotoGallery } from './components/PhotoGallery';
 export { ListingCard } from './components/ListingCard';
+export { SearchSelectTracker } from './components/SearchSelectTracker';
+export { trackSelect, trackConvert, type SearchSite } from './lib/searchEvent';
 export { AreaAdvantages } from './components/AreaAdvantages';
 export { Badge } from './components/Badge';
 export { PublicShell } from './components/PublicShell';
