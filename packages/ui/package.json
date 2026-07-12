@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@noc/config": "*",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.6.0"
   },

@@ -6,7 +6,7 @@ import { prisma } from '@noc/db';
 import { PhotoGallery, TrackView, AreaAdvantages } from '@noc/ui';
 import { StoreShell } from '../../_components/StoreShell';
 import { advantagesForNeighborhood } from '../../../lib/advantages';
-import { updatesForListing, customPhotosForListing } from '../../../lib/geoInheritance';
+import { updatesForListing, customPhotosForListing, areaMapsForListing } from '../../../lib/geoInheritance';
 import { StoreLandCard } from '../../_components/StoreLandCard';
 import { getLandDetail, resolveListingId, similarLands } from '../../../lib/listings';
 import { getAdminViewer, ownerDetailFor } from '../../../lib/adminView';
@@ -23,6 +23,19 @@ import { WishlistButton } from '../../_components/WishlistButton';
 export const dynamic = 'force-dynamic';
 const fmt = (n: number) => n.toLocaleString('en');
 const BASE = (process.env.BROKERAGE_URL || 'https://alsawarey.com').replace(/\/$/, '');
+
+// Labels for inherited parent maps: which level a map came from + the fixed-kind fallback name.
+const MAP_LEVEL_LABEL: Record<'city' | 'district' | 'neighborhood', { ar: string; en: string }> = {
+  city: { ar: 'من المدينة', en: 'From the city' },
+  district: { ar: 'من الحي', en: 'From the district' },
+  neighborhood: { ar: 'من المجاورة', en: 'From the neighborhood' },
+};
+const MAP_KIND_LABEL: Record<string, { ar: string; en: string }> = {
+  masterplan: { ar: 'المخطط العام', en: 'Masterplan' },
+  location: { ar: 'خريطة الموقع', en: 'Location map' },
+  services: { ar: 'خريطة مناطق الخدمات', en: 'Services-areas map' },
+  mainroads: { ar: 'خريطة المحاور والطرق الرئيسية', en: 'Main roads (axis) map' },
+};
 
 import { waPhone } from '@noc/config';
 
@@ -95,6 +108,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   const advGroups = await advantagesForNeighborhood(nb?.neighborhoodId, locale);
   const areaUpdates = await updatesForListing(nb?.neighborhoodId);
   const areaPhotos = await customPhotosForListing(nb?.neighborhoodId);
+  const areaMaps = await areaMapsForListing(nb?.neighborhoodId, 'alsawarey');
   const genRows = await prisma.attachment.findMany({
     where: { ownerType: 'ListingPoster', ownerId: listingId, stampCategory: { contains: 'alsawarey' } },
     orderBy: { stampCategory: 'asc' },
@@ -301,24 +315,47 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
           </div>
         )}
 
-        {/* Inherited area updates (geo.inheritance matrix — updates.toListing). Collapsed by
-            default so the listing itself stays the star. */}
-        {areaUpdates.length > 0 && (
+        {/* Inherited area content (geo.inheritance matrix — updates.toListing / maps.toListing).
+            Collapsed by default so the listing itself stays the star. */}
+        {(areaUpdates.length > 0 || areaMaps.length > 0) && (
           <details className="mt-6 rounded-2xl bg-white p-5 shadow-md">
-            <summary className="cursor-pointer text-lg font-bold text-navy-800">{L('عن المنطقة — آخر التحديثات', 'About the area — latest updates')}</summary>
-            <ul className="mt-3 space-y-2">
-              {areaUpdates.map((u) => (
-                <li key={u.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-ink-100 p-3 text-sm">
-                  <span className="rounded bg-gold/15 px-2 py-0.5 text-xs font-semibold text-navy-700">
-                    {u.source === 'city' ? L('المدينة', 'City') : u.source === 'district' ? L('الحي', 'District') : L('المجاورة', 'Neighborhood')}
-                  </span>
-                  <span className="font-semibold text-navy-800">{u.title || L('تحديث', 'Update')}</span>
-                  <span className="ms-auto font-num text-xs text-ink-500" dir="ltr">
-                    {new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(u.happenedAt)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <summary className="cursor-pointer text-lg font-bold text-navy-800">{L('عن المنطقة', 'About the area')}</summary>
+            <div className="mt-3 space-y-6">
+              {areaUpdates.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-bold text-navy-800">{L('آخر التحديثات', 'Latest updates')}</h3>
+                  <ul className="space-y-2">
+                    {areaUpdates.map((u) => (
+                      <li key={u.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-ink-100 p-3 text-sm">
+                        <span className="rounded bg-gold/15 px-2 py-0.5 text-xs font-semibold text-navy-700">
+                          {u.source === 'city' ? L('المدينة', 'City') : u.source === 'district' ? L('الحي', 'District') : L('المجاورة', 'Neighborhood')}
+                        </span>
+                        <span className="font-semibold text-navy-800">{u.title || L('تحديث', 'Update')}</span>
+                        <span className="ms-auto font-num text-xs text-ink-500" dir="ltr">
+                          {new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(u.happenedAt)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {areaMaps.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-bold text-navy-800">{L('خرائط المنطقة', 'Area maps')}</h3>
+                  <div className="space-y-4">
+                    {areaMaps.map((mp) => {
+                      const label = `${L(MAP_LEVEL_LABEL[mp.level].ar, MAP_LEVEL_LABEL[mp.level].en)} — ${mp.title || L(MAP_KIND_LABEL[mp.kind]?.ar ?? mp.kind, MAP_KIND_LABEL[mp.kind]?.en ?? mp.kind)}`;
+                      return (
+                        <div key={`${mp.level}:${mp.kind}`} className="space-y-2">
+                          <div className="font-semibold text-navy-800">{label}</div>
+                          <PhotoGallery photos={[mp.path]} alt={geoPhotoAlt(areaName, label, locale)} locale={locale} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </details>
         )}
 

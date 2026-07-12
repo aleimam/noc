@@ -12,7 +12,7 @@ import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { auth } from '@noc/auth';
 import { getStandardAreas } from '../../../lib/marketplace';
 import { advantagesForNeighborhood } from '../../../lib/advantages';
-import { getGeoInheritance, updatesForListing, customPhotosForListing } from '../../../lib/geoInheritance';
+import { getGeoInheritance, updatesForListing, customPhotosForListing, areaMapsForListing } from '../../../lib/geoInheritance';
 import { amenitiesForListing } from '../../../lib/amenities';
 import { listListingImages } from '../../../lib/poster/generate';
 import { trackListingView } from '../../../lib/views';
@@ -75,6 +75,19 @@ type Item = { label: string; value?: string; photos?: string[]; link?: 'url' | '
 function safeUrl(v: string): string {
   return /^https?:\/\//i.test(v) ? v : `https://${v}`;
 }
+
+// Labels for inherited parent maps: which level a map came from + the fixed-kind fallback name.
+const MAP_LEVEL_LABEL: Record<'city' | 'district' | 'neighborhood', { ar: string; en: string }> = {
+  city: { ar: 'من المدينة', en: 'From the city' },
+  district: { ar: 'من الحي', en: 'From the district' },
+  neighborhood: { ar: 'من المجاورة', en: 'From the neighborhood' },
+};
+const MAP_KIND_LABEL: Record<string, { ar: string; en: string }> = {
+  masterplan: { ar: 'المخطط العام', en: 'Masterplan' },
+  location: { ar: 'خريطة الموقع', en: 'Location map' },
+  services: { ar: 'خريطة مناطق الخدمات', en: 'Services-areas map' },
+  mainroads: { ar: 'خريطة المحاور والطرق الرئيسية', en: 'Main roads (axis) map' },
+};
 
 export default async function ListingDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id: param } = await params;
@@ -166,10 +179,11 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   // Area content flows onto the listing per the admin inheritance matrix ('geo.inheritance').
   const geoMatrix = await getGeoInheritance();
   const advGroups = await advantagesForNeighborhood(listing.neighborhoodId, locale, geoMatrix);
-  const [areaUpdates, areaAmenities, areaPhotos] = await Promise.all([
+  const [areaUpdates, areaAmenities, areaPhotos, areaMaps] = await Promise.all([
     updatesForListing(listing.neighborhoodId, geoMatrix),
     amenitiesForListing(listing.id, listing.neighborhoodId, geoMatrix),
     customPhotosForListing(listing.neighborhoodId, geoMatrix),
+    areaMapsForListing(listing.neighborhoodId, 'newobour', geoMatrix),
   ]);
   const showAreaLinks = geoMatrix.maps.toListing && !!listing.neighborhood;
   const fmtDate = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
@@ -438,7 +452,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
 
       {/* About the area — inherited area content (matrix-gated), closed by default so it
           never buries the listing itself. */}
-      {listing.neighborhood && (areaUpdates.length > 0 || areaAmenities.length > 0 || areaPhotos.length > 0 || showAreaLinks) && (
+      {listing.neighborhood && (areaUpdates.length > 0 || areaAmenities.length > 0 || areaMaps.length > 0 || areaPhotos.length > 0 || showAreaLinks) && (
         <details className="rounded-lg border border-graphite/15 p-4">
           <summary className="cursor-pointer text-lg font-semibold text-primary">{L('عن المنطقة', 'About the area')}</summary>
           <div className="mt-3 space-y-5">
@@ -468,6 +482,20 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
                 </ul>
               </div>
             )}
+            {areaMaps.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-primary">{L('خرائط المنطقة', 'Area maps')}</h3>
+                {areaMaps.map((mp) => {
+                  const label = `${L(MAP_LEVEL_LABEL[mp.level].ar, MAP_LEVEL_LABEL[mp.level].en)} — ${mp.title || L(MAP_KIND_LABEL[mp.kind]?.ar ?? mp.kind, MAP_KIND_LABEL[mp.kind]?.en ?? mp.kind)}`;
+                  return (
+                    <div key={`${mp.level}:${mp.kind}`} className="space-y-1">
+                      <div className="text-sm font-medium">{label}</div>
+                      <PhotoGallery photos={[mp.path]} alt={geoPhotoAlt(areaName, label, locale)} locale={locale} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             {areaPhotos.length > 0 && (
               <div className="space-y-2">
                 <h3 className="text-sm font-bold text-primary">{L('صور المنطقة', 'Area photos')}</h3>
@@ -481,7 +509,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
             )}
             {showAreaLinks && listing.neighborhood && (
               <div className="space-y-1">
-                <h3 className="text-sm font-bold text-primary">{L('خرائط المنطقة', 'Area maps')}</h3>
+                <h3 className="text-sm font-bold text-primary">{L('صفحات المنطقة', 'Area pages')}</h3>
                 <div className="flex flex-wrap gap-2">
                   <a href={neighborhoodHref(listing.neighborhood)} className="rounded-lg border border-accent/40 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/5">
                     {L(listing.neighborhood.nameAr, listing.neighborhood.nameEn)}

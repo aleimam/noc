@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { waPhone } from '@noc/config';
-import { LanguageSwitcher, ThemeToggle } from '@noc/ui';
+import { LanguageSwitcher, ThemeToggle, FloatingWhatsApp } from '@noc/ui';
 import { getStorefront } from '../../lib/storefront';
 import { getAdminViewer } from '../../lib/adminView';
 import { SearchBox } from './SearchBox';
@@ -59,12 +59,14 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
       orderBy: { footerOrder: 'asc' },
       select: { slug: true, titleAr: true, titleEn: true },
     }),
-    prisma.setting.findMany({ where: { key: { in: ['copyright_alsawarey', 'copyright_alsawarey_en'] } } }),
+    prisma.setting.findMany({ where: { key: { in: ['copyright_alsawarey', 'copyright_alsawarey_en', 'whatsapp_float_alsawarey', 'whatsapp_float_msg_alsawarey'] } } }),
   ]);
   const Lc = (t: { ar: string; en: string }) => (locale === 'ar' ? t.ar : t.en);
   const whatsapp = content.contact.whatsapp;
   const socials = (content.contact.socials ?? []).filter((s) => s.url.trim());
   const cw = Object.fromEntries(copyrightRows.map((r) => [r.key, r.value]));
+  const whatsappFloat = cw['whatsapp_float_alsawarey'] === '1';
+  const whatsappFloatMsg = cw['whatsapp_float_msg_alsawarey'] || '';
   const copyright =
     (locale === 'en' ? cw['copyright_alsawarey_en'] || cw['copyright_alsawarey'] : cw['copyright_alsawarey']) ||
     (locale === 'en' ? '© Al Sawarey Real-estate Investment' : `© ${new Date().getFullYear()} alsawarey.com`);
@@ -156,6 +158,14 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
         </div>
         <div className="border-t border-white/10 py-2 text-center text-xs text-white/50">{copyright}</div>
       </footer>
+
+      {whatsappFloat && whatsapp && (
+        <FloatingWhatsApp
+          phone={whatsapp}
+          message={whatsappFloatMsg || L('مرحباً، لدي استفسار', 'Hello, I have a question')}
+          label={L('تواصل معنا على واتساب', 'Contact us on WhatsApp')}
+        />
+      )}
     </div>
   );
 }

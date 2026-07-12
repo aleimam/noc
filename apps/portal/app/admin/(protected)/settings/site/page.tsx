@@ -9,7 +9,7 @@ import { SiteSettingsClient } from './SiteSettingsClient';
 
 export const dynamic = 'force-dynamic';
 
-const KEYS = ['site.mobileMenu', 'site.slogan', 'site.slogan_en', 'copyright_newobour', 'copyright_newobour_en', 'copyright_alsawarey', 'copyright_alsawarey_en', 'site.whatsappHelp'];
+const KEYS = ['site.mobileMenu', 'site.slogan', 'site.slogan_en', 'copyright_newobour', 'copyright_newobour_en', 'copyright_alsawarey', 'copyright_alsawarey_en', 'site.whatsappHelp', 'whatsapp_float_newobour', 'whatsapp_float_msg_newobour', 'whatsapp_float_alsawarey', 'whatsapp_float_msg_alsawarey'];
 
 export default async function SiteSettingsPage() {
   await requirePermission('settings', 'VIEW');
@@ -25,6 +25,10 @@ export default async function SiteSettingsPage() {
     copyrightAlsawarey: v['copyright_alsawarey'] ?? DEFAULT_COPYRIGHT_ALSAWAREY,
     copyrightAlsawareyEn: v['copyright_alsawarey_en'] ?? DEFAULT_COPYRIGHT_ALSAWAREY_EN,
     whatsappHelp: v['site.whatsappHelp'] ?? '',
+    whatsappFloatNewobour: v['whatsapp_float_newobour'] === '1',
+    whatsappFloatMsgNewobour: v['whatsapp_float_msg_newobour'] ?? '',
+    whatsappFloatAlsawarey: v['whatsapp_float_alsawarey'] === '1',
+    whatsappFloatMsgAlsawarey: v['whatsapp_float_msg_alsawarey'] ?? '',
   };
 
   return (
@@ -33,7 +37,7 @@ export default async function SiteSettingsPage() {
         <h1 className="text-2xl font-bold text-primary">إعدادات الموقع العامة</h1>
         <a href="/admin/settings" className="text-sm text-accent">← الإعدادات</a>
       </div>
-      <p className="text-sm opacity-70">قائمة الجوال، حقوق النشر (للموقعين)، ورقم واتساب للمساعدة الظاهر في صفحات التقنين.</p>
+      <p className="text-sm opacity-70">قائمة الجوال، حقوق النشر (للموقعين)، رقم واتساب للمساعدة، وزر واتساب العائم لكل موقع.</p>
       <SiteSettingsClient initial={initial} />
     </div>
   );

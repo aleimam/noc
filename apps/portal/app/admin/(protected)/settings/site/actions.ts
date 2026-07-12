@@ -13,6 +13,10 @@ const ALLOWED = new Set([
   'copyright_alsawarey',
   'copyright_alsawarey_en',
   'site.whatsappHelp',
+  'whatsapp_float_newobour',
+  'whatsapp_float_msg_newobour',
+  'whatsapp_float_alsawarey',
+  'whatsapp_float_msg_alsawarey',
 ]);
 
 export async function saveSiteSettings(values: Record<string, string>): Promise<{ ok: true } | { ok: false; error: string }> {

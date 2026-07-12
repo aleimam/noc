@@ -18,3 +18,4 @@ export { ListingCard } from './components/ListingCard';
 export { AreaAdvantages } from './components/AreaAdvantages';
 export { Badge } from './components/Badge';
 export { PublicShell } from './components/PublicShell';
+export { FloatingWhatsApp } from './components/FloatingWhatsApp';

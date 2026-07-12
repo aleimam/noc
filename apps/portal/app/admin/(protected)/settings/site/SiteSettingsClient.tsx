@@ -5,8 +5,30 @@ import { useRouter } from 'next/navigation';
 import { toast } from '@noc/ui';
 import { saveSiteSettings } from './actions';
 
-type Initial = { mobileMenu: string; sloganNewobour: string; sloganNewobourEn: string; copyrightNewobour: string; copyrightNewobourEn: string; copyrightAlsawarey: string; copyrightAlsawareyEn: string; whatsappHelp: string };
+type Initial = {
+  mobileMenu: string;
+  sloganNewobour: string;
+  sloganNewobourEn: string;
+  copyrightNewobour: string;
+  copyrightNewobourEn: string;
+  copyrightAlsawarey: string;
+  copyrightAlsawareyEn: string;
+  whatsappHelp: string;
+  whatsappFloatNewobour: boolean;
+  whatsappFloatMsgNewobour: string;
+  whatsappFloatAlsawarey: boolean;
+  whatsappFloatMsgAlsawarey: string;
+};
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
+
+function OnOff({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex gap-2">
+      <button type="button" onClick={() => onChange(true)} className={`rounded-md px-4 py-2 text-sm ${on ? 'bg-primary text-soft' : 'border border-graphite/20'}`}>مفعّل / On</button>
+      <button type="button" onClick={() => onChange(false)} className={`rounded-md px-4 py-2 text-sm ${!on ? 'bg-primary text-soft' : 'border border-graphite/20'}`}>متوقف / Off</button>
+    </div>
+  );
+}
 
 export function SiteSettingsClient({ initial }: { initial: Initial }) {
   const router = useRouter();
@@ -26,6 +48,10 @@ export function SiteSettingsClient({ initial }: { initial: Initial }) {
         copyright_alsawarey: s.copyrightAlsawarey,
         copyright_alsawarey_en: s.copyrightAlsawareyEn,
         'site.whatsappHelp': s.whatsappHelp,
+        whatsapp_float_newobour: s.whatsappFloatNewobour ? '1' : '0',
+        whatsapp_float_msg_newobour: s.whatsappFloatMsgNewobour,
+        whatsapp_float_alsawarey: s.whatsappFloatAlsawarey ? '1' : '0',
+        whatsapp_float_msg_alsawarey: s.whatsappFloatMsgAlsawarey,
       });
       if (r.ok) {
         setSaved(true);
@@ -75,6 +101,24 @@ export function SiteSettingsClient({ initial }: { initial: Initial }) {
         <h2 className="font-semibold text-primary">واتساب المساعدة (صفحات التقنين)</h2>
         <p className="text-xs opacity-60">يظهر زر «محتاج مساعدة؟ كلمنا» للزوّار. اتركه فارغاً لإخفاء الزر.</p>
         <input dir="ltr" value={s.whatsappHelp} onChange={(e) => setS((x) => ({ ...x, whatsappHelp: e.target.value }))} className={inp} placeholder="+201XXXXXXXXX" />
+      </section>
+
+      <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
+        <h2 className="font-semibold text-primary">زر واتساب عائم — العبور الجديدة / Floating WhatsApp</h2>
+        <p className="text-xs opacity-60">زر واتساب دائري يظهر في كل صفحات العبور الجديدة. يستخدم «رقم واتساب المساعدة» أعلاه — لو الرقم فارغ لن يظهر الزر.</p>
+        <OnOff on={s.whatsappFloatNewobour} onChange={(v) => setS((x) => ({ ...x, whatsappFloatNewobour: v }))} />
+        <label className="block text-sm">رسالة مبدئية (اختياري) / Prefilled message
+          <input value={s.whatsappFloatMsgNewobour} onChange={(e) => setS((x) => ({ ...x, whatsappFloatMsgNewobour: e.target.value }))} className={inp} placeholder="مرحباً، لدي استفسار" />
+        </label>
+      </section>
+
+      <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
+        <h2 className="font-semibold text-primary">زر واتساب عائم — الصواري / Floating WhatsApp</h2>
+        <p className="text-xs opacity-60">زر واتساب دائري يظهر في كل صفحات الصواري (alsawarey.com). يستخدم رقم واتساب المُدخل في «واجهة موقع الصواري» — لو الرقم فارغ لن يظهر الزر.</p>
+        <OnOff on={s.whatsappFloatAlsawarey} onChange={(v) => setS((x) => ({ ...x, whatsappFloatAlsawarey: v }))} />
+        <label className="block text-sm">رسالة مبدئية (اختياري) / Prefilled message
+          <input value={s.whatsappFloatMsgAlsawarey} onChange={(e) => setS((x) => ({ ...x, whatsappFloatMsgAlsawarey: e.target.value }))} className={inp} placeholder="مرحباً، لدي استفسار" />
+        </label>
       </section>
 
       <div className="flex items-center gap-3">

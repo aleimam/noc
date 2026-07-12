@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
-import { PublicShell } from '@noc/ui';
+import { PublicShell, FloatingWhatsApp } from '@noc/ui';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { getModuleVisibility, MODULE_KEYS, type ModuleKey } from '../../lib/modules';
@@ -35,6 +35,13 @@ export async function SiteShell({ active, children }: { active?: string; childre
   return (
     <PublicShell active={active} hiddenKeys={hidden} footerPages={footerPages} copyright={locale === 'en' ? site.copyrightEn : site.copyright} tagline={locale === 'en' ? site.sloganEn : site.slogan} mobileMenuMode={site.mobileMenuMode} loggedIn={loggedIn} accountLabel={accountLabel} accountHref={accountHref} partners={partners}>
       {children}
+      {site.whatsappFloat && site.whatsappHelp && (
+        <FloatingWhatsApp
+          phone={site.whatsappHelp}
+          message={site.whatsappFloatMsg || (locale === 'en' ? 'Hello, I have a question' : 'مرحباً، لدي استفسار')}
+          label={locale === 'en' ? 'Contact us on WhatsApp' : 'تواصل معنا على واتساب'}
+        />
+      )}
     </PublicShell>
   );
 }
