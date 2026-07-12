@@ -24,7 +24,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
   // Al Sawarey · shared market (manage) · shared market (setup) · appearance · system.
   // `icon` = a key into AdminSidebar's ICONS map (used by the collapsible icon rail).
   const groups: { title?: string; items: NavItem[] }[] = [
-    { items: [{ href: '/admin', label: t('dashboard'), icon: 'dashboard' }, { href: '/admin/analytics', label: L('تحليلات الزوّار', 'Visitor analytics'), section: 'analytics', icon: 'chart' }] },
+    { items: [{ href: '/admin', label: t('dashboard'), icon: 'dashboard' }, { href: '/admin/analytics', label: L('تحليلات الزوّار', 'Visitor analytics'), section: 'analytics', icon: 'chart' }, { href: '/admin/analytics/search', label: L('ذكاء البحث', 'Search intelligence'), section: 'analytics', icon: 'search' }] },
     {
       title: L('العبور الجديدة', 'New Obour'),
       items: [

@@ -47,6 +47,9 @@ export type LandCard = {
   area: number | null;
   cityAr: string | null;
   districtAr: string | null;
+  /** Geo-hierarchy names (District/Neighborhood) for search — the EAV district/city labels above
+   *  don't cover geo-only listings, which made "الحى العاشر" return nothing. Not shown on the card. */
+  geoText: string | null;
   corner: boolean;
   onMainStreet: boolean;
   adNumber: string | null;
@@ -100,6 +103,8 @@ const cardSelect = {
   area: true, // Listing.area column — used for the canonical slug (matches the detail page)
   featured: true,
   typeOption: { select: { nameAr: true, nameEn: true } },
+  // Geo hierarchy for search (not shown on the card) — see LandCard.geoText.
+  neighborhood: { select: { nameAr: true, nameEn: true, district: { select: { nameAr: true, nameEn: true } } } },
   values: {
     select: {
       number: true,
@@ -151,6 +156,7 @@ function toCard(l: Prisma.ListingGetPayload<{ select: typeof cardSelect }>, cove
     area: r.area,
     cityAr: r.cityAr,
     districtAr: r.districtAr,
+    geoText: [l.neighborhood?.district?.nameAr, l.neighborhood?.district?.nameEn, l.neighborhood?.nameAr, l.neighborhood?.nameEn].filter(Boolean).join(' ') || null,
     corner: r.corner,
     onMainStreet: r.onMainStreet,
     adNumber: l.adNumber ?? null,

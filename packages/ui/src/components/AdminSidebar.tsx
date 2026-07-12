@@ -37,6 +37,12 @@ export const ICONS: Record<string, ReactNode> = {
       <rect x="3" y="16" width="7" height="5" rx="1" />
     </Icon>
   ),
+  search: (
+    <Icon>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </Icon>
+  ),
   chart: (
     <Icon>
       <path d="M4 3v18h16" />

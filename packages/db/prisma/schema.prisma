@@ -1142,6 +1142,25 @@ model SearchLog {
   @@index([selectedListingId])
 }
 
+// Admin-managed synonym dictionary (Search Intelligence S3). One row = one equivalence GROUP of
+// interchangeable terms (e.g. «فيلا» = «فيله» = «villa»). At search time a query token that matches
+// any normalized term in an active group expands to match all of them, so common misspellings /
+// dialect variants / EN⇄AR pairs stop returning zero results. site/surface null = applies everywhere.
+model SearchSynonym {
+  id         String   @id @default(cuid())
+  site       String? // null = both sites; else 'newobour' | 'alsawarey'
+  surface    String? // null = all surfaces; else 'market' | 'storefront' | 'rationing'
+  terms      String   @db.Text // admin-entered equivalent terms, one per line (raw)
+  normalized String   @db.Text // the same terms Arabic-normalized, one per line — the match keys (rebuilt on save)
+  note       String? // optional admin note
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([site, surface])
+  @@index([isActive])
+}
+
 // ─────────────────── Module 2: Lands & community database ───────────────────
 
 enum LandType {

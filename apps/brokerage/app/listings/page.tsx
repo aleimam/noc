@@ -108,7 +108,7 @@ export default async function Catalogue({
     const terms = normalizeSearch(q).split(' ').filter(Boolean);
     const matched = pool.cards.filter((land) => {
       const hay = normalizeSearch(
-        [land.title, land.typeAr, land.typeEn, land.districtAr, land.cityAr, land.adNumber].filter(Boolean).join(' '),
+        [land.title, land.typeAr, land.typeEn, land.districtAr, land.cityAr, land.geoText, land.adNumber].filter(Boolean).join(' '),
       );
       return terms.every((t) => hay.includes(t));
     });

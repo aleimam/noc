@@ -13,6 +13,7 @@ import { ListControls } from './ListControls';
 import { FbNotice, HelpButton } from './Bits';
 import { TotalsCard } from './TotalsCard';
 import { searchSheets, type SearchField, type SheetCard, type SortKey } from '../../lib/rationing/search';
+import { logSearch } from '../../lib/search';
 import { getRationingConfig } from '../../lib/rationing/settings';
 import { getRationingTotals } from '../../lib/rationing/stats';
 import { getSiteConfig } from '../../lib/site';
@@ -99,6 +100,8 @@ export default async function RationingSearch({
     await prisma.sheetSearchLog.create({
       data: { query: q, field, resultsCount: total, matched: total > 0, usedSuggestion, userId: session?.user?.id ?? null },
     });
+    // Also feed the unified Search Intelligence log (dashboard covers market/storefront/rationing).
+    logSearch({ site: 'newobour', surface: 'rationing', query: q, resultsCount: total, userId: session?.user?.id ?? null });
   }
 
   const totals = searched ? null : await getRationingTotals();
