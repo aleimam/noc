@@ -14,6 +14,8 @@ export type SearchLeadPayload = {
   phone: string;
   note?: string;
   name?: string;
+  /** Honeypot — hidden field humans never fill; the server silently drops submissions that do. */
+  website?: string;
 };
 
 export async function submitSearchLead(p: SearchLeadPayload): Promise<{ ok: boolean; error?: string }> {

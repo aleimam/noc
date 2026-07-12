@@ -73,6 +73,7 @@ type ValueRow = {
   text: string | null;
   attribute: { key: string };
   option: { labelAr: string; labelEn: string } | null;
+  listItem: { labelAr: string; labelEn: string } | null;
 };
 
 function resolve(values: ValueRow[]) {
@@ -83,7 +84,10 @@ function resolve(values: ValueRow[]) {
     return v?.number != null ? Number(v.number) : null;
   };
   const bool = (k: string) => by.get(k)?.bool === true;
-  const optAr = (k: string) => by.get(k)?.option?.labelAr ?? null;
+  // SELECT values live in the shared OptionList (`listItem`) since the 2026-07 option-lists
+  // migration; pre-migration rows still carry the legacy `option`. Read BOTH — reading only
+  // `option` silently dropped city/district from every post-migration card.
+  const optAr = (k: string) => by.get(k)?.listItem?.labelAr ?? by.get(k)?.option?.labelAr ?? null;
   return {
     area: num(ATTR.area),
     corner: bool(ATTR.corner),
@@ -112,6 +116,7 @@ const cardSelect = {
       text: true,
       attribute: { select: { key: true } },
       option: { select: { labelAr: true, labelEn: true } },
+      listItem: { select: { labelAr: true, labelEn: true } },
     },
   },
 } satisfies Prisma.ListingSelect;
@@ -427,16 +432,23 @@ export async function recentlySold(take = 6): Promise<LandCard[]> {
 export async function similarLands(listingId: string, take = 4): Promise<LandCard[]> {
   const base = await prisma.listing.findUnique({
     where: { id: listingId },
-    select: { values: { select: { number: true, attribute: { select: { key: true } }, optionId: true } } },
+    select: { values: { select: { number: true, attribute: { select: { key: true } }, optionId: true, listItemId: true } } },
   });
   let area: number | null = null;
   let districtOptionId: string | null = null;
+  let districtListItemId: string | null = null;
   for (const v of base?.values ?? []) {
     if (v.attribute.key === ATTR.area && v.number != null) area = Number(v.number);
-    if (v.attribute.key === ATTR.district && v.optionId) districtOptionId = v.optionId;
+    // District SELECT lives in the shared OptionList post-migration (listItemId); legacy rows
+    // still carry optionId. Match on whichever the base listing has.
+    if (v.attribute.key === ATTR.district) {
+      if (v.listItemId) districtListItemId = v.listItemId;
+      else if (v.optionId) districtOptionId = v.optionId;
+    }
   }
   const and: Prisma.ListingWhereInput[] = [{ id: { not: listingId } }];
-  if (districtOptionId) and.push({ values: { some: { attribute: { key: ATTR.district }, optionId: districtOptionId } } });
+  if (districtListItemId) and.push({ values: { some: { attribute: { key: ATTR.district }, listItemId: districtListItemId } } });
+  else if (districtOptionId) and.push({ values: { some: { attribute: { key: ATTR.district }, optionId: districtOptionId } } });
   if (area != null) and.push({ values: { some: { attribute: { key: ATTR.area }, number: { gte: area * 0.7, lte: area * 1.3 } } } });
 
   const rows = await prisma.listing.findMany({

@@ -18,10 +18,15 @@ async function main() {
   const cutoff = new Date(Date.now() - DAYS * 86_400_000);
   const sessions = await prisma.visitSession.deleteMany({ where: { lastEventAt: { lt: cutoff } } });
   const visitors = await prisma.visitor.deleteMany({ where: { lastSeen: { lt: cutoff }, sessions: { none: {} } } });
+  // Search Intelligence retention: SearchLog rows are written by unauthenticated public searches,
+  // so without pruning the table grows unbounded. The search dashboard's widest filter is 365d,
+  // so keep at least a year regardless of the (shorter) raw-analytics window.
+  const searchCutoff = new Date(Date.now() - Math.max(DAYS, 365) * 86_400_000);
+  const searchLogs = await prisma.searchLog.deleteMany({ where: { createdAt: { lt: searchCutoff } } });
   const stamp = new Date().toISOString();
   console.log(
     `[${stamp}] analytics prune (>${DAYS}d, cutoff ${cutoff.toISOString()}): ` +
-      `sessions=${sessions.count} visitors=${visitors.count} (pageviews+events cascaded)`,
+      `sessions=${sessions.count} visitors=${visitors.count} searchLogs=${searchLogs.count} (pageviews+events cascaded)`,
   );
 }
 

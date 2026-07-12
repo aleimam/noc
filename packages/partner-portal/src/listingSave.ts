@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
 import { requirePartner } from '@noc/auth';
-import { isValidPhone } from '@noc/config';
+import { isValidPhone, REQUIRED_LISTING_ATTR_KEYS } from '@noc/config';
 
 export type LeanValueInput = {
   attributeId: string;
@@ -95,6 +95,39 @@ export async function savePartnerListing(input: LeanListingInput): Promise<Resul
         if (ok) applicable.add(a.id);
       }
       values = values.filter((v) => applicable.has(v.attributeId));
+    }
+  }
+
+  // Mandatory basic details (e.g. the city): enforce server-side — partner submissions always
+  // publish into moderation (PENDING), so the requirement always applies here.
+  {
+    const required = await prisma.attribute.findMany({
+      where: { key: { in: [...REQUIRED_LISTING_ATTR_KEYS] }, isActive: true },
+      select: { id: true, classifierLinks: { select: { optionId: true, option: { select: { classifierId: true } } } } },
+    });
+    const chosen = new Set([input.typeOptionId, input.purposeOptionId, input.conditionOptionId]);
+    for (const a of required) {
+      if (a.classifierLinks.length === 0) continue; // not curated → not applicable anywhere
+      const byCls = new Map<string, string[]>();
+      for (const l of a.classifierLinks) {
+        const arr = byCls.get(l.option.classifierId) ?? [];
+        arr.push(l.optionId);
+        byCls.set(l.option.classifierId, arr);
+      }
+      let applicable = byCls.size > 0;
+      for (const allowed of byCls.values()) {
+        if (!allowed.some((oid) => chosen.has(oid))) { applicable = false; break; }
+      }
+      if (!applicable) continue;
+      const v = values.find((x) => x.attributeId === a.id);
+      const has =
+        !!v &&
+        ((v.listItemIds?.length ?? 0) > 0 ||
+          (v.optionIds?.length ?? 0) > 0 ||
+          (typeof v.text === 'string' && v.text.trim() !== '') ||
+          v.number != null ||
+          typeof v.bool === 'boolean');
+      if (!has) return { ok: false, error: 'failed' };
     }
   }
 

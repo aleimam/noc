@@ -326,15 +326,18 @@ export function ListingForm({
       return;
     }
     if (!isValidPhone(contactPhone)) { setError(tc('phoneInvalid')); return; }
-    // Mandatory basic details (e.g. the city) must be filled before publishing.
-    const missingRequired = attributes.find((a) => {
-      if (!isRequiredAttr(a) || !applies(a)) return false;
-      const v = vals[a.id];
-      return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : !v;
-    });
-    if (missingRequired) {
-      setError(`${tc('fillRequired')} — ${L(missingRequired.labelAr, missingRequired.labelEn)}`);
-      return;
+    // Mandatory basic details (e.g. the city) must be filled before PUBLISHING —
+    // a rough DRAFT may stay incomplete (matches the server-side guard).
+    if (status === 'PENDING') {
+      const missingRequired = attributes.find((a) => {
+        if (!isRequiredAttr(a) || !applies(a)) return false;
+        const v = vals[a.id];
+        return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : !v;
+      });
+      if (missingRequired) {
+        setError(`${tc('fillRequired')} — ${L(missingRequired.labelAr, missingRequired.labelEn)}`);
+        return;
+      }
     }
     const input: ListingInput = {
       id: initial.id,
@@ -794,7 +797,8 @@ export function ListingForm({
                   <label key={a.id} className="text-sm">
                     <span className="mb-1 block opacity-80">
                       {L(a.labelAr, a.labelEn)}
-                      {isRequiredAttr(a) && <span className="text-red-600"> *</span>}
+                      {/* explicit word, not just an asterisk — low-literacy audience */}
+                      {isRequiredAttr(a) && <span className="font-semibold text-red-600"> ({L('مطلوب', 'required')})</span>}
                     </span>
                     {control(a)}
                   </label>

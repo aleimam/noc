@@ -10,6 +10,15 @@ export function rateLimit(key: string, limit: number, windowMs: number): boolean
   const now = Date.now();
   // Opportunistic cleanup so the map can't grow unbounded.
   if (buckets.size > 5000) for (const [k, b] of buckets) if (now > b.resetAt) buckets.delete(k);
+  // Hard size cap: if a flood of distinct keys (e.g. spoofed IPs during a window) outpaces
+  // expiry cleanup, evict oldest-inserted entries so memory stays bounded.
+  if (buckets.size > 10000) {
+    let toDrop = buckets.size - 10000;
+    for (const k of buckets.keys()) {
+      if (toDrop-- <= 0) break;
+      buckets.delete(k);
+    }
+  }
   const b = buckets.get(key);
   if (!b || now > b.resetAt) {
     buckets.set(key, { count: 1, resetAt: now + windowMs });

@@ -73,13 +73,14 @@ export function LeadInbox({ leads, locale }: { leads: LeadRow[]; locale: 'ar' | 
                 <span className="text-xs opacity-50" dir="ltr">{l.createdAt}</span>
               </div>
               {l.note && <p className="mt-1 text-sm opacity-80" dir="auto">“{l.note}”</p>}
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              {/* real touch targets (~40px) — admins work this inbox from phones */}
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                 {STATUSES.filter((s) => s !== l.status).map((s) => (
-                  <button key={s} onClick={() => setStatus(l.id, s)} disabled={pending} className="rounded border border-graphite/25 px-2 py-0.5 hover:bg-graphite/10">
+                  <button key={s} onClick={() => setStatus(l.id, s)} disabled={pending} className="min-h-[40px] rounded-lg border border-graphite/25 px-3 py-1.5 font-semibold hover:bg-graphite/10">
                     → {statusLabel(s)}
                   </button>
                 ))}
-                <button onClick={() => remove(l.id)} disabled={pending} className="ms-auto text-red-600 hover:underline">{L('حذف', 'Delete')}</button>
+                <button onClick={() => remove(l.id)} disabled={pending} className="ms-auto min-h-[40px] rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-600/10">{L('حذف', 'Delete')}</button>
               </div>
             </div>
           ))}

@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { prisma } from '@noc/db';
 import { normalizeSearch } from '../../../lib/search';
+import { rateLimit, clientIp } from '../../../lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,9 @@ type Body =
 const ok = () => Response.json({ ok: true });
 
 export async function POST(req: NextRequest): Promise<Response> {
+  // Per-IP backstop: the endpoint is public + writes rows, so cap how fast one client can
+  // fabricate select/convert events. Still returns ok() — a throttled beacon must stay silent.
+  if (!rateLimit(`search-ev:${clientIp(req.headers)}`, 60, 60 * 1000)) return ok();
   let body: Body | null = null;
   try {
     const text = await req.text();

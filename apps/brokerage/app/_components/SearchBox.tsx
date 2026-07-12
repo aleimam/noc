@@ -1,28 +1,22 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { SearchAutocomplete } from '@noc/ui';
 
+/** Compact header search on the navy bar — the same instant-suggestions box as the hero and
+ *  /market, restyled for the dark navbar. Wrapper metrics match the old plain form so the
+ *  single-row header layout (fragile at ~820px) is unchanged; the input is 16px (text-base)
+ *  to avoid the iOS focus-zoom. The button stays a compact glyph here (space-constrained bar —
+ *  the big «بحث» word lives on the hero + results surfaces). */
 export function SearchBox({ placeholder, initial = '', className = '' }: { placeholder: string; initial?: string; className?: string }) {
-  const router = useRouter();
-  const [q, setQ] = useState(initial);
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        router.push(`/listings?q=${encodeURIComponent(q.trim())}`);
-      }}
-      className={`flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 ${className}`}
-    >
-      {/* Real submit button — the glyph is tappable, not just decoration. */}
-      <button type="submit" aria-label={placeholder} className="shrink-0 text-white/70 hover:text-white">⌕</button>
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder={placeholder}
-        className="w-full min-w-0 bg-transparent text-sm text-white placeholder:text-white/60 outline-none"
-        aria-label={placeholder}
-      />
-    </form>
+    <SearchAutocomplete
+      action="/listings"
+      initialQuery={initial}
+      placeholder={placeholder}
+      className={`rounded-xl border border-white/20 bg-white/10 px-3 py-1 ${className}`}
+      inputClassName="w-full min-w-0 bg-transparent text-base text-white placeholder:text-white/60 outline-none"
+      buttonClassName="shrink-0 px-1 text-white/80 hover:text-white"
+      buttonLabel="🔍"
+    />
   );
 }

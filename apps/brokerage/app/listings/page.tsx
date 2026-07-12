@@ -9,8 +9,10 @@ import { StoreLandCard } from '../_components/StoreLandCard';
 import { listLands, ATTR } from '../../lib/listings';
 import { getAdminViewer, ownerBadges } from '../../lib/adminView';
 import { wishlistListingIds } from '../../lib/wishlist';
+import { headers } from 'next/headers';
 import { pageMeta } from '../../lib/seo';
 import { logSearch, normalizeSearch, expandSearchTerms } from '../../lib/search';
+import { rateLimit, clientIp } from '../../lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -115,7 +117,11 @@ export default async function Catalogue({
       return expanded.every((alts) => alts.some((v) => hay.includes(v)));
     });
     const userId = (await auth())?.user?.id ?? null;
-    logSearch({ site: 'alsawarey', surface: 'storefront', query: q, resultsCount: matched.length, usedFastSearch: str(sp.fast) === '1', userId });
+    // Per-IP backstop on the log write: an unauth ?q= loop must not grow SearchLog unbounded
+    // or poison trending. Over the cap the search still works — we just stop recording it.
+    if (rateLimit(`slog:${clientIp(await headers())}`, 20, 60 * 1000)) {
+      logSearch({ site: 'alsawarey', surface: 'storefront', query: q, resultsCount: matched.length, usedFastSearch: str(sp.fast) === '1', userId });
+    }
     total = matched.length;
     cards = matched.slice((page - 1) * PAGE, page * PAGE);
   } else {

@@ -30,7 +30,8 @@ const BOOL_TYPES = new Set(['BOOLEAN', 'YESNO']);
 const GEO_TYPES = new Set(['DISTRICT', 'NEIGHBORHOOD']);
 const SKIP_TYPES = new Set(['PHOTOS', 'DOCUMENTS']);
 
-const inp = 'w-full rounded-md border border-graphite/25 bg-transparent px-3 py-2 text-sm';
+// text-base (16px) — anything smaller triggers iOS focus-zoom on the whole page (long phone form).
+const inp = 'w-full rounded-md border border-graphite/25 bg-transparent px-3 py-2 text-base';
 
 /** Lean listing create/edit form for partners: classifiers → applicable attributes (simple inputs)
  *  → title/price/description/photos/contact. No rich-text or map annotator (staff-only). */
@@ -340,7 +341,8 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
           <div className="grid gap-3 sm:grid-cols-2">
             {attrs.map((a) => (
               <div key={a.id} className="text-sm">
-                <div className="mb-1 font-semibold">{label(a)}{a.unit ? ` (${a.unit})` : ''}{isRequiredAttr(a) && <span className="text-red-600"> *</span>}</div>
+                {/* explicit word, not just an asterisk — low-literacy audience */}
+                <div className="mb-1 font-semibold">{label(a)}{a.unit ? ` (${a.unit})` : ''}{isRequiredAttr(a) && <span className="text-red-600"> ({L('مطلوب', 'required')})</span>}</div>
                 {renderAttr(a)}
               </div>
             ))}

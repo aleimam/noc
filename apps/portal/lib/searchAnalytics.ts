@@ -26,16 +26,19 @@ export type SearchFunnel = {
 export type SearchOverview = {
   funnel: SearchFunnel;
   zeroRate: number; // 0..1 — share of searches that returned nothing
-  refinementRate: number; // 0..1 — share of searching sessions that searched more than once
   distinctTerms: number;
   topTerms: TermRow[];
   zeroTerms: TermRow[]; // most common terms that returned nothing
   convertingTerms: TermRow[]; // terms most associated with a conversion
 };
+// NOTE: no refinement metric — SearchLog.sessionId is always null on the server-rendered search
+// pages (the analytics session id is client-localStorage only), so "searched again in the same
+// session" is structurally unmeasurable today. Showing a permanently-0% number would mislead.
 
-/** Build the WHERE clause shared by every query: optional site + optional surface + window. */
+/** Build the WHERE clause shared by every query: optional site + optional surface + window.
+ *  `normalized != ''` drops punctuation-only queries that normalize to nothing (junk terms). */
 function scope(opts: { site?: string | null; surface?: SearchSurface | null; since: Date }) {
-  const where: Record<string, unknown> = { createdAt: { gte: opts.since } };
+  const where: Record<string, unknown> = { createdAt: { gte: opts.since }, normalized: { not: '' } };
   if (opts.site) where.site = opts.site;
   if (opts.surface) where.surface = opts.surface;
   return where;
@@ -94,26 +97,20 @@ export async function getSearchOverview(opts: { site?: string | null; surface?: 
   const since = windowStart(days);
   const where = scope({ site: opts.site, surface: opts.surface, since });
 
-  const [searches, withResults, selections, conversions, distinct, sessionsAll, topTerms, zeroTerms, convertingTerms] = await Promise.all([
+  const [searches, withResults, selections, conversions, distinct, topTerms, zeroTerms, convertingTerms] = await Promise.all([
     prisma.searchLog.count({ where }),
     prisma.searchLog.count({ where: { ...where, zeroResult: false } }),
     prisma.searchLog.count({ where: { ...where, selectedListingId: { not: null } } }),
     prisma.searchLog.count({ where: { ...where, converted: true } }),
     prisma.searchLog.findMany({ where, distinct: ['normalized'], select: { normalized: true } }),
-    // Refinement: sessions (with a sessionId) grouped, so we can see who searched more than once.
-    prisma.searchLog.groupBy({ by: ['sessionId'], where: { ...where, sessionId: { not: null } }, _count: { _all: true } }),
     termRows(where, { orderBy: 'count', take: 25 }),
     termRows(where, { orderBy: 'zero', take: 25 }),
     termRows(where, { orderBy: 'converted', take: 25 }),
   ]);
 
-  const searchingSessions = sessionsAll.length;
-  const refinedSessions = sessionsAll.filter((s) => s._count._all > 1).length;
-
   return {
     funnel: { searches, withResults, selections, conversions },
     zeroRate: searches ? (searches - withResults) / searches : 0,
-    refinementRate: searchingSessions ? refinedSessions / searchingSessions : 0,
     distinctTerms: distinct.length,
     topTerms,
     zeroTerms,

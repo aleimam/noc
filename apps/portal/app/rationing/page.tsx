@@ -97,11 +97,15 @@ export default async function RationingSearch({
     suggestions = out.suggestions;
 
     const session = await auth();
-    await prisma.sheetSearchLog.create({
-      data: { query: q, field, resultsCount: total, matched: total > 0, usedSuggestion, userId: session?.user?.id ?? null },
-    });
-    // Also feed the unified Search Intelligence log (dashboard covers market/storefront/rationing).
-    logSearch({ site: 'newobour', surface: 'rationing', query: q, resultsCount: total, userId: session?.user?.id ?? null });
+    // Log the SEARCH, not every page of it — paginating one search must not inflate counts
+    // (matches the quota + TrackEvent guards, which also key off page 1).
+    if (page <= 1) {
+      await prisma.sheetSearchLog.create({
+        data: { query: q, field, resultsCount: total, matched: total > 0, usedSuggestion, userId: session?.user?.id ?? null },
+      });
+      // Also feed the unified Search Intelligence log (dashboard covers market/storefront/rationing).
+      logSearch({ site: 'newobour', surface: 'rationing', query: q, resultsCount: total, userId: session?.user?.id ?? null });
+    }
   }
 
   const totals = searched ? null : await getRationingTotals();

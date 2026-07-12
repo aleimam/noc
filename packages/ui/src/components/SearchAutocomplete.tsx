@@ -19,6 +19,7 @@ export function SearchAutocomplete({
   className = '',
   inputClassName,
   buttonClassName,
+  buttonLabel,
   extraParams = {},
   locale = 'ar',
 }: {
@@ -29,6 +30,9 @@ export function SearchAutocomplete({
   className?: string;
   inputClassName?: string;
   buttonClassName?: string;
+  /** Visible submit label. Defaults to an explicit «بحث»/"Search" word — the audience is
+   *  low-literacy, so the primary action must be a word, not just a glyph. */
+  buttonLabel?: string;
   extraParams?: Record<string, string>;
   locale?: 'ar' | 'en';
 }) {
@@ -52,7 +56,10 @@ export function SearchAutocomplete({
         .then((j: { suggestions?: Suggestion[] }) => setSuggestions(Array.isArray(j?.suggestions) ? j.suggestions : []))
         .catch(() => {});
     }, 220);
-    return () => clearTimeout(id);
+    return () => {
+      clearTimeout(id);
+      acRef.current?.abort(); // don't let an in-flight request land after unmount/next keystroke
+    };
   }, [q, open]);
 
   useEffect(() => {
@@ -98,7 +105,9 @@ export function SearchAutocomplete({
           className={baseInput}
           dir="auto"
         />
-        <button type="submit" aria-label={locale === 'ar' ? 'بحث' : 'Search'} className={buttonClassName ?? 'shrink-0 rounded-full bg-primary px-4 py-2.5 text-soft'}>🔍</button>
+        <button type="submit" aria-label={locale === 'ar' ? 'بحث' : 'Search'} className={buttonClassName ?? 'shrink-0 rounded-full bg-primary px-5 py-2.5 text-base font-bold text-soft'}>
+          {buttonLabel ?? (locale === 'ar' ? 'بحث' : 'Search')}
+        </button>
       </form>
       {open && suggestions.length > 0 && (
         <ul className="absolute inset-x-0 top-full z-50 mt-1 max-h-80 overflow-auto rounded-xl border border-graphite/20 bg-white py-1 shadow-lg">
@@ -108,7 +117,7 @@ export function SearchAutocomplete({
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); go(s.text, true); }}
                 onMouseEnter={() => setActive(i)}
-                className={`flex w-full items-center gap-2 px-4 py-2 text-start text-base ${active === i ? 'bg-graphite/10' : ''}`}
+                className={`flex min-h-[44px] w-full items-center gap-2 px-4 py-2.5 text-start text-base ${active === i ? 'bg-graphite/10' : ''}`}
                 dir="auto"
               >
                 <span aria-hidden>{KIND_ICON[s.kind]}</span>

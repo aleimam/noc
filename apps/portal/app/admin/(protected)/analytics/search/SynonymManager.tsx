@@ -16,7 +16,8 @@ export type SynonymRow = {
 type Draft = { id?: string; terms: string; site: string; surface: string; note: string; isActive: boolean };
 const EMPTY: Draft = { terms: '', site: '', surface: '', note: '', isActive: true };
 
-const inp = 'w-full rounded-md border border-graphite/25 bg-transparent px-3 py-2 text-sm';
+// text-base (16px) — smaller triggers iOS focus-zoom, and admins edit synonyms from phones.
+const inp = 'w-full rounded-md border border-graphite/25 bg-transparent px-3 py-2 text-base';
 
 export function SynonymManager({ groups, canManage, locale }: { groups: SynonymRow[]; canManage: boolean; locale: 'ar' | 'en' }) {
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
@@ -126,10 +127,11 @@ export function SynonymManager({ groups, canManage, locale }: { groups: SynonymR
                   {g.note && <span className="italic">“{g.note}”</span>}
                   {!g.isActive && <span className="font-semibold text-graphite/60">{L('غير مُفعّل', 'inactive')}</span>}
                   {canManage && (
-                    <span className="ms-auto flex gap-2">
-                      <button onClick={() => toggle(g.id, !g.isActive)} disabled={pending} className="text-accent hover:underline">{g.isActive ? L('إيقاف', 'Disable') : L('تفعيل', 'Enable')}</button>
-                      <button onClick={() => open(g)} disabled={pending} className="text-accent hover:underline">{L('تعديل', 'Edit')}</button>
-                      <button onClick={() => remove(g.id)} disabled={pending} className="text-red-600 hover:underline">{L('حذف', 'Delete')}</button>
+                    /* real touch targets (~40px) — this editor is used from phones */
+                    <span className="ms-auto flex flex-wrap items-center gap-1.5 text-sm">
+                      <button onClick={() => toggle(g.id, !g.isActive)} disabled={pending} className="min-h-[40px] rounded-lg border border-graphite/25 px-3 py-1.5 font-semibold text-accent hover:bg-graphite/10">{g.isActive ? L('إيقاف', 'Disable') : L('تفعيل', 'Enable')}</button>
+                      <button onClick={() => open(g)} disabled={pending} className="min-h-[40px] rounded-lg border border-graphite/25 px-3 py-1.5 font-semibold text-accent hover:bg-graphite/10">{L('تعديل', 'Edit')}</button>
+                      <button onClick={() => remove(g.id)} disabled={pending} className="min-h-[40px] rounded-lg px-3 py-1.5 font-semibold text-red-600 hover:bg-red-600/10">{L('حذف', 'Delete')}</button>
                     </span>
                   )}
                 </div>

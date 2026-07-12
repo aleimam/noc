@@ -99,8 +99,17 @@ export function logSearch(input: {
 // equivalence GROUP of interchangeable terms (stored pre-normalized, one per line). A query token in
 // a group expands to match ANY term in that group. site/surface null = applies everywhere.
 
-/** normalized-token → set of normalized variants (itself + everyone in its group(s)). */
+/** normalized-token → set of normalized variants (itself + everyone in its group(s)).
+ *  Cached ~60s per process: synonyms change rarely but are consulted on EVERY search render,
+ *  so an uncached findMany would be a per-request DB hit an attacker can multiply. */
+type SynCacheEntry = { at: number; map: Map<string, Set<string>> };
+const synCache = new Map<string, SynCacheEntry>();
+const SYN_TTL_MS = 60 * 1000;
+
 async function loadSynonymVariants(opts: { site: SearchSite; surface: SearchSurface }): Promise<Map<string, Set<string>>> {
+  const key = `${opts.site}:${opts.surface}`;
+  const hit = synCache.get(key);
+  if (hit && Date.now() - hit.at < SYN_TTL_MS) return hit.map;
   const map = new Map<string, Set<string>>();
   try {
     const rows = await prisma.searchSynonym.findMany({
@@ -119,6 +128,7 @@ async function loadSynonymVariants(opts: { site: SearchSite; surface: SearchSurf
         map.set(term, set);
       }
     }
+    synCache.set(key, { at: Date.now(), map });
   } catch {
     /* dictionary is best-effort — a failure must never break search */
   }
@@ -127,17 +137,29 @@ async function loadSynonymVariants(opts: { site: SearchSite; surface: SearchSurf
 
 /**
  * Expand each normalized query token to the list of variants it should match (itself + synonyms).
- * Caller keeps multi-term AND with each term now an OR over its variants:
+ * Caller keeps multi-term AND with each unit now an OR over its variants:
  *   expanded.every((alts) => alts.some((v) => haystack.includes(v))).
+ *
+ * Multi-word groups: besides single tokens we also probe each adjacent token PAIR against the
+ * dictionary — a matching bigram is consumed as ONE unit (its variants replace both tokens).
  */
 export async function expandSearchTerms(terms: string[], opts: { site: SearchSite; surface: SearchSurface }): Promise<string[][]> {
   if (terms.length === 0) return [];
   const map = await loadSynonymVariants(opts);
   if (map.size === 0) return terms.map((t) => [t]);
-  return terms.map((t) => {
-    const variants = map.get(t);
-    return variants ? Array.from(variants) : [t];
-  });
+  const out: string[][] = [];
+  for (let i = 0; i < terms.length; i++) {
+    const bigram = i + 1 < terms.length ? `${terms[i]} ${terms[i + 1]}` : null;
+    const bigramVariants = bigram ? map.get(bigram) : undefined;
+    if (bigramVariants) {
+      out.push(Array.from(bigramVariants));
+      i++; // consumed two tokens
+      continue;
+    }
+    const variants = map.get(terms[i]!);
+    out.push(variants ? Array.from(variants) : [terms[i]!]);
+  }
+  return out;
 }
 
 // ── Autocomplete / trending (Search Intelligence S3c) — mirror of apps/portal/lib/search.ts ──
@@ -171,14 +193,25 @@ async function loadCorpus(): Promise<CorpusItem[]> {
   return items;
 }
 
+// Trending is derived from public, unauthenticated SearchLog writes, so it is hardened:
+// windowed (last 14 days — a flood ages out), cached ~60s per process (no full-table groupBy per
+// focus event), and the displayed sample capped at 60 chars (limits content-injection real estate).
+const TRENDING_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+const TRENDING_TTL_MS = 60 * 1000;
+const trendingCache = new Map<string, { at: number; items: Suggestion[] }>();
+
 /** Suggestions for the instant search box: corpus matches for a partial query, else trending. */
 export async function getSearchSuggestions(qRaw: string, opts: { site: SearchSite; surface: SearchSurface }): Promise<Suggestion[]> {
   const q = normalizeSearch(qRaw);
   if (q.length < 2) {
+    const cacheKey = `${opts.site}:${opts.surface}`;
+    const cached = trendingCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < TRENDING_TTL_MS) return cached.items;
     try {
+      const since = new Date(Date.now() - TRENDING_WINDOW_MS);
       const grouped = await prisma.searchLog.groupBy({
         by: ['normalized'],
-        where: { site: opts.site, surface: opts.surface, zeroResult: false, normalized: { not: '' } },
+        where: { site: opts.site, surface: opts.surface, zeroResult: false, normalized: { not: '' }, createdAt: { gte: since } },
         _count: { _all: true },
         orderBy: { _count: { normalized: 'desc' } },
         take: 6,
@@ -186,13 +219,17 @@ export async function getSearchSuggestions(qRaw: string, opts: { site: SearchSit
       const norms = grouped.map((g) => g.normalized);
       if (!norms.length) return [];
       const samples = await prisma.searchLog.findMany({
-        where: { site: opts.site, surface: opts.surface, normalized: { in: norms } },
+        where: { site: opts.site, surface: opts.surface, normalized: { in: norms }, createdAt: { gte: since } },
         distinct: ['normalized'],
         orderBy: { createdAt: 'desc' },
         select: { normalized: true, query: true },
       });
       const byNorm = new Map(samples.map((s) => [s.normalized, s.query]));
-      return grouped.map((g) => ({ text: (byNorm.get(g.normalized) || g.normalized).trim(), kind: 'trending' as const })).filter((s) => s.text);
+      const items = grouped
+        .map((g) => ({ text: (byNorm.get(g.normalized) || g.normalized).trim().slice(0, 60), kind: 'trending' as const }))
+        .filter((s) => s.text);
+      trendingCache.set(cacheKey, { at: Date.now(), items });
+      return items;
     } catch {
       return [];
     }

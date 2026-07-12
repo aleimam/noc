@@ -22,6 +22,7 @@ export function ZeroResultLead({
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
+  const [website, setWebsite] = useState(''); // honeypot — hidden field humans never see/fill
   const [state, setState] = useState<'idle' | 'sending' | 'done'>('idle');
   const [error, setError] = useState('');
 
@@ -32,11 +33,11 @@ export function ZeroResultLead({
       return;
     }
     setState('sending');
-    void submitSearchLead({ site, surface, query, phone: phone.trim(), note: note.trim() || undefined }).then((r) => {
+    void submitSearchLead({ site, surface, query, phone: phone.trim(), note: note.trim() || undefined, website }).then((r) => {
       if (r.ok) setState('done');
       else {
         setState('idle');
-        setError(L('تعذّر الإرسال، حاول مرة أخرى', 'Could not send, please try again'));
+        setError(L('مش قادرين نبعت دلوقتي، جرّب تاني', 'Could not send, please try again'));
       }
     });
   }
@@ -62,6 +63,17 @@ export function ZeroResultLead({
           : L('سيب رقمك ونتواصل معاك لما يتوفر المطلوب.', "Leave your number and we'll reach out when a match is available.")}
       </p>
       <div className="mt-3 space-y-2">
+        {/* Honeypot (spam trap): visually hidden + untabbable; humans never fill it, autofill bots do. */}
+        <input
+          type="text"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          className="absolute -left-[9999px] h-0 w-0 opacity-0"
+          placeholder="website"
+        />
         <input
           type="tel"
           inputMode="tel"
@@ -87,7 +99,7 @@ export function ZeroResultLead({
           disabled={state === 'sending'}
           className="w-full rounded-xl bg-primary px-4 py-3 text-base font-bold text-soft disabled:opacity-50"
         >
-          {state === 'sending' ? L('جارٍ الإرسال…', 'Sending…') : L('تواصلوا معي', 'Contact me')}
+          {state === 'sending' ? L('جارٍ الإرسال…', 'Sending…') : L('كلموني 📞', 'Contact me')}
         </button>
       </div>
     </div>

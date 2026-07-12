@@ -60,15 +60,16 @@ export default async function SearchIntelligencePage({ searchParams }: { searchP
     s === 'all' ? L('كل المواضع', 'All surfaces') : s === 'market' ? L('سوق العبور', 'Market') : s === 'storefront' ? L('متجر الصواري', 'Storefront') : L('كشوف التقنين', 'Rationing');
 
   const f = ov.funnel;
+  // (No refinement metric: sessionId is never available server-side, so it would always read 0%.)
   const kpis = [
     { label: L('عمليات البحث', 'Searches'), value: f.searches },
     { label: L('بحث بنتائج', 'With results'), value: f.withResults },
     { label: L('نتائج تم فتحها', 'Results opened'), value: f.selections },
     { label: L('تحوّلات (تواصل/عرض)', 'Conversions'), value: f.conversions },
     { label: L('نسبة بلا نتائج', 'Zero-result rate'), value: pct(ov.zeroRate) },
-    { label: L('نسبة إعادة البحث', 'Refinement rate'), value: pct(ov.refinementRate) },
     { label: L('كلمات بحث مختلفة', 'Distinct terms'), value: ov.distinctTerms },
     { label: L('معدل التحوّل', 'Search→contact'), value: f.searches ? pct(f.conversions / f.searches) : '0%' },
+    { label: L('نتيجة مفتوحة/بحث', 'Open rate'), value: f.searches ? pct(f.selections / f.searches) : '0%' },
   ];
 
   // Funnel bar geometry: searches → with-results → selections → conversions.

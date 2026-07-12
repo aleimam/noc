@@ -15,7 +15,9 @@ import { SeoIntro } from '../_components/SeoText';
 import { getSeoIntro } from '../../lib/seoContent';
 import { partnershipsEnabled } from '../../lib/modules';
 import { marketHref } from '../../lib/listings';
+import { headers } from 'next/headers';
 import { logSearch, normalizeSearch, expandSearchTerms } from '../../lib/search';
+import { rateLimit, clientIp } from '../../lib/rateLimit';
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
@@ -116,7 +118,11 @@ export default async function MarketPage({
       return expanded.every((alts) => alts.some((v) => hay.includes(v)));
     });
     const userId = (await auth())?.user?.id ?? null;
-    logSearch({ site: 'newobour', surface: 'market', query: q, resultsCount: matched.length, usedFastSearch: get('fast') === '1', userId });
+    // Per-IP backstop on the log write: an unauth ?q= loop must not grow SearchLog unbounded
+    // or poison trending. Over the cap the search still works — we just stop recording it.
+    if (rateLimit(`slog:${clientIp(await headers())}`, 20, 60 * 1000)) {
+      logSearch({ site: 'newobour', surface: 'market', query: q, resultsCount: matched.length, usedFastSearch: get('fast') === '1', userId });
+    }
     listings = matched.slice(0, 60);
   }
 

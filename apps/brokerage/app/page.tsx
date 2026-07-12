@@ -139,7 +139,7 @@ export default async function Home() {
               action="/listings"
               locale={locale}
               placeholder={L(c.hero.searchPlaceholder)}
-              className="mx-auto mt-7 max-w-2xl rounded-full bg-white p-2 shadow-xl"
+              className="mx-auto mt-7 max-w-2xl rounded-full bg-white p-2 shadow-xl dark:ring-1 dark:ring-white/25"
               inputClassName="min-w-0 flex-1 bg-transparent px-5 py-3 text-lg text-navy-800 outline-none placeholder:text-ink-400 sm:text-xl"
               buttonClassName="flex-none rounded-full bg-gold px-8 py-3 text-lg font-bold text-navy-900 hover:brightness-105"
             />
