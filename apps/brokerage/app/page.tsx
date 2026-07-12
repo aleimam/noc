@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Fragment } from 'react';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@noc/db';
+import { SearchAutocomplete } from '@noc/ui';
 import type { Loc, StoreSectionKey } from '@noc/config';
 import { StoreShell } from './_components/StoreShell';
 import { StoreLandCard } from './_components/StoreLandCard';
@@ -134,15 +135,14 @@ export default async function Home() {
           <p className="mx-auto mt-3 max-w-2xl text-base text-white/85 sm:text-lg">{L(c.hero.subtitle)}</p>
 
           {c.hero.showSearch && (
-            <form action="/listings" method="get" className="mx-auto mt-7 flex max-w-2xl items-center gap-2 rounded-full bg-white p-2 shadow-xl">
-              <input
-                name="q"
-                placeholder={L(c.hero.searchPlaceholder)}
-                aria-label={locale === 'ar' ? 'ابحث' : 'Search'}
-                className="min-w-0 flex-1 bg-transparent px-5 py-3 text-lg text-navy-800 outline-none placeholder:text-ink-400 sm:text-xl"
-              />
-              <button type="submit" className="flex-none rounded-full bg-gold px-8 py-3 text-lg font-bold text-navy-900 hover:brightness-105">{locale === 'ar' ? 'بحث' : 'Search'}</button>
-            </form>
+            <SearchAutocomplete
+              action="/listings"
+              locale={locale}
+              placeholder={L(c.hero.searchPlaceholder)}
+              className="mx-auto mt-7 max-w-2xl rounded-full bg-white p-2 shadow-xl"
+              inputClassName="min-w-0 flex-1 bg-transparent px-5 py-3 text-lg text-navy-800 outline-none placeholder:text-ink-400 sm:text-xl"
+              buttonClassName="flex-none rounded-full bg-gold px-8 py-3 text-lg font-bold text-navy-900 hover:brightness-105"
+            />
           )}
 
           <div className="mt-6 flex flex-wrap justify-center gap-3">

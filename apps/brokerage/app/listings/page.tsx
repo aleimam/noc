@@ -115,7 +115,7 @@ export default async function Catalogue({
       return expanded.every((alts) => alts.some((v) => hay.includes(v)));
     });
     const userId = (await auth())?.user?.id ?? null;
-    logSearch({ site: 'alsawarey', surface: 'storefront', query: q, resultsCount: matched.length, userId });
+    logSearch({ site: 'alsawarey', surface: 'storefront', query: q, resultsCount: matched.length, usedFastSearch: str(sp.fast) === '1', userId });
     total = matched.length;
     cards = matched.slice((page - 1) * PAGE, page * PAGE);
   } else {

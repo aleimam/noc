@@ -19,6 +19,7 @@ export { SearchSelectTracker } from './components/SearchSelectTracker';
 export { trackSelect, trackConvert, type SearchSite } from './lib/searchEvent';
 export { ZeroResultLead } from './components/ZeroResultLead';
 export { submitSearchLead, type SearchLeadPayload } from './lib/searchLead';
+export { SearchAutocomplete } from './components/SearchAutocomplete';
 export { AreaAdvantages } from './components/AreaAdvantages';
 export { Badge } from './components/Badge';
 export { PublicShell } from './components/PublicShell';

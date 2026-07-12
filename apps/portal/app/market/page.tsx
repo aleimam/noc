@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma, Prisma } from '@noc/db';
 import { auth } from '@noc/auth';
 import { newObourVisibility } from '@noc/partner-portal/visibility';
-import { ListingCard, RecentlyViewed, TrackEvent, SearchSelectTracker, ZeroResultLead } from '@noc/ui';
+import { ListingCard, RecentlyViewed, TrackEvent, SearchSelectTracker, ZeroResultLead, SearchAutocomplete } from '@noc/ui';
 import { SiteShell } from '../_components/SiteShell';
 import { currency } from '@noc/i18n';
 import { MarketFilters } from './MarketFilters';
@@ -116,7 +116,7 @@ export default async function MarketPage({
       return expanded.every((alts) => alts.some((v) => hay.includes(v)));
     });
     const userId = (await auth())?.user?.id ?? null;
-    logSearch({ site: 'newobour', surface: 'market', query: q, resultsCount: matched.length, userId });
+    logSearch({ site: 'newobour', surface: 'market', query: q, resultsCount: matched.length, usedFastSearch: get('fast') === '1', userId });
     listings = matched.slice(0, 60);
   }
 
@@ -138,23 +138,16 @@ export default async function MarketPage({
       <h1 className="text-2xl font-extrabold text-navy-800">{t('title')}</h1>
       <SeoIntro text={intro} />
 
-      {/* Free-text search (Arabic-normalized, multi-term). Preserves the active type/partnership
-          facets via hidden fields; the instant/autocomplete box is a later phase (S2/S3). */}
-      <form action="/market" method="get" className="flex items-center gap-2 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-graphite/15">
-        {typeKey && <input type="hidden" name="type" value={typeKey} />}
-        {partnershipsOn && get('partnership') === '1' && <input type="hidden" name="partnership" value="1" />}
-        <span className="ps-2 text-gold" aria-hidden>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
-        </span>
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder={L('ابحث بالعنوان أو المنطقة أو رقم الإعلان…', 'Search by title, area or ad number…')}
-          aria-label={L('ابحث في السوق', 'Search the marketplace')}
-          className="min-w-0 flex-1 bg-transparent px-1 py-2.5 text-lg text-navy-800 outline-none placeholder:text-ink-400"
-        />
-        <button type="submit" className="flex-none rounded-xl bg-gold px-5 py-2.5 text-lg font-bold text-navy-900 transition hover:brightness-105">{L('بحث', 'Search')}</button>
-      </form>
+      {/* Instant search with autocomplete (S3): Arabic-normalized, multi-term, suggestion dropdown.
+          Preserves the active type/partnership facets on navigate; picking a suggestion sets fast=1. */}
+      <SearchAutocomplete
+        action="/market"
+        initialQuery={q}
+        locale={locale}
+        placeholder={L('ابحث بالعنوان أو المنطقة أو رقم الإعلان…', 'Search by title, area or ad number…')}
+        extraParams={{ type: typeKey || '', partnership: partnershipsOn && get('partnership') === '1' ? '1' : '' }}
+        inputClassName="min-w-0 flex-1 rounded-2xl bg-white px-4 py-3 text-lg text-navy-800 shadow-sm outline-none ring-1 ring-graphite/15 placeholder:text-ink-400"
+      />
 
       <MarketFilters
         partnershipsEnabled={partnershipsOn}

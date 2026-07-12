@@ -139,3 +139,74 @@ export async function expandSearchTerms(terms: string[], opts: { site: SearchSit
     return variants ? Array.from(variants) : [t];
   });
 }
+
+// ── Autocomplete / trending (Search Intelligence S3c) — mirror of apps/portal/lib/search.ts ──
+export type Suggestion = { text: string; kind: 'trending' | 'type' | 'district' | 'neighborhood' };
+
+type CorpusItem = { text: string; norm: string; kind: 'type' | 'district' | 'neighborhood' };
+let corpusCache: { at: number; items: CorpusItem[] } | null = null;
+const CORPUS_TTL_MS = 5 * 60 * 1000;
+
+async function loadCorpus(): Promise<CorpusItem[]> {
+  if (corpusCache && Date.now() - corpusCache.at < CORPUS_TTL_MS) return corpusCache.items;
+  const items: CorpusItem[] = [];
+  try {
+    const [types, districts, neighborhoods] = await Promise.all([
+      prisma.classifierOption.findMany({ where: { isActive: true, classifier: { key: 'type' } }, select: { nameAr: true, nameEn: true } }),
+      prisma.district.findMany({ where: { isActive: true }, select: { nameAr: true, nameEn: true } }),
+      prisma.neighborhood.findMany({ where: { isActive: true }, select: { nameAr: true, nameEn: true } }),
+    ]);
+    const add = (text: string | null | undefined, kind: CorpusItem['kind']) => {
+      const t = (text ?? '').trim();
+      const norm = normalizeSearch(t);
+      if (t && norm) items.push({ text: t, norm, kind });
+    };
+    for (const t of types) { add(t.nameAr, 'type'); add(t.nameEn, 'type'); }
+    for (const d of districts) { add(d.nameAr, 'district'); add(d.nameEn, 'district'); }
+    for (const n of neighborhoods) { add(n.nameAr, 'neighborhood'); add(n.nameEn, 'neighborhood'); }
+    corpusCache = { at: Date.now(), items };
+  } catch {
+    return corpusCache?.items ?? [];
+  }
+  return items;
+}
+
+/** Suggestions for the instant search box: corpus matches for a partial query, else trending. */
+export async function getSearchSuggestions(qRaw: string, opts: { site: SearchSite; surface: SearchSurface }): Promise<Suggestion[]> {
+  const q = normalizeSearch(qRaw);
+  if (q.length < 2) {
+    try {
+      const grouped = await prisma.searchLog.groupBy({
+        by: ['normalized'],
+        where: { site: opts.site, surface: opts.surface, zeroResult: false, normalized: { not: '' } },
+        _count: { _all: true },
+        orderBy: { _count: { normalized: 'desc' } },
+        take: 6,
+      });
+      const norms = grouped.map((g) => g.normalized);
+      if (!norms.length) return [];
+      const samples = await prisma.searchLog.findMany({
+        where: { site: opts.site, surface: opts.surface, normalized: { in: norms } },
+        distinct: ['normalized'],
+        orderBy: { createdAt: 'desc' },
+        select: { normalized: true, query: true },
+      });
+      const byNorm = new Map(samples.map((s) => [s.normalized, s.query]));
+      return grouped.map((g) => ({ text: (byNorm.get(g.normalized) || g.normalized).trim(), kind: 'trending' as const })).filter((s) => s.text);
+    } catch {
+      return [];
+    }
+  }
+  const items = await loadCorpus();
+  const seen = new Set<string>();
+  const out: Suggestion[] = [];
+  for (const pass of [(i: CorpusItem) => i.norm.startsWith(q), (i: CorpusItem) => i.norm.includes(q)]) {
+    for (const i of items) {
+      if (out.length >= 8) break;
+      if (!pass(i) || seen.has(i.norm)) continue;
+      seen.add(i.norm);
+      out.push({ text: i.text, kind: i.kind });
+    }
+  }
+  return out;
+}
