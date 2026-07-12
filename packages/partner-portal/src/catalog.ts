@@ -42,8 +42,8 @@ export async function loadPartnerCatalog(ownerId: string) {
       },
     }),
     prisma.ownerAllowedCategory.findMany({ where: { ownerId }, select: { optionId: true } }),
-    prisma.district.findMany({ where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true } }),
-    prisma.neighborhood.findMany({ where: { isActive: true }, orderBy: { order: 'asc' }, select: { id: true, districtId: true, nameAr: true, nameEn: true } }),
+    prisma.district.findMany({ where: { isActive: true }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
+    prisma.neighborhood.findMany({ where: { isActive: true }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }], select: { id: true, districtId: true, nameAr: true, nameEn: true } }),
   ]);
 
   const grantedTypeIds = new Set(grants.map((g) => g.optionId));

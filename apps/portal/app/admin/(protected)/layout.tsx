@@ -30,7 +30,6 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
       items: [
         { href: '/admin/rationing', label: L('كشوف التقنين', 'Rationing sheets'), section: 'sheets', icon: 'sheet' },
         { href: '/admin/lands', label: L('الدليل الجغرافي', 'Geo directory'), section: 'lands', icon: 'map' },
-        { href: '/admin/lands/lands', label: L('قطع الأراضي', 'Land plots'), section: 'lands', icon: 'pin' },
         { href: '/admin/newobour/market', label: L('سوق العبور — العروض', 'New Obour market'), section: 'listings', icon: 'store' },
         { href: '/admin/marketplace/price-index', label: L('مؤشر الأسعار', 'Price index'), section: 'listings', icon: 'chart' },
         { href: '/admin/settings/calculator', label: L('حاسبة التصالح', 'Calculator'), section: 'settings', icon: 'calc' },

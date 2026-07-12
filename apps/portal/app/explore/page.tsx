@@ -30,8 +30,8 @@ export default async function ExplorePage() {
 
   const districts = await prisma.district.findMany({
     where: { isActive: true },
-    orderBy: { order: 'asc' },
-    include: { city: true, neighborhoods: { where: { isActive: true }, orderBy: { order: 'asc' } } },
+    orderBy: [{ order: 'asc' }, { nameAr: 'asc' }],
+    include: { city: true, neighborhoods: { where: { isActive: true }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }] } },
   });
   const withNb = districts.filter((d) => d.neighborhoods.length > 0);
 

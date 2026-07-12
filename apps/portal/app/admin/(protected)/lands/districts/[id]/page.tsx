@@ -17,14 +17,14 @@ export default async function DistrictDetail({ params }: { params: Promise<{ id:
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
   const [neighborhoods, advantages, maps, updates, adjacencyIds] = await Promise.all([
-    prisma.neighborhood.findMany({ where: { districtId: id }, orderBy: [{ order: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
+    prisma.neighborhood.findMany({ where: { districtId: id }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
     prisma.advantage.findMany({ where: { districtId: id }, orderBy: { order: 'asc' } }),
     loadAreaMaps('district', id),
     loadUpdates({ districtId: id }),
     loadAdjacency('district', id),
   ]);
   const adjacent = adjacencyIds.length
-    ? await prisma.district.findMany({ where: { id: { in: adjacencyIds } }, select: { id: true, nameAr: true, nameEn: true } })
+    ? await prisma.district.findMany({ where: { id: { in: adjacencyIds } }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }], select: { id: true, nameAr: true, nameEn: true } })
     : [];
 
   const fmt = (s: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));

@@ -43,7 +43,7 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
   const id = resolved.id;
   const d = await prisma.district.findUnique({
     where: { id },
-    include: { neighborhoods: { where: { isActive: true }, orderBy: { order: 'asc' } } },
+    include: { neighborhoods: { where: { isActive: true }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }] } },
   });
   if (!d || !d.isActive) notFound();
   // Canonicalize: permanently redirect legacy cuids to the key-based SEO URL (308).

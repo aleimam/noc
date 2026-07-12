@@ -12,10 +12,10 @@ export default async function NeighborhoodsPage() {
 
   const [neighborhoods, districts] = await Promise.all([
     prisma.neighborhood.findMany({
-      orderBy: [{ districtId: 'asc' }, { order: 'asc' }],
+      orderBy: [{ district: { order: 'asc' } }, { order: 'asc' }, { nameAr: 'asc' }],
       include: { _count: { select: { blocks: true } } },
     }),
-    prisma.district.findMany({ orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true } }),
+    prisma.district.findMany({ orderBy: [{ order: 'asc' }, { nameAr: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
   ]);
 
   const rows = neighborhoods.map((n) => ({

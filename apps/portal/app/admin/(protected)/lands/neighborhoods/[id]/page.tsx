@@ -18,7 +18,7 @@ export default async function NeighborhoodDetail({ params }: { params: Promise<{
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
   const [siblings, advantages, amenities, maps, updates, adjacencyIds] = await Promise.all([
-    prisma.neighborhood.findMany({ where: { districtId: n.districtId, id: { not: id } }, orderBy: [{ order: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
+    prisma.neighborhood.findMany({ where: { districtId: n.districtId, id: { not: id } }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
     prisma.advantage.findMany({ where: { neighborhoodId: id }, orderBy: { order: 'asc' } }),
     amenitiesForNeighborhood(id, n.districtId),
     loadAreaMaps('neighborhood', id),
@@ -26,7 +26,7 @@ export default async function NeighborhoodDetail({ params }: { params: Promise<{
     loadAdjacency('neighborhood', id),
   ]);
   const adjacent = adjacencyIds.length
-    ? await prisma.neighborhood.findMany({ where: { id: { in: adjacencyIds } }, include: { district: true } })
+    ? await prisma.neighborhood.findMany({ where: { id: { in: adjacencyIds } }, orderBy: [{ district: { order: 'asc' } }, { order: 'asc' }, { nameAr: 'asc' }], include: { district: true } })
     : [];
   const fmt = (s: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
 

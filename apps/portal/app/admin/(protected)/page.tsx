@@ -24,7 +24,7 @@ export default async function AdminDashboard() {
 
   const [
     sheets, ratFollows, searches, scans, cities,
-    districts, neighborhoods, lands, landFollows,
+    districts, neighborhoods, landFollows,
     listingsTotal, listingsPending, listingsPublished, listingsSold, onBrokerage,
     offersOpen, owners, wishlists, leads,
     customers, customersVerified, staff,
@@ -37,7 +37,6 @@ export default async function AdminDashboard() {
     count(canSheets, () => prisma.rationingCity.count()),
     count(canLands, () => prisma.district.count()),
     count(canLands, () => prisma.neighborhood.count()),
-    count(canLands, () => prisma.land.count()),
     count(canLands, () => prisma.landFollow.count()),
     count(canListings, () => prisma.listing.count()),
     count(canListings, () => prisma.listing.count({ where: { status: 'PENDING' } })),
@@ -104,7 +103,6 @@ export default async function AdminDashboard() {
           kpis={[
             { label: L('الأحياء', 'Districts'), value: districts, href: '/admin/lands/districts' },
             { label: L('المجاورات', 'Neighborhoods'), value: neighborhoods, href: '/admin/lands/neighborhoods' },
-            { label: L('الأراضي', 'Lands'), value: lands, href: '/admin/lands/lands' },
             { label: L('متابعات المناطق', 'Area follows'), value: landFollows, href: '/admin/lands/follows' },
           ]}
         />

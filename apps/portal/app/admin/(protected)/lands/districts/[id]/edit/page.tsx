@@ -28,7 +28,7 @@ export default async function DistrictEdit({ params }: { params: Promise<{ id: s
     loadAreaMaps('district', id),
     followerCount('district', id),
     loadAdjacency('district', id),
-    prisma.district.findMany({ where: { id: { not: id } }, orderBy: [{ order: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
+    prisma.district.findMany({ where: { id: { not: id } }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
     amenityPickOptions(locale),
     placedAmenityIds('district', id),
     getSeoIntroRaw(`district.${id}`),

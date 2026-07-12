@@ -27,7 +27,7 @@ export default async function NeighborhoodEdit({ params }: { params: Promise<{ i
     loadAreaMaps('neighborhood', id),
     followerCount('neighborhood', id),
     loadAdjacency('neighborhood', id),
-    prisma.neighborhood.findMany({ where: { id: { not: id } }, orderBy: [{ order: 'asc' }], include: { district: true } }),
+    prisma.neighborhood.findMany({ where: { id: { not: id } }, orderBy: [{ district: { order: 'asc' } }, { order: 'asc' }, { nameAr: 'asc' }], include: { district: true } }),
     loadUpdates({ districtId: n.districtId }),
     amenityPickOptions(locale),
     placedAmenityIds('neighborhood', id),

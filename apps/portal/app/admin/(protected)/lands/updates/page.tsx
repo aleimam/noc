@@ -13,8 +13,8 @@ export default async function UpdatesSection() {
 
   const [cities, districts, neighborhoods, ups] = await Promise.all([
     prisma.city.findMany({ orderBy: [{ order: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
-    prisma.district.findMany({ orderBy: [{ order: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
-    prisma.neighborhood.findMany({ orderBy: [{ order: 'asc' }], include: { district: true } }),
+    prisma.district.findMany({ orderBy: [{ order: 'asc' }, { nameAr: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
+    prisma.neighborhood.findMany({ orderBy: [{ district: { order: 'asc' } }, { order: 'asc' }, { nameAr: 'asc' }], include: { district: true } }),
     prisma.geoUpdate.findMany({
       where: { OR: [{ cityId: { not: null } }, { districtId: { not: null } }, { neighborhoodId: { not: null } }] },
       orderBy: { happenedAt: 'desc' },

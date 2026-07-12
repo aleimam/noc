@@ -46,7 +46,7 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
     where: { id },
     include: {
       advantages: { orderBy: { order: 'asc' } },
-      districts: { where: { isActive: true }, orderBy: { order: 'asc' } },
+      districts: { where: { isActive: true }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }] },
     },
   });
   if (!city || !city.isActive) notFound();
