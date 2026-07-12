@@ -6,6 +6,7 @@ import { auth, requirePermission, loadSmsConfig } from '@noc/auth';
 import { prisma, Prisma } from '@noc/db';
 import { sendSms } from '@noc/sms';
 import { stampMapCopy } from '../../../../lib/mapStamp';
+import { districtHref, neighborhoodHref } from '../../../../lib/geoHref';
 import { sanitizeRichHtml } from '../../../../lib/sanitize';
 import { markAreaListingsStale } from '../../../../lib/poster/generate';
 import {
@@ -21,15 +22,16 @@ function revDetail(level: GeoLevel, id: string) {
   if (level === 'city') {
     revalidatePath(`/admin/lands/cities/${id}`);
     revalidatePath(`/admin/lands/cities/${id}/edit`);
-    revalidatePath(`/explore/city/${id}`);
+    // Public geo pages use key/slug params — invalidate the whole dynamic segment.
+    revalidatePath('/explore/city/[id]', 'page');
   } else if (level === 'district') {
     revalidatePath(`/admin/lands/districts/${id}`);
     revalidatePath(`/admin/lands/districts/${id}/edit`);
-    revalidatePath(`/explore/district/${id}`);
+    revalidatePath('/explore/district/[id]', 'page');
   } else if (level === 'neighborhood') {
     revalidatePath(`/admin/lands/neighborhoods/${id}`);
     revalidatePath(`/admin/lands/neighborhoods/${id}/edit`);
-    revalidatePath(`/explore/${id}`);
+    revalidatePath('/explore/neighborhood/[id]', 'page');
   }
 }
 function geoField(level: GeoLevel, id: string) {
@@ -643,8 +645,21 @@ export async function notifyGeoUpdate(id: string): Promise<{ ok: true; count: nu
     if (phones.length) {
       const cfg = await loadSmsConfig();
       const base = (process.env.PORTAL_URL || process.env.NEXTAUTH_URL || '').replace(/\/$/, '');
-      const areaId = u.districtId || u.neighborhoodId || u.blockId || u.landId;
-      const url = base && areaId ? `${base}/explore/${areaId}` : null;
+      // Canonical SEO URL for the SMS link (district key / neighborhood slug). Block- and
+      // land-level updates have no public page — those SMSes go out without a link.
+      let url: string | null = null;
+      if (base) {
+        if (u.districtId) {
+          const d = await prisma.district.findUnique({ where: { id: u.districtId }, select: { id: true, key: true } });
+          if (d) url = `${base}${districtHref(d)}`;
+        } else if (u.neighborhoodId) {
+          const n = await prisma.neighborhood.findUnique({
+            where: { id: u.neighborhoodId },
+            select: { id: true, nameAr: true, district: { select: { nameAr: true } } },
+          });
+          if (n) url = `${base}${neighborhoodHref(n)}`;
+        }
+      }
       const body = `العبور الجديد: ${u.title || 'تحديث جديد عن أرضك'}${url ? ' ' + url : ''}`;
       for (const phone of phones) {
         await sendSms(phone, body, cfg).catch((e) => console.error('geo update sms failed', e));

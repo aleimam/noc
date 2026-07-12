@@ -25,6 +25,10 @@ SMS gateway, and next-intl ar/en.
 - IN FLIGHT: **RBAC restructure** — 7-group sidebar; `marketplace`/`settings` god-sections split
   into 13 purpose keys (listings/catalog/owners/storefront/content/appearance/analytics + kept
   keys); zero-lockout copy-then-delete migration; role presets refresh; gated dashboard tiles.
+- **Portal URL restructure (SEO)** — canonical geo URLs (`/explore/city|district/<key>`,
+  `/explore/neighborhood/<arabic-slug>--<id>` via `lib/geoHref.ts`), `/partners` → `/partner/join`,
+  `/rationing/plot?ref=` → `/rationing/plots/<ref>`; every legacy URL 308-redirects; sitemap +
+  all internal emitters (GeoTree, market, SMS geo links) emit canonical hrefs.
 
 ## 📌 Previous status (2026-07-11, end of day)
 

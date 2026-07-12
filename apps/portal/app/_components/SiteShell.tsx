@@ -31,7 +31,7 @@ export async function SiteShell({ active, children }: { active?: string; childre
   const loggedIn = type === 'CUSTOMER' || isPartner;
   const accountHref = isPartner ? '/partner' : '/account';
   const accountLabel = isPartner ? (locale === 'en' ? 'Partner portal' : 'بوابة الشركاء') : locale === 'en' ? 'My account' : 'حسابي';
-  const partners = { href: '/partners', label: locale === 'en' ? 'Partners' : 'الشركاء' };
+  const partners = { href: '/partner/join', label: locale === 'en' ? 'Partners' : 'الشركاء' };
   return (
     <PublicShell active={active} hiddenKeys={hidden} footerPages={footerPages} copyright={locale === 'en' ? site.copyrightEn : site.copyright} tagline={locale === 'en' ? site.sloganEn : site.slogan} mobileMenuMode={site.mobileMenuMode} loggedIn={loggedIn} accountLabel={accountLabel} accountHref={accountHref} partners={partners}>
       {children}

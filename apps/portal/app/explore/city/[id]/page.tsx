@@ -1,18 +1,22 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { PhotoGallery } from '@noc/ui';
 import { SiteShell } from '../../../_components/SiteShell';
 import { updatesForCity } from '../../../../lib/geoInheritance';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
+import { cityHref, districtHref, resolveCityId } from '../../../../lib/geoHref';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
+  const { id: param } = await params;
   const locale = (await getLocale()) as 'ar' | 'en';
-  const c = await prisma.city.findUnique({ where: { id }, select: { nameAr: true, nameEn: true, isActive: true } });
+  const resolved = await resolveCityId(param);
+  const c = resolved
+    ? await prisma.city.findUnique({ where: { id: resolved.id }, select: { id: true, key: true, nameAr: true, nameEn: true, isActive: true } })
+    : null;
   if (!c || !c.isActive) return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديد' };
   const name = locale === 'ar' ? c.nameAr : c.nameEn;
   return pageMeta({
@@ -20,13 +24,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     description: locale === 'en'
       ? `${name}: masterplan, location, services and main-roads maps, city advantages and districts.`
       : `${name}: المخطط العام والموقع وخرائط الخدمات والمحاور، ومميزات المدينة وأحياؤها.`,
-    path: `/explore/city/${id}`,
+    path: cityHref(c),
     locale,
   });
 }
 
 export default async function CityPublic({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+  const { id: param } = await params;
+  const resolved = await resolveCityId(param);
+  if (!resolved) notFound();
+  const id = resolved.id;
   const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('lands');
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
@@ -39,6 +46,8 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
     },
   });
   if (!city || !city.isActive) notFound();
+  // Canonicalize: permanently redirect legacy cuids to the key-based SEO URL (308).
+  if (decodeURIComponent(param) !== resolved.canonicalParam) permanentRedirect(cityHref(city));
 
   const [maps, updates] = await Promise.all([
     prisma.areaMap.findMany({ where: { level: 'city', areaId: id } }),
@@ -58,7 +67,7 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
   const crumbsLd = breadcrumbLd([
     { name: L('الرئيسية', 'Home'), path: '/' },
     { name: t('exploreTitle'), path: '/explore' },
-    { name: L(city.nameAr, city.nameEn), path: `/explore/city/${city.id}` },
+    { name: L(city.nameAr, city.nameEn), path: cityHref(city) },
   ]);
 
   return (
@@ -118,7 +127,7 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
             <h2 className="font-semibold text-primary">{t('districts')}</h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {city.districts.map((d) => (
-                <a key={d.id} href={`/explore/district/${d.id}`} className="rounded-lg border border-graphite/15 p-4 transition-colors hover:border-accent">
+                <a key={d.id} href={districtHref(d)} className="rounded-lg border border-graphite/15 p-4 transition-colors hover:border-accent">
                   <div className="font-semibold">{L(d.nameAr, d.nameEn)}</div>
                 </a>
               ))}

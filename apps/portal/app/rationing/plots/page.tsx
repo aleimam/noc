@@ -95,7 +95,7 @@ export default async function PlotsTab({ searchParams }: { searchParams: Promise
                 <h2 className="mb-2 text-lg font-bold text-navy-800 dark:text-soft">{t('recentPlots')}</h2>
                 <div className="flex flex-col gap-2.5">
                   {summary.recent.map((r) => (
-                    <Link key={r.ref} href={`/rationing/plot?ref=${encodeURIComponent(r.ref)}`} className="flex items-center gap-3.5 rounded-xl border border-ink-200 bg-white p-4 transition hover:border-gold hover:shadow-md">
+                    <Link key={r.ref} href={`/rationing/plots/${encodeURIComponent(r.ref)}`} className="flex items-center gap-3.5 rounded-xl border border-ink-200 bg-white p-4 transition hover:border-gold hover:shadow-md">
                       <div className="min-w-0 flex-1">
                         <div className="font-num text-xl font-bold text-navy-800 dark:text-soft">{r.ref}</div>
                         <div className="mt-0.5 truncate text-sm text-ink-600">{r.cityName ?? '—'} · {t('colApplicantsCount')}: <span className="font-num">{r.count}</span></div>
@@ -125,7 +125,7 @@ export default async function PlotsTab({ searchParams }: { searchParams: Promise
                 {rows.map((r) => (
                   <Link
                     key={r.ref}
-                    href={`/rationing/plot?ref=${encodeURIComponent(r.ref)}`}
+                    href={`/rationing/plots/${encodeURIComponent(r.ref)}`}
                     className="flex items-center gap-3.5 rounded-xl border border-ink-200 bg-white p-4 transition hover:border-gold hover:shadow-md"
                   >
                     <div className="min-w-0 flex-1">

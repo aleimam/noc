@@ -3,7 +3,7 @@
 import { headers } from 'next/headers';
 import { prisma } from '@noc/db';
 import { isValidPhone } from '@noc/config';
-import { rateLimit, clientIp } from '../../lib/rateLimit';
+import { rateLimit, clientIp } from '../../../lib/rateLimit';
 
 export type PartnerApplyInput = {
   name: string;

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { PhotoGallery, ListingCard } from '@noc/ui';
@@ -9,13 +9,17 @@ import { amenitiesForDistrict } from '../../../../lib/amenities';
 import { getGeoInheritance, updatesForDistrict, customPhotosForDistrict } from '../../../../lib/geoInheritance';
 import { SiteShell } from '../../../_components/SiteShell';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
+import { districtHref, neighborhoodHref, resolveDistrictId } from '../../../../lib/geoHref';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
+  const { id: param } = await params;
   const locale = (await getLocale()) as 'ar' | 'en';
-  const d = await prisma.district.findUnique({ where: { id }, select: { nameAr: true, nameEn: true, isActive: true } });
+  const resolved = await resolveDistrictId(param);
+  const d = resolved
+    ? await prisma.district.findUnique({ where: { id: resolved.id }, select: { id: true, key: true, nameAr: true, nameEn: true, isActive: true } })
+    : null;
   if (!d || !d.isActive) return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديد' };
   const name = locale === 'ar' ? d.nameAr : d.nameEn;
   return pageMeta({
@@ -23,18 +27,23 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     description: locale === 'en'
       ? `${name} in New Obour City: neighborhoods, advantages, public realm, maps and lands for sale.`
       : `${name} بمدينة العبور الجديدة: المجاورات والمميزات والمرافق والخرائط والأراضي المعروضة.`,
-    path: `/explore/district/${id}`,
+    path: districtHref(d),
     locale,
   });
 }
 
 export default async function DistrictPublic({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+  const { id: param } = await params;
+  const resolved = await resolveDistrictId(param);
+  if (!resolved) notFound();
+  const id = resolved.id;
   const d = await prisma.district.findUnique({
     where: { id },
     include: { neighborhoods: { where: { isActive: true }, orderBy: { order: 'asc' } } },
   });
   if (!d || !d.isActive) notFound();
+  // Canonicalize: permanently redirect legacy cuids to the key-based SEO URL (308).
+  if (decodeURIComponent(param) !== resolved.canonicalParam) permanentRedirect(districtHref(d));
 
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations('lands');
@@ -76,7 +85,7 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
   const crumbsLd = breadcrumbLd([
     { name: L('الرئيسية', 'Home'), path: '/' },
     { name: t('exploreTitle'), path: '/explore' },
-    { name: L(d.nameAr, d.nameEn), path: `/explore/district/${d.id}` },
+    { name: L(d.nameAr, d.nameEn), path: districtHref(d) },
   ]);
 
   return (
@@ -93,7 +102,7 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
             {d.neighborhoods.map((n) => {
               const areas = (n.areas as number[] | null) ?? [];
               return (
-                <a key={n.id} href={`/explore/${n.id}`} className="rounded-lg border border-graphite/15 p-4 transition-colors hover:border-accent">
+                <a key={n.id} href={neighborhoodHref({ id: n.id, nameAr: n.nameAr, district: { nameAr: d.nameAr } })} className="rounded-lg border border-graphite/15 p-4 transition-colors hover:border-accent">
                   <div className="font-semibold">{L(n.nameAr, n.nameEn)}</div>
                   <div className="mt-1 text-xs opacity-70">{n.assortedAreas ? t('assorted') : areas.length ? `${areas.join(locale === 'ar' ? '، ' : ', ')} ${m2}` : '—'}</div>
                 </a>

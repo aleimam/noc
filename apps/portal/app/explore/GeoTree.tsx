@@ -6,9 +6,11 @@ import { useState } from 'react';
 // rule: big tappable nodes, explicit expand buttons separate from the open-page links so
 // touch never misfires. Connector lines are simple borders (no chart lib). RTL-aware via
 // logical properties (ms-/border-s). Default: city expanded, districts collapsed.
-export type TreeCity = { id: string; nameAr: string; nameEn: string; districts: TreeDistrict[] };
-export type TreeDistrict = { id: string; nameAr: string; nameEn: string; neighborhoods: TreeNode[] };
-export type TreeNode = { id: string; nameAr: string; nameEn: string };
+// Hrefs are prebuilt server-side (canonical SEO URLs from lib/geoHref) — this client
+// component never constructs /explore/... paths itself.
+export type TreeCity = { id: string; nameAr: string; nameEn: string; href: string; districts: TreeDistrict[] };
+export type TreeDistrict = { id: string; nameAr: string; nameEn: string; href: string; neighborhoods: TreeNode[] };
+export type TreeNode = { id: string; nameAr: string; nameEn: string; href: string };
 
 export function GeoTree({ cities, locale }: { cities: TreeCity[]; locale: 'ar' | 'en' }) {
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
@@ -31,7 +33,7 @@ export function GeoTree({ cities, locale }: { cities: TreeCity[]; locale: 'ar' |
           <div key={c.id}>
             {/* City node */}
             <div className="mx-auto flex w-fit items-center gap-2 rounded-2xl border-2 border-gold bg-navy-800 px-5 py-3 shadow-md">
-              <a href={`/explore/city/${c.id}`} className="text-lg font-extrabold text-white hover:text-gold">
+              <a href={c.href} className="text-lg font-extrabold text-white hover:text-gold">
                 {name(c)}
               </a>
               <button
@@ -55,7 +57,7 @@ export function GeoTree({ cities, locale }: { cities: TreeCity[]; locale: 'ar' |
                     return (
                       <div key={d.id} className="rounded-xl border border-graphite/20 bg-white p-3 dark:bg-navy-900">
                         <div className="flex items-center justify-between gap-2">
-                          <a href={`/explore/district/${d.id}`} className="min-w-0 flex-1 truncate text-base font-bold text-primary hover:text-accent">
+                          <a href={d.href} className="min-w-0 flex-1 truncate text-base font-bold text-primary hover:text-accent">
                             {name(d)}
                           </a>
                           {d.neighborhoods.length > 0 && (
@@ -75,7 +77,7 @@ export function GeoTree({ cities, locale }: { cities: TreeCity[]; locale: 'ar' |
                             {d.neighborhoods.map((n) => (
                               <li key={n.id}>
                                 <a
-                                  href={`/explore/${n.id}`}
+                                  href={n.href}
                                   className="block rounded-lg bg-graphite/5 px-3 py-2 text-sm font-semibold text-primary hover:bg-gold/15"
                                 >
                                   {name(n)}

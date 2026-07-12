@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { listingVisibleOnNewObour } from '@noc/partner-portal/visibility';
 import { marketHref, resolveMarketListingId } from '../../../lib/listings';
+import { cityHref, districtHref, neighborhoodHref } from '../../../lib/geoHref';
 import { PhotoGallery, TrackView, ListingCard, AreaAdvantages } from '@noc/ui';
 import { localizeUnit, currency } from '@noc/i18n';
 import { formatDetailValue, waPhone, type DetailConfig } from '@noc/config';
@@ -80,7 +81,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const listing = resolvedId
     ? await prisma.listing.findUnique({
         where: { id: resolvedId },
-        include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: { include: { portalUser: { select: { id: true } } } }, buildingConditions: { include: { condition: true } }, neighborhood: { include: { district: { include: { city: { select: { id: true, nameAr: true, nameEn: true } } } } } } },
+        include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: { include: { portalUser: { select: { id: true } } } }, buildingConditions: { include: { condition: true } }, neighborhood: { include: { district: { include: { city: { select: { id: true, key: true, nameAr: true, nameEn: true } } } } } } },
       })
     : null;
   if (!listing || listing.status !== 'PUBLISHED') notFound();
@@ -369,9 +370,9 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       {listing.neighborhood && (
         <div className="text-sm">
           <span className="opacity-70">{L('المنطقة', 'Location')}: </span>
-          <a href={`/explore/district/${listing.neighborhood.districtId}`} className="text-accent hover:underline">{L(listing.neighborhood.district.nameAr, listing.neighborhood.district.nameEn)}</a>
+          <a href={districtHref(listing.neighborhood.district)} className="text-accent hover:underline">{L(listing.neighborhood.district.nameAr, listing.neighborhood.district.nameEn)}</a>
           <span className="opacity-50"> — </span>
-          <a href={`/explore/${listing.neighborhood.id}`} className="text-accent hover:underline">{L(listing.neighborhood.nameAr, listing.neighborhood.nameEn)}</a>
+          <a href={neighborhoodHref(listing.neighborhood)} className="text-accent hover:underline">{L(listing.neighborhood.nameAr, listing.neighborhood.nameEn)}</a>
         </div>
       )}
 
@@ -460,14 +461,14 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-primary">{L('خرائط المنطقة', 'Area maps')}</h3>
                 <div className="flex flex-wrap gap-2">
-                  <a href={`/explore/${listing.neighborhood.id}`} className="rounded-lg border border-accent/40 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/5">
+                  <a href={neighborhoodHref(listing.neighborhood)} className="rounded-lg border border-accent/40 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/5">
                     {L(listing.neighborhood.nameAr, listing.neighborhood.nameEn)}
                   </a>
-                  <a href={`/explore/district/${listing.neighborhood.districtId}`} className="rounded-lg border border-accent/40 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/5">
+                  <a href={districtHref(listing.neighborhood.district)} className="rounded-lg border border-accent/40 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/5">
                     {L(listing.neighborhood.district.nameAr, listing.neighborhood.district.nameEn)}
                   </a>
                   {listing.neighborhood.district.city && (
-                    <a href={`/explore/city/${listing.neighborhood.district.city.id}`} className="rounded-lg border border-accent/40 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/5">
+                    <a href={cityHref(listing.neighborhood.district.city)} className="rounded-lg border border-accent/40 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/5">
                       {L(listing.neighborhood.district.city.nameAr, listing.neighborhood.district.city.nameEn)}
                     </a>
                   )}

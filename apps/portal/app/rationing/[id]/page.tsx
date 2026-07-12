@@ -99,7 +99,7 @@ export default async function SheetDetail({ params }: { params: Promise<{ id: st
             {/* Original plot — emphasized + clickable → the plot page with all its applicants. */}
             {sheet.plotFullRef && (
               <Link
-                href={`/rationing/plot?ref=${encodeURIComponent(sheet.plotFullRef)}`}
+                href={`/rationing/plots/${encodeURIComponent(sheet.plotFullRef)}`}
                 className="mb-4 flex items-center justify-between gap-3 rounded-xl border-2 border-gold bg-gold/10 p-4 transition hover:bg-gold/20"
               >
                 <div className="min-w-0">
