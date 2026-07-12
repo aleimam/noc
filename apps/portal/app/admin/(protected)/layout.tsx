@@ -37,6 +37,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
         { href: '/admin/news', label: L('الأخبار', 'News'), section: 'content', icon: 'news' },
         { href: '/admin/guide', label: L('الدليل', 'Guide'), section: 'content', icon: 'book' },
         { href: '/admin/guide/conditions', label: L('اشتراطات البناء', 'Building conditions'), section: 'content', icon: 'doc' },
+        { href: '/admin/seo', label: L('محتوى SEO', 'SEO content'), section: 'content', icon: 'doc' },
       ],
     },
     {

@@ -286,6 +286,28 @@ export const envSchema = z.object({
 });
 export type Env = z.infer<typeof envSchema>;
 
+// ── Social profile links (the Organization / RealEstateAgent `sameAs` entity signal) ──
+// Stored per brand as a newline/comma-separated list of profile URLs in Setting; parsed
+// here so both apps + the admin editor share one definition. Pure (no deps).
+
+export const SOCIAL_SETTING_KEYS = { newobour: 'social.newobour', alsawarey: 'social.alsawarey' } as const;
+export type SocialBrand = keyof typeof SOCIAL_SETTING_KEYS;
+
+/** Parse a newline/comma-separated list into de-duped absolute http(s) URLs. */
+export function parseSocialLinks(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(/[\n,]+/)) {
+    const url = part.trim();
+    if (/^https?:\/\//i.test(url) && !seen.has(url)) {
+      seen.add(url);
+      out.push(url);
+    }
+  }
+  return out;
+}
+
 // ── Al Sawarey "sell your land" page content (editable in the New Obour backend) ──
 
 export type SellContent = {

@@ -7,6 +7,9 @@ import { SiteShell } from '../../../_components/SiteShell';
 import { updatesForCity } from '../../../../lib/geoInheritance';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
 import { geoPhotoAlt } from '../../../../lib/imageAlt';
+import { getSeoIntro } from '../../../../lib/seoContent';
+import { citySummary } from '../../../../lib/geoSummary';
+import { SeoIntro, GeoSummary } from '../../../_components/SeoText';
 import { cityHref, districtHref, resolveCityId } from '../../../../lib/geoHref';
 
 export const dynamic = 'force-dynamic';
@@ -51,10 +54,12 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
   if (decodeURIComponent(param) !== resolved.canonicalParam) permanentRedirect(cityHref(city));
   const areaName = L(city.nameAr, city.nameEn); // for photo alt text (image SEO)
 
-  const [maps, updates] = await Promise.all([
+  const [maps, updates, intro] = await Promise.all([
     prisma.areaMap.findMany({ where: { level: 'city', areaId: id } }),
     updatesForCity(id),
+    getSeoIntro(`city.${id}`, locale),
   ]);
+  const summary = citySummary({ name: L(city.nameAr, city.nameEn), districtCount: city.districts.length, locale });
   const pickRow = (kind: string) => maps.find((x) => x.kind === kind) ?? null;
   const customPhotos = maps.filter((x) => x.kind.startsWith('custom:'));
   const fmt = (dt: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(dt);
@@ -78,6 +83,8 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
       <div className="mx-auto max-w-3xl space-y-6 p-6">
         <a href="/explore" className="text-sm text-accent">‹ {t('exploreTitle')}</a>
         <h1 className="text-2xl font-bold text-primary">{L(city.nameAr, city.nameEn)}</h1>
+        <SeoIntro text={intro} />
+        <GeoSummary text={summary} />
 
         {city.advantages.length > 0 && (
           <section className="space-y-2">

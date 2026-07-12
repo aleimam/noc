@@ -3,9 +3,11 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, UpdatesEditor, CustomPhotosEditor } from '../../../GeoContentEditors';
+import { GeoSeoIntroEditor } from '../../../GeoSeoIntroEditor';
 import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency, masterplanClean } from '../../../geo';
 import { AmenityAttachPicker } from '../../../AmenityAttachPicker';
 import { amenityPickOptions, placedAmenityIds } from '@/lib/amenities';
+import { getSeoIntroRaw } from '@/lib/seoContent';
 import { EditSaveBar } from '@/app/_components/EditSaveBar';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +22,7 @@ export default async function DistrictEdit({ params }: { params: Promise<{ id: s
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
-  const [advantages, updates, maps, followers, adjacency, others, amenityOptions, attachedAmenities] = await Promise.all([
+  const [advantages, updates, maps, followers, adjacency, others, amenityOptions, attachedAmenities, seoIntro] = await Promise.all([
     prisma.advantage.findMany({ where: { districtId: id }, orderBy: { order: 'asc' } }),
     loadUpdates({ districtId: id }),
     loadAreaMaps('district', id),
@@ -29,6 +31,7 @@ export default async function DistrictEdit({ params }: { params: Promise<{ id: s
     prisma.district.findMany({ where: { id: { not: id } }, orderBy: [{ order: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
     amenityPickOptions(locale),
     placedAmenityIds('district', id),
+    getSeoIntroRaw(`district.${id}`),
   ]);
   const candidates = others.map((d) => ({ id: d.id, name: L(d.nameAr, d.nameEn) }));
   // The district's location map is drawn on its city's masterplan.
@@ -43,6 +46,11 @@ export default async function DistrictEdit({ params }: { params: Promise<{ id: s
           <EditSaveBar hint />
         </div>
       </div>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold text-primary">{L('نص SEO التعريفي', 'SEO intro')}</h2>
+        <GeoSeoIntroEditor level="district" targetId={id} initial={seoIntro} locale={locale} />
+      </section>
 
       <section className="space-y-2">
         <h2 className="font-semibold text-primary">{t('advantages')}</h2>

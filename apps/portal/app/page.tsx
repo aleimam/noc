@@ -5,6 +5,8 @@ import { ListingCard } from '@noc/ui';
 import { currency } from '@noc/i18n';
 import { getModuleVisibility } from '../lib/modules';
 import { SiteShell } from './_components/SiteShell';
+import { SeoIntro } from './_components/SeoText';
+import { getSeoIntro } from '../lib/seoContent';
 import { marketHref } from '../lib/listings';
 
 export const dynamic = 'force-dynamic';
@@ -37,6 +39,7 @@ export default async function Home() {
   }
 
   const vis = await getModuleVisibility();
+  const homeIntro = await getSeoIntro('home', locale);
   const allServices = [
     { key: 'rationing', href: '/rationing', title: tr('title'), desc: L('ابحث عن اسمك في كشوف التقنين', 'Find your name in the legalization ledgers'), icon: 'M3 5h13M3 12h13M3 19h7M21 8l-4 4 4 4' },
     { key: 'market', href: '/market', title: t('title'), desc: L('تصفّح الأراضي والوحدات المعروضة', 'Browse land plots and units for sale'), icon: 'M3 21h18M5 21V7l8-4v18M19 21V11l-6-3' },
@@ -78,6 +81,12 @@ export default async function Home() {
           </form>
         </div>
       </section>
+
+      {homeIntro && (
+        <section className="mx-auto max-w-[1120px] px-6 pt-8">
+          <SeoIntro text={homeIntro} />
+        </section>
+      )}
 
       {/* Recent listings — surfaced right below the hero */}
       {listings.length > 0 && (

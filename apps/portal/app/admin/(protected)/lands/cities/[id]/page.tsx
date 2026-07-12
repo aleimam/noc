@@ -3,7 +3,9 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { AdvantagesEditor, AreaMapEditor, UpdatesEditor, CustomPhotosEditor } from '../../GeoContentEditors';
+import { GeoSeoIntroEditor } from '../../GeoSeoIntroEditor';
 import { loadAreaMaps, loadUpdates } from '../../geo';
+import { getSeoIntroRaw } from '@/lib/seoContent';
 import { EditSaveBar } from '@/app/_components/EditSaveBar';
 
 export const dynamic = 'force-dynamic';
@@ -18,10 +20,11 @@ export default async function CityEdit({ params }: { params: Promise<{ id: strin
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
-  const [advantages, maps, updates] = await Promise.all([
+  const [advantages, maps, updates, seoIntro] = await Promise.all([
     prisma.advantage.findMany({ where: { cityId: id }, orderBy: { order: 'asc' } }),
     loadAreaMaps('city', id),
     loadUpdates({ cityId: id }),
+    getSeoIntroRaw(`city.${id}`),
   ]);
 
   return (
@@ -33,6 +36,11 @@ export default async function CityEdit({ params }: { params: Promise<{ id: strin
           <EditSaveBar hint />
         </div>
       </div>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold text-primary">{L('نص SEO التعريفي', 'SEO intro')}</h2>
+        <GeoSeoIntroEditor level="city" targetId={id} initial={seoIntro} locale={locale} />
+      </section>
 
       <section className="space-y-2">
         <h2 className="font-semibold text-primary">{t('advantages')}</h2>

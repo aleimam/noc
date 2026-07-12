@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { dirForLocale, type Locale } from '@noc/i18n';
 import { ThemeScript, Analytics, ConsentBanner, EnterToSubmit, Tracker, Toaster } from '@noc/ui';
-import { buildThemeCss } from '@noc/config';
+import { buildThemeCss, parseSocialLinks, SOCIAL_SETTING_KEYS } from '@noc/config';
 import { prisma } from '@noc/db';
 import { getBrandTheme } from '../lib/theme';
 import './globals.css';
@@ -25,18 +25,20 @@ export async function generateMetadata(): Promise<Metadata> {
       : 'العبور الجديدة | بوابة الخدمات المجانية',
     description: en ? 'New Obour City — free community services portal' : 'بوابة الخدمات المجانية لمدينة العبور الجديدة',
     icons: { icon: '/brand/favicon' },
+    alternates: { types: { 'application/rss+xml': [{ url: '/feed.xml', title: en ? 'New Obour — feed' : 'العبور الجديدة — آخر التحديثات' }] } },
   };
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as Locale;
   const messages = await getMessages();
-  const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_newobour', 'pixel_newobour', 'gsc_newobour', 'bing_newobour', 'yandex_newobour'] } } });
+  const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_newobour', 'pixel_newobour', 'gsc_newobour', 'bing_newobour', 'yandex_newobour', SOCIAL_SETTING_KEYS.newobour] } } });
   const s = Object.fromEntries(ids.map((r) => [r.key, r.value]));
   const themeCss = buildThemeCss(await getBrandTheme('newobour'));
   const siteUrl = (process.env.PORTAL_URL || 'https://newobour.com').replace(/\/$/, '');
+  const sameAs = parseSocialLinks(s[SOCIAL_SETTING_KEYS.newobour]);
   const jsonLd = [
-    { '@context': 'https://schema.org', '@type': 'Organization', name: 'العبور الجديدة', alternateName: 'New Obour', url: siteUrl, logo: `${siteUrl}/brand/logo` },
+    { '@context': 'https://schema.org', '@type': 'Organization', name: 'العبور الجديدة', alternateName: 'New Obour', url: siteUrl, logo: `${siteUrl}/brand/logo`, ...(sameAs.length ? { sameAs } : {}) },
     { '@context': 'https://schema.org', '@type': 'WebSite', name: 'العبور الجديدة', alternateName: 'New Obour', url: siteUrl, inLanguage: ['ar', 'en'], potentialAction: { '@type': 'SearchAction', target: `${siteUrl}/rationing?q={search_term_string}`, 'query-input': 'required name=search_term_string' } },
   ];
 

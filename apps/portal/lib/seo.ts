@@ -53,5 +53,18 @@ export function breadcrumbLd(items: { name: string; path: string }[]) {
   };
 }
 
+/** FAQPage JSON-LD from Q&A pairs. Render the SAME pairs visibly (Google requirement). */
+export function faqLd(items: { q: string; a: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((it) => ({
+      '@type': 'Question',
+      name: it.q,
+      acceptedAnswer: { '@type': 'Answer', text: it.a },
+    })),
+  };
+}
+
 /** Serialize a JSON-LD object for a <script> tag, escaping "<" so user text can't break out. */
 export const ldJson = (data: unknown): string => JSON.stringify(data).replace(/</g, '\\u003c');

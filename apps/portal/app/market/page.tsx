@@ -10,6 +10,8 @@ import { MarketCardActions } from '../_components/MarketCardActions';
 import { CompareBar } from '../_components/CompareBar';
 import { wishedSet } from '../../lib/wishlist';
 import { pageMeta } from '../../lib/seo';
+import { SeoIntro } from '../_components/SeoText';
+import { getSeoIntro } from '../../lib/seoContent';
 import { partnershipsEnabled } from '../../lib/modules';
 import { marketHref } from '../../lib/listings';
 
@@ -34,6 +36,7 @@ export default async function MarketPage({
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const get = (k: string) => (typeof sp[k] === 'string' ? (sp[k] as string) : '');
   const partnershipsOn = await partnershipsEnabled();
+  const intro = await getSeoIntro('market', locale);
 
   const typeCls = await prisma.classifier.findUnique({
     where: { key: 'type' },
@@ -96,6 +99,7 @@ export default async function MarketPage({
     <SiteShell active="market">
       <div className="mx-auto max-w-5xl space-y-5 p-6">
       <h1 className="text-2xl font-extrabold text-navy-800">{t('title')}</h1>
+      <SeoIntro text={intro} />
 
       <MarketFilters
         partnershipsEnabled={partnershipsOn}

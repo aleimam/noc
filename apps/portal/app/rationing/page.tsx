@@ -16,7 +16,9 @@ import { searchSheets, type SearchField, type SheetCard, type SortKey } from '..
 import { getRationingConfig } from '../../lib/rationing/settings';
 import { getRationingTotals } from '../../lib/rationing/stats';
 import { getSiteConfig } from '../../lib/site';
-import { pageMeta } from '../../lib/seo';
+import { pageMeta, faqLd, ldJson } from '../../lib/seo';
+import { FaqSection } from '../_components/FaqSection';
+import { rationingFaq } from './faq';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -54,6 +56,7 @@ export default async function RationingSearch({
 
   const locale = (await getLocale()) as 'ar' | 'en';
   const t = await getTranslations('rationing');
+  const faq = rationingFaq(locale);
   const [config, site] = await Promise.all([getRationingConfig(), getSiteConfig()]);
 
   const cities = await prisma.rationingCity.findMany({
@@ -117,6 +120,7 @@ export default async function RationingSearch({
 
   return (
     <SiteShell active="rationing">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(faqLd(faq)) }} />
       <div className="mx-auto max-w-4xl space-y-5 p-4 sm:p-6">
         <FbNotice />
 
@@ -216,6 +220,8 @@ export default async function RationingSearch({
             📄 {t('reportMissedBtn')}
           </Link>
         </div>
+
+        <FaqSection title={locale === 'ar' ? 'الأسئلة الشائعة' : 'Frequently asked questions'} items={faq} />
       </div>
     </SiteShell>
   );

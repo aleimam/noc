@@ -10,6 +10,9 @@ import { getGeoInheritance, updatesForDistrict, customPhotosForDistrict } from '
 import { SiteShell } from '../../../_components/SiteShell';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
 import { geoPhotoAlt } from '../../../../lib/imageAlt';
+import { getSeoIntro } from '../../../../lib/seoContent';
+import { districtSummary } from '../../../../lib/geoSummary';
+import { SeoIntro, GeoSummary } from '../../../_components/SeoText';
 import { districtHref, neighborhoodHref, resolveDistrictId } from '../../../../lib/geoHref';
 
 export const dynamic = 'force-dynamic';
@@ -53,14 +56,25 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
   const areaName = L(d.nameAr, d.nameEn); // for photo alt text (image SEO)
 
   const matrix = await getGeoInheritance();
-  const [advantages, areaMaps, updates, amenityRows] = await Promise.all([
+  const [advantages, areaMaps, updates, amenityRows, intro] = await Promise.all([
     prisma.advantage.findMany({ where: { districtId: id }, orderBy: { order: 'asc' } }),
     prisma.areaMap.findMany({ where: { level: 'district', areaId: id } }),
     // own updates + inherited city updates (per the inheritance matrix), source-tagged
     updatesForDistrict(id, d.cityId, matrix),
     amenitiesForDistrict(id),
+    getSeoIntro(`district.${id}`, locale),
   ]);
   const listingCards = await areaListings({ neighborhood: { districtId: id } });
+
+  // Auto SEO summary: neighborhood count + plot-area range across this district's neighborhoods.
+  const nbAreas = d.neighborhoods.flatMap((n) => ((n.areas as number[] | null) ?? [])).filter((x) => typeof x === 'number' && isFinite(x) && x > 0);
+  const summary = districtSummary({
+    name: L(d.nameAr, d.nameEn),
+    neighborhoodCount: d.neighborhoods.length,
+    areaMin: nbAreas.length ? Math.min(...nbAreas) : null,
+    areaMax: nbAreas.length ? Math.max(...nbAreas) : null,
+    locale,
+  });
 
   const fmt = (dt: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(dt);
   const pickRow = (kind: string) => areaMaps.find((x) => x.kind === kind) ?? null;
@@ -96,6 +110,8 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
       <div className="mx-auto max-w-3xl space-y-6 p-6">
       <a href="/explore" className="text-sm text-accent">‹ {t('exploreTitle')}</a>
       <h1 className="text-2xl font-bold text-primary">{L(d.nameAr, d.nameEn)}</h1>
+      <SeoIntro text={intro} />
+      <GeoSummary text={summary} />
 
       {d.neighborhoods.length > 0 && (
         <section className="space-y-2">

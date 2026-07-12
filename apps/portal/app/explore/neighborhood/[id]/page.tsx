@@ -12,6 +12,8 @@ import { getGeoInheritance, updatesForNeighborhood, customPhotosForNeighborhood 
 import { SiteShell } from '../../../_components/SiteShell';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
 import { geoPhotoAlt } from '../../../../lib/imageAlt';
+import { neighborhoodSummary } from '../../../../lib/geoSummary';
+import { GeoSummary } from '../../../_components/SeoText';
 import { districtHref, neighborhoodHref, neighborhoodParam, resolveNeighborhoodId } from '../../../../lib/geoHref';
 
 export const dynamic = 'force-dynamic';
@@ -101,6 +103,15 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
   const areas = (n.areas as number[] | null) ?? [];
   const buildingTypes = labels((n.buildingTypes as string[] | null) ?? [], BUILDING_TYPES, locale);
   const mainRoads = labels((n.mainRoads as string[] | null) ?? [], MAIN_ROADS, locale);
+  const summary = neighborhoodSummary({
+    name: L(n.nameAr, n.nameEn),
+    district: L(n.district.nameAr, n.district.nameEn),
+    areas,
+    assorted: n.assortedAreas,
+    buildingTypes,
+    mainRoads,
+    locale,
+  });
 
   const chips = (items: string[]) => (
     <div className="flex flex-wrap gap-2">
@@ -125,6 +136,7 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
       <div>
         <a href={districtHref(n.district)} className="inline-block rounded bg-graphite/10 px-2 py-0.5 text-xs text-accent hover:underline">{L(n.district.nameAr, n.district.nameEn)}</a>
         <h1 className="mt-2 text-2xl font-bold text-primary">{L(n.nameAr, n.nameEn)}</h1>
+        <div className="mt-2"><GeoSummary text={summary} /></div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

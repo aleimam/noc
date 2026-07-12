@@ -9,6 +9,7 @@ import { stampMapCopy } from '../../../../lib/mapStamp';
 import { cityHref, districtHref, neighborhoodHref } from '../../../../lib/geoHref';
 import { pingIndexNow, portalOrigin } from '../../../../lib/indexnow';
 import { sanitizeRichHtml } from '../../../../lib/sanitize';
+import { seoIntroSettingKey } from '../../../../lib/seoContent';
 import { markAreaListingsStale } from '../../../../lib/poster/generate';
 import {
   defaultGeoInheritance,
@@ -882,5 +883,25 @@ export async function saveGeoInheritance(input: GeoInheritanceMatrix): Promise<R
     return { ok: true };
   } catch (e) {
     return fail(e);
+  }
+}
+
+/** Save the per-city / per-district SEO intro paragraph (Setting seo.intro.<level>.<id>).
+ *  Permission 'lands' (edited inline on the geo editor). Rendered as plain text publicly. */
+export async function saveGeoSeoIntro(
+  level: 'city' | 'district',
+  id: string,
+  value: { ar: string; en: string },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requirePermission('lands', 'UPDATE');
+  const clean = { ar: (value.ar ?? '').trim(), en: (value.en ?? '').trim() };
+  try {
+    const key = seoIntroSettingKey(`${level}.${id}`);
+    await prisma.setting.upsert({ where: { key }, update: { value: JSON.stringify(clean) }, create: { key, value: JSON.stringify(clean) } });
+    revDetail(level, id);
+    return { ok: true };
+  } catch (e) {
+    console.error('saveGeoSeoIntro failed', e);
+    return { ok: false, error: 'failed' };
   }
 }

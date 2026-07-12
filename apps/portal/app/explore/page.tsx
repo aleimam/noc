@@ -4,6 +4,8 @@ import { prisma } from '@noc/db';
 import { SiteShell } from '../_components/SiteShell';
 import { localizeUnit } from '@noc/i18n';
 import { pageMeta } from '../../lib/seo';
+import { SeoIntro } from '../_components/SeoText';
+import { getSeoIntro } from '../../lib/seoContent';
 import { cityHref, districtHref, neighborhoodHref } from '../../lib/geoHref';
 import { GeoTree, type TreeCity } from './GeoTree';
 
@@ -24,6 +26,7 @@ export default async function ExplorePage() {
   const t = await getTranslations('lands');
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const m2 = localizeUnit('م²', locale);
+  const intro = await getSeoIntro('explore', locale);
 
   const districts = await prisma.district.findMany({
     where: { isActive: true },
@@ -71,9 +74,10 @@ export default async function ExplorePage() {
   return (
     <SiteShell active="explore">
       <div className="mx-auto max-w-5xl space-y-10 p-6">
-      <div>
+      <div className="space-y-2">
         <h1 className="text-2xl font-extrabold text-navy-800">{t('exploreTitle')}</h1>
         <p className="text-sm text-ink-500">{t('exploreManage')}</p>
+        <SeoIntro text={intro} />
       </div>
 
       <GeoTree cities={treeCities} locale={locale} />

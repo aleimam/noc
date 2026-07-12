@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { dirForLocale, type Locale } from '@noc/i18n';
 import { ThemeScript, Analytics, ConsentBanner, EnterToSubmit, Tracker, Toaster } from '@noc/ui';
-import { buildThemeCss } from '@noc/config';
+import { buildThemeCss, parseSocialLinks, SOCIAL_SETTING_KEYS } from '@noc/config';
 import { prisma } from '@noc/db';
 import { getBrandTheme } from '../lib/theme';
 import './globals.css';
@@ -30,10 +30,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as Locale;
   const messages = await getMessages();
-  const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_alsawarey', 'pixel_alsawarey', 'gsc_alsawarey', 'bing_alsawarey', 'yandex_alsawarey', 'alswarey_phone'] } } });
+  const ids = await prisma.setting.findMany({ where: { key: { in: ['ga4_alsawarey', 'pixel_alsawarey', 'gsc_alsawarey', 'bing_alsawarey', 'yandex_alsawarey', 'alswarey_phone', SOCIAL_SETTING_KEYS.alsawarey] } } });
   const s = Object.fromEntries(ids.map((r) => [r.key, r.value]));
   const themeCss = buildThemeCss(await getBrandTheme('alsawarey'));
   const siteUrl = (process.env.BROKERAGE_URL || 'https://alsawarey.com').replace(/\/$/, '');
+  const sameAs = parseSocialLinks(s[SOCIAL_SETTING_KEYS.alsawarey]);
   const jsonLd = [
     {
       '@context': 'https://schema.org',
@@ -44,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       logo: `${siteUrl}/brand/logo`,
       image: `${siteUrl}/brand/logo`,
       ...(s.alswarey_phone ? { telephone: s.alswarey_phone } : {}),
+      ...(sameAs.length ? { sameAs } : {}),
       areaServed: [{ '@type': 'City', name: 'New Obour City' }, { '@type': 'Country', name: 'Egypt' }],
       address: { '@type': 'PostalAddress', addressLocality: 'New Obour City', addressRegion: 'Qalyubia', addressCountry: 'EG' },
     },
