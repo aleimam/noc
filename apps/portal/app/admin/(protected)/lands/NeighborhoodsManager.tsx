@@ -101,7 +101,7 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
 
   return (
     <div className="space-y-4">
-      {error && <p className="text-sm text-red-600">{error === 'in_use' ? t('inUse') : error}</p>}
+      {error && <p className="text-sm text-red-600">{error === 'in_use' ? t('inUse') : error === 'duplicate' ? t('dupNeighborhood') : error}</p>}
 
       <div className="flex flex-wrap items-center gap-3">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('search')} className="w-full max-w-xs rounded-md border border-graphite/20 bg-transparent px-3 py-1.5 text-sm" />

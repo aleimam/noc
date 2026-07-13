@@ -998,6 +998,7 @@
     "confirmNotifyGeneric": "Send this update to all followers by SMS?",
     "addNeighborhood": "Add neighborhood",
     "addNeighborhoodHint": "Enter just the name now; you can fill the rest after it's created.",
+    "dupNeighborhood": "This neighborhood already exists in this district",
     "actionFailed": "Couldn't complete the action",
     "search": "Search…",
     "allStatuses": "All statuses",

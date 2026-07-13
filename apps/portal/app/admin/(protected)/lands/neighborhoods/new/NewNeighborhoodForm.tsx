@@ -13,15 +13,15 @@ export function NewNeighborhoodForm({ districtId }: { districtId: string }) {
   const [pending, start] = useTransition();
   const [ar, setAr] = useState('');
   const [en, setEn] = useState('');
-  const [err, setErr] = useState(false);
+  const [err, setErr] = useState('');
 
   function save() {
     if (!ar.trim()) return;
-    setErr(false);
+    setErr('');
     start(async () => {
       const r = await upsertNeighborhood({ districtId, nameAr: ar.trim(), nameEn: en.trim() || ar.trim() });
       if (r.ok && r.id) router.push(`/admin/lands/neighborhoods/${r.id}/edit`);
-      else setErr(true);
+      else setErr(r.ok ? 'failed' : r.error);
     });
   }
 
@@ -30,7 +30,7 @@ export function NewNeighborhoodForm({ districtId }: { districtId: string }) {
       <label className="block text-sm">{t('nameAr')}<input value={ar} onChange={(e) => setAr(e.target.value)} className={inp} autoFocus onKeyDown={(e) => e.key === 'Enter' && save()} /></label>
       <label className="block text-sm">{t('nameEn')}<input dir="ltr" value={en} onChange={(e) => setEn(e.target.value)} className={inp} onKeyDown={(e) => e.key === 'Enter' && save()} /></label>
       <p className="text-xs opacity-60">{t('addNeighborhoodHint')}</p>
-      {err && <p className="text-sm text-red-600">{t('actionFailed') ?? '!'}</p>}
+      {err && <p className="text-sm text-red-600">{err === 'duplicate' ? t('dupNeighborhood') : (t('actionFailed') ?? '!')}</p>}
       <button disabled={pending || !ar.trim()} onClick={save} className="rounded bg-primary px-5 py-2 text-sm text-soft disabled:opacity-50">
         {pending ? t('sending') : `+ ${t('addNeighborhood')}`}
       </button>

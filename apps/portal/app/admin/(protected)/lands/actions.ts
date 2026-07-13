@@ -191,6 +191,21 @@ export async function upsertNeighborhood(input: {
       const m = /(\d+)/.exec(toLatin(nameAr));
       if (m) order = Number(m[1]);
     }
+
+    // No duplicate neighborhoods within the same district: reject a sibling with the same
+    // Arabic OR English name (case- + whitespace-insensitive), excluding the row being edited.
+    // Runs AFTER the numbered-add expansion so re-adding «2» (→ «مجاورة 2») is also caught.
+    const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+    const nA = norm(nameAr);
+    const nE = norm(nameEn);
+    const siblings = await prisma.neighborhood.findMany({
+      where: { districtId: input.districtId, ...(input.id ? { id: { not: input.id } } : {}) },
+      select: { nameAr: true, nameEn: true },
+    });
+    if (siblings.some((s) => norm(s.nameAr) === nA || (!!nE && norm(s.nameEn) === nE))) {
+      return { ok: false, error: 'duplicate' };
+    }
+
     const data = {
       districtId: input.districtId,
       nameAr,
@@ -200,7 +215,7 @@ export async function upsertNeighborhood(input: {
       areas: input.areas ?? [],
       buildingTypes: input.buildingTypes ?? [],
       mainRoads: input.mainRoads ?? [],
-      order: input.order ?? 0,
+      order, // derived above (numbered add / number-in-name); falls back to input.order
       isActive: input.isActive ?? true,
     };
     const row = input.id

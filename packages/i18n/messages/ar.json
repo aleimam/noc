@@ -998,6 +998,7 @@
     "confirmNotifyGeneric": "إرسال هذا التحديث لكل المتابعين عبر رسالة SMS؟",
     "addNeighborhood": "إضافة مجاورة",
     "addNeighborhoodHint": "أدخل الاسم فقط الآن؛ يمكنك إكمال باقي التفاصيل بعد الإنشاء.",
+    "dupNeighborhood": "هذه المجاورة موجودة بالفعل في هذا الحي",
     "actionFailed": "تعذّر إتمام العملية",
     "search": "بحث…",
     "allStatuses": "كل الحالات",
