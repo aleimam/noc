@@ -293,15 +293,18 @@ async function runWatcherMatch(batchId?: string): Promise<number> {
 
     await prisma.rationingFollow.update({
       where: { id: f.id },
-      data: { status: 'matched', sheetId: hit.sheetId, lastNotifiedAt: new Date() },
+      data: { status: 'matched', sheetId: hit.sheetId },
     });
     matched++;
 
+    // Stamp lastNotifiedAt ONLY when the alert SMS actually goes out — otherwise the admin UI
+    // would falsely show "alerted" for a phone-less follow or a failed send.
     if (f.user?.phone) {
       if (!cfg) cfg = await loadSmsConfig();
       const locale = (f.user.preference?.locale?.toLowerCase() === 'en' ? 'en' : 'ar') as 'ar' | 'en';
       const url = base ? `${base}/rationing/${hit.sheetId}` : null;
-      await sendSms(f.user.phone, watchSmsBody(locale, url), cfg).catch((e) => console.error('watch sms failed', e));
+      const res = await sendSms(f.user.phone, watchSmsBody(locale, url), cfg).catch((e) => { console.error('watch sms failed', e); return null; });
+      if (res?.ok) await prisma.rationingFollow.update({ where: { id: f.id }, data: { lastNotifiedAt: new Date() } });
     }
   }
   return matched;
@@ -369,7 +372,7 @@ export async function sendCongratsSms(ids: string[]): Promise<{ ok: true; sent: 
       const locale = (f.user.preference?.locale?.toLowerCase() === 'en' ? 'en' : 'ar') as 'ar' | 'en';
       const url = base && f.sheetId ? `${base}/rationing/${f.sheetId}` : null;
       const res = await sendSms(f.user.phone, congratsSmsBody(locale, url), cfg).catch((e) => { console.error('congrats sms failed', e); return null; });
-      if (res) { await prisma.rationingFollow.update({ where: { id: f.id }, data: { congratsAt: new Date() } }); sent++; }
+      if (res?.ok) { await prisma.rationingFollow.update({ where: { id: f.id }, data: { congratsAt: new Date() } }); sent++; }
       else skipped++;
     }
     revalidatePath('/admin/rationing/watchers');

@@ -44,7 +44,11 @@ export async function startFollow(input: FollowFields & { phone?: string }): Pro
   if (!input.applicantName?.trim()) return { ok: false, error: 'name_required' };
 
   const session = await auth();
-  const sessionUserId = session?.user?.id ?? null;
+  // Only a CUSTOMER session auto-attaches the follow to that account (it has a verified phone).
+  // A STAFF/admin session must NOT capture it under their phone-less account — fall through to
+  // the typed-phone path so the follow lands on a customer reachable by SMS. (Matches the page,
+  // which shows the phone field to everyone except logged-in customers.)
+  const sessionUserId = session?.user?.type === 'CUSTOMER' ? session.user.id : null;
   if (!sessionUserId && !input.phone?.trim()) return { ok: false, error: 'phone_required' };
 
   const locale = (await getLocale()) as 'ar' | 'en';
