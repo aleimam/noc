@@ -419,22 +419,23 @@ export function ListingForm({
   }
 
   // Auto-fill «مستحقات جهاز المدينة» from the reconciliation calculator (حاسبة التصالح):
-  // reads «أصل المساحة» (+ «المساحة» as the received standard when set), runs the same pure
-  // reconcile() the public /calculator uses, and fills transfer fee / استكمال / the 3 annual
-  // installments. Values stay editable — this is a starting point, not a lock.
+  // reads BOTH «أصل المساحة» (original) and «المساحة» (the ACTUAL area received — used as the
+  // standard; owner decision 2026-07-12: never derive it), runs the same pure reconcile() the
+  // public /calculator uses, and fills transfer fee / استكمال / the 3 annual installments.
+  // Values stay editable — this is a starting point, not a lock.
   function autoCalcAuthorityFees() {
     if (!calcConfig) return;
     setError('');
     const attrByKey = (k: string) => attributes.find((a) => a.key === k && applies(a));
     const origAttr = attrByKey('original_area');
     const orig = origAttr && typeof vals[origAttr.id] === 'string' ? Number(vals[origAttr.id]) : NaN;
-    if (!origAttr || !Number.isFinite(orig) || orig <= 0) {
-      setError(L('أدخل «أصل المساحة» أولًا حتى تعمل حاسبة التصالح', 'Enter the original area first so the reconciliation calculator can run'));
+    const stdAttr = attrByKey('area');
+    const std = stdAttr && typeof vals[stdAttr.id] === 'string' ? Number(vals[stdAttr.id]) : NaN;
+    if (!origAttr || !Number.isFinite(orig) || orig <= 0 || !stdAttr || !Number.isFinite(std) || std <= 0) {
+      setError(L('أدخل «أصل المساحة» و«المساحة» أولًا حتى تعمل حاسبة التصالح', 'Enter the original area and the actual area first so the reconciliation calculator can run'));
       return;
     }
-    const stdAttr = attrByKey('area');
-    const stdRaw = stdAttr && typeof vals[stdAttr.id] === 'string' ? Number(vals[stdAttr.id]) : NaN;
-    const r = reconcile(orig, Number.isFinite(stdRaw) && stdRaw > 0 ? stdRaw : null, calcConfig);
+    const r = reconcile(orig, std, calcConfig);
     if (r.overMax) {
       setError(L(`المساحة أكبر من الحد الأقصى للحاسبة (${r.maxArea} م²) — تواصل مع الجهاز مباشرة`, `Area exceeds the calculator maximum (${r.maxArea} m²)`));
       return;
@@ -862,7 +863,7 @@ export function ListingForm({
                     🧮 {L('احسب تلقائيًا من حاسبة التصالح', 'Auto-calculate from the reconciliation calculator')}
                   </button>
                   <p className="mt-1.5 text-xs opacity-70">
-                    {L('يعتمد الحساب على «أصل المساحة» (و«المساحة» كمساحة قياسية إن وُجدت). تُملأ القيم ويمكنك تعديلها قبل الحفظ.', 'Uses the original area (and the received area as the standard when set). Values are filled in and stay editable.')}
+                    {L('يعتمد الحساب على «أصل المساحة» و«المساحة» (الفعلية المستلمة). تُملأ القيم ويمكنك تعديلها قبل الحفظ.', 'Uses the original area and the actual received area. Values are filled in and stay editable.')}
                   </p>
                 </div>
               )}
