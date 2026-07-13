@@ -177,7 +177,6 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
           </div>
 
           <div className="flex flex-wrap gap-4 text-sm">
-            <label className="flex items-center gap-2"><input type="checkbox" checked={draft.hasBlocks} onChange={(e) => setDraft({ ...draft, hasBlocks: e.target.checked })} /> {t('hasBlocks')}</label>
             <label className="flex items-center gap-2"><input type="checkbox" checked={draft.assortedAreas} onChange={(e) => setDraft({ ...draft, assortedAreas: e.target.checked })} /> {t('assorted')}</label>
             <label className="flex items-center gap-2"><input type="checkbox" checked={draft.isActive} onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })} /> {t('active')}</label>
           </div>

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import { AREA_PRESETS } from '@noc/config';
 import { ImageAttachment, Lightbox, toast, type UploadedAttachment } from '@noc/ui';
 import { RichEditor } from '../pages/RichEditor';
 import {
@@ -18,12 +19,107 @@ import {
   notifyGeoUpdate,
   setDistrictAdjacency,
   setNeighborhoodAdjacency,
+  updateNeighborhoodAreas,
 } from './actions';
 import type { Shape } from './MapAnnotator';
 
 type Level = 'city' | 'district' | 'neighborhood';
 type MapKind = 'location' | 'masterplan' | 'services' | 'mainroads';
 const inp = 'w-full rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm';
+
+/** Available standard plot areas (م²) for a neighborhood — the sizes of land plots buyers can
+ *  get there. Toggle presets or add a custom size; «مساحات متنوعة» means "assorted / no fixed set".
+ *  Saves via updateNeighborhoodAreas. Mirrors the quick editor on the neighborhoods list. */
+export function AreasEditor({
+  neighborhoodId,
+  initialAreas,
+  initialAssorted,
+  locale,
+}: {
+  neighborhoodId: string;
+  initialAreas: number[];
+  initialAssorted: boolean;
+  locale: 'ar' | 'en';
+}) {
+  const t = useTranslations('lands');
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [areas, setAreas] = useState<number[]>([...initialAreas].sort((a, b) => a - b));
+  const [assorted, setAssorted] = useState(initialAssorted);
+  const [custom, setCustom] = useState('');
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
+  const m2 = L('م²', 'm²');
+
+  function persist(nextAreas: number[], nextAssorted: boolean) {
+    start(async () => {
+      const r = await updateNeighborhoodAreas(neighborhoodId, nextAreas, nextAssorted);
+      if (!r.ok) { toast(L('تعذّر الحفظ', 'Save failed'), 'error'); return; }
+      toast(L('تم الحفظ', 'Saved'));
+      router.refresh();
+    });
+  }
+  function toggleArea(a: number) {
+    const next = areas.includes(a) ? areas.filter((x) => x !== a) : [...areas, a].sort((x, y) => x - y);
+    setAreas(next);
+    persist(next, assorted);
+  }
+  function addCustom() {
+    const n = Math.round(Number(custom));
+    if (!Number.isFinite(n) || n <= 0 || areas.includes(n)) { setCustom(''); return; }
+    const next = [...areas, n].sort((x, y) => x - y);
+    setAreas(next);
+    setCustom('');
+    persist(next, assorted);
+  }
+  function toggleAssorted(on: boolean) {
+    setAssorted(on);
+    persist(areas, on);
+  }
+
+  const presets = Array.from(new Set([...AREA_PRESETS, ...areas])).sort((a, b) => a - b);
+
+  return (
+    <div className="space-y-3">
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={assorted} onChange={(e) => toggleAssorted(e.target.checked)} disabled={pending} />
+        {L('مساحات متنوعة (بدون مقاسات ثابتة)', 'Assorted (no fixed sizes)')}
+      </label>
+      {!assorted && (
+        <>
+          <p className="text-xs opacity-60">{L('اختر المساحات القياسية المتاحة لقطع الأراضي في هذه المجاورة، أو أضف مساحة مخصّصة.', 'Pick the standard plot sizes available in this neighborhood, or add a custom one.')}</p>
+          <div className="flex flex-wrap gap-2">
+            {presets.map((a) => {
+              const on = areas.includes(a);
+              return (
+                <button
+                  key={a}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => toggleArea(a)}
+                  className={`rounded-full border px-3 py-1 text-sm ${on ? 'border-accent bg-accent/10 font-semibold text-accent' : 'border-graphite/25 hover:bg-graphite/10'}`}
+                >
+                  {a} {m2}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={custom}
+              onChange={(e) => setCustom(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
+              placeholder={L('مساحة مخصّصة', 'Custom size')}
+              className="w-36 rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm"
+            />
+            <button type="button" disabled={pending || !custom.trim()} onClick={addCustom} className="rounded border border-graphite/25 px-3 py-1 text-sm hover:bg-graphite/10 disabled:opacity-50">+ {t('add')}</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export function AdvantagesEditor({
   level,

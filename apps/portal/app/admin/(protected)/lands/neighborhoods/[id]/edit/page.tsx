@@ -2,8 +2,7 @@ import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { BlocksManager } from '../../../BlocksManager';
-import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, UpdatesEditor, InheritedUpdates, CustomPhotosEditor } from '../../../GeoContentEditors';
+import { AdvantagesEditor, AreaMapEditor, AdjacencyEditor, UpdatesEditor, InheritedUpdates, CustomPhotosEditor, AreasEditor } from '../../../GeoContentEditors';
 import { loadUpdates, loadAreaMaps, followerCount, loadAdjacency, masterplanClean } from '../../../geo';
 import { AmenityAttachPicker } from '../../../AmenityAttachPicker';
 import { amenityPickOptions, placedAmenityIds } from '@/lib/amenities';
@@ -14,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function NeighborhoodEdit({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission('lands', 'UPDATE');
   const { id } = await params;
-  const n = await prisma.neighborhood.findUnique({ where: { id }, include: { district: true, blocks: { orderBy: { order: 'asc' } } } });
+  const n = await prisma.neighborhood.findUnique({ where: { id }, include: { district: true } });
   if (!n) notFound();
 
   const t = await getTranslations('lands');
@@ -46,12 +45,10 @@ export default async function NeighborhoodEdit({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      {n.hasBlocks && (
-        <section className="space-y-2">
-          <h2 className="font-semibold text-primary">{t('blocks')}</h2>
-          <BlocksManager neighborhoodId={n.id} blocks={n.blocks.map((b) => ({ id: b.id, name: b.name, order: b.order }))} />
-        </section>
-      )}
+      <section className="space-y-2">
+        <h2 className="font-semibold text-primary">{t('areas')}</h2>
+        <AreasEditor neighborhoodId={n.id} initialAreas={(n.areas as number[] | null) ?? []} initialAssorted={n.assortedAreas} locale={locale} />
+      </section>
 
       <section className="space-y-2">
         <h2 className="font-semibold text-primary">{t('advantages')}</h2>

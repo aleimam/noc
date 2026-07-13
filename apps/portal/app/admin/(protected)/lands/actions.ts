@@ -213,6 +213,20 @@ export async function upsertNeighborhood(input: {
   }
 }
 
+/** Focused update of a neighborhood's available standard plot areas (المساحات المتاحة) —
+ *  used by the AreasEditor on the neighborhood edit page. `assorted` = «مساحات متنوعة». */
+export async function updateNeighborhoodAreas(id: string, areas: number[], assorted: boolean): Promise<Result> {
+  await requirePermission('lands', 'UPDATE');
+  try {
+    const clean = Array.from(new Set(areas.filter((a) => Number.isFinite(a) && a > 0).map((a) => Math.round(a)))).sort((a, b) => a - b);
+    await prisma.neighborhood.update({ where: { id }, data: { areas: clean, assortedAreas: !!assorted } });
+    rev();
+    return { ok: true, id };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function deleteNeighborhood(id: string): Promise<Result> {
   await requirePermission('lands', 'DELETE');
   try {
