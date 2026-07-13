@@ -46,7 +46,9 @@ export const DEFAULT_CALC_CONFIG: CalculatorConfig = {
   ],
   buyPrice: 3000,
   sellPrice: 750,
-  transferRate: 330,
+  // 180 = نقل الملكية 150/م² (the Authority halved it from 300 — 10%→5%, 2026-07)
+  //     + 30/م² مصاريف إدارية (unchanged).
+  transferRate: 180,
   transferFlat: 135.35,
   adminPct: 1.5,
   adminFlat: 1500,
