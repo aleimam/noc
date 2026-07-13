@@ -332,9 +332,10 @@ export function AdminSidebar({
                 <path d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             ) : (
-              // double chevron toward start → "collapse" (direction is cosmetic under RTL)
+              // double chevron pointing right (») → "collapse" toward the right edge the RTL
+              // sidebar is docked on (points the way the panel slides away).
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
-                <path d="m13 6-6 6 6 6M18 6l-6 6 6 6" />
+                <path d="m11 6 6 6-6 6M6 6l6 6-6 6" />
               </svg>
             )}
           </button>
