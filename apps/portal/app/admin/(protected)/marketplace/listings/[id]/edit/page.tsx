@@ -73,7 +73,6 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
           hasSaleMandate: listing.hasSaleMandate,
           saleMandateDate: listing.saleMandateDate ?? '',
           saleMandatePhoto: papers.mandate,
-          cardTitle: listing.cardTitle ?? '',
           contactPhone: listing.contactPhone,
           contactWhatsapp: listing.contactWhatsapp,
           ownerId: listing.ownerId ?? '',

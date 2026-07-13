@@ -80,7 +80,7 @@ async function gather(listingId: string): Promise<Gathered | null> {
   const l = await prisma.listing.findUnique({
     where: { id: listingId },
     select: {
-      title: true, cardTitle: true, adNumber: true, area: true, neighborhoodId: true, typeOptionId: true,
+      title: true, adNumber: true, area: true, neighborhoodId: true, typeOptionId: true,
       values: {
         select: {
           number: true, bool: true, text: true,
@@ -126,7 +126,7 @@ async function gather(listingId: string): Promise<Gathered | null> {
   }
   const ordered = [...bySec.values()].sort((a, b) => a.order - b.order);
   const nonArea = ordered.slice(1); // drop Area (first section)
-  const headTitle = l.cardTitle?.trim() || l.title; // staff Card Title, falling back to the listing title
+  const headTitle = l.title; // cardTitle retired 2026-07-12 — the listing title is the one headline everywhere
   const headAd = l.adNumber ? `#${l.adNumber}` : '';
 
   // Per-category render marks (Type option × group): a makeCard=false row hides that

@@ -40,7 +40,6 @@ export type ListingInput = {
   hasSaleMandate?: boolean;
   saleMandateDate?: string | null;
   saleMandatePhotoId?: string | null;
-  cardTitle?: string; // staff marketing headline for the generated cards
   contactPhone: string;
   contactWhatsapp: boolean;
   ownerId?: string | null;
@@ -219,8 +218,7 @@ export async function saveListing(input: ListingInput): Promise<Result> {
             ? (input.partnershipType as PartnershipTypeKey)
             : null,
         partnershipNote: input.isPartnership ? input.partnershipNote?.trim().slice(0, 190) || null : null,
-        // Card Title is staff-managed; seller edits must not wipe it.
-        ...(isStaff ? { cardTitle: input.cardTitle?.trim().slice(0, 120) || null } : {}),
+        // (cardTitle retired 2026-07-12 — generated cards use the listing title; the column stays dormant.)
         // Official papers (internal) are staff-managed; partner/seller edits never touch them.
         ...(isStaff
           ? {

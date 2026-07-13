@@ -548,7 +548,7 @@ model Listing {
   priceNegotiable Boolean       @default(false)
   soldPrice       Decimal?      @db.Decimal(14, 2) // set by staff when marked SOLD; optionally shown publicly
   adNumber        String?       @unique // public ad reference YYMM+owner(2)+seq, frozen at publish
-  cardTitle       String? // marketing headline on the generated cards (staff-entered; falls back to title)
+  cardTitle       String? // RETIRED 2026-07-12 (input removed; cards use `title`) — dormant column, kept to avoid a destructive migration
   postersStale    Boolean       @default(false) // generated images out of date vs listing/area data
   featured        Boolean       @default(false) // promoted on the storefront (manual)
   views           Int           @default(0) // public detail-page views (both sites)
