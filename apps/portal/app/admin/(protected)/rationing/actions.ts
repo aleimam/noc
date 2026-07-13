@@ -39,6 +39,10 @@ export async function previewImport(formData: FormData): Promise<PreviewResult> 
   const knownSet = new Set(knownCities.map((c) => c.normalized));
   const newCities = cities.filter((c) => !knownSet.has(c.normalized)).map((c) => c.name);
 
+  // How many active name-watch follows would this upload match? (Same rule as the
+  // importer: a follow's nameNorm is a substring of a parsed name, + plot/block if set.)
+  const watchMatches = await countWatchMatches(rows);
+
   const seen = new Set<string>();
   let newCount = 0;
   let dupFileCount = 0;
@@ -75,12 +79,32 @@ export async function previewImport(formData: FormData): Promise<PreviewResult> 
   return {
     ok: true,
     fileName: file.name || 'upload.xlsx',
-    summary: { total: rows.length, newCount, dupFileCount, dupServerCount, flaggedCount, newCities },
+    summary: { total: rows.length, newCount, dupFileCount, dupServerCount, flaggedCount, newCities, watchMatches },
     rows: out,
   };
 }
 
-type CommitResult = { ok: true; batchId: string; created: number; updated: number; duplicates: number } | { ok: false; error: string };
+/** Count active WATCH follows that the given parsed rows would match (preview heads-up). */
+async function countWatchMatches(rows: ParsedRow[]): Promise<number> {
+  const follows = await prisma.rationingFollow.findMany({
+    where: { kind: 'WATCH', status: 'active' },
+    select: { nameNorm: true, plotNo: true, blockNo: true },
+  });
+  if (!follows.length) return 0;
+  const parsed = rows.flatMap((r) =>
+    r.names.map((n) => ({ norm: normalizeArabic(n), plotNorm: normalizeArabic(r.plotNo), blockNorm: normalizeArabic(r.blockNo) })),
+  );
+  let hits = 0;
+  for (const f of follows) {
+    if (!f.nameNorm) continue;
+    const pn = f.plotNo ? normalizeArabic(f.plotNo) : null;
+    const bn = f.blockNo ? normalizeArabic(f.blockNo) : null;
+    if (parsed.some((p) => p.norm.includes(f.nameNorm) && (!pn || p.plotNorm === pn) && (!bn || p.blockNorm === bn))) hits++;
+  }
+  return hits;
+}
+
+type CommitResult = { ok: true; batchId: string; created: number; updated: number; duplicates: number; matchedWatchers: number } | { ok: false; error: string };
 
 /** Upsert the cities referenced by the rows; return a normalized→id map. */
 async function ensureCities(rows: ParsedRow[]): Promise<Map<string, string>> {
@@ -209,12 +233,15 @@ export async function commitImport(formData: FormData): Promise<CommitResult> {
       data: { rowCount: created + updated, createdCount: created, updatedCount: updated, duplicateCount: duplicates, flaggedCount: flagged },
     });
 
-    // Alert customers whose WATCH follow now matches a row in this batch (req #7/#11).
-    await notifyWatchers(batch.id).catch((e) => console.error('notifyWatchers failed', e));
+    // Alert customers whose WATCH follow now matches a row in this batch (req #7/#11),
+    // and count them so the upload can report how many name-watchers it matched.
+    let matchedWatchers = 0;
+    try { matchedWatchers = await runWatcherMatch(batch.id); } catch (e) { console.error('notifyWatchers failed', e); }
 
     revalidatePath('/admin/rationing/sheets');
     revalidatePath('/admin/rationing');
-    return { ok: true, batchId: batch.id, created, updated, duplicates };
+    revalidatePath('/admin/rationing/watchers');
+    return { ok: true, batchId: batch.id, created, updated, duplicates, matchedWatchers };
   } catch (e) {
     console.error('commitImport failed', e);
     return { ok: false, error: 'commit_failed' };
@@ -224,6 +251,13 @@ export async function commitImport(formData: FormData): Promise<CommitResult> {
 function watchSmsBody(locale: 'ar' | 'en', url: string | null): string {
   if (locale === 'en') return `New Obour: your name appeared in a new rationing sheet.${url ? ' ' + url : ''}`;
   return `العبور الجديدة: ظهر اسمك في كشف تقنين جديد.${url ? ' ' + url : ''}`;
+}
+
+// Warmer, admin-curated congratulations message (sent from the watchers page after a
+// human has reviewed the match) — distinct from the automatic alert above.
+function congratsSmsBody(locale: 'ar' | 'en', url: string | null): string {
+  if (locale === 'en') return `New Obour: Congratulations! Your name appeared in the rationing sheets. Our team will call you shortly.${url ? ' ' + url : ''}`;
+  return `العبور الجديدة: مبروك! ظهر اسمك في كشوف التقنين. سيتواصل معك فريقنا هاتفيًا قريبًا.${url ? ' ' + url : ''}`;
 }
 
 /**
@@ -273,11 +307,6 @@ async function runWatcherMatch(batchId?: string): Promise<number> {
   return matched;
 }
 
-/** For each active WATCH follow, see if this batch contains a matching row; if so, SMS the customer. */
-async function notifyWatchers(batchId: string): Promise<void> {
-  await runWatcherMatch(batchId);
-}
-
 /** Admin action: match all current watchers against every sheet already imported. */
 export async function recheckWatchers(): Promise<{ ok: true; matched: number } | { ok: false; error: string }> {
   await requirePermission('sheets', 'UPDATE');
@@ -316,6 +345,70 @@ export async function deleteFollow(id: string): Promise<{ ok: true } | { ok: fal
     return { ok: true };
   } catch (e) {
     console.error('deleteFollow failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
+/** Admin action: send the curated congratulations SMS to the selected matched watchers.
+ *  Skips any without a phone. Records `congratsAt` on each one actually sent. */
+export async function sendCongratsSms(ids: string[]): Promise<{ ok: true; sent: number; skipped: number } | { ok: false; error: string }> {
+  await requirePermission('sheets', 'UPDATE');
+  if (!ids.length) return { ok: true, sent: 0, skipped: 0 };
+  try {
+    const follows = await prisma.rationingFollow.findMany({
+      where: { id: { in: ids }, kind: 'WATCH' },
+      include: { user: { select: { phone: true, preference: { select: { locale: true } } } } },
+    });
+    const base = (process.env.PORTAL_URL || process.env.NEXTAUTH_URL || '').replace(/\/$/, '');
+    let cfg: Awaited<ReturnType<typeof loadSmsConfig>> | null = null;
+    let sent = 0;
+    let skipped = 0;
+    for (const f of follows) {
+      if (!f.user?.phone) { skipped++; continue; }
+      if (!cfg) cfg = await loadSmsConfig();
+      const locale = (f.user.preference?.locale?.toLowerCase() === 'en' ? 'en' : 'ar') as 'ar' | 'en';
+      const url = base && f.sheetId ? `${base}/rationing/${f.sheetId}` : null;
+      const res = await sendSms(f.user.phone, congratsSmsBody(locale, url), cfg).catch((e) => { console.error('congrats sms failed', e); return null; });
+      if (res) { await prisma.rationingFollow.update({ where: { id: f.id }, data: { congratsAt: new Date() } }); sent++; }
+      else skipped++;
+    }
+    revalidatePath('/admin/rationing/watchers');
+    return { ok: true, sent, skipped };
+  } catch (e) {
+    console.error('sendCongratsSms failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
+/** Admin action: mark the selected matched watchers as contacted-by-phone (→ Done). */
+export async function markContacted(ids: string[]): Promise<{ ok: true; n: number } | { ok: false; error: string }> {
+  await requirePermission('sheets', 'UPDATE');
+  if (!ids.length) return { ok: true, n: 0 };
+  try {
+    const session = await auth();
+    const by = session?.user?.email ?? session?.user?.id ?? null;
+    const res = await prisma.rationingFollow.updateMany({
+      where: { id: { in: ids }, kind: 'WATCH' },
+      data: { contactedAt: new Date(), contactedBy: by },
+    });
+    revalidatePath('/admin/rationing/watchers');
+    revalidatePath('/admin/rationing');
+    return { ok: true, n: res.count };
+  } catch (e) {
+    console.error('markContacted failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
+/** Admin action: undo a contacted mark (send it back to the follow-up queue). */
+export async function unmarkContacted(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requirePermission('sheets', 'UPDATE');
+  try {
+    await prisma.rationingFollow.update({ where: { id }, data: { contactedAt: null, contactedBy: null } });
+    revalidatePath('/admin/rationing/watchers');
+    return { ok: true };
+  } catch (e) {
+    console.error('unmarkContacted failed', e);
     return { ok: false, error: 'failed' };
   }
 }

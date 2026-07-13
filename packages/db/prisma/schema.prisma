@@ -1014,7 +1014,10 @@ model RationingFollow {
   cityId         String?
   sheetId        String? // source row (FOUND) or the row that matched a WATCH
   status         String              @default("active") // active | matched | closed
-  lastNotifiedAt DateTime?
+  lastNotifiedAt DateTime? // the AUTOMATIC "your name appeared" alert sent on import
+  congratsAt     DateTime? // admin-sent congratulations SMS (curated, from the watchers page)
+  contactedAt    DateTime? // marked contacted-by-phone → the follow-up is Done
+  contactedBy    String? // admin email/id who marked it contacted (audit)
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
@@ -1025,6 +1028,7 @@ model RationingFollow {
   @@index([nameNorm])
   @@index([userId])
   @@index([status, kind])
+  @@index([contactedAt])
 }
 
 /// A scanned rationing-sheet page. Linked to applicant rows by file name == RationingSheet.sourceFile.

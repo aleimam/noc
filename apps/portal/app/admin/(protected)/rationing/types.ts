@@ -40,6 +40,7 @@ export type PreviewResult =
         dupServerCount: number; // already present on the server
         flaggedCount: number;
         newCities: string[];
+        watchMatches: number; // active name-watch follows this upload would match
       };
       rows: PreviewRow[]; // capped sample for the UI
     }

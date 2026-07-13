@@ -55,7 +55,9 @@ export function ImportSheets() {
     start(async () => {
       const r = await commitImport(fd);
       if (r.ok) {
-        setMsg({ ok: true, text: t('importSummary', { created: r.created, updated: r.updated, dup: r.duplicates }) });
+        const summary = t('importSummary', { created: r.created, updated: r.updated, dup: r.duplicates });
+        const matched = r.matchedWatchers > 0 ? ' ' + t('importWatchMatched', { n: r.matchedWatchers }) : '';
+        setMsg({ ok: true, text: summary + matched });
         setPreview(null);
         setFile(null);
         router.refresh();
@@ -92,12 +94,13 @@ export function ImportSheets() {
             <span className="text-xs opacity-60">{preview.fileName}</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Stat label={t('total')} value={preview.summary.total} />
             <Stat label={t('willAdd')} value={preview.summary.newCount} tone="green" />
             <Stat label={t('dupInFile')} value={preview.summary.dupFileCount} tone="amber" />
             <Stat label={t('dupOnServer')} value={preview.summary.dupServerCount} tone="amber" />
             <Stat label={t('flaggedRows')} value={preview.summary.flaggedCount} tone="amber" />
+            <Stat label={t('previewWatchMatches')} value={preview.summary.watchMatches} tone="green" />
           </div>
 
           {preview.summary.newCities.length > 0 && (
