@@ -2,7 +2,7 @@
 
 Master onboarding for anyone (human or Claude session) picking up this repo. It captures the
 architecture, the production runbook, and every hard-won gotcha. Deeper docs are linked at the
-bottom. Last full update: **2026-07-12**.
+bottom. Last full update: **2026-07-13**.
 
 ## What this is
 
@@ -157,7 +157,7 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 | **Partner portal (multi-site)** | `/partner` on BOTH domains | 100% shared via `@noc/partner-portal`; per-partner site access (`Owner.siteNewObour/siteAlsawary`); partner listings show only on enabled sites; lean listing form both sides; login = password OR OTP (SMS/email) |
 | Rationing (كشوف التقنين) | portal `/rationing`, admin sheets/scans | Excel import, soft Arabic search, quotas by security level |
 | Lands/geo explorer | portal `/explore` | city→district→neighborhood→block, masterplans, advantages, amenities. Neighborhood inherits district LOCATION map if it has none (explore only, never listings) |
-| Calculator | portal `/calculator` | area + تصالح cost calc, admin-editable rates |
+| Calculator | portal `/calculator` | area + تصالح cost calc, admin-editable rates (transfer 180/م² since the Authority's 2026-07 cut); the listing form's «مستحقات جهاز المدينة» auto-fills from the same `reconcile()` (🧮 button, needs أصل المساحة + المساحة) |
 | News / Guide / Price index / Owner profiles | portal | public surfaces |
 | Web analytics | admin `/admin/analytics` | first-party: sessions, events, funnel, Web Vitals, cohorts, rollups, saved views |
 | **Search Intelligence** | public search on market/storefront/rationing · admin `/admin/analytics/search` | every search logged to `SearchLog` (Arabic-normalized, zeroResult, usedFastSearch) + select/convert attribution via `/api/search-event` beacons (heuristic recency — no server session id). Dashboard (funnel, top/zero/converting terms, filter by window·site·surface, RBAC `analytics`) hosts the **synonym dictionary** (`SearchSynonym` groups expand query tokens: term AND kept, variants OR'd) and the **zero-result lead inbox** (`SearchLead` — leads carry a phone, so inbox + editors need `analytics:MANAGE`). Public extras: zero-result "leave your number" card (`ZeroResultLead` → rate-limited `/api/search-lead`) and autocomplete (`SearchAutocomplete` → `/api/search-suggest`: cached corpus of types + geo names, trending when empty; picked suggestion sets `fast=1` → `usedFastSearch`). ⚠️ `apps/{portal,brokerage}/lib/search.ts` are MIRRORS — keep identical |
@@ -165,7 +165,7 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 | Appearance/theming | admin settings | per-site colors/fonts via Setting `theme.<brand>` |
 | Security posture | admin settings | `security.level` LIGHT/MEDIUM/HIGH gates scans/maps/quotas |
 
-## Current state & pending (as of 2026-07-12)
+## Current state & pending (as of 2026-07-13)
 
 **Owner-blocked (waiting on the owner, everything else is prepped):**
 1. **Cloudflare proxy flip (Part C)** — pure dashboard task now; ordered checklist in
@@ -182,6 +182,25 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 5. `/code-review ultra` — owner-triggered, billed; fold findings into `security.md` §7.
 6. **Enable the Price Index module** (Settings → Modules → مؤشر الأسعار) when the owner wants
    `/price-index` public — the page + monthly snapshot cron are live but hidden by this toggle.
+
+**2026-07-13: admin-workflow batch (commits `32c9194` → `4a77aa2`, all deployed+verified):**
+Al Sawarey classifier trio (Type «أرض - تم التخصيص» / Purpose «عمارة سكني» / Condition «جاري
+ترفيق الحي») now pre-selects when the brokerage channel is toggled ON on a FRESH staff form —
+both entry points; resolved by stable option keys (`land_allocated`/`housing_building`/
+`utility_ongoing`) via `loadAlsawareyDefaults()` in the account-listings catalog, so admin
+renames don't break it. **Card Title RETIRED** (owner request): input + plumbing removed,
+generated posters always use the listing title; `Listing.cardTitle` stays as a dormant column.
+Neighborhoods admin list: **blocks column removed** (owner: blocks are just a number like plot
+no., not geo units) and replaced by sortable map-coverage badges (🗺️ مخطط / 📍 موقع). **Fixed**:
+the in-form masterplan annotator never appeared on `/admin/newobour/market/new` (the page didn't
+pass `nbMasterplans` — the marketplace pages did). **حاسبة التصالح transfer fee cut per the
+Authority (10%→5%)**: `transferRate` 330 → **180**/م² (150 نقل ملكية + 30 إداري; `transferFlat`
+135.35 unchanged) in both the code default and the live prod Setting. **NEW: 🧮 auto-calc on
+listings** — the «مستحقات جهاز المدينة» section has a button running the same `reconcile()` as
+`/calculator` (live rates via `getCalculatorConfig()`, passed to `ListingForm` on all five portal
+entry points); inputs are «أصل المساحة» + «المساحة» (actual — BOTH required, standard is never
+derived; owner decision) and it fills `ownership_fees`/`remaining_fees`/`first|second|third_annual`
+— editable after fill.
 
 **2026-07-12: Search Intelligence COMPLETE (S1→S3c, all deployed+verified):** S1 logging + fuzzy
 per-token Arabic matching · S2 select/convert beacons · S3a dashboard + rationing wired into the

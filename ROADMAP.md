@@ -11,7 +11,25 @@ SMS gateway, and next-intl ar/en.
 
 ---
 
-## 📌 Current status (2026-07-12)
+## 📌 Current status (2026-07-13)
+
+**Shipped 2026-07-13 (commits `32c9194` → `4a77aa2`):**
+- **Al Sawarey listing defaults** — toggling «عرض هذا الإعلان على الصواري» on a fresh staff form
+  pre-selects the standard trio (أرض - تم التخصيص / عمارة سكني / جاري ترفيق الحي) on both entry
+  points, resolved by stable option keys via `loadAlsawareyDefaults()` (rename-proof).
+- **Card Title retired** (owner request) — input + plumbing removed; posters always use the
+  listing title; `Listing.cardTitle` left as a dormant column.
+- **Neighborhoods admin list** — blocks column removed (blocks = just a number, not geo units);
+  sortable map-coverage badges added (🗺️ مخطط / 📍 موقع, green ✓ when present).
+- **Annotator bug fixed** — `/admin/newobour/market/new` never passed `nbMasterplans`, so the
+  in-form plot annotator always claimed the neighborhood had no masterplan.
+- **حاسبة التصالح: transfer fee cut per the Authority (10%→5%)** — `transferRate` 330 → **180**/م²
+  (150 نقل ملكية + 30 إداري; flat 135.35 unchanged), code default + live prod Setting.
+- **🧮 Auto-calc on listings** — «مستحقات جهاز المدينة» fills from the same `reconcile()` as
+  `/calculator` (live rates), inputs = أصل المساحة + المساحة (both required, standard never
+  derived), outputs = نقل الملكية / الاستكمال / الأقساط الثلاثة; values stay editable.
+
+## 📌 Previous status (2026-07-12)
 
 **Shipped 2026-07-12, later batches (commits `d3c8e94` → `28be3e7`):**
 - **Search Intelligence — COMPLETE, S1→S3c** (#8 below): unified search logging + fuzzy Arabic
