@@ -28,6 +28,18 @@ SMS gateway, and next-intl ar/en.
   on both sites (ImageObject captions inherit automatically); lean partner form now passes a
   filename hint (was bare UUIDs).
 
+**Shipped 2026-07-12, final batch — polish + hardening pass (commit `7ade160`):** 3 parallel
+reviews (security / correctness / UX) over all of the above → **22 verified fixes**, deployed +
+live-verified. Headliners: storefront EAV read-path fix (`listItem ?? option` — post-migration
+listings had silently lost city/district on cards, wishlist, compare, the search haystack, and
+similar-lands had degraded to area-only); required-city enforced server-side (publish only);
+per-IP rate limits on the search-log write (20/min), `/api/search-event` (60/min) and
+`/api/search-lead` (+ global hourly ceiling, 24h dedupe, honeypot, required query); trending
+suggestions windowed 14d + cached 60s + display-capped; synonym dictionary cached 60s; bigram
+matching for multi-word synonym groups; SearchLog retention in the nightly prune cron (≥365d);
+always-0% refinement KPI removed; explicit «بحث» buttons (were 🔍-only), header search upgraded
+to autocomplete, 16px inputs (iOS zoom), ≥40px admin touch targets, «(مطلوب)» word markers.
+
 **Shipped 2026-07-12, morning (commits `9e5364d`, `877d565`):**
 - **Geo Directory (الدليل الجغرافي)** — section renamed; **city-level updates** (GeoUpdate.cityId,
   editable from the City page or the central Updates section; no SMS notify — no city follows);
@@ -259,6 +271,14 @@ lead capture + admin synonym dictionary + autocomplete/trending.
 deliberately has **no typeahead** (would leak register names) and keeps its own
 did-you-mean layer. The visitor-analytics "Top searches" tile reads `AnalyticsEvent`, not
 `SearchLog` — separate systems.
+
+**Hardened 2026-07-12 (commit `7ade160`, same-day review pass):** rate limits on the log write /
+event beacon / lead endpoint (+ honeypot, 24h dedupe, global ceiling, required query); trending
+windowed (14d) + cached (60s) + display-capped (attacker-controlled raw text); synonym dictionary
+cached 60s (was a per-search DB hit); bigram probing so multi-word groups actually trigger;
+`SearchLog` pruned nightly (≥365d kept — matches the dashboard's widest window); the
+refinement-rate KPI removed (structurally unmeasurable, always read 0%); and the storefront card
+read path fixed to `listItem ?? option` — which also restored city/district in search + similar-lands.
 
 ---
 

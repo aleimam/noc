@@ -137,6 +137,16 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   polymorphic `Attachment` (`ownerType`/`ownerId`/`attributeId`).
 - **Owner display rule:** partners see UNBRANDED assets only; branded posters are per-brand
   (photo-stamping engine with per-category rules).
+- **EAV SELECT read path:** since the 2026-07 option-lists migration, SELECT values are stored
+  as `listItemId` (shared OptionList); legacy rows still carry `optionId`. ANY read of a SELECT
+  value MUST fall back `listItem ?? option` — reading only `option` silently dropped city/district
+  from every post-migration storefront card + search haystack (found & fixed in the 2026-07-12
+  hardening pass; same trap existed in `similarLands`).
+- **Public write endpoints get an in-app rate limit** (`lib/rateLimit.ts` per app: in-memory,
+  X-Real-IP-trusting, size-capped). Convention from the hardening pass: page-render log writes
+  ~20/min/IP (feature keeps working over the cap — only the WRITE stops), beacons ~60/min/IP,
+  lead-style forms get per-IP + a global ceiling + dedupe + a honeypot field. Anything derived
+  from unauthenticated writes (e.g. trending suggestions) must be windowed + cached + length-capped.
 
 ## Feature map (all live in production)
 
@@ -183,6 +193,20 @@ Al Sawarey hero + header. Same day: numerical district/neighborhood ordering eve
 My-Lands kept), city now a mandatory auto-selected basic detail on every listing
 (`REQUIRED_LISTING_ATTR_KEYS` in @noc/config + `ops/city-mandatory.ts`, ran on prod), and photo
 SEO enriched (alt text + upload filenames lead with city → district → neighborhood).
+
+**2026-07-12 (end of day): polish + hardening pass (commit `7ade160`)** — 3 parallel reviews
+(security / correctness / UX) over everything shipped that day → **22 verified fixes, all
+deployed + live-verified**. Headliners: the EAV `listItem ?? option` read-path fix (see
+Architecture rules — storefront cards/search/similar-lands had silently lost city+district on
+every post-migration listing); required listing details now enforced SERVER-side (publish only —
+drafts may stay incomplete); rate limits per the new convention (search-log write 20/min/IP,
+`/api/search-event` 60/min/IP, `/api/search-lead` + global ceiling + 24h dedupe + honeypot +
+required query); trending suggestions windowed 14d + cached 60s + display-capped; synonym
+dictionary cached 60s; `SearchLog` pruned by the nightly `noc-analytics-prune` cron (≥365d kept);
+bigram matching so multi-word synonym groups («الحي العاشر») actually trigger; the misleading
+always-0% refinement KPI removed (sessionId is never server-readable). UX: explicit «بحث» text
+buttons (were 🔍-only), Al Sawarey header search upgraded to the same autocomplete, 16px inputs
+everywhere (iOS focus-zoom), ≥40px admin touch targets, «(مطلوب)» word markers on required fields.
 
 **2026-07-11 sweep (see ROADMAP "Current status"):** full UI/UX review fixed+deployed (~80
 findings incl. wa.me links via shared `waPhone()`, Toaster in both apps, partner photo-drop,
