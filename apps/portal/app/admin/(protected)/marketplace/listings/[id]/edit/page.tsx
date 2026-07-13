@@ -4,6 +4,7 @@ import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { ListingForm } from '@/app/account/listings/ListingForm';
 import { loadCatalog, buildVals, loadListingAttachments, loadListingPapers } from '@/app/account/listings/catalog';
+import { getCalculatorConfig } from '@/lib/calculator/config';
 import { AreaMapEditor } from '../../../../lands/GeoContentEditors';
 import { loadAreaMaps, masterplanClean } from '../../../../lands/geo';
 import { PosterPanel } from '../PosterPanel';
@@ -18,9 +19,10 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();
-  const [owners, attachData] = await Promise.all([
+  const [owners, attachData, calcConfig] = await Promise.all([
     prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } }),
     loadListingAttachments(id),
+    getCalculatorConfig(),
   ]);
   const { photos, attachs } = attachData;
   const papers = await loadListingPapers(id);
@@ -52,6 +54,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
         nbMasterplans={Object.fromEntries(nbMaps.map((m) => [m.areaId, m.cleanPath]))}
         locationAnnotation={lmaps.locationAnnotation}
         savedNeighborhoodId={listing.neighborhoodId}
+        calcConfig={calcConfig}
         initial={{
           id: listing.id,
           typeOptionId: listing.typeOptionId ?? '',

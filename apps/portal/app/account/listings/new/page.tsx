@@ -4,6 +4,7 @@ import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { ListingForm } from '../ListingForm';
 import { loadCatalog } from '../catalog';
+import { getCalculatorConfig } from '../../../../lib/calculator/config';
 
 export default async function NewListing({
   searchParams,
@@ -19,6 +20,7 @@ export default async function NewListing({
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const { classifiers, sections, attributes, standardAreas, buildingConditions, partnershipsOn } = await loadCatalog();
+  const calcConfig = await getCalculatorConfig();
   const dbUser = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { phone: true },
@@ -38,6 +40,7 @@ export default async function NewListing({
         standardAreas={standardAreas}
         buildingConditions={buildingConditions}
         partnershipsEnabled={partnershipsOn}
+        calcConfig={calcConfig}
         initial={{
           typeOptionId: '',
           purposeOptionId: '',

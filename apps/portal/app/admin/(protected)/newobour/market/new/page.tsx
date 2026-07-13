@@ -3,6 +3,7 @@ import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { ListingForm } from '@/app/account/listings/ListingForm';
 import { loadCatalog, loadAlsawareyDefaults } from '@/app/account/listings/catalog';
+import { getCalculatorConfig } from '@/lib/calculator/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,7 @@ export default async function NewObourNewListing() {
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);
   const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();
-  const [owners, alsawareyDefaults, nbMaps] = await Promise.all([
+  const [owners, alsawareyDefaults, nbMaps, calcConfig] = await Promise.all([
     prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } }),
     // Ticking «عرض هذا الإعلان على الصواري» on this (New-Obour-first) form pre-selects the
     // standard Al Sawarey classifier trio.
@@ -23,6 +24,8 @@ export default async function NewObourNewListing() {
     // Neighborhood masterplans feed the in-form location-map annotator (same as the
     // marketplace new/edit pages — without this the annotator never appears here).
     prisma.areaMap.findMany({ where: { level: 'neighborhood', kind: 'masterplan' }, select: { areaId: true, cleanPath: true } }),
+    // Live حاسبة التصالح rates → the «احسب تلقائيًا» button on مستحقات جهاز المدينة.
+    getCalculatorConfig(),
   ]);
 
   return (
@@ -35,6 +38,7 @@ export default async function NewObourNewListing() {
         staffMode
         returnTo="/admin/newobour/market"
         alsawareyDefaults={alsawareyDefaults}
+        calcConfig={calcConfig}
         nbMasterplans={Object.fromEntries(nbMaps.map((m) => [m.areaId, m.cleanPath]))}
         owners={owners.map((o) => ({ id: o.id, name: o.name, type: o.type }))}
         classifiers={classifiers}

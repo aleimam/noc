@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ImageAttachment, Lightbox, type UploadedAttachment } from '@noc/ui';
+import { ImageAttachment, Lightbox, toast, type UploadedAttachment } from '@noc/ui';
 import { localizeUnit } from '@noc/i18n';
 import { roundToStandardArea, formatMoneyThousands, formatMoneyEgp, formatArea, isValidPhone, REQUIRED_LISTING_ATTR_KEYS } from '@noc/config';
+import { reconcile, type CalculatorConfig } from '../../../lib/calculator/calc';
 import { RichEditor } from '../../admin/(protected)/pages/RichEditor';
 import { setAreaMap } from '../../admin/(protected)/lands/actions';
 import type { Shape } from '../../admin/(protected)/lands/MapAnnotator';
@@ -24,6 +25,11 @@ type Opt = { id: string; labelAr: string; labelEn: string; districtId?: string }
 type Attr = { id: string; key: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; config?: AttrCfg; order: number; options: Opt[]; optionIds: string[] };
 
 const REQUIRED_ATTR_KEYS = new Set<string>(REQUIRED_LISTING_ATTR_KEYS);
+
+// «مستحقات جهاز المدينة» auto-fill: these attribute keys map 1:1 onto the reconciliation
+// calculator's outputs (see autoCalcAuthorityFees). Input = «أصل المساحة» (original_area);
+// «المساحة» (area) is used as the received standard when present.
+const AUTHORITY_FEE_KEYS = new Set(['ownership_fees', 'remaining_fees', 'first_annual', 'second_annual', 'third_annual']);
 
 const NUMERIC_TYPES = new Set(['NUMBER', 'MONEY', 'MONEY_THOUSANDS', 'AREA_ORIGINAL', 'AREA_ALLOCATED']);
 type Section = { id: string; nameAr: string; nameEn: string; order: number };
@@ -85,6 +91,7 @@ export function ListingForm({
   savedNeighborhoodId = null,
   partnershipsEnabled = true,
   alsawareyDefaults = null,
+  calcConfig = null,
 }: {
   classifiers: Classifier[];
   sections: Section[];
@@ -106,6 +113,8 @@ export function ListingForm({
   /** Standard Al Sawarey classifier trio (Type/Purpose/Condition option ids) — pre-selected when
    *  staff turn the Al Sawarey channel ON on a fresh form. See loadAlsawareyDefaults(). */
   alsawareyDefaults?: { typeOptionId: string; purposeOptionId: string; conditionOptionId: string } | null;
+  /** Live حاسبة التصالح config — enables the «احسب تلقائيًا» button on مستحقات جهاز المدينة. */
+  calcConfig?: CalculatorConfig | null;
 }) {
   const t = useTranslations('mp');
   const tc = useTranslations('common');
@@ -407,6 +416,45 @@ export function ListingForm({
         router.push(returnTo ?? (staffMode ? '/admin/marketplace/listings' : partnerMode ? '/partner' : '/account/listings'));
       } else setError(r.error === 'invalid_phone' ? tc('phoneInvalid') : tc('saveFailed'));
     });
+  }
+
+  // Auto-fill «مستحقات جهاز المدينة» from the reconciliation calculator (حاسبة التصالح):
+  // reads «أصل المساحة» (+ «المساحة» as the received standard when set), runs the same pure
+  // reconcile() the public /calculator uses, and fills transfer fee / استكمال / the 3 annual
+  // installments. Values stay editable — this is a starting point, not a lock.
+  function autoCalcAuthorityFees() {
+    if (!calcConfig) return;
+    setError('');
+    const attrByKey = (k: string) => attributes.find((a) => a.key === k && applies(a));
+    const origAttr = attrByKey('original_area');
+    const orig = origAttr && typeof vals[origAttr.id] === 'string' ? Number(vals[origAttr.id]) : NaN;
+    if (!origAttr || !Number.isFinite(orig) || orig <= 0) {
+      setError(L('أدخل «أصل المساحة» أولًا حتى تعمل حاسبة التصالح', 'Enter the original area first so the reconciliation calculator can run'));
+      return;
+    }
+    const stdAttr = attrByKey('area');
+    const stdRaw = stdAttr && typeof vals[stdAttr.id] === 'string' ? Number(vals[stdAttr.id]) : NaN;
+    const r = reconcile(orig, Number.isFinite(stdRaw) && stdRaw > 0 ? stdRaw : null, calcConfig);
+    if (r.overMax) {
+      setError(L(`المساحة أكبر من الحد الأقصى للحاسبة (${r.maxArea} م²) — تواصل مع الجهاز مباشرة`, `Area exceeds the calculator maximum (${r.maxArea} m²)`));
+      return;
+    }
+    const fill: Record<string, number> = {
+      ownership_fees: r.transferFee,
+      remaining_fees: r.estekmal,
+      first_annual: r.installments[0],
+      second_annual: r.installments[1],
+      third_annual: r.installments[2],
+    };
+    setVals((prev) => {
+      const next = { ...prev };
+      for (const [k, v] of Object.entries(fill)) {
+        const a = attrByKey(k);
+        if (a) next[a.id] = String(v);
+      }
+      return next;
+    });
+    toast(L('تم حساب المستحقات من حاسبة التصالح — راجع القيم قبل الحفظ', 'Dues calculated from the reconciliation calculator — review before saving'));
   }
 
   // Compose a title from the chosen categories + first Area detail with a value + price.
@@ -803,6 +851,21 @@ export function ListingForm({
           grouped.map((g) => (
             <div key={g.section.id} className="space-y-3 rounded-lg border border-graphite/15 p-4">
               <h4 className="font-semibold text-primary">{L(g.section.nameAr, g.section.nameEn)}</h4>
+              {/* «مستحقات جهاز المدينة»: one-tap auto-fill from the reconciliation calculator. */}
+              {calcConfig && g.attrs.some((a) => AUTHORITY_FEE_KEYS.has(a.key)) && (
+                <div className="rounded-lg border border-gold-300/60 bg-gold/10 p-3">
+                  <button
+                    type="button"
+                    onClick={autoCalcAuthorityFees}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-soft hover:brightness-110"
+                  >
+                    🧮 {L('احسب تلقائيًا من حاسبة التصالح', 'Auto-calculate from the reconciliation calculator')}
+                  </button>
+                  <p className="mt-1.5 text-xs opacity-70">
+                    {L('يعتمد الحساب على «أصل المساحة» (و«المساحة» كمساحة قياسية إن وُجدت). تُملأ القيم ويمكنك تعديلها قبل الحفظ.', 'Uses the original area (and the received area as the standard when set). Values are filled in and stay editable.')}
+                  </p>
+                </div>
+              )}
               <div className="grid gap-3 sm:grid-cols-2">
                 {g.attrs.map((a) => (
                   <label key={a.id} className="text-sm">

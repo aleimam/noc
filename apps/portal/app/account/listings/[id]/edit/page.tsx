@@ -4,6 +4,7 @@ import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { ListingForm } from '../../ListingForm';
 import { loadCatalog, buildVals, loadListingAttachments } from '../../catalog';
+import { getCalculatorConfig } from '../../../../../lib/calculator/config';
 
 export default async function EditListing({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -17,6 +18,7 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();
+  const calcConfig = await getCalculatorConfig();
   const { photos, attachs } = await loadListingAttachments(id);
   const vals = buildVals(listing.values, new Map(attributes.map((a) => [a.id, a.type])));
 
@@ -33,6 +35,7 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
         locale={locale}
         standardAreas={standardAreas}
         buildingConditions={buildingConditions}
+        calcConfig={calcConfig}
         initial={{
           id: listing.id,
           typeOptionId: listing.typeOptionId ?? '',
