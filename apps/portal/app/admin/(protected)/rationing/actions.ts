@@ -226,23 +226,30 @@ function watchSmsBody(locale: 'ar' | 'en', url: string | null): string {
   return `العبور الجديدة: ظهر اسمك في كشف تقنين جديد.${url ? ' ' + url : ''}`;
 }
 
-/** For each active WATCH follow, see if this batch contains a matching row; if so, SMS the customer. */
-async function notifyWatchers(batchId: string): Promise<void> {
+/**
+ * Match active WATCH follows against sheets and alert the customer on each hit.
+ * Scoped to one batch (on import) when `batchId` is given; otherwise scans EVERY
+ * sheet — used by the admin "check existing sheets" button so a name that was
+ * already in an older sheet before the person subscribed still gets caught.
+ * Returns the number of follows newly moved to `matched`.
+ */
+async function runWatcherMatch(batchId?: string): Promise<number> {
   const follows = await prisma.rationingFollow.findMany({
     where: { kind: 'WATCH', status: 'active' },
     include: { user: { select: { phone: true, preference: { select: { locale: true } } } } },
   });
-  if (!follows.length) return;
+  if (!follows.length) return 0;
 
   const base = (process.env.PORTAL_URL || process.env.NEXTAUTH_URL || '').replace(/\/$/, '');
   let cfg: Awaited<ReturnType<typeof loadSmsConfig>> | null = null;
+  let matched = 0;
 
   for (const f of follows) {
     if (!f.nameNorm) continue;
     const where: Prisma.RationingNameWhereInput = {
       normalized: { contains: f.nameNorm },
       sheet: {
-        batchId,
+        ...(batchId ? { batchId } : {}),
         ...(f.plotNo ? { plotNorm: normalizeArabic(f.plotNo) } : {}),
         ...(f.blockNo ? { blockNorm: normalizeArabic(f.blockNo) } : {}),
       },
@@ -254,6 +261,7 @@ async function notifyWatchers(batchId: string): Promise<void> {
       where: { id: f.id },
       data: { status: 'matched', sheetId: hit.sheetId, lastNotifiedAt: new Date() },
     });
+    matched++;
 
     if (f.user?.phone) {
       if (!cfg) cfg = await loadSmsConfig();
@@ -261,6 +269,54 @@ async function notifyWatchers(batchId: string): Promise<void> {
       const url = base ? `${base}/rationing/${hit.sheetId}` : null;
       await sendSms(f.user.phone, watchSmsBody(locale, url), cfg).catch((e) => console.error('watch sms failed', e));
     }
+  }
+  return matched;
+}
+
+/** For each active WATCH follow, see if this batch contains a matching row; if so, SMS the customer. */
+async function notifyWatchers(batchId: string): Promise<void> {
+  await runWatcherMatch(batchId);
+}
+
+/** Admin action: match all current watchers against every sheet already imported. */
+export async function recheckWatchers(): Promise<{ ok: true; matched: number } | { ok: false; error: string }> {
+  await requirePermission('sheets', 'UPDATE');
+  try {
+    const matched = await runWatcherMatch();
+    revalidatePath('/admin/rationing/watchers');
+    revalidatePath('/admin/rationing');
+    return { ok: true, matched };
+  } catch (e) {
+    console.error('recheckWatchers failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
+/** Admin action: stop (`closed`) or resume (`active`) a WATCH follow. */
+export async function setFollowStatus(id: string, status: 'active' | 'closed'): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requirePermission('sheets', 'UPDATE');
+  try {
+    await prisma.rationingFollow.update({ where: { id }, data: { status } });
+    revalidatePath('/admin/rationing/watchers');
+    revalidatePath('/admin/rationing');
+    return { ok: true };
+  } catch (e) {
+    console.error('setFollowStatus failed', e);
+    return { ok: false, error: 'failed' };
+  }
+}
+
+/** Admin action: permanently remove a WATCH follow. */
+export async function deleteFollow(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requirePermission('sheets', 'DELETE');
+  try {
+    await prisma.rationingFollow.delete({ where: { id } });
+    revalidatePath('/admin/rationing/watchers');
+    revalidatePath('/admin/rationing');
+    return { ok: true };
+  } catch (e) {
+    console.error('deleteFollow failed', e);
+    return { ok: false, error: 'failed' };
   }
 }
 
