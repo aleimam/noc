@@ -2,7 +2,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { ListingForm } from '@/app/account/listings/ListingForm';
-import { loadCatalog } from '@/app/account/listings/catalog';
+import { loadCatalog, loadAlsawareyDefaults } from '@/app/account/listings/catalog';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,12 @@ export default async function NewObourNewListing() {
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);
   const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();
-  const owners = await prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } });
+  const [owners, alsawareyDefaults] = await Promise.all([
+    prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } }),
+    // Ticking «عرض هذا الإعلان على الصواري» on this (New-Obour-first) form pre-selects the
+    // standard Al Sawarey classifier trio.
+    loadAlsawareyDefaults(),
+  ]);
 
   return (
     <div className="space-y-4">
@@ -26,6 +31,7 @@ export default async function NewObourNewListing() {
       <ListingForm
         staffMode
         returnTo="/admin/newobour/market"
+        alsawareyDefaults={alsawareyDefaults}
         owners={owners.map((o) => ({ id: o.id, name: o.name, type: o.type }))}
         classifiers={classifiers}
         sections={sections}

@@ -85,6 +85,7 @@ export function ListingForm({
   locationAnnotation = null,
   savedNeighborhoodId = null,
   partnershipsEnabled = true,
+  alsawareyDefaults = null,
 }: {
   classifiers: Classifier[];
   sections: Section[];
@@ -103,6 +104,9 @@ export function ListingForm({
   /** Saved location-map shapes (edit page), reused when the same neighborhood stays selected. */
   locationAnnotation?: Shape[] | null;
   savedNeighborhoodId?: string | null;
+  /** Standard Al Sawarey classifier trio (Type/Purpose/Condition option ids) — pre-selected when
+   *  staff turn the Al Sawarey channel ON on a fresh form. See loadAlsawareyDefaults(). */
+  alsawareyDefaults?: { typeOptionId: string; purposeOptionId: string; conditionOptionId: string } | null;
 }) {
   const t = useTranslations('mp');
   const tc = useTranslations('common');
@@ -208,11 +212,30 @@ export function ListingForm({
   }
 
   // Toggling the channel resets classifier choices so only valid options can be picked.
+  // Turning it ON on a FRESH form (nothing chosen yet) pre-selects the standard Al Sawarey trio
+  // (Type «أرض - تم التخصيص» / Purpose «عمارة سكني» / الحالة «جاري ترفيق الحي») — staff can still
+  // change them. A form with choices keeps the old clear-all behavior so we never silently
+  // relabel an existing selection.
   function toggleBrokerage(on: boolean) {
     setShowOnBrokerage(on);
     setSelected((prev) => {
       const next = { ...prev };
-      for (const c of classifiers) if (c.key === 'type' || c.key === 'purpose' || c.key === 'condition') next[c.id] = '';
+      const untouched = (['type', 'purpose', 'condition'] as const).every((k) => {
+        const c = clsByKey.get(k);
+        return !c || !prev[c.id];
+      });
+      for (const c of classifiers) {
+        if (c.key !== 'type' && c.key !== 'purpose' && c.key !== 'condition') continue;
+        let v = '';
+        if (on && untouched && alsawareyDefaults) {
+          const want =
+            c.key === 'type' ? alsawareyDefaults.typeOptionId : c.key === 'purpose' ? alsawareyDefaults.purposeOptionId : alsawareyDefaults.conditionOptionId;
+          const opt = c.options.find((o) => o.id === want);
+          // Type/Purpose must be on the Al Sawarey allow-list; Condition has no allow-list.
+          if (opt && (c.key === 'condition' || opt.allowedOnAlsawarey)) v = opt.id;
+        }
+        next[c.id] = v;
+      }
       return next;
     });
   }

@@ -2,26 +2,22 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { ListingForm } from '@/app/account/listings/ListingForm';
-import { loadCatalog } from '@/app/account/listings/catalog';
+import { loadCatalog, loadAlsawareyDefaults } from '@/app/account/listings/catalog';
 
 export default async function StaffNewListing() {
   await requirePermission('listings', 'CREATE');
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
   const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();
-  const [owners, settings, defOpts, nbMaps] = await Promise.all([
+  const [owners, settings, alsawareyDefaults, nbMaps] = await Promise.all([
     prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } }),
     prisma.setting.findMany({ where: { key: { in: ['alswarey_phone', 'alswarey_whatsapp'] } } }),
     // Default classifiers for a new Al Sawarey listing (staff can still change them).
-    prisma.classifierOption.findMany({
-      where: { key: { in: ['land_allocated', 'housing_building', 'utility_ongoing'] }, classifier: { key: { in: ['type', 'purpose', 'condition'] } } },
-      select: { id: true, key: true, classifier: { select: { key: true } } },
-    }),
+    loadAlsawareyDefaults(),
     // Neighborhood masterplans feed the in-form location-map annotator.
     prisma.areaMap.findMany({ where: { level: 'neighborhood', kind: 'masterplan' }, select: { areaId: true, cleanPath: true } }),
   ]);
   const sett = Object.fromEntries(settings.map((s) => [s.key, s.value]));
-  const defOpt = (ck: string, ok: string) => defOpts.find((o) => o.classifier.key === ck && o.key === ok)?.id ?? '';
   // Default the owner to our own "US" owner (Al Sawarey) when one exists.
   const defaultOwnerId = owners.find((o) => o.type === 'US')?.id ?? '';
 
@@ -33,6 +29,7 @@ export default async function StaffNewListing() {
       </div>
       <ListingForm
         staffMode
+        alsawareyDefaults={alsawareyDefaults}
         owners={owners.map((o) => ({ id: o.id, name: o.name, type: o.type }))}
         classifiers={classifiers}
         sections={sections}
@@ -42,9 +39,9 @@ export default async function StaffNewListing() {
         buildingConditions={buildingConditions}
         nbMasterplans={Object.fromEntries(nbMaps.map((m) => [m.areaId, m.cleanPath]))}
         initial={{
-          typeOptionId: defOpt('type', 'land_allocated'),
-          purposeOptionId: defOpt('purpose', 'housing_building'),
-          conditionOptionId: defOpt('condition', 'utility_ongoing'),
+          typeOptionId: alsawareyDefaults.typeOptionId,
+          purposeOptionId: alsawareyDefaults.purposeOptionId,
+          conditionOptionId: alsawareyDefaults.conditionOptionId,
           title: '',
           description: '',
           area: '',

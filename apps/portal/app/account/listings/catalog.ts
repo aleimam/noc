@@ -113,6 +113,24 @@ export async function loadCatalog() {
   };
 }
 
+/** Ids of the standard Al Sawarey listing trio — Type «أرض - تم التخصيص» / Purpose «عمارة سكني» /
+ *  Condition «جاري ترفيق الحي» — what staff pick for nearly every Al Sawarey land. Resolved by the
+ *  options' stable `key`s so admin renames don't break the defaults; a missing key → '' (the form
+ *  simply doesn't default that field). */
+export type AlsawareyDefaults = { typeOptionId: string; purposeOptionId: string; conditionOptionId: string };
+export async function loadAlsawareyDefaults(): Promise<AlsawareyDefaults> {
+  const rows = await prisma.classifierOption.findMany({
+    where: { key: { in: ['land_allocated', 'housing_building', 'utility_ongoing'] }, classifier: { key: { in: ['type', 'purpose', 'condition'] } } },
+    select: { id: true, key: true, classifier: { select: { key: true } } },
+  });
+  const pick = (ck: string, ok: string) => rows.find((o) => o.classifier.key === ck && o.key === ok)?.id ?? '';
+  return {
+    typeOptionId: pick('type', 'land_allocated'),
+    purposeOptionId: pick('purpose', 'housing_building'),
+    conditionOptionId: pick('condition', 'utility_ongoing'),
+  };
+}
+
 /** The two official-paper photos (internal) for a listing, keyed by stampCategory. */
 export async function loadListingPapers(listingId: string) {
   const rows = await prisma.attachment.findMany({
