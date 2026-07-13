@@ -15,11 +15,14 @@ export default async function NewObourNewListing() {
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);
   const { classifiers, sections, attributes, standardAreas, buildingConditions } = await loadCatalog();
-  const [owners, alsawareyDefaults] = await Promise.all([
+  const [owners, alsawareyDefaults, nbMaps] = await Promise.all([
     prisma.owner.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, type: true } }),
     // Ticking «عرض هذا الإعلان على الصواري» on this (New-Obour-first) form pre-selects the
     // standard Al Sawarey classifier trio.
     loadAlsawareyDefaults(),
+    // Neighborhood masterplans feed the in-form location-map annotator (same as the
+    // marketplace new/edit pages — without this the annotator never appears here).
+    prisma.areaMap.findMany({ where: { level: 'neighborhood', kind: 'masterplan' }, select: { areaId: true, cleanPath: true } }),
   ]);
 
   return (
@@ -32,6 +35,7 @@ export default async function NewObourNewListing() {
         staffMode
         returnTo="/admin/newobour/market"
         alsawareyDefaults={alsawareyDefaults}
+        nbMasterplans={Object.fromEntries(nbMaps.map((m) => [m.areaId, m.cleanPath]))}
         owners={owners.map((o) => ({ id: o.id, name: o.name, type: o.type }))}
         classifiers={classifiers}
         sections={sections}

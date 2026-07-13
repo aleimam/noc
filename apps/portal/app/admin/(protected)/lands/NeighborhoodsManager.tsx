@@ -19,10 +19,11 @@ type N = {
   mainRoads: string[];
   order: number;
   isActive: boolean;
-  blockCount: number;
+  hasMasterplan: boolean;
+  hasLocationMap: boolean;
 };
 type D = { id: string; nameAr: string; nameEn: string };
-type Draft = Omit<N, 'blockCount' | 'id'> & { id?: string };
+type Draft = Omit<N, 'hasMasterplan' | 'hasLocationMap' | 'id'> & { id?: string };
 
 const inp = 'w-full rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm';
 
@@ -48,13 +49,13 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
   const [districtFilter, setDistrictFilter] = useState('');
   // Default sort = ترتيب (order): neighborhoods are numbered (مجاورة 1، 2، 3…) and lists
   // must follow that number, not the alphabetic name (where 10 sorts before 2).
-  const [sortKey, setSortKey] = useState<'order' | 'district' | 'neighborhood' | 'blocks'>('order');
+  const [sortKey, setSortKey] = useState<'order' | 'district' | 'neighborhood' | 'maps'>('order');
   const [dir, setDir] = useState<'asc' | 'desc'>('asc');
-  function toggleSort(k: 'order' | 'district' | 'neighborhood' | 'blocks') {
+  function toggleSort(k: 'order' | 'district' | 'neighborhood' | 'maps') {
     if (sortKey === k) setDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     else { setSortKey(k); setDir('asc'); }
   }
-  const arrow = (k: 'order' | 'district' | 'neighborhood' | 'blocks') => (sortKey === k ? (dir === 'asc' ? ' ▲' : ' ▼') : '');
+  const arrow = (k: 'order' | 'district' | 'neighborhood' | 'maps') => (sortKey === k ? (dir === 'asc' ? ' ▲' : ' ▼') : '');
   const view = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const rows = neighborhoods.filter(
@@ -64,7 +65,7 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
       let r = 0;
       if (sortKey === 'order') r = a.order - b.order || L(a.nameAr, a.nameEn).localeCompare(L(b.nameAr, b.nameEn), 'ar');
       else if (sortKey === 'district') r = dName(a.districtId).localeCompare(dName(b.districtId), 'ar');
-      else if (sortKey === 'blocks') r = (a.hasBlocks ? a.blockCount : 0) - (b.hasBlocks ? b.blockCount : 0);
+      else if (sortKey === 'maps') r = (Number(a.hasMasterplan) + Number(a.hasLocationMap)) - (Number(b.hasMasterplan) + Number(b.hasLocationMap));
       else r = L(a.nameAr, a.nameEn).localeCompare(L(b.nameAr, b.nameEn), 'ar');
       return dir === 'asc' ? r : -r;
     });
@@ -119,7 +120,7 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
               <th className="p-2 text-start"><button type="button" onClick={() => toggleSort('district')} className="font-semibold hover:text-accent">{t('district')}{arrow('district')}</button></th>
               <th className="p-2 text-start"><button type="button" onClick={() => toggleSort('neighborhood')} className="font-semibold hover:text-accent">{t('neighborhood')}{arrow('neighborhood')}</button></th>
               <th className="p-2 text-start">{t('areas')}</th>
-              <th className="p-2 text-start"><button type="button" onClick={() => toggleSort('blocks')} className="font-semibold hover:text-accent">{t('blocks')}{arrow('blocks')}</button></th>
+              <th className="p-2 text-start"><button type="button" onClick={() => toggleSort('maps')} className="font-semibold hover:text-accent">{L('الخرائط', 'Maps')}{arrow('maps')}</button></th>
               <th className="p-2"></th>
             </tr>
           </thead>
@@ -137,7 +138,15 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
                   {!n.isActive && <span className="opacity-50"> · {t('active')}: —</span>}
                 </td>
                 <td className="p-2 text-xs opacity-70">{n.assortedAreas ? t('assorted') : n.areas.join(', ') || '—'}</td>
-                <td className="p-2">{n.hasBlocks ? n.blockCount : '—'}</td>
+                {/* Map coverage at a glance: masterplan + location map, green when present. */}
+                <td className="whitespace-nowrap p-2">
+                  <span className={`me-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${n.hasMasterplan ? 'bg-green/15 text-green' : 'bg-graphite/10 text-graphite/50'}`} title={t('masterplan')}>
+                    🗺️ {L('مخطط', 'Plan')} {n.hasMasterplan ? '✓' : '—'}
+                  </span>
+                  <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${n.hasLocationMap ? 'bg-green/15 text-green' : 'bg-graphite/10 text-graphite/50'}`} title={t('locationMap')}>
+                    📍 {L('موقع', 'Location')} {n.hasLocationMap ? '✓' : '—'}
+                  </span>
+                </td>
                 <td className="whitespace-nowrap p-2 text-end">
                   <button onClick={() => setDraft({ id: n.id, districtId: n.districtId, nameAr: n.nameAr, nameEn: n.nameEn, hasBlocks: n.hasBlocks, assortedAreas: n.assortedAreas, areas: n.areas, buildingTypes: n.buildingTypes, mainRoads: n.mainRoads, order: n.order, isActive: n.isActive })} className="px-2 py-1 text-accent">{t('edit')}</button>
                   <button disabled={pending} onClick={() => del(n.id)} className="px-2 py-1 text-red-600">{t('delete')}</button>

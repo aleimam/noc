@@ -10,13 +10,15 @@ export default async function NeighborhoodsPage() {
   const t = await getTranslations('lands');
   const locale = (await getLocale()) as 'ar' | 'en';
 
-  const [neighborhoods, districts] = await Promise.all([
+  const [neighborhoods, districts, maps] = await Promise.all([
     prisma.neighborhood.findMany({
       orderBy: [{ district: { order: 'asc' } }, { order: 'asc' }, { nameAr: 'asc' }],
-      include: { _count: { select: { blocks: true } } },
     }),
     prisma.district.findMany({ orderBy: [{ order: 'asc' }, { nameAr: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
+    // Map coverage per neighborhood: does it have a masterplan / location map yet?
+    prisma.areaMap.findMany({ where: { level: 'neighborhood', kind: { in: ['masterplan', 'location'] } }, select: { areaId: true, kind: true } }),
   ]);
+  const hasMap = (id: string, kind: string) => maps.some((m) => m.areaId === id && m.kind === kind);
 
   const rows = neighborhoods.map((n) => ({
     id: n.id,
@@ -30,7 +32,8 @@ export default async function NeighborhoodsPage() {
     mainRoads: (n.mainRoads as string[] | null) ?? [],
     order: n.order,
     isActive: n.isActive,
-    blockCount: n._count.blocks,
+    hasMasterplan: hasMap(n.id, 'masterplan'),
+    hasLocationMap: hasMap(n.id, 'location'),
   }));
 
   return (
