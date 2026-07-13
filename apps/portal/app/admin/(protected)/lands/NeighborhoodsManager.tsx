@@ -76,12 +76,10 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
   function save() {
     if (!draft) return;
     setError('');
-    // New neighborhood with the order left at 0: derive it from the number in the
-    // name (مجاورة 12 → 12) so lists sort naturally without manual bookkeeping.
-    const num = /([0-9]+)/.exec(`${draft.nameAr} ${draft.nameEn}`)?.[1];
-    const toSave = !draft.id && !draft.order && num ? { ...draft, order: Number(num) } : draft;
+    // The server expands a bare number in the name to «مجاورة N» and derives `order` from any
+    // number in the name (handles Arabic-Indic digits too) — so we just pass what was typed.
     start(async () => {
-      const r = await upsertNeighborhood(toSave);
+      const r = await upsertNeighborhood(draft);
       if (r.ok) {
         setDraft(null);
         router.refresh();
@@ -169,7 +167,12 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
               </select>
             </label>
             <label className="text-sm">{t('order')}<input type="number" value={draft.order} onChange={(e) => setDraft({ ...draft, order: +e.target.value })} className={inp} /></label>
-            <label className="text-sm">{t('nameAr')}<input value={draft.nameAr} onChange={(e) => setDraft({ ...draft, nameAr: e.target.value })} className={inp} /></label>
+            <label className="text-sm">
+              {t('nameAr')}
+              <input value={draft.nameAr} onChange={(e) => setDraft({ ...draft, nameAr: e.target.value })} placeholder={L('رقم مثل 2 أو الاسم كامل', 'A number like 2 or a full name')} className={inp} />
+              {/* Quick numbered add: a bare number becomes «مجاورة N» and orders the list automatically. */}
+              <span className="mt-1 block text-xs opacity-60">{L('اكتب رقمًا فقط (مثل 2) ← «مجاورة 2» ويُرتَّب تلقائيًا، أو اكتب الاسم كاملًا.', 'Type just a number (e.g. 2) → «مجاورة 2», auto-ordered — or type a full name.')}</span>
+            </label>
             <label className="text-sm">{t('nameEn')}<input dir="ltr" value={draft.nameEn} onChange={(e) => setDraft({ ...draft, nameEn: e.target.value })} className={inp} /></label>
           </div>
 

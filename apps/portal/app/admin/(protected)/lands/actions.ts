@@ -172,10 +172,29 @@ export async function upsertNeighborhood(input: {
 }): Promise<Result> {
   await requirePermission('lands', input.id ? 'UPDATE' : 'CREATE');
   try {
+    // Quick numbered add: a BARE number (ASCII or Arabic-Indic ٠-٩ / Persian ۰-۹) becomes
+    // «مجاورة N» / «Neighborhood N» and sets order = N, so numbered neighborhoods sort naturally.
+    // A full name is kept as-is; when its order is left 0 we still derive it from any number in
+    // the name. This is the single source of truth (the form just passes what was typed).
+    const toLatin = (s: string) =>
+      s.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)).replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+    let nameAr = input.nameAr.trim();
+    let nameEn = input.nameEn.trim();
+    let order = input.order ?? 0;
+    const bare = toLatin(nameAr).replace(/\s+/g, '');
+    if (/^\d+$/.test(bare)) {
+      const n = Number(bare);
+      nameAr = `مجاورة ${n}`;
+      if (!nameEn) nameEn = `Neighborhood ${n}`;
+      if (!order) order = n;
+    } else if (!order) {
+      const m = /(\d+)/.exec(toLatin(nameAr));
+      if (m) order = Number(m[1]);
+    }
     const data = {
       districtId: input.districtId,
-      nameAr: input.nameAr.trim(),
-      nameEn: input.nameEn.trim(),
+      nameAr,
+      nameEn,
       hasBlocks: !!input.hasBlocks,
       assortedAreas: !!input.assortedAreas,
       areas: input.areas ?? [],
