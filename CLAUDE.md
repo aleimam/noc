@@ -2,7 +2,7 @@
 
 Master onboarding for anyone (human or Claude session) picking up this repo. It captures the
 architecture, the production runbook, and every hard-won gotcha. Deeper docs are linked at the
-bottom. Last full update: **2026-07-13**.
+bottom. Last full update: **2026-07-14**.
 
 ## What this is
 
@@ -155,7 +155,7 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 | Marketplace (listings) | portal `/market`, admin `/admin/marketplace` | EAV + classifiers + moderation queue (PENDING→PUBLISHED) |
 | Al Sawarey storefront | brokerage `/` `/listings` | display-only; `showOnBrokerage` + Type/Purpose gates; customer OTP login, wishlist |
 | **Partner portal (multi-site)** | `/partner` on BOTH domains | 100% shared via `@noc/partner-portal`; per-partner site access (`Owner.siteNewObour/siteAlsawary`); partner listings show only on enabled sites; lean listing form both sides; login = password OR OTP (SMS/email) |
-| Rationing (كشوف التقنين) | portal `/rationing`, admin sheets/scans | Excel import, soft Arabic search, quotas by security level |
+| Rationing (كشوف التقنين) | portal `/rationing`, admin sheets/scans/**watchers** | Excel import, soft Arabic search, quotas by security level; name-watch follow-ups (`/admin/rationing/watchers`) → auto-alert + curated congrats SMS + phone-contact «Done» queue |
 | Lands/geo explorer | portal `/explore` | city→district→neighborhood→block, masterplans, advantages, amenities. Neighborhood inherits district LOCATION map if it has none (explore only, never listings) |
 | Calculator | portal `/calculator` | area + تصالح cost calc, admin-editable rates (transfer 180/م² since the Authority's 2026-07 cut); the listing form's «مستحقات جهاز المدينة» auto-fills from the same `reconcile()` (🧮 button, needs أصل المساحة + المساحة) |
 | News / Guide / Price index / Owner profiles | portal | public surfaces |
@@ -165,7 +165,7 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 | Appearance/theming | admin settings | per-site colors/fonts via Setting `theme.<brand>` |
 | Security posture | admin settings | `security.level` LIGHT/MEDIUM/HIGH gates scans/maps/quotas |
 
-## Current state & pending (as of 2026-07-13)
+## Current state & pending (as of 2026-07-14)
 
 **Owner-blocked (waiting on the owner, everything else is prepped):**
 1. **Cloudflare proxy flip (Part C)** — pure dashboard task now; ordered checklist in
@@ -182,6 +182,37 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 5. `/code-review ultra` — owner-triggered, billed; fold findings into `security.md` §7.
 6. **Enable the Price Index module** (Settings → Modules → مؤشر الأسعار) when the owner wants
    `/price-index` public — the page + monthly snapshot cron are live but hidden by this toggle.
+
+**2026-07-14: rationing name-watch admin + follow-up workflow (commits `7f9f49a`→`d99345f`,
+deployed+verified).** The public «تنبيهني عند ظهور اسمي» requests (`RationingFollow` kind=WATCH)
+now have a full admin surface at **`/admin/rationing/watchers`** (RBAC `sheets:VIEW`, card in the
+rationing hub). Master list with status-filter chips (all / active / **ظهرت — للمتابعة** = matched
+& not-contacted / **تم التواصل** = Done / closed) + **«فحص الكشوف الحالية الآن»** which matches
+active watchers against EVERY imported sheet — not just a fresh batch — via a shared
+`runWatcherMatch(batchId?)` core (closes the pre-existing-match gap: a name already in an older
+sheet before the person subscribed is otherwise never caught). **Follow-up workflow** (owner chose
+*keep auto-SMS + add manual*): the follow-up tab is a select-list (checkboxes) with bulk
+**congratulations SMS** (`sendCongratsSms` — warmer than the auto-alert, skips phone-less, dedup) +
+**mark contacted-by-phone** (`markContacted` → moves the row to the Done tab with who/when + undo).
+Import now reports matches: preview stat «متابعات ستُطابق» (`countWatchMatches`) + commit toast
+«وطابق N…». Schema `RationingFollow.congratsAt/contactedAt/contactedBy` (migration
+`20260714120000_rationing_follow_followup`); `FollowupTable` client in `WatchersClient.tsx`.
+
+  - **SMS delivery fix (same batch):** watch-follow SMS sends to `User.phone`. The follow page marks
+    only a CUSTOMER session as "logged in", but `startFollow` treated ANY session as logged-in — so a
+    watch created **while logged in as STAFF/admin** attached to the phone-less admin account and
+    **silently discarded the typed phone** → nothing to send. Fixed: `startFollow` auto-attaches only
+    for `session.user.type==='CUSTOMER'`; staff/no-session fall through to the typed-phone path. Also
+    `runWatcherMatch`/`sendCongratsSms` now stamp `lastNotifiedAt`/`congratsAt` ONLY on a successful
+    send (were set regardless → false "sent"). **SMS Misr re-verified healthy 2026-07-14** (provider
+    smsmisr, `environment=1` LIVE, balance 12915, live diagnostic send → `code 1901`, delivered to
+    01225227677). **Delivery is NOT broken at the provider — any "SMS didn't arrive" = a missing
+    recipient phone, not the pipeline.** (Also: the 2 stale phone-less test watchers were deleted.)
+  - **Also 2026-07-14:** duplicate neighborhoods within the same district are now blocked
+    (`upsertNeighborhood` rejects a same-name sibling — Arabic OR English, case/space-insensitive —
+    at both add entry points; commit `c67848f`), and a latent bug where the numbered-add derived
+    `order` was discarded (saved `input.order ?? 0`) is fixed; `ops/backfill-neighborhood-order.ts`
+    re-run on prod (2 rows corrected).
 
 **2026-07-13: admin-workflow batch (commits `32c9194` → `4a77aa2`, all deployed+verified):**
 Al Sawarey classifier trio (Type «أرض - تم التخصيص» / Purpose «عمارة سكني» / Condition «جاري
