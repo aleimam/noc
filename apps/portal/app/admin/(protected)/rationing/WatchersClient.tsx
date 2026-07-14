@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { setFollowStatus, deleteFollow, recheckWatchers, sendCongratsSms, markContacted, unmarkContacted } from './actions';
 
-export function WatcherActions({ id, status }: { id: string; status: string }) {
+export function WatcherActions({ id, status, name }: { id: string; status: string; name: string }) {
   const t = useTranslations('rationing');
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -28,7 +28,7 @@ export function WatcherActions({ id, status }: { id: string; status: string }) {
       <button
         disabled={pending}
         onClick={() => {
-          if (!confirm(t('confirmDeleteFollow'))) return;
+          if (!confirm(t('confirmDeleteFollow', { name }))) return;
           run(() => deleteFollow(id));
         }}
         className="text-xs text-red-600 disabled:opacity-50"

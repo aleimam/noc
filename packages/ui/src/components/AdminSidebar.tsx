@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { cn } from '../lib/cn';
 import type { AdminNavGroup } from './AdminShell';
 
@@ -290,6 +291,20 @@ export function AdminSidebar({
 
   const toggleLabel = collapsed ? expandLabel : collapseLabel;
 
+  // Highlight the nav item for the page you're on. A page can be nested under an item's
+  // href (e.g. /admin/rationing/watchers under /admin/rationing), so the ACTIVE item is the
+  // one whose href is the longest prefix of the current path — that stops /admin (dashboard)
+  // from matching everything.
+  const pathname = usePathname();
+  const activeHref = useMemo(() => {
+    if (!pathname) return '';
+    let best = '';
+    for (const g of nav)
+      for (const it of g.items)
+        if ((pathname === it.href || pathname.startsWith(it.href + '/')) && it.href.length > best.length) best = it.href;
+    return best;
+  }, [nav, pathname]);
+
   return (
     <>
       {/* Dim backdrop — mobile overlay only. Gated on `mounted` so it never renders on SSR. */}
@@ -350,22 +365,27 @@ export function AdminSidebar({
                 ) : (
                   <div className="px-3 pb-1 pt-3 text-xs font-bold uppercase tracking-wide text-gold/70">{group.title}</div>
                 ))}
-              {group.items.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  onClick={closeOnMobile}
-                  title={collapsed ? item.label : undefined}
-                  aria-label={collapsed ? item.label : undefined}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md py-2 text-sm text-soft/90 hover:bg-soft/10',
-                    collapsed ? 'mx-1 justify-center px-0' : 'px-3',
-                  )}
-                >
-                  {ICONS[item.icon ?? 'dot'] ?? ICONS.dot}
-                  {!collapsed && <span className="truncate">{item.label}</span>}
-                </a>
-              ))}
+              {group.items.map((item) => {
+                const active = item.href === activeHref;
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    onClick={closeOnMobile}
+                    title={collapsed ? item.label : undefined}
+                    aria-label={collapsed ? item.label : undefined}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'flex items-center gap-3 rounded-md py-2 text-sm hover:bg-soft/10',
+                      active ? 'bg-gold/20 font-semibold text-gold' : 'text-soft/90',
+                      collapsed ? 'mx-1 justify-center px-0' : 'px-3',
+                    )}
+                  >
+                    {ICONS[item.icon ?? 'dot'] ?? ICONS.dot}
+                    {!collapsed && <span className="truncate">{item.label}</span>}
+                  </a>
+                );
+              })}
             </div>
           ))}
         </nav>

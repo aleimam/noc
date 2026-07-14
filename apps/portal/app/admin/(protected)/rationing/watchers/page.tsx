@@ -158,7 +158,7 @@ export default async function WatchersPage({ searchParams }: { searchParams: Pro
                     ) : '—'}
                   </td>
                   <td className="p-2" dir="ltr">{fmtDateTime(f.createdAt, locale)}</td>
-                  <td className="p-2 text-end"><WatcherActions id={f.id} status={f.status} /></td>
+                  <td className="p-2 text-end"><WatcherActions id={f.id} status={f.status} name={f.applicantName} /></td>
                 </tr>
               ))}
             </tbody>

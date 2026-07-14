@@ -682,7 +682,7 @@
     "closeFollow": "إيقاف",
     "reactivateFollow": "إعادة تفعيل",
     "deleteFollow": "حذف",
-    "confirmDeleteFollow": "حذف هذه المتابعة نهائيًا؟",
+    "confirmDeleteFollow": "حذف متابعة «{name}» نهائيًا؟ لا يمكن التراجع.",
     "filterAll": "الكل",
     "lastNotified": "آخر تنبيه",
     "recheckExisting": "فحص الكشوف الحالية الآن",

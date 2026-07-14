@@ -682,7 +682,7 @@
     "closeFollow": "Stop",
     "reactivateFollow": "Reactivate",
     "deleteFollow": "Delete",
-    "confirmDeleteFollow": "Delete this watch request permanently?",
+    "confirmDeleteFollow": "Delete the watch for “{name}” permanently? This can't be undone.",
     "filterAll": "All",
     "lastNotified": "Last alert",
     "recheckExisting": "Check existing sheets now",
