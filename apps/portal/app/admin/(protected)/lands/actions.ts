@@ -85,7 +85,7 @@ function rev() {
 // ── Cities (top of the geo hierarchy: City → District → Neighborhood) ──
 export async function upsertCity(input: {
   id?: string;
-  key: string;
+  key?: string; // create only; auto-generated when omitted (name-prompt create flow)
   nameAr: string;
   nameEn: string;
   order?: number;
@@ -94,12 +94,13 @@ export async function upsertCity(input: {
   await requirePermission('lands', input.id ? 'UPDATE' : 'CREATE');
   try {
     const data = { nameAr: input.nameAr.trim(), nameEn: input.nameEn.trim(), order: input.order ?? 0, isActive: input.isActive ?? true };
-    if (!data.nameAr || !data.nameEn) return { ok: false, error: 'failed' };
-    if (input.id) await prisma.city.update({ where: { id: input.id }, data });
-    else await prisma.city.create({ data: { ...data, key: input.key.trim() } });
+    if (!data.nameAr) return { ok: false, error: 'failed' };
+    const row = input.id
+      ? await prisma.city.update({ where: { id: input.id }, data })
+      : await prisma.city.create({ data: { ...data, key: input.key?.trim() || `city-${randomUUID().slice(0, 8)}` } });
     rev();
     revalidatePath('/admin/lands/cities');
-    return { ok: true };
+    return { ok: true, id: row.id };
   } catch (e) {
     return fail(e);
   }
@@ -121,7 +122,8 @@ export async function deleteCity(id: string): Promise<Result> {
 // ── Districts ──
 export async function upsertDistrict(input: {
   id?: string;
-  key: string;
+  key?: string; // create only; auto-generated when omitted
+  cityId?: string | null; // parent city (editable from the Basics section)
   nameAr: string;
   nameEn: string;
   order?: number;
@@ -134,11 +136,14 @@ export async function upsertDistrict(input: {
       nameEn: input.nameEn.trim(),
       order: input.order ?? 0,
       isActive: input.isActive ?? true,
+      ...(input.cityId !== undefined ? { cityId: input.cityId || null } : {}),
     };
+    if (!data.nameAr) return { ok: false, error: 'failed' };
     const row = input.id
       ? await prisma.district.update({ where: { id: input.id }, data })
-      : await prisma.district.create({ data: { ...data, key: input.key.trim() } });
+      : await prisma.district.create({ data: { ...data, key: input.key?.trim() || `district-${randomUUID().slice(0, 8)}` } });
     rev();
+    revalidatePath('/admin/lands/districts');
     return { ok: true, id: row.id };
   } catch (e) {
     return fail(e);
@@ -240,6 +245,44 @@ export async function updateNeighborhoodAreas(id: string, areas: number[], assor
   } catch (e) {
     return fail(e);
   }
+}
+
+/** Auto-save for the shared "Basics" section on every geo edit page (name / parent / order /
+ *  active, + building types & main roads for a neighborhood). Dispatches to the level's upsert
+ *  so all its guards run (neighborhood: dup-name check + numbered-name expansion). Areas/assorted
+ *  are owned by the AreasEditor, so we reload + preserve them rather than overwrite. */
+export async function saveGeoBasics(input: {
+  level: 'city' | 'district' | 'neighborhood';
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  order?: number;
+  isActive?: boolean;
+  parentId?: string | null; // district → city, neighborhood → district
+  buildingTypes?: string[]; // neighborhood only
+  mainRoads?: string[]; // neighborhood only
+}): Promise<Result> {
+  await requirePermission('lands', 'UPDATE');
+  if (input.level === 'city') {
+    return upsertCity({ id: input.id, nameAr: input.nameAr, nameEn: input.nameEn, order: input.order, isActive: input.isActive });
+  }
+  if (input.level === 'district') {
+    return upsertDistrict({ id: input.id, cityId: input.parentId ?? null, nameAr: input.nameAr, nameEn: input.nameEn, order: input.order, isActive: input.isActive });
+  }
+  if (!input.parentId) return { ok: false, error: 'district_required' };
+  const cur = await prisma.neighborhood.findUnique({ where: { id: input.id }, select: { areas: true, assortedAreas: true } });
+  return upsertNeighborhood({
+    id: input.id,
+    districtId: input.parentId,
+    nameAr: input.nameAr,
+    nameEn: input.nameEn,
+    order: input.order,
+    isActive: input.isActive,
+    areas: (cur?.areas as number[] | null) ?? [],
+    assortedAreas: cur?.assortedAreas ?? false,
+    buildingTypes: input.buildingTypes ?? [],
+    mainRoads: input.mainRoads ?? [],
+  });
 }
 
 export async function deleteNeighborhood(id: string): Promise<Result> {

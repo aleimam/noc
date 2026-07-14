@@ -27,6 +27,9 @@ export function CatalogTable({
   detailBase,
   childAdd,
   defaultSort = 'order',
+  newHref,
+  editBase,
+  editSuffix = '',
 }: {
   initial: CatalogRow[];
   upsert: (i: UpsertInput) => Promise<Result>;
@@ -34,6 +37,9 @@ export function CatalogTable({
   detailBase?: string; // when set, the Arabic name links to `${detailBase}/${id}`
   childAdd?: { hrefBase: string; label: string }; // per-row quick "add child" link (→ `${hrefBase}?district=${id}`)
   defaultSort?: SortKey; // initial sort column (name-centric lists pass 'nameAr')
+  newHref?: string; // when set, "+ Add" links here (name-prompt → edit page) instead of inline add
+  editBase?: string; // when set, the row "Edit" links to `${editBase}/${id}${editSuffix}` instead of editing inline
+  editSuffix?: string;
 }) {
   const t = useTranslations('mp');
   const router = useRouter();
@@ -144,7 +150,11 @@ export function CatalogTable({
                   <td className="p-2">{row.isActive ? '✔' : '—'}</td>
                   <td className="whitespace-nowrap p-2 text-end">
                     {childAdd && <a href={`${childAdd.hrefBase}?district=${row.id}`} className="px-2 py-1 text-green">{childAdd.label}</a>}
-                    <button onClick={() => setDraft({ id: row.id, key: row.key, nameAr: row.nameAr, nameEn: row.nameEn, order: row.order, isActive: row.isActive })} className="px-2 py-1 text-accent">{t('edit')}</button>
+                    {editBase ? (
+                      <a href={`${editBase}/${row.id}${editSuffix}`} className="px-2 py-1 text-accent">{t('edit')}</a>
+                    ) : (
+                      <button onClick={() => setDraft({ id: row.id, key: row.key, nameAr: row.nameAr, nameEn: row.nameEn, order: row.order, isActive: row.isActive })} className="px-2 py-1 text-accent">{t('edit')}</button>
+                    )}
                     <button
                       disabled={pending}
                       onClick={() => {
@@ -163,7 +173,9 @@ export function CatalogTable({
         </table>
       </div>
 
-      {draft && !draft.id ? (
+      {newHref ? (
+        <a href={newHref} className="inline-block rounded-md border border-graphite/25 px-3 py-1.5 text-sm hover:bg-graphite/10">+ {t('add')}</a>
+      ) : draft && !draft.id ? (
         <div className="flex flex-wrap items-end gap-2 rounded-lg border border-graphite/15 p-3">
           <label className="text-sm">{t('key')}<input dir="ltr" value={draft.key} onChange={(e) => setDraft({ ...draft, key: e.target.value })} className={input} /></label>
           <label className="text-sm">{t('nameAr')}<input value={draft.nameAr} onChange={(e) => setDraft({ ...draft, nameAr: e.target.value })} className={input} /></label>

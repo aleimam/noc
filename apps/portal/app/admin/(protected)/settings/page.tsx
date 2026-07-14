@@ -16,7 +16,6 @@ export default async function SettingsHub() {
     { href: '/admin/settings/site', label: 'إعدادات الموقع العامة', desc: 'قائمة الجوال، حقوق النشر، واتساب المساعدة' },
     { href: '/admin/settings/backups', label: 'النسخ الاحتياطي', desc: 'تحميل النسخ، نسخة فورية، ونسخة على خادم خارجي' },
     { href: '/admin/settings/account', label: t('settingsAccount'), desc: t('settingsAccountDesc') },
-    { href: '/admin/settings/appearance', label: t('settingsAppearance'), desc: t('settingsAppearanceDesc') },
   ];
   return (
     <div className="space-y-6">

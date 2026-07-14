@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { AREA_PRESETS } from '@noc/config';
+import { AREA_PRESETS, BUILDING_TYPES, MAIN_ROADS } from '@noc/config';
 import { ImageAttachment, Lightbox, toast, type UploadedAttachment } from '@noc/ui';
 import { RichEditor } from '../pages/RichEditor';
 import {
@@ -20,12 +20,124 @@ import {
   setDistrictAdjacency,
   setNeighborhoodAdjacency,
   updateNeighborhoodAreas,
+  saveGeoBasics,
 } from './actions';
 import type { Shape } from './MapAnnotator';
 
 type Level = 'city' | 'district' | 'neighborhood';
 type MapKind = 'location' | 'masterplan' | 'services' | 'mainroads';
 const inp = 'w-full rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm';
+
+/** Shared "Basics" section at the top of every geo edit page — the identity fields that used to
+ *  live only in the list (name / parent / order / active, + a neighborhood's building types &
+ *  main roads). Auto-saves each change via saveGeoBasics with a «تم الحفظ» toast; a neighborhood
+ *  rename runs the same duplicate-name guard as the list. */
+export function GeoBasics({
+  level,
+  id,
+  locale,
+  initial,
+  parents = [],
+  tags,
+}: {
+  level: Level;
+  id: string;
+  locale: 'ar' | 'en';
+  initial: { nameAr: string; nameEn: string; order: number; isActive: boolean; parentId: string | null };
+  parents?: { id: string; name: string }[];
+  tags?: { buildingTypes: string[]; mainRoads: string[] };
+}) {
+  const t = useTranslations('lands');
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
+  const [nameAr, setNameAr] = useState(initial.nameAr);
+  const [nameEn, setNameEn] = useState(initial.nameEn);
+  const [order, setOrder] = useState(initial.order);
+  const [isActive, setIsActive] = useState(initial.isActive);
+  const [parentId, setParentId] = useState(initial.parentId ?? '');
+  const [bTypes, setBTypes] = useState<string[]>(tags?.buildingTypes ?? []);
+  const [roads, setRoads] = useState<string[]>(tags?.mainRoads ?? []);
+  const [err, setErr] = useState('');
+
+  function persist(over: Partial<{ nameAr: string; nameEn: string; order: number; isActive: boolean; parentId: string; buildingTypes: string[]; mainRoads: string[] }> = {}) {
+    const payload = {
+      level,
+      id,
+      nameAr: over.nameAr ?? nameAr,
+      nameEn: over.nameEn ?? nameEn,
+      order: over.order ?? order,
+      isActive: over.isActive ?? isActive,
+      parentId: (over.parentId ?? parentId) || null,
+      buildingTypes: over.buildingTypes ?? bTypes,
+      mainRoads: over.mainRoads ?? roads,
+    };
+    start(async () => {
+      setErr('');
+      const r = await saveGeoBasics(payload);
+      if (r.ok) { toast(t('savedGeo')); router.refresh(); }
+      else setErr(r.error === 'duplicate' ? t('dupNeighborhood') : r.error === 'district_required' ? t('districtRequired') : t('actionFailed'));
+    });
+  }
+  const flip = <T,>(arr: T[], v: T): T[] => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+
+  return (
+    <div className="space-y-3 rounded-lg border border-graphite/15 p-4">
+      {err && <p className="text-sm text-red-600">{err}</p>}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-sm">{t('nameAr')}
+          <input value={nameAr} onChange={(e) => setNameAr(e.target.value)} onBlur={() => persist()} className={inp} />
+        </label>
+        <label className="text-sm">{t('nameEn')}
+          <input dir="ltr" value={nameEn} onChange={(e) => setNameEn(e.target.value)} onBlur={() => persist()} className={inp} />
+        </label>
+        {level !== 'city' && (
+          <label className="text-sm">{level === 'district' ? t('city') : t('district')}
+            <select value={parentId} onChange={(e) => { setParentId(e.target.value); persist({ parentId: e.target.value }); }} className={inp}>
+              {level === 'district' && <option value="">—</option>}
+              {parents.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </label>
+        )}
+        <label className="text-sm">{t('order')}
+          <input type="number" value={order} onChange={(e) => setOrder(+e.target.value)} onBlur={() => persist()} className={inp} />
+        </label>
+        <label className="flex items-center gap-2 self-end text-sm">
+          <input type="checkbox" checked={isActive} onChange={(e) => { setIsActive(e.target.checked); persist({ isActive: e.target.checked }); }} /> {t('active')}
+        </label>
+      </div>
+
+      {level === 'neighborhood' && (
+        <div className="grid gap-3 pt-1 sm:grid-cols-2">
+          <div className="space-y-1">
+            <div className="text-sm opacity-70">{t('buildingTypes')}</div>
+            <div className="flex flex-wrap gap-1.5">
+              {BUILDING_TYPES.map((b) => {
+                const on = bTypes.includes(b.key);
+                return (
+                  <button key={b.key} type="button" disabled={pending} onClick={() => { const next = flip(bTypes, b.key); setBTypes(next); persist({ buildingTypes: next }); }}
+                    className={`rounded-full border px-2.5 py-1 text-xs ${on ? 'border-accent bg-accent/10 text-accent' : 'border-graphite/25 opacity-80'}`}>{L(b.ar, b.en)}</button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-sm opacity-70">{t('mainRoads')}</div>
+            <div className="flex flex-wrap gap-1.5">
+              {MAIN_ROADS.map((r) => {
+                const on = roads.includes(r.key);
+                return (
+                  <button key={r.key} type="button" disabled={pending} onClick={() => { const next = flip(roads, r.key); setRoads(next); persist({ mainRoads: next }); }}
+                    className={`rounded-full border px-2.5 py-1 text-xs ${on ? 'border-accent bg-accent/10 text-accent' : 'border-graphite/25 opacity-80'}`}>{L(r.ar, r.en)}</button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Available standard plot areas (م²) for a neighborhood — the sizes of land plots buyers can
  *  get there. Toggle presets or add a custom size; «مساحات متنوعة» means "assorted / no fixed set".

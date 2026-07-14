@@ -29,7 +29,7 @@ export default async function CitiesPage() {
         <h1 className="text-2xl font-bold text-primary">{t('cities')}</h1>
         <a href="/admin/lands" className="text-sm text-accent">← {t('title')}</a>
       </div>
-      <CatalogTable initial={rows} upsert={upsertCity} remove={deleteCity} detailBase="/admin/lands/cities" />
+      <CatalogTable initial={rows} upsert={upsertCity} remove={deleteCity} detailBase="/admin/lands/cities" newHref="/admin/lands/cities/new" editBase="/admin/lands/cities" />
     </div>
   );
 }

@@ -34,6 +34,9 @@ export default async function DistrictsPage() {
         upsert={upsertDistrict}
         remove={deleteDistrict}
         detailBase="/admin/lands/districts"
+        editBase="/admin/lands/districts"
+        editSuffix="/edit"
+        newHref="/admin/lands/districts/new"
         childAdd={{ hrefBase: '/admin/lands/neighborhoods/new', label: `+ ${t('addNeighborhood')}` }}
       />
     </div>

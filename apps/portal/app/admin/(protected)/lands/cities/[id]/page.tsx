@@ -2,11 +2,11 @@ import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { AdvantagesEditor, AreaMapEditor, UpdatesEditor, CustomPhotosEditor } from '../../GeoContentEditors';
+import { AdvantagesEditor, AreaMapEditor, UpdatesEditor, CustomPhotosEditor, GeoBasics } from '../../GeoContentEditors';
 import { GeoSeoIntroEditor } from '../../GeoSeoIntroEditor';
 import { loadAreaMaps, loadUpdates } from '../../geo';
 import { getSeoIntroRaw } from '@/lib/seoContent';
-import { EditSaveBar } from '@/app/_components/EditSaveBar';
+import { DoneButton } from '@/app/_components/DoneButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,9 +33,14 @@ export default async function CityEdit({ params }: { params: Promise<{ id: strin
         <h1 className="text-2xl font-bold text-primary">{t('edit')}: {L(city.nameAr, city.nameEn)}</h1>
         <div className="flex items-center gap-3">
           <a href="/admin/lands/cities" className="text-sm text-accent">← {t('cities')}</a>
-          <EditSaveBar hint />
+          <span className="text-xs opacity-60">{t('autosaveHint')}</span>
         </div>
       </div>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold text-primary">{t('basics')}</h2>
+        <GeoBasics level="city" id={id} locale={locale} initial={{ nameAr: city.nameAr, nameEn: city.nameEn, order: city.order, isActive: city.isActive, parentId: null }} />
+      </section>
 
       <section className="space-y-2">
         <h2 className="font-semibold text-primary">{L('نص SEO التعريفي', 'SEO intro')}</h2>
@@ -78,7 +83,7 @@ export default async function CityEdit({ params }: { params: Promise<{ id: strin
         <CustomPhotosEditor level="city" targetId={id} photos={maps.custom} />
       </section>
 
-      <div className="flex justify-end border-t border-graphite/15 pt-4"><EditSaveBar /></div>
+      <div className="flex justify-end border-t border-graphite/15 pt-4"><DoneButton href="/admin/lands/cities" /></div>
     </div>
   );
 }

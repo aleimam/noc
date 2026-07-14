@@ -75,7 +75,6 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
         { href: '/admin/settings/theme', label: L('المظهر والألوان', 'Theme & colors'), section: 'appearance', icon: 'palette' },
         { href: '/admin/settings/watermark', label: L('العلامة المائية', 'Watermark'), section: 'appearance', icon: 'image' },
         { href: '/admin/settings/poster-identity', label: L('هوية صور الإعلانات (البوستر)', 'Listing images (poster)'), section: 'appearance', icon: 'image' },
-        { href: '/admin/settings/appearance', label: L('لغة اللوحة', 'Panel language'), icon: 'globe' },
       ],
     },
     {
