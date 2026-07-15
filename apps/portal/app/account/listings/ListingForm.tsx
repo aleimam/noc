@@ -49,6 +49,7 @@ export type ListingFormInitial = {
   priceUnit: 'TOTAL' | 'UNIT' | 'SQM';
   priceNegotiable: boolean;
   priceNote: string;
+  lowestPrice: string; // internal floor — admins & owner only, never public
   isPartnership?: boolean;
   partnershipType?: string;
   partnershipNote?: string;
@@ -157,6 +158,7 @@ export function ListingForm({
   const [priceUnit, setPriceUnit] = useState(initial.priceUnit);
   const [priceNegotiable, setPriceNegotiable] = useState(initial.priceNegotiable);
   const [priceNote, setPriceNote] = useState(initial.priceNote);
+  const [lowestPrice, setLowestPrice] = useState(initial.lowestPrice);
   const [isPartnership, setIsPartnership] = useState(initial.isPartnership ?? false);
   const [partnershipType, setPartnershipType] = useState(initial.partnershipType ?? '');
   const [partnershipNote, setPartnershipNote] = useState(initial.partnershipNote ?? '');
@@ -381,6 +383,7 @@ export function ListingForm({
       priceUnit,
       priceNegotiable,
       priceNote,
+      lowestPrice: lowestPrice.trim() ? Number(lowestPrice) : null,
       isPartnership,
       partnershipType: isPartnership ? partnershipType || null : null,
       partnershipNote: isPartnership ? partnershipNote : '',
@@ -750,7 +753,15 @@ export function ListingForm({
             </div>
           </div>
         </div>
-        <label className="block text-sm">{t('priceNote')}<input value={priceNote} onChange={(e) => setPriceNote(e.target.value)} className={inp} /></label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm">{t('priceNote')}<input value={priceNote} onChange={(e) => setPriceNote(e.target.value)} className={inp} /></label>
+          {/* Internal floor / walk-away price — admins & owner only. Never rendered on any public page. */}
+          <label className="block text-sm">
+            <span className="flex items-center gap-1">🔒 {t('lowestPrice')}</span>
+            <input type="number" dir="ltr" value={lowestPrice} onChange={(e) => setLowestPrice(e.target.value)} className={inp} />
+            <span className="mt-1 block text-xs opacity-60">{t('lowestPriceHint')}</span>
+          </label>
+        </div>
 
         {/* ── Plot consolidation & partnerships (تجميع الملاك والشراكات) opt-in ── */}
         {partnershipsEnabled && (

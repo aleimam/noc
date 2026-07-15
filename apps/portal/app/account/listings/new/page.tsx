@@ -52,6 +52,7 @@ export default async function NewListing({
           priceUnit: 'TOTAL',
           priceNegotiable: false,
           priceNote: '',
+          lowestPrice: '',
           isPartnership: presetPartnership,
           contactPhone: dbUser?.phone ?? '',
           contactWhatsapp: true,

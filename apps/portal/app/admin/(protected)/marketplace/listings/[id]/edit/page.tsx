@@ -67,6 +67,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
           priceUnit: listing.priceUnit,
           priceNegotiable: listing.priceNegotiable,
           priceNote: listing.priceNote ?? '',
+          lowestPrice: listing.lowestPrice != null ? String(listing.lowestPrice) : '',
           isPartnership: listing.isPartnership,
           partnershipType: listing.partnershipType ?? '',
           partnershipNote: listing.partnershipNote ?? '',

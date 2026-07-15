@@ -388,6 +388,8 @@
     "price": "Price",
     "actualAreaField": "Actual area (m²)",
     "priceNote": "Price note",
+    "lowestPrice": "Lowest price (admin only)",
+    "lowestPriceHint": "Never shown publicly — admins & owner only",
     "photos": "Photos",
     "contactPhone": "Contact phone",
     "whatsapp": "WhatsApp",

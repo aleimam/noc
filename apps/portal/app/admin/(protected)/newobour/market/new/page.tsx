@@ -58,6 +58,7 @@ export default async function NewObourNewListing() {
           priceUnit: 'TOTAL',
           priceNegotiable: false,
           priceNote: '',
+          lowestPrice: '',
           contactPhone: '',
           contactWhatsapp: true,
           ownerId: '',

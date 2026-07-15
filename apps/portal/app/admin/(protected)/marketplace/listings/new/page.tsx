@@ -53,6 +53,7 @@ export default async function StaffNewListing() {
           priceUnit: 'TOTAL',
           priceNegotiable: false,
           priceNote: '',
+          lowestPrice: '',
           contactPhone: sett.alswarey_phone ?? '',
           contactWhatsapp: !!sett.alswarey_whatsapp,
           ownerId: defaultOwnerId,

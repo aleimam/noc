@@ -388,6 +388,8 @@
     "price": "السعر",
     "actualAreaField": "المساحة الفعلية (م²)",
     "priceNote": "ملاحظة على السعر",
+    "lowestPrice": "أقل سعر (للإدارة فقط)",
+    "lowestPriceHint": "لا يظهر للجمهور — للإدارة والمالك فقط",
     "photos": "الصور",
     "contactPhone": "رقم التواصل",
     "whatsapp": "واتساب",

@@ -48,6 +48,7 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
           priceUnit: listing.priceUnit,
           priceNegotiable: listing.priceNegotiable,
           priceNote: listing.priceNote ?? '',
+          lowestPrice: listing.lowestPrice != null ? String(listing.lowestPrice) : '',
           isPartnership: listing.isPartnership,
           partnershipType: listing.partnershipType ?? '',
           partnershipNote: listing.partnershipNote ?? '',

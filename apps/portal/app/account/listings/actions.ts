@@ -30,6 +30,7 @@ export type ListingInput = {
   priceUnit?: 'TOTAL' | 'UNIT' | 'SQM';
   priceNegotiable?: boolean;
   priceNote?: string;
+  lowestPrice?: number | null; // internal floor — admins & owner only, never public
   isPartnership?: boolean;
   partnershipType?: string | null; // PartnershipType key, validated server-side
   partnershipNote?: string;
@@ -211,6 +212,8 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         priceUnit: input.priceUnit ?? 'TOTAL',
         priceNegotiable: input.priceNegotiable ?? false,
         priceNote: input.priceNote?.trim() || null,
+        // Internal floor — every writer here is staff or the listing owner; never leaves the edit form.
+        lowestPrice: input.lowestPrice != null && !Number.isNaN(input.lowestPrice) ? input.lowestPrice : null,
         // Partnership opt-in: type/note only persist while the flag is on.
         isPartnership: !!input.isPartnership,
         partnershipType:
