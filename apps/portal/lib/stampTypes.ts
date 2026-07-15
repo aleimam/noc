@@ -17,8 +17,10 @@ export type StampConfig = {
 };
 
 // Every photo-bearing module is a category; 'other' catches any uncategorized upload.
-export type StampCategory = 'listing' | 'map' | 'amenity' | 'area-update' | 'rationing-scan' | 'other';
-export const STAMP_CATEGORIES: StampCategory[] = ['listing', 'map', 'amenity', 'area-update', 'rationing-scan', 'other'];
+// Maps are stamped as two per-site copies: 'map' = Al Sawarey copy, 'map-newobour' = New Obour
+// copy — each with its own logo + format so the two sites' map watermarks are independent.
+export type StampCategory = 'listing' | 'map' | 'map-newobour' | 'amenity' | 'area-update' | 'rationing-scan' | 'other';
+export const STAMP_CATEGORIES: StampCategory[] = ['listing', 'map', 'map-newobour', 'amenity', 'area-update', 'rationing-scan', 'other'];
 // Baked into the file on upload / re-stamp (Attachment-based). 'map' uses AreaMap copies;
 // 'rationing-scan' uses a live view overlay — both handled separately, not baked here.
 export const BAKED_CATEGORIES: StampCategory[] = ['listing', 'amenity', 'area-update', 'other'];

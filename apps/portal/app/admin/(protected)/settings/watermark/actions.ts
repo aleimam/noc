@@ -57,7 +57,7 @@ export async function saveStamp(s: StampSettings): Promise<Result> {
  */
 export async function restampCategory(cat: StampCategory): Promise<CountResult> {
   await requirePermission('appearance', 'UPDATE');
-  if (cat === 'map') return restampMaps();
+  if (cat === 'map' || cat === 'map-newobour') return restampMaps();
   // Listing photos re-stamp PER LISTING so each picks up its category's (Type) rule.
   if (cat === 'listing') {
     try {
@@ -122,10 +122,11 @@ export async function restampCategory(cat: StampCategory): Promise<CountResult> 
 export async function revertCategory(cat: StampCategory): Promise<CountResult> {
   await requirePermission('appearance', 'UPDATE');
   try {
-    if (cat === 'map') {
+    if (cat === 'map' || cat === 'map-newobour') {
       const maps = await prisma.areaMap.findMany();
       for (const m of maps) {
-        await prisma.areaMap.update({ where: { id: m.id }, data: { alswareyPath: m.cleanPath, newobourPath: m.cleanPath } });
+        // Revert only this site's copy back to the clean map.
+        await prisma.areaMap.update({ where: { id: m.id }, data: cat === 'map' ? { alswareyPath: m.cleanPath } : { newobourPath: m.cleanPath } });
       }
       return { ok: true, count: maps.length };
     }
@@ -150,14 +151,13 @@ export async function revertCategory(cat: StampCategory): Promise<CountResult> {
 export async function restampMaps(): Promise<CountResult> {
   await requirePermission('appearance', 'UPDATE');
   try {
-    const logos = await prisma.setting.findMany({ where: { key: { in: ['brand_alsawarey_logo', 'brand_newobour_logo'] } } });
-    const lm = Object.fromEntries(logos.map((s) => [s.key, s.value]));
     const maps = await prisma.areaMap.findMany();
     let count = 0;
     for (const m of maps) {
+      // Each copy resolves its own logo (watermark-page override, else the site brand logo).
       const [alswareyPath, newobourPath] = await Promise.all([
-        stampMapCopy(m.cleanPath, lm['brand_alsawarey_logo'] ?? null),
-        stampMapCopy(m.cleanPath, lm['brand_newobour_logo'] ?? null),
+        stampMapCopy(m.cleanPath, 'map'),
+        stampMapCopy(m.cleanPath, 'map-newobour'),
       ]);
       await prisma.areaMap.update({ where: { id: m.id }, data: { alswareyPath, newobourPath } });
       count++;

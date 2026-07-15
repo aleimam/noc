@@ -5,7 +5,10 @@ import path from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { uploadRoot } from './uploads';
-import { getStampSettings, stampImage, categoryActive } from './stamp';
+import { getStampSettings, stampImage, categoryActive, logoForCategory } from './stamp';
+import { brandForCategory, getBrandContacts } from './contacts';
+
+type MapCat = 'map' | 'map-newobour';
 
 function abs(publicPath: string): string {
   return path.join(uploadRoot(), publicPath.replace(/^\/uploads\//, ''));
@@ -22,17 +25,22 @@ async function saveBuffer(buf: Buffer): Promise<string> {
 }
 
 /**
- * Produce a stamped copy of the clean map for a given brand logo, using the admin's
- * 'map' stamp config (logo position/opacity/size + optional footer). If the config
- * produces no change (logo+footer both off, or no logo), the clean path is reused.
+ * Produce a stamped copy of the clean map for ONE site's map category:
+ *   'map'          → the Al Sawarey copy (AreaMap.alswareyPath)
+ *   'map-newobour' → the New Obour copy (AreaMap.newobourPath)
+ * The logo is the config's own uploaded logo (from the watermark page) when set, else that
+ * site's brand logo from the Branding page — resolved by logoForCategory. Footer uses that
+ * site's brand contacts. If the config is off / has nothing to draw, the clean path is reused.
  */
-export async function stampMapCopy(cleanPublicPath: string, logoPublicPath: string | null): Promise<string> {
+export async function stampMapCopy(cleanPublicPath: string, cat: MapCat): Promise<string> {
   try {
     const s = await getStampSettings();
-    if (!categoryActive(s, 'map')) return cleanPublicPath;
-    const cfg = s.categories.map;
+    if (!categoryActive(s, cat)) return cleanPublicPath;
+    const cfg = s.categories[cat];
+    const logo = await logoForCategory(cat, cfg); // custom (watermark page) ?? site brand logo
+    const contacts = cfg.footerEnabled ? await getBrandContacts(brandForCategory(cat)) : [];
     const cleanBuf = await readFile(abs(cleanPublicPath));
-    const out = await stampImage(cleanBuf, { ...cfg, logoEnabled: cfg.logoEnabled && !!logoPublicPath }, logoPublicPath);
+    const out = await stampImage(cleanBuf, { ...cfg, logoEnabled: cfg.logoEnabled && !!logo }, logo, contacts);
     if (out === cleanBuf || out.equals(cleanBuf)) return cleanPublicPath;
     return await saveBuffer(out);
   } catch (e) {

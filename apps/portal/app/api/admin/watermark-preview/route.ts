@@ -16,13 +16,21 @@ const abs = (p: string) => path.join(uploadRoot(), p.replace(/^\/uploads\//, '')
  *  generated placeholder card when the library has no photos yet. Always ~760px wide (fast). */
 async function sampleBuffer(cat: StampCategory): Promise<Buffer> {
   const sharp = (await import('sharp')).default;
-  const pick = (where: Record<string, unknown>) =>
-    prisma.attachment.findFirst({ where, orderBy: { createdAt: 'desc' }, select: { originalPath: true, path: true } });
-  const row =
-    (await pick({ stampCategory: cat, originalPath: { not: null }, mime: { startsWith: 'image/' } })) ??
-    (await pick({ stampCategory: 'listing', originalPath: { not: null }, mime: { startsWith: 'image/' } })) ??
-    (await pick({ originalPath: { not: null }, mime: { startsWith: 'image/' } }));
-  const rel = row?.originalPath ?? row?.path ?? null;
+  let rel: string | null = null;
+  // Maps live as AreaMap.cleanPath (not category-tagged Attachments) — sample a real clean map.
+  if (cat === 'map' || cat === 'map-newobour') {
+    const m = await prisma.areaMap.findFirst({ select: { cleanPath: true } });
+    rel = m?.cleanPath ?? null;
+  }
+  if (!rel) {
+    const pick = (where: Record<string, unknown>) =>
+      prisma.attachment.findFirst({ where, orderBy: { createdAt: 'desc' }, select: { originalPath: true, path: true } });
+    const row =
+      (await pick({ stampCategory: cat, originalPath: { not: null }, mime: { startsWith: 'image/' } })) ??
+      (await pick({ stampCategory: 'listing', originalPath: { not: null }, mime: { startsWith: 'image/' } })) ??
+      (await pick({ originalPath: { not: null }, mime: { startsWith: 'image/' } }));
+    rel = row?.originalPath ?? row?.path ?? null;
+  }
   if (rel) {
     try {
       return await sharp(await readFile(abs(rel))).rotate().resize({ width: PREVIEW_W, withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer();

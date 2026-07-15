@@ -476,11 +476,11 @@ async function stampAndUpsertAreaMap(input: {
   if (!att) return { ok: false, error: 'failed' };
   await prisma.attachment.update({ where: { id: att.id }, data: { ownerType: 'AreaMap', ownerId: input.targetId } });
 
-  const logos = await prisma.setting.findMany({ where: { key: { in: ['brand_alsawarey_logo', 'brand_newobour_logo'] } } });
-  const lm = Object.fromEntries(logos.map((s) => [s.key, s.value]));
+  // Two independent per-site copies (each resolves its own logo: watermark-page override, else
+  // that site's brand logo). 'map' = Al Sawarey copy, 'map-newobour' = New Obour copy.
   const [alswareyPath, newobourPath] = await Promise.all([
-    stampMapCopy(att.path, lm['brand_alsawarey_logo'] ?? null),
-    stampMapCopy(att.path, lm['brand_newobour_logo'] ?? null),
+    stampMapCopy(att.path, 'map'),
+    stampMapCopy(att.path, 'map-newobour'),
   ]);
 
   const annPatch = input.annotation === undefined ? {} : { annotation: (input.annotation ?? Prisma.JsonNull) as Prisma.InputJsonValue };

@@ -14,7 +14,8 @@ const POS_LABEL: Record<StampPosition, string> = {
 };
 const CAT_LABEL: Record<StampCategory, string> = {
   listing: 'صور الأراضي والإعلانات',
-  map: 'الخرائط (الموقع والمخطط)',
+  map: 'الخرائط — نسخة موقع الصواري',
+  'map-newobour': 'الخرائط — نسخة موقع العبور الجديدة',
   amenity: 'مرافق المنطقة (المرافق العامة)',
   'area-update': 'تحديثات المناطق (الأخبار)',
   'rationing-scan': 'كشوف التقنين (عرض مباشر)',
@@ -156,7 +157,7 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
 
   function catSection(cat: StampCategory) {
     const c = s.categories[cat];
-    const bakeable = BAKED_CATEGORIES.includes(cat) || cat === 'map';
+    const bakeable = BAKED_CATEGORIES.includes(cat) || cat === 'map' || cat === 'map-newobour';
     return (
       <section className={`space-y-3 rounded-lg border border-graphite/15 p-4 ${!s.global ? 'opacity-60' : ''}`}>
         <h3 className="font-semibold text-primary">{CAT_LABEL[cat]}</h3>
