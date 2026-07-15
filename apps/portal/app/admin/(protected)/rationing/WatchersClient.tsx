@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { setFollowStatus, deleteFollow, recheckWatchers, sendCongratsSms, markContacted, unmarkContacted } from './actions';
+import { setFollowStatus, deleteFollow, recheckWatchers, sendCongratsSms, markContacted, unmarkContacted, saveCongratsSmsText } from './actions';
 
 export function WatcherActions({ id, status, name }: { id: string; status: string; name: string }) {
   const t = useTranslations('rationing');
@@ -63,6 +63,50 @@ export function RecheckWatchersButton() {
       </button>
       {msg && <span className={msg.ok ? 'text-sm text-green' : 'text-sm text-red-600'}>{msg.text}</span>}
     </div>
+  );
+}
+
+/** Collapsible editor for the congratulations SMS text (Setting `rationing.congratsSms`).
+ *  `{name}` in the text is replaced with the applicant's name; the sheet link is appended
+ *  automatically on send. */
+export function CongratsSmsEditor({ initial }: { initial: { ar: string; en: string } }) {
+  const t = useTranslations('rationing');
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [ar, setAr] = useState(initial.ar);
+  const [en, setEn] = useState(initial.en);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const area = 'mt-1 w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
+  return (
+    <details className="rounded-lg border border-graphite/15 p-4">
+      <summary className="cursor-pointer text-sm font-semibold text-primary">✉️ {t('congratsEditorTitle')}</summary>
+      <div className="mt-3 space-y-3">
+        <p className="text-xs opacity-70">{t('congratsEditorHint')}</p>
+        <label className="block text-sm">{t('congratsAr')}
+          <textarea value={ar} onChange={(e) => setAr(e.target.value)} rows={3} maxLength={400} className={area} />
+        </label>
+        <label className="block text-sm">{t('congratsEn')}
+          <textarea dir="ltr" value={en} onChange={(e) => setEn(e.target.value)} rows={2} maxLength={400} className={area} />
+        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            disabled={pending || !ar.trim()}
+            onClick={() =>
+              start(async () => {
+                setMsg(null);
+                const r = await saveCongratsSmsText(ar, en);
+                setMsg(r.ok ? { ok: true, text: t('congratsSaved') } : { ok: false, text: t('err_failed') });
+                router.refresh();
+              })
+            }
+            className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50"
+          >
+            {t('congratsSave')}
+          </button>
+          {msg && <span className={msg.ok ? 'text-sm text-green' : 'text-sm text-red-600'}>{msg.text}</span>}
+        </div>
+      </div>
+    </details>
   );
 }
 

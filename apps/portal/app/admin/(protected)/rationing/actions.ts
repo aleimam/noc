@@ -253,11 +253,55 @@ function watchSmsBody(locale: 'ar' | 'en', url: string | null): string {
   return `العبور الجديدة: ظهر اسمك في كشف تقنين جديد.${url ? ' ' + url : ''}`;
 }
 
-// Warmer, admin-curated congratulations message (sent from the watchers page after a
-// human has reviewed the match) — distinct from the automatic alert above.
-function congratsSmsBody(locale: 'ar' | 'en', url: string | null): string {
-  if (locale === 'en') return `New Obour: Congratulations! Your name appeared in the rationing sheets. Our team will call you shortly.${url ? ' ' + url : ''}`;
-  return `العبور الجديدة: مبروك! ظهر اسمك في كشوف التقنين. سيتواصل معك فريقنا هاتفيًا قريبًا.${url ? ' ' + url : ''}`;
+// Warmer, admin-curated congratulations message (sent from the watchers page after a human
+// has reviewed the match). The TEXT is admin-editable (Setting `rationing.congratsSms`,
+// JSON {ar,en}); `{name}` is replaced with the applicant's name and the sheet link is
+// appended automatically. Defaults below apply until the admin customizes it.
+const CONGRATS_KEY = 'rationing.congratsSms';
+const CONGRATS_DEFAULTS = {
+  ar: 'العبور الجديدة: مبروك! ظهر اسمك في كشوف التقنين. سيتواصل معك فريقنا هاتفيًا قريبًا.',
+  en: 'New Obour: Congratulations! Your name appeared in the rationing sheets. Our team will call you shortly.',
+};
+
+async function loadCongratsTexts(): Promise<{ ar: string; en: string }> {
+  try {
+    const row = await prisma.setting.findUnique({ where: { key: CONGRATS_KEY } });
+    const p = row?.value ? (JSON.parse(row.value) as { ar?: string; en?: string }) : {};
+    const ar = (p.ar ?? '').trim() || CONGRATS_DEFAULTS.ar;
+    // English falls back to the Arabic text (better a readable Arabic SMS than a stale default).
+    const en = (p.en ?? '').trim() || (p.ar ?? '').trim() || CONGRATS_DEFAULTS.en;
+    return { ar, en };
+  } catch {
+    return CONGRATS_DEFAULTS;
+  }
+}
+
+function renderCongrats(text: string, name: string, url: string | null): string {
+  const body = text.replace(/\{name\}/g, name).trim();
+  return url ? `${body} ${url}` : body;
+}
+
+/** The current congratulations texts (effective values incl. defaults) — feeds the editor. */
+export async function getCongratsSms(): Promise<{ ar: string; en: string }> {
+  await requirePermission('sheets', 'VIEW');
+  return loadCongratsTexts();
+}
+
+/** Save the admin-edited congratulations SMS texts (Arabic required; English optional). */
+export async function saveCongratsSmsText(ar: string, en: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requirePermission('sheets', 'UPDATE');
+  const a = (ar ?? '').trim().slice(0, 400);
+  const e = (en ?? '').trim().slice(0, 400);
+  if (!a) return { ok: false, error: 'empty' };
+  try {
+    const value = JSON.stringify({ ar: a, en: e });
+    await prisma.setting.upsert({ where: { key: CONGRATS_KEY }, update: { value }, create: { key: CONGRATS_KEY, value } });
+    revalidatePath('/admin/rationing/watchers');
+    return { ok: true };
+  } catch (err) {
+    console.error('saveCongratsSmsText failed', err);
+    return { ok: false, error: 'failed' };
+  }
 }
 
 /**
@@ -363,6 +407,7 @@ export async function sendCongratsSms(ids: string[]): Promise<{ ok: true; sent: 
       include: { user: { select: { phone: true, preference: { select: { locale: true } } } } },
     });
     const base = (process.env.PORTAL_URL || process.env.NEXTAUTH_URL || '').replace(/\/$/, '');
+    const texts = await loadCongratsTexts(); // admin-editable message (defaults until customized)
     let cfg: Awaited<ReturnType<typeof loadSmsConfig>> | null = null;
     let sent = 0;
     let skipped = 0;
@@ -371,7 +416,8 @@ export async function sendCongratsSms(ids: string[]): Promise<{ ok: true; sent: 
       if (!cfg) cfg = await loadSmsConfig();
       const locale = (f.user.preference?.locale?.toLowerCase() === 'en' ? 'en' : 'ar') as 'ar' | 'en';
       const url = base && f.sheetId ? `${base}/rationing/${f.sheetId}` : null;
-      const res = await sendSms(f.user.phone, congratsSmsBody(locale, url), cfg).catch((e) => { console.error('congrats sms failed', e); return null; });
+      const body = renderCongrats(locale === 'en' ? texts.en : texts.ar, f.applicantName, url);
+      const res = await sendSms(f.user.phone, body, cfg).catch((e) => { console.error('congrats sms failed', e); return null; });
       if (res?.ok) { await prisma.rationingFollow.update({ where: { id: f.id }, data: { congratsAt: new Date() } }); sent++; }
       else skipped++;
     }

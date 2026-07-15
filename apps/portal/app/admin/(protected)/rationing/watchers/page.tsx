@@ -1,7 +1,8 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma, Prisma } from '@noc/db';
-import { WatcherActions, RecheckWatchersButton, FollowupTable, type FollowRow } from '../WatchersClient';
+import { WatcherActions, RecheckWatchersButton, FollowupTable, CongratsSmsEditor, type FollowRow } from '../WatchersClient';
+import { getCongratsSms } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -104,6 +105,8 @@ export default async function WatchersPage({ searchParams }: { searchParams: Pro
         <RecheckWatchersButton />
         <p className="mt-2 text-xs opacity-70">{t('recheckHint')}</p>
       </div>
+
+      <CongratsSmsEditor initial={await getCongratsSms()} />
 
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
