@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { ImageAttachment, type UploadedAttachment } from '@noc/ui';
 import { saveStamp, restampCategory, revertCategory } from './actions';
 import { ContactsManager, type Contact } from './ContactsManager';
@@ -25,6 +25,62 @@ const BRANDS: { brand: string; label: string; cats: StampCategory[] }[] = [
   { brand: 'newobour', label: 'العبور الجديدة', cats: STAMP_CATEGORIES.filter((c) => c !== 'listing' && c !== 'map') },
 ];
 const inp = 'mt-1 w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
+
+/** Live preview: POSTs the CURRENT (unsaved) config to the stamp engine and shows a real sample
+ *  photo of the same category, stamped. Debounced; only calls the server while a logo or footer
+ *  is enabled (nothing to preview otherwise). */
+function StampPreview({ category, config }: { category: StampCategory; config: StampConfig }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const on = config.logoEnabled || config.footerEnabled;
+  const key = JSON.stringify(config);
+  useEffect(() => {
+    if (!on) {
+      setUrl((p) => { if (p) URL.revokeObjectURL(p); return null; });
+      return;
+    }
+    let alive = true;
+    setLoading(true);
+    const id = setTimeout(async () => {
+      try {
+        const r = await fetch('/api/admin/watermark-preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category, config }),
+        });
+        if (!r.ok) throw new Error('preview');
+        const blob = await r.blob();
+        if (!alive) return;
+        const obj = URL.createObjectURL(blob);
+        setUrl((p) => { if (p) URL.revokeObjectURL(p); return obj; });
+      } catch {
+        if (alive) setUrl(null);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    }, 450);
+    return () => { alive = false; clearTimeout(id); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, on, category]);
+
+  return (
+    <div className="rounded-lg border border-graphite/20 bg-graphite/5 p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-sm font-semibold text-primary">معاينة مباشرة</span>
+        {on && loading && <span className="text-xs opacity-60">جارٍ التحديث…</span>}
+      </div>
+      {!on ? (
+        <p className="py-6 text-center text-xs opacity-60">فعّل «ختم الشعار» أو «شريط التذييل» لرؤية المعاينة على صورة تجريبية.</p>
+      ) : url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="معاينة الختم" className="mx-auto max-h-72 w-auto rounded-md border border-graphite/15" />
+      ) : (
+        <p className="py-6 text-center text-xs opacity-60">{loading ? '…' : 'تعذّرت المعاينة'}</p>
+      )}
+      <p className="mt-2 text-center text-[11px] leading-relaxed opacity-50">صورة تجريبية من نفس النوع — تُحدَّث بعد كل تعديل. تعرض تنسيق الشعار/التذييل بصرف النظر عن المفتاح الرئيسي.</p>
+    </div>
+  );
+}
 
 export function WatermarkClient({ initial, contacts, typeOptions }: { initial: StampSettings; contacts: Contact[]; typeOptions: TypeOption[] }) {
   const [s, setS] = useState<StampSettings>(initial);
@@ -66,7 +122,7 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
   }
 
   // Shared config controls (used by both a photo category and a per-Type override).
-  function configControls(c: StampConfig, onPatch: (p: Partial<StampConfig>) => void) {
+  function configControls(c: StampConfig, onPatch: (p: Partial<StampConfig>) => void, cat: StampCategory) {
     return (
       <>
         <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={c.enabled} onChange={(e) => onPatch({ enabled: e.target.checked })} /> تفعيل الختم</label>
@@ -93,6 +149,7 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
           <label className="text-sm">نص احتياطي (سطر ١)<input value={c.footerLine1} onChange={(e) => onPatch({ footerLine1: e.target.value })} className={inp} placeholder="01040810000 · WhatsApp" /></label>
           <label className="text-sm">نص احتياطي (سطر ٢)<input dir="ltr" value={c.footerLine2} onChange={(e) => onPatch({ footerLine2: e.target.value })} className={inp} placeholder="alsawarey.com" /></label>
         </div>
+        <StampPreview category={cat} config={c} />
       </>
     );
   }
@@ -103,7 +160,7 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
     return (
       <section className={`space-y-3 rounded-lg border border-graphite/15 p-4 ${!s.global ? 'opacity-60' : ''}`}>
         <h3 className="font-semibold text-primary">{CAT_LABEL[cat]}</h3>
-        {configControls(c, (p) => patch(cat, p))}
+        {configControls(c, (p) => patch(cat, p), cat)}
         {cat === 'rationing-scan' ? (
           <p className="text-xs text-primary/70">تُختم كشوف التقنين عند العرض مباشرةً — لا حاجة لإعادة الختم.</p>
         ) : bakeable ? (
@@ -126,7 +183,7 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
                     <span className="font-semibold text-navy-800">🏷️ {t?.nameAr ?? tid}</span>
                     <button type="button" onClick={() => removeOverride(tid)} className="text-xs text-red-600">حذف القاعدة</button>
                   </div>
-                  {configControls(s.listingTypeOverrides[tid]!, (p) => patchOverride(tid, p))}
+                  {configControls(s.listingTypeOverrides[tid]!, (p) => patchOverride(tid, p), 'listing')}
                 </div>
               );
             })}

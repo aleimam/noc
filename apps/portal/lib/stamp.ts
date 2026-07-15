@@ -215,6 +215,16 @@ export async function stampForCategory(buffer: Buffer, cat: StampCategory): Prom
   return stampImage(buffer, cfg, logo, contacts);
 }
 
+/** Live preview for the watermark settings editor: stamp a sample buffer with an UNSAVED config
+ *  so the admin sees the effect after each change. Resolves the same logo + brand contacts as
+ *  production; shows the logo/footer per the config's own toggles, independent of the global
+ *  master switch (it's a design preview, not the production gate). */
+export async function stampPreview(cat: StampCategory, cfg: StampConfig, buffer: Buffer): Promise<Buffer> {
+  const logo = cfg.logoEnabled ? await logoForCategory(cat, cfg) : null;
+  const contacts = cfg.footerEnabled ? await getBrandContacts(brandForCategory(cat)) : [];
+  return stampImage(buffer, cfg, logo, contacts);
+}
+
 /** The stamp config for a listing's photos: a per-Type override if configured, else the base
  *  'listing' config. Lets admins watermark land listings differently from apartments, etc. */
 export function effectiveListingConfig(s: StampSettings, typeOptionId: string | null): StampConfig {
