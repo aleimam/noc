@@ -116,6 +116,8 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     select: { path: true },
   });
   const isAdminViewer = !!(await getAdminViewer());
+  // Cross-domain deep link: the admin panel lives on the portal domain, not this one.
+  const portalBase = (process.env.PORTAL_URL || 'https://newobour.com').replace(/\/$/, '');
   const owner = isAdminViewer ? await ownerDetailFor(listingId) : null;
   // Official papers (internal): staff-only on the frontend; the public never sees them.
   const paperPhotos: Record<string, string> = isAdminViewer
@@ -254,6 +256,13 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
                 )}
                 <div className="flex items-baseline gap-1.5"><dt className="text-xs text-ink-500">{L('أضافه', 'Added by')}</dt><dd className="whitespace-nowrap font-semibold">{owner.createdByName ?? '—'}</dd></div>
               </dl>
+              {/* Staff-only deep link to the backend edit page (portal domain). */}
+              <a
+                href={`${portalBase}/admin/marketplace/listings/${listingId}/edit`}
+                className="ms-auto inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-amber-400 bg-white px-4 py-1.5 text-sm font-bold text-amber-800 hover:bg-amber-100"
+              >
+                ✎ {L('تعديل (إدارة)', 'Edit (staff)')}
+              </a>
             </div>
             {owner.details && <p className="mt-2 border-t border-amber-200 pt-2 text-sm text-navy-700">{owner.details}</p>}
           </section>
