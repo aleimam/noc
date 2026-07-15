@@ -40,7 +40,7 @@ export async function stampMapCopy(cleanPublicPath: string, cat: MapCat): Promis
     const logo = await logoForCategory(cat, cfg); // custom (watermark page) ?? site brand logo
     const contacts = cfg.footerEnabled ? await getBrandContacts(brandForCategory(cat)) : [];
     const cleanBuf = await readFile(abs(cleanPublicPath));
-    const out = await stampImage(cleanBuf, { ...cfg, logoEnabled: cfg.logoEnabled && !!logo }, logo, contacts);
+    const out = await stampImage(cleanBuf, { ...cfg, logoEnabled: cfg.logoEnabled && !!logo }, logo, contacts, cfg.wmLogoPath);
     if (out === cleanBuf || out.equals(cleanBuf)) return cleanPublicPath;
     return await saveBuffer(out);
   } catch (e) {

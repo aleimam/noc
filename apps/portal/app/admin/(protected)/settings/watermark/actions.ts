@@ -94,7 +94,7 @@ export async function restampCategory(cat: StampCategory): Promise<CountResult> 
       try {
         const origBuf = await readFile(abs(r.originalPath));
         if (active) {
-          const out = await stampImage(origBuf, cfg, logo, contacts);
+          const out = await stampImage(origBuf, cfg, logo, contacts, cfg.wmLogoPath);
           if (!out.equals(origBuf)) {
             const ext = r.originalPath.split('.').pop() || 'jpg';
             const newPath = await saveBuffer(out, ext);

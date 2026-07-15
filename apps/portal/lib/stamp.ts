@@ -47,7 +47,7 @@ export async function saveStampSettings(s: StampSettings): Promise<void> {
 /** Is this category actually stamping right now (master on + category on + something to draw)? */
 export function categoryActive(s: StampSettings, cat: StampCategory): boolean {
   const c = s.categories[cat];
-  return s.global && !!c?.enabled && (c.logoEnabled || c.footerEnabled);
+  return s.global && !!c?.enabled && (c.logoEnabled || c.wmEnabled || c.footerEnabled);
 }
 
 const GRAVITY: Record<StampPosition, string> = {
@@ -141,12 +141,15 @@ function legacyFooterSvg(W: number, fh: number, line1: string, line2: string): s
     (l2 ? `<text x="${W / 2}" y="${fh * 0.78}" fill="#cdd6e4" font-family="Arial,sans-serif" font-size="${f2}" text-anchor="middle" dominant-baseline="middle">${l2}</text>` : '');
 }
 
-/** Bake the configured logo + footer into an image buffer. The footer prefers the brand's
- *  managed `contacts` (icon + value), falling back to the free-text lines. No-op safe. */
-export async function stampImage(buffer: Buffer, cfg: StampConfig, logoPath: string | null, contacts: BrandContactItem[] = []): Promise<Buffer> {
+/** Bake the configured layers into an image buffer: the corner logo stamp, a big transparent
+ *  CENTERED watermark (its own logo, or the stamp's), and the footer bar. The footer prefers
+ *  the brand's managed `contacts` (icon + value), falling back to the free-text lines. No-op safe. */
+export async function stampImage(buffer: Buffer, cfg: StampConfig, logoPath: string | null, contacts: BrandContactItem[] = [], wmLogoPath: string | null = null): Promise<Buffer> {
+  const wmSrc = wmLogoPath ?? cfg.wmLogoPath ?? logoPath; // watermark falls back to the stamp logo
   const wantsLogo = cfg.logoEnabled && !!logoPath;
+  const wantsWm = !!cfg.wmEnabled && !!wmSrc;
   const wantsFooter = cfg.footerEnabled && (contacts.length > 0 || !!(cfg.footerLine1 || cfg.footerLine2));
-  if (!wantsLogo && !wantsFooter) return buffer;
+  if (!wantsLogo && !wantsWm && !wantsFooter) return buffer;
   try {
     const sharp = (await import('sharp')).default;
     const base = sharp(buffer);
@@ -155,16 +158,32 @@ export async function stampImage(buffer: Buffer, cfg: StampConfig, logoPath: str
     const H = meta.height ?? 800;
     const composites: { input: Buffer; gravity?: string; top?: number; left?: number }[] = [];
 
+    // Opacity is applied by multiplying the alpha channel (dest-in with a tiled 1×1 pixel).
+    const fade = async (buf: Buffer, opacity: number) => {
+      const a = Math.round(Math.min(1, Math.max(0, opacity)) * 255);
+      return sharp(buf)
+        .composite([{ input: Buffer.from([255, 255, 255, a]), raw: { width: 1, height: 1, channels: 4 }, tile: true, blend: 'dest-in' }])
+        .png()
+        .toBuffer();
+    };
+
     if (wantsLogo && logoPath) {
       const logoBuf = await readFile(abs(logoPath));
       const targetW = Math.max(32, Math.round((W * Math.min(50, Math.max(1, cfg.scale))) / 100));
       const resized = await sharp(logoBuf).resize({ width: targetW }).ensureAlpha().png().toBuffer();
-      const a = Math.round(Math.min(1, Math.max(0, cfg.opacity)) * 255);
-      const faded = await sharp(resized)
-        .composite([{ input: Buffer.from([255, 255, 255, a]), raw: { width: 1, height: 1, channels: 4 }, tile: true, blend: 'dest-in' }])
+      composites.push({ input: await fade(resized, cfg.opacity), gravity: GRAVITY[cfg.position] });
+    }
+    if (wantsWm && wmSrc) {
+      // Centered, large, very transparent. fit:'inside' bounds BOTH dimensions so a huge
+      // watermark can never exceed the photo (sharp rejects oversized overlays).
+      const wmBuf = await readFile(abs(wmSrc));
+      const targetW = Math.max(48, Math.round((W * Math.min(90, Math.max(10, cfg.wmScale ?? 45))) / 100));
+      const resized = await sharp(wmBuf)
+        .resize({ width: targetW, height: Math.max(32, H - 16), fit: 'inside' })
+        .ensureAlpha()
         .png()
         .toBuffer();
-      composites.push({ input: faded, gravity: GRAVITY[cfg.position] });
+      composites.push({ input: await fade(resized, cfg.wmOpacity ?? 0.15), gravity: 'center' });
     }
     if (wantsFooter) {
       const fh = Math.max(46, Math.round(W * 0.08));
@@ -212,7 +231,7 @@ export async function stampForCategory(buffer: Buffer, cat: StampCategory): Prom
   const cfg = s.categories[cat];
   const logo = await logoForCategory(cat, cfg);
   const contacts = cfg.footerEnabled ? await getBrandContacts(brandForCategory(cat)) : [];
-  return stampImage(buffer, cfg, logo, contacts);
+  return stampImage(buffer, cfg, logo, contacts, cfg.wmLogoPath);
 }
 
 /** Live preview for the watermark settings editor: stamp a sample buffer with an UNSAVED config
@@ -220,9 +239,11 @@ export async function stampForCategory(buffer: Buffer, cat: StampCategory): Prom
  *  production; shows the logo/footer per the config's own toggles, independent of the global
  *  master switch (it's a design preview, not the production gate). */
 export async function stampPreview(cat: StampCategory, cfg: StampConfig, buffer: Buffer): Promise<Buffer> {
-  const logo = cfg.logoEnabled ? await logoForCategory(cat, cfg) : null;
+  // Resolve the logo unconditionally: stampImage gates the corner stamp on cfg.logoEnabled,
+  // and the centered watermark may fall back to this logo even when the corner stamp is off.
+  const logo = await logoForCategory(cat, cfg);
   const contacts = cfg.footerEnabled ? await getBrandContacts(brandForCategory(cat)) : [];
-  return stampImage(buffer, cfg, logo, contacts);
+  return stampImage(buffer, cfg, logo, contacts, cfg.wmLogoPath);
 }
 
 /** The stamp config for a listing's photos: a per-Type override if configured, else the base
@@ -247,7 +268,7 @@ export async function restampListingPhotos(listingId: string): Promise<number> {
   const s = await getStampSettings();
   const listing = await prisma.listing.findUnique({ where: { id: listingId }, select: { typeOptionId: true } });
   const cfg = effectiveListingConfig(s, listing?.typeOptionId ?? null);
-  const active = s.global && !!cfg.enabled && (cfg.logoEnabled || cfg.footerEnabled);
+  const active = s.global && !!cfg.enabled && (cfg.logoEnabled || cfg.wmEnabled || cfg.footerEnabled);
   const logo = active ? await logoForCategory('listing', cfg) : null;
   const contacts = active && cfg.footerEnabled ? await getBrandContacts(brandForCategory('listing')) : [];
   const rows = await prisma.attachment.findMany({
@@ -265,7 +286,7 @@ export async function restampListingPhotos(listingId: string): Promise<number> {
         continue;
       }
       const orig = await readFile(abs(r.originalPath));
-      const out = await stampImage(orig, cfg, logo, contacts);
+      const out = await stampImage(orig, cfg, logo, contacts, cfg.wmLogoPath);
       if (!out.equals(orig)) {
         const ext = (r.originalPath.split('.').pop() || 'jpg').toLowerCase();
         const newPath = await saveStampBuffer(out, ext);

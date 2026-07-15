@@ -6,11 +6,15 @@ export type StampPosition = 'top-left' | 'top-right' | 'center' | 'bottom-left' 
 
 export type StampConfig = {
   enabled: boolean; // category on/off (gated further by the global master switch)
-  logoEnabled: boolean;
+  logoEnabled: boolean; // corner stamp layer
   logoPath: string | null; // optional override; else the category's brand logo
   position: StampPosition;
   opacity: number; // 0..1
   scale: number; // logo width as % of the photo width
+  wmEnabled: boolean; // second layer: big transparent watermark, always centered
+  wmLogoPath: string | null; // optional own logo; else the corner-stamp logo (custom or brand)
+  wmOpacity: number; // 0..1 (low — it's a watermark)
+  wmScale: number; // watermark width as % of the photo width
   footerEnabled: boolean;
   footerLine1: string;
   footerLine2: string;
@@ -41,6 +45,10 @@ export const DEFAULT_CONFIG: StampConfig = {
   position: 'bottom-right',
   opacity: 0.55,
   scale: 18,
+  wmEnabled: false,
+  wmLogoPath: null,
+  wmOpacity: 0.15,
+  wmScale: 45,
   footerEnabled: false,
   footerLine1: '',
   footerLine2: '',

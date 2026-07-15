@@ -28,6 +28,7 @@ const BRANDS: { brand: string; label: string; cats: StampCategory[] }[] = [
 const inp = 'mt-1 w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
 // Which brand's default logo a category falls back to (mirrors brandForCategory on the server).
 const catBrandLabel = (cat: StampCategory) => (cat === 'listing' || cat === 'map' ? 'الصواري' : 'العبور الجديدة');
+const catBrandDomain = (cat: StampCategory) => (cat === 'listing' || cat === 'map' ? 'alsawarey.com' : 'newobour.com');
 
 /** Live preview: POSTs the CURRENT (unsaved) config to the stamp engine and shows a real sample
  *  photo of the same category, stamped. Debounced; only calls the server while a logo or footer
@@ -35,7 +36,7 @@ const catBrandLabel = (cat: StampCategory) => (cat === 'listing' || cat === 'map
 function StampPreview({ category, config }: { category: StampCategory; config: StampConfig }) {
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const on = config.logoEnabled || config.footerEnabled;
+  const on = config.logoEnabled || config.wmEnabled || config.footerEnabled;
   const key = JSON.stringify(config);
   useEffect(() => {
     if (!on) {
@@ -73,7 +74,7 @@ function StampPreview({ category, config }: { category: StampCategory; config: S
         {on && loading && <span className="text-xs opacity-60">جارٍ التحديث…</span>}
       </div>
       {!on ? (
-        <p className="py-6 text-center text-xs opacity-60">فعّل «ختم الشعار» أو «شريط التذييل» لرؤية المعاينة على صورة تجريبية.</p>
+        <p className="py-6 text-center text-xs opacity-60">فعّل «ختم الشعار» أو «العلامة المائية» أو «شريط التذييل» لرؤية المعاينة على صورة تجريبية.</p>
       ) : url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={url} alt="معاينة الختم" className="mx-auto max-h-72 w-auto rounded-md border border-graphite/15" />
@@ -90,6 +91,9 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState('');
   const [addSel, setAddSel] = useState('');
+  // Unsaved-changes tracking: compare against the last saved snapshot, not the mount prop.
+  const [savedSnap, setSavedSnap] = useState(() => JSON.stringify(initial));
+  const dirty = JSON.stringify(s) !== savedSnap;
 
   const patch = (cat: StampCategory, p: Partial<StampConfig>) =>
     setS((prev) => ({ ...prev, categories: { ...prev.categories, [cat]: { ...prev.categories[cat], ...p } } }));
@@ -104,15 +108,21 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
     setMsg('');
     start(async () => {
       const r = await saveStamp(s);
+      if (r.ok) setSavedSnap(JSON.stringify(s));
       setMsg(r.ok ? 'تم الحفظ ✓' : 'فشل الحفظ');
     });
   }
+  // Re-stamp SAVES the current settings first — otherwise photos would be re-baked with the
+  // previously saved config while the live preview shows the new one (a nasty trap).
   function restamp(cat: StampCategory) {
-    if (!confirm('سيتم إعادة توليد صور هذه الفئة من النسخ الأصلية النقية بالإعدادات المحفوظة حالياً. متابعة؟')) return;
+    if (!confirm('سيتم حفظ الإعدادات الحالية ثم إعادة توليد صور هذه الفئة من النسخ الأصلية النقية. متابعة؟')) return;
     setMsg('');
     start(async () => {
+      const sv = await saveStamp(s);
+      if (!sv.ok) { setMsg('فشل الحفظ'); return; }
+      setSavedSnap(JSON.stringify(s));
       const r = await restampCategory(cat);
-      setMsg(r.ok ? `تمت معالجة ${r.count} صورة ✓` : r.error === 'not_bakeable' ? 'هذه الفئة تُختم عند العرض مباشرة' : 'فشلت العملية');
+      setMsg(r.ok ? `تم الحفظ وتمت معالجة ${r.count} صورة ✓` : r.error === 'not_bakeable' ? 'هذه الفئة تُختم عند العرض مباشرة' : 'فشلت العملية');
     });
   }
   function revert(cat: StampCategory) {
@@ -125,38 +135,74 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
   }
 
   // Shared config controls (used by both a photo category and a per-Type override).
+  // Three independent layers, each in its own box: corner stamp · centered transparent
+  // watermark · footer bar. The corner stamp and the watermark can carry DIFFERENT logos.
   function configControls(c: StampConfig, onPatch: (p: Partial<StampConfig>) => void, cat: StampCategory) {
+    const group = 'space-y-3 rounded-md border border-graphite/15 bg-white/50 p-3';
     return (
       <>
-        <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={c.enabled} onChange={(e) => onPatch({ enabled: e.target.checked })} /> تفعيل الختم</label>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={c.logoEnabled} onChange={(e) => onPatch({ logoEnabled: e.target.checked })} /> ختم الشعار في الزاوية (علامة مائية)</label>
-        <div>
-          <div className="mb-1 text-sm opacity-70">شعار مخصّص (اختياري — الافتراضي شعار العلامة التجارية)</div>
-          <ImageAttachment value={c.logoPath ? { id: '', path: c.logoPath, originalName: '' } : null} onChange={(a: UploadedAttachment | null) => onPatch({ logoPath: a?.path ?? null })} />
-          <p className={`mt-1 text-xs ${c.logoPath ? 'text-green' : 'opacity-70'}`}>
-            {c.logoPath
-              ? '✓ سيُستخدم الشعار المرفوع هنا في الختم'
-              : `سيُستخدم شعار «${catBrandLabel(cat)}» الافتراضي (من صفحة «الشعارات والهوية»)`}
-          </p>
+        <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={c.enabled} onChange={(e) => onPatch({ enabled: e.target.checked })} /> تفعيل الختم لهذه الفئة</label>
+
+        {/* ── Layer 1: corner logo stamp ── */}
+        <div className={group}>
+          <label className="flex items-center gap-2 text-sm font-bold text-primary"><input type="checkbox" checked={c.logoEnabled} onChange={(e) => onPatch({ logoEnabled: e.target.checked })} /> ١· ختم الشعار (في زاوية أو منتصف الصورة)</label>
+          <div>
+            <div className="mb-1 text-sm opacity-70">شعار مخصّص (اختياري — الافتراضي شعار العلامة التجارية)</div>
+            <ImageAttachment value={c.logoPath ? { id: '', path: c.logoPath, originalName: '' } : null} onChange={(a: UploadedAttachment | null) => onPatch({ logoPath: a?.path ?? null })} />
+            <p className={`mt-1 text-xs ${c.logoPath ? 'text-green' : 'opacity-70'}`}>
+              {c.logoPath
+                ? '✓ سيُستخدم الشعار المرفوع هنا في الختم'
+                : `سيُستخدم شعار «${catBrandLabel(cat)}» الافتراضي (من صفحة «الشعارات والهوية»)`}
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <label className="text-sm">الموضع
+              <select value={c.position} onChange={(e) => onPatch({ position: e.target.value as StampPosition })} className={inp}>
+                {POSITIONS.map((p) => <option key={p} value={p}>{POS_LABEL[p]}</option>)}
+              </select>
+            </label>
+            <label className="text-sm">الشفافية: {Math.round(c.opacity * 100)}%
+              <input type="range" min={10} max={100} step={5} value={Math.round(c.opacity * 100)} onChange={(e) => onPatch({ opacity: parseInt(e.target.value, 10) / 100 })} className="w-full" />
+            </label>
+            <label className="text-sm">الحجم: {c.scale}%
+              <input type="range" min={5} max={50} step={1} value={c.scale} onChange={(e) => onPatch({ scale: parseInt(e.target.value, 10) })} className="w-full" />
+            </label>
+          </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <label className="text-sm">الموضع
-            <select value={c.position} onChange={(e) => onPatch({ position: e.target.value as StampPosition })} className={inp}>
-              {POSITIONS.map((p) => <option key={p} value={p}>{POS_LABEL[p]}</option>)}
-            </select>
-          </label>
-          <label className="text-sm">الشفافية: {Math.round(c.opacity * 100)}%
-            <input type="range" min={10} max={100} step={5} value={Math.round(c.opacity * 100)} onChange={(e) => onPatch({ opacity: parseInt(e.target.value, 10) / 100 })} className="w-full" />
-          </label>
-          <label className="text-sm">الحجم: {c.scale}%
-            <input type="range" min={5} max={50} step={1} value={c.scale} onChange={(e) => onPatch({ scale: parseInt(e.target.value, 10) })} className="w-full" />
-          </label>
+
+        {/* ── Layer 2: big transparent centered watermark (not applicable to the live scan overlay) ── */}
+        {cat !== 'rationing-scan' && (
+          <div className={group}>
+            <label className="flex items-center gap-2 text-sm font-bold text-primary"><input type="checkbox" checked={c.wmEnabled} onChange={(e) => onPatch({ wmEnabled: e.target.checked })} /> ٢· علامة مائية شفافة في منتصف الصورة</label>
+            <p className="text-xs opacity-60">طبقة مستقلة عن ختم الزاوية — يمكن تفعيل الاثنين معًا وبشعارين مختلفين.</p>
+            <div>
+              <div className="mb-1 text-sm opacity-70">شعار العلامة المائية (اختياري)</div>
+              <ImageAttachment value={c.wmLogoPath ? { id: '', path: c.wmLogoPath, originalName: '' } : null} onChange={(a: UploadedAttachment | null) => onPatch({ wmLogoPath: a?.path ?? null })} />
+              <p className={`mt-1 text-xs ${c.wmLogoPath ? 'text-green' : 'opacity-70'}`}>
+                {c.wmLogoPath ? '✓ سيُستخدم هذا الشعار للعلامة المائية' : 'سيُستخدم نفس شعار الختم أعلاه (المخصّص أو شعار العلامة التجارية)'}
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="text-sm">الشفافية: {Math.round((c.wmOpacity ?? 0.15) * 100)}%
+                <input type="range" min={5} max={60} step={5} value={Math.round((c.wmOpacity ?? 0.15) * 100)} onChange={(e) => onPatch({ wmOpacity: parseInt(e.target.value, 10) / 100 })} className="w-full" />
+              </label>
+              <label className="text-sm">الحجم: {c.wmScale ?? 45}%
+                <input type="range" min={20} max={90} step={5} value={c.wmScale ?? 45} onChange={(e) => onPatch({ wmScale: parseInt(e.target.value, 10) })} className="w-full" />
+              </label>
+            </div>
+          </div>
+        )}
+
+        {/* ── Layer 3: footer bar ── */}
+        <div className={group}>
+          <label className="flex items-center gap-2 text-sm font-bold text-primary"><input type="checkbox" checked={c.footerEnabled} onChange={(e) => onPatch({ footerEnabled: e.target.checked })} /> ٣· شريط تذييل ببيانات التواصل والأيقونات</label>
+          <p className="text-xs opacity-60">يعرض تلقائيًا بيانات تواصل «{catBrandLabel(cat)}» المُدارة أعلى هذا القسم. النصان أدناه احتياطيان — يُستخدمان فقط إذا لم تُدخل أي بيانات تواصل.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-sm">نص احتياطي (سطر ١)<input value={c.footerLine1} onChange={(e) => onPatch({ footerLine1: e.target.value })} className={inp} placeholder={`01xxxxxxxxx · ${catBrandLabel(cat)}`} /></label>
+            <label className="text-sm">نص احتياطي (سطر ٢)<input dir="ltr" value={c.footerLine2} onChange={(e) => onPatch({ footerLine2: e.target.value })} className={inp} placeholder={catBrandDomain(cat)} /></label>
+          </div>
         </div>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={c.footerEnabled} onChange={(e) => onPatch({ footerEnabled: e.target.checked })} /> شريط تذييل ببيانات التواصل والأيقونات</label>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm">نص احتياطي (سطر ١)<input value={c.footerLine1} onChange={(e) => onPatch({ footerLine1: e.target.value })} className={inp} placeholder="01040810000 · WhatsApp" /></label>
-          <label className="text-sm">نص احتياطي (سطر ٢)<input dir="ltr" value={c.footerLine2} onChange={(e) => onPatch({ footerLine2: e.target.value })} className={inp} placeholder="alsawarey.com" /></label>
-        </div>
+
         <StampPreview category={cat} config={c} />
       </>
     );
@@ -226,7 +272,10 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
 
       {BRANDS.map((b) => (
         <div key={b.brand} className="space-y-3 rounded-xl border-2 border-navy-800/20 bg-navy-800/[0.03] p-3">
-          <h2 className="px-1 text-lg font-black text-navy-800">🏷️ {b.label}</h2>
+          <div className="px-1">
+            <h2 className="text-lg font-black text-navy-800">🏷️ {b.label}</h2>
+            <p className="text-xs opacity-60">إعدادات ختم صور موقع {b.brand === 'alsawarey' ? 'alsawarey.com' : 'newobour.com'} — بيانات التواصل والفئات أدناه تخص هذا الموقع فقط.</p>
+          </div>
           <ContactsManager brand={b.brand} brandLabel={b.label} contacts={contacts.filter((c) => c.brand === b.brand)} />
           {b.cats.map((cat) => <div key={cat}>{catSection(cat)}</div>)}
         </div>
@@ -234,6 +283,7 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
 
       <div className="sticky bottom-0 flex items-center gap-3 border-t border-graphite/15 bg-soft py-3">
         <button disabled={pending} onClick={save} className="rounded-md bg-primary px-6 py-2 text-sm text-soft disabled:opacity-50">{pending ? 'جارٍ الحفظ…' : 'حفظ الإعدادات'}</button>
+        {dirty && !pending && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">تغييرات غير محفوظة</span>}
         {msg && <span className="text-sm text-green">{msg}</span>}
       </div>
     </div>
