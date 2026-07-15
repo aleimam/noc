@@ -18,6 +18,7 @@ import { listListingImages } from '../../../lib/poster/generate';
 import { trackListingView } from '../../../lib/views';
 import { partnershipsEnabled } from '../../../lib/modules';
 import { SiteShell } from '../../_components/SiteShell';
+import { AdminEditButton } from '../../_components/AdminEditButton';
 import { pageMeta, breadcrumbLd, ldJson, abs } from '../../../lib/seo';
 import { listingAlt, geoPhotoAlt } from '../../../lib/imageAlt';
 
@@ -343,6 +344,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
           ))}
         </div>
         <h1 className="mt-2 text-2xl font-bold text-primary">{listing.title}</h1>
+        <div className="mt-2"><AdminEditButton href={`/admin/marketplace/listings/${listing.id}/edit`} section="listings" /></div>
         {listing.area != null && (
           <div className="mt-1 text-lg font-semibold text-primary">
             {locale === 'ar' ? 'المساحة الفعلية' : 'Actual area'}: {Number(listing.area).toLocaleString('en-US')} <span className="text-sm font-normal">{locale === 'ar' ? 'م²' : 'm²'}</span>

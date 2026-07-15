@@ -26,6 +26,8 @@ const BRANDS: { brand: string; label: string; cats: StampCategory[] }[] = [
   { brand: 'newobour', label: 'العبور الجديدة', cats: STAMP_CATEGORIES.filter((c) => c !== 'listing' && c !== 'map') },
 ];
 const inp = 'mt-1 w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
+// Which brand's default logo a category falls back to (mirrors brandForCategory on the server).
+const catBrandLabel = (cat: StampCategory) => (cat === 'listing' || cat === 'map' ? 'الصواري' : 'العبور الجديدة');
 
 /** Live preview: POSTs the CURRENT (unsaved) config to the stamp engine and shows a real sample
  *  photo of the same category, stamped. Debounced; only calls the server while a logo or footer
@@ -131,6 +133,11 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
         <div>
           <div className="mb-1 text-sm opacity-70">شعار مخصّص (اختياري — الافتراضي شعار العلامة التجارية)</div>
           <ImageAttachment value={c.logoPath ? { id: '', path: c.logoPath, originalName: '' } : null} onChange={(a: UploadedAttachment | null) => onPatch({ logoPath: a?.path ?? null })} />
+          <p className={`mt-1 text-xs ${c.logoPath ? 'text-green' : 'opacity-70'}`}>
+            {c.logoPath
+              ? '✓ سيُستخدم الشعار المرفوع هنا في الختم'
+              : `سيُستخدم شعار «${catBrandLabel(cat)}» الافتراضي (من صفحة «الشعارات والهوية»)`}
+          </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="text-sm">الموضع

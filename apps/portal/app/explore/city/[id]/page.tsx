@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { PhotoGallery } from '@noc/ui';
 import { SiteShell } from '../../../_components/SiteShell';
+import { AdminEditButton } from '../../../_components/AdminEditButton';
 import { updatesForCity } from '../../../../lib/geoInheritance';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
 import { geoPhotoAlt } from '../../../../lib/imageAlt';
@@ -83,6 +84,7 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
       <div className="mx-auto max-w-3xl space-y-6 p-6">
         <a href="/explore" className="text-sm text-accent">‹ {t('exploreTitle')}</a>
         <h1 className="text-2xl font-bold text-primary">{L(city.nameAr, city.nameEn)}</h1>
+        <div className="mt-2"><AdminEditButton href={`/admin/lands/cities/${id}`} section="lands" /></div>
         <SeoIntro text={intro} />
         <GeoSummary text={summary} />
 

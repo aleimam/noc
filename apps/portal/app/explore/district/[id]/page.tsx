@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
+import { AdminEditButton } from '../../../_components/AdminEditButton';
 import { PhotoGallery, ListingCard } from '@noc/ui';
 import { localizeUnit, currency, type Locale } from '@noc/i18n';
 import { areaListings } from '../../../../lib/areaListings';
@@ -110,6 +111,7 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
       <div className="mx-auto max-w-3xl space-y-6 p-6">
       <a href="/explore" className="text-sm text-accent">‹ {t('exploreTitle')}</a>
       <h1 className="text-2xl font-bold text-primary">{L(d.nameAr, d.nameEn)}</h1>
+      <div className="mt-2"><AdminEditButton href={`/admin/lands/districts/${id}/edit`} section="lands" /></div>
       <SeoIntro text={intro} />
       <GeoSummary text={summary} />
 

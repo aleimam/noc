@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
+import { AdminEditButton } from '../../../_components/AdminEditButton';
 import { PhotoGallery, ListingCard } from '@noc/ui';
 import { localizeUnit, currency, type Locale } from '@noc/i18n';
 import { BUILDING_TYPES, MAIN_ROADS } from '@noc/config';
@@ -136,6 +137,7 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
       <div>
         <a href={districtHref(n.district)} className="inline-block rounded bg-graphite/10 px-2 py-0.5 text-xs text-accent hover:underline">{L(n.district.nameAr, n.district.nameEn)}</a>
         <h1 className="mt-2 text-2xl font-bold text-primary">{L(n.nameAr, n.nameEn)}</h1>
+        <div className="mt-2"><AdminEditButton href={`/admin/lands/neighborhoods/${id}/edit`} section="lands" /></div>
         <div className="mt-2"><GeoSummary text={summary} /></div>
       </div>
 
