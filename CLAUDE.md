@@ -111,6 +111,14 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   by design (`ops/RESTORE.md`).
 - **SSH safety:** `/root/.ssh/authorized_keys` is immutable (`chattr +i`) + fallback key file
   `/etc/ssh/root_keys` (CWP once wiped .ssh). Password auth off. Recovery: CWP panel :2087.
+- **Attack surface (hardening round 3, 2026-07-11 — see `security.md` §5 + F9–F12):** public
+  listeners are now ONLY web (80/443) · SSH 22 (key-only) · the mail stack · CWP panel
+  2030–2096. **pure-ftpd and BIND/named were disabled+firewalled** (unused; FTP was under live
+  brute-force; DNS is Cloudflare's) — if something "used to work over FTP", that's why.
+  TLSv1.3 enabled, `server_tokens off`, `.env` 600. **Both Next apps bind 127.0.0.1 only**
+  (`next start -H 127.0.0.1` in each app's `start` script — nginx proxies via localhost; don't
+  "fix" this back to 0.0.0.0). Kernel rebooted onto 5.14.0-687.23.1. pm2 still runs as root
+  (accepted trade-off on this CWP box).
 
 ## Architecture rules (learned the hard way)
 

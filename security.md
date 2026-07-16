@@ -206,9 +206,11 @@ route **is the active protection**, not a mirror.
 - **Next.js bound to localhost** — `next start -H 127.0.0.1` in both apps' start scripts, so
   :3001/:3002 no longer listen on public interfaces at all (previously firewall-blocked only).
 - `.env` tightened to `600` (was 644).
-- **Still open (accepted / pending):** apps run under pm2 as root (CWP box convention; a
-  non-root migration is possible but touchy — revisit after Cloudflare cutover). Kernel reboot
-  pending (owner schedules). CSF `RESTRICT_SYSLOG` left at CWP default.
+- **Kernel reboot DONE 2026-07-11** (owner-approved): running `5.14.0-687.23.1`,
+  `needs-restarting -r` clear; all services + pm2 apps returned unattended (~90s downtime).
+- **Still open (accepted):** apps run under pm2 as **root** (CWP box convention; a non-root
+  migration is possible but touchy — revisit after the Cloudflare cutover). CSF
+  `RESTRICT_SYSLOG` left at CWP default. Both are conscious trade-offs, not oversights.
 
 ---
 
