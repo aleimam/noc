@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { toast } from './Toast';
 
 type Props = {
   /** Single image (back-compat). */
@@ -12,12 +13,14 @@ type Props = {
   alt?: string;
   /** UI-label language (Arabic-first default). */
   locale?: 'ar' | 'en';
+  /** Keeps the caller's gallery in sync while the visitor browses in here. */
+  onIndexChange?: (i: number) => void;
   onClose: () => void;
 };
 
 /** Fullscreen image viewer: zoomable (wheel / double-tap / +− buttons, drag to pan)
  *  and, when given `photos`, swipeable between images. Closes on ESC or backdrop click. */
-export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onClose }: Props) {
+export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexChange, onClose }: Props) {
   const list = photos && photos.length ? photos : src ? [src] : [];
   const [i, setI] = useState(index);
   const [scale, setScale] = useState(1);
@@ -35,11 +38,59 @@ export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onClose }
   const go = useCallback(
     (d: number) => {
       if (!many) return;
-      setI((v) => (v + d + list.length) % list.length);
+      setI((v) => {
+        const next = (v + d + list.length) % list.length;
+        onIndexChange?.(next);
+        return next;
+      });
       reset();
     },
-    [many, list.length, reset],
+    [many, list.length, reset, onIndexChange],
   );
+
+  // ── Actions on the current image (ecommerce lightbox): copy / share / download / open ──
+  const absUrl = () => new URL(cur!, window.location.href).href;
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(absUrl());
+    toast(L('تم نسخ رابط الصورة', 'Image link copied'));
+  };
+  const copyImage = async () => {
+    try {
+      // Clipboard accepts PNG only → recompress through a canvas when needed (same-origin, untainted).
+      if (!navigator.clipboard || !('write' in navigator.clipboard) || typeof ClipboardItem === 'undefined') throw new Error('unsupported');
+      const blob = await (await fetch(cur!)).blob();
+      let png = blob;
+      if (blob.type !== 'image/png') {
+        const bmp = await createImageBitmap(blob);
+        const c = document.createElement('canvas');
+        c.width = bmp.width;
+        c.height = bmp.height;
+        c.getContext('2d')!.drawImage(bmp, 0, 0);
+        png = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('toBlob'))), 'image/png'));
+      }
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+      toast(L('تم نسخ الصورة', 'Image copied'));
+    } catch {
+      try { await copyLink(); } catch { /* clipboard unavailable */ }
+    }
+  };
+  const share = async () => {
+    const url = absUrl();
+    if (navigator.share) {
+      try { await navigator.share({ url, title: alt || undefined }); } catch { /* visitor cancelled */ }
+      return;
+    }
+    try { await copyLink(); } catch { /* clipboard unavailable */ }
+  };
+  const download = () => {
+    const a = document.createElement('a');
+    a.href = cur!;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+  const openTab = () => window.open(absUrl(), '_blank', 'noopener');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -135,14 +186,22 @@ export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onClose }
         <button type="button" onClick={() => zoomBy(-0.4)} aria-label={L('تصغير', 'Zoom out')} className="h-9 w-9 rounded-full bg-soft/20 text-xl leading-none text-soft hover:bg-soft/30">－</button>
       </div>
 
-      {/* prev / next + counter */}
-      {many && (
-        <div className="fixed inset-x-0 bottom-4 flex items-center justify-center gap-3" onClick={(e) => e.stopPropagation()}>
-          <button type="button" onClick={() => go(1)} className="rounded-full bg-soft/20 px-4 py-1.5 text-sm text-soft hover:bg-soft/30">{L('التالي', 'Next')}</button>
-          <span className="rounded-full bg-soft/15 px-3 py-1 text-sm text-soft" dir="ltr" style={{ fontVariantNumeric: 'tabular-nums' }}>{i + 1} / {list.length}</span>
-          <button type="button" onClick={() => go(-1)} className="rounded-full bg-soft/20 px-4 py-1.5 text-sm text-soft hover:bg-soft/30">{L('السابق', 'Previous')}</button>
+      {/* actions + prev / next + counter */}
+      <div className="fixed inset-x-0 bottom-4 flex flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button type="button" onClick={copyImage} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">📋 {L('نسخ', 'Copy')}</button>
+          <button type="button" onClick={share} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">📤 {L('مشاركة', 'Share')}</button>
+          <button type="button" onClick={download} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">⬇️ {L('تنزيل', 'Download')}</button>
+          <button type="button" onClick={openTab} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">🔗 {L('فتح في صفحة', 'Open in tab')}</button>
         </div>
-      )}
+        {many && (
+          <div className="flex items-center justify-center gap-3">
+            <button type="button" onClick={() => go(1)} className="rounded-full bg-soft/20 px-4 py-1.5 text-sm text-soft hover:bg-soft/30">{L('التالي', 'Next')}</button>
+            <span className="rounded-full bg-soft/15 px-3 py-1 text-sm text-soft" dir="ltr" style={{ fontVariantNumeric: 'tabular-nums' }}>{i + 1} / {list.length}</span>
+            <button type="button" onClick={() => go(-1)} className="rounded-full bg-soft/20 px-4 py-1.5 text-sm text-soft hover:bg-soft/30">{L('السابق', 'Previous')}</button>
+          </div>
+        )}
+      </div>
     </div>,
     document.body,
   );

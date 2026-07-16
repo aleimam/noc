@@ -5,7 +5,7 @@ import { prisma } from '@noc/db';
 import { listingVisibleOnNewObour } from '@noc/partner-portal/visibility';
 import { marketHref, resolveMarketListingId } from '../../../lib/listings';
 import { cityHref, districtHref, neighborhoodHref } from '../../../lib/geoHref';
-import { PhotoGallery, TrackView, ListingCard, AreaAdvantages } from '@noc/ui';
+import { PhotoGallery, HeroGallery, TrackView, ListingCard, AreaAdvantages } from '@noc/ui';
 import { localizeUnit, currency } from '@noc/i18n';
 import { formatDetailValue, waPhone, type DetailConfig } from '@noc/config';
 import { newObourVisibility } from '@noc/partner-portal/visibility';
@@ -20,7 +20,7 @@ import { partnershipsEnabled } from '../../../lib/modules';
 import { SiteShell } from '../../_components/SiteShell';
 import { AdminEditButton } from '../../_components/AdminEditButton';
 import { pageMeta, breadcrumbLd, ldJson, abs } from '../../../lib/seo';
-import { listingAlt, geoPhotoAlt } from '../../../lib/imageAlt';
+import { listingAlt } from '../../../lib/imageAlt';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id: param } = await params;
@@ -165,13 +165,11 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     : [];
   const paperPhoto = (cat: string) => paperRows.find((p) => p.stampCategory === cat)?.path ?? null;
 
-  // Gallery images. When the listing has no uploaded photos (e.g. land plots), fall back to
-  // its annotated location map so the gallery is never an empty gray box.
+  // Gallery images (SEO/JSON-LD + recently-viewed cover). When the listing has no uploaded
+  // photos (e.g. land plots), fall back to its annotated location map.
+  const listingLocMap = await prisma.areaMap.findFirst({ where: { level: 'listing', areaId: id, kind: 'location' }, select: { cleanPath: true } });
   let galleryPaths = photos.map((p) => p.path);
-  if (galleryPaths.length === 0) {
-    const locMap = await prisma.areaMap.findFirst({ where: { level: 'listing', areaId: id, kind: 'location' }, select: { cleanPath: true } });
-    if (locMap?.cleanPath) galleryPaths = [locMap.cleanPath];
-  }
+  if (galleryPaths.length === 0 && listingLocMap?.cleanPath) galleryPaths = [listingLocMap.cleanPath];
 
   const attrIds = [...new Set(listing.values.map((v) => v.attributeId))];
   const attrs = attrIds.length
@@ -191,6 +189,26 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const showAreaLinks = geoMatrix.maps.toListing && !!listing.neighborhood;
   const fmtDate = (d: Date) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
   const genImgs = await listListingImages(listing.id, 'newobour');
+
+  // ── Hero gallery (ecommerce-style, one strip at the top): photos → posters → maps ──
+  // Everything image-like about the listing lives here; the old scattered sections are gone.
+  const POSTER_LABEL: Record<string, { ar: string; en: string }> = {
+    poster: { ar: 'صورة العرض', en: 'Listing poster' },
+    card: { ar: 'بطاقة الإعلان', en: 'Listing card' },
+    adv: { ar: 'مميزات المنطقة', en: 'Area advantages' },
+  };
+  const heroItems: { src: string; label?: string }[] = [];
+  const heroSeen = new Set<string>();
+  const pushHero = (src: string | null | undefined, label?: string) => {
+    if (!src || heroSeen.has(src)) return;
+    heroSeen.add(src);
+    heroItems.push(label ? { src, label } : { src });
+  };
+  for (const p of photos) pushHero(p.path);
+  for (const g of genImgs) pushHero(g.path, L(POSTER_LABEL[g.kind]?.ar ?? 'صورة العرض', POSTER_LABEL[g.kind]?.en ?? 'Listing poster'));
+  pushHero(listingLocMap?.cleanPath, L('موقع القطعة', 'Plot location'));
+  for (const mp of areaMaps) pushHero(mp.path, `${L(MAP_LEVEL_LABEL[mp.level].ar, MAP_LEVEL_LABEL[mp.level].en)} — ${mp.title || L(MAP_KIND_LABEL[mp.kind]?.ar ?? mp.kind, MAP_KIND_LABEL[mp.kind]?.en ?? mp.kind)}`);
+  for (const p of areaPhotos) pushHero(p.path, p.title || L('صور المنطقة', 'Area photo'));
 
   // Recommendations: other published listings of the same type ("like what you're viewing").
   const similar = listing.typeOptionId
@@ -335,7 +353,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       <TrackView item={{ id: listing.id, title: listing.title, cover: galleryPaths[0] ?? null, price: listing.price != null ? String(listing.price) : null, href: canonicalPath }} />
       <div className="flex justify-end"><MarketCardActions listingId={listing.id} initialSaved={saved} compareLabel={t('compare')} /></div>
       <a href="/market" className="text-sm text-accent">‹ {t('title')}</a>
-      <PhotoGallery photos={galleryPaths} alt={photoAlt} locale={locale} />
+      <HeroGallery items={heroItems} alt={photoAlt} locale={locale} />
 
       <div>
         <div className="flex flex-wrap gap-1">
@@ -456,7 +474,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
 
       {/* About the area — inherited area content (matrix-gated), closed by default so it
           never buries the listing itself. */}
-      {listing.neighborhood && (areaUpdates.length > 0 || areaAmenities.length > 0 || areaMaps.length > 0 || areaPhotos.length > 0 || showAreaLinks) && (
+      {listing.neighborhood && (areaUpdates.length > 0 || areaAmenities.length > 0 || showAreaLinks) && (
         <details className="rounded-lg border border-graphite/15 p-4">
           <summary className="cursor-pointer text-lg font-semibold text-primary">{L('عن المنطقة', 'About the area')}</summary>
           <div className="mt-3 space-y-5">
@@ -486,31 +504,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
                 </ul>
               </div>
             )}
-            {areaMaps.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-bold text-primary">{L('خرائط المنطقة', 'Area maps')}</h3>
-                {areaMaps.map((mp) => {
-                  const label = `${L(MAP_LEVEL_LABEL[mp.level].ar, MAP_LEVEL_LABEL[mp.level].en)} — ${mp.title || L(MAP_KIND_LABEL[mp.kind]?.ar ?? mp.kind, MAP_KIND_LABEL[mp.kind]?.en ?? mp.kind)}`;
-                  return (
-                    <div key={`${mp.level}:${mp.kind}`} className="space-y-1">
-                      <div className="text-sm font-medium">{label}</div>
-                      <PhotoGallery photos={[mp.path]} alt={geoPhotoAlt(areaName, label, locale)} locale={locale} />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {areaPhotos.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-bold text-primary">{L('صور المنطقة', 'Area photos')}</h3>
-                {areaPhotos.map((p) => (
-                  <div key={p.kind} className="space-y-1">
-                    {p.title && <div className="text-sm font-medium">{p.title}</div>}
-                    <PhotoGallery photos={[p.path]} alt={geoPhotoAlt(areaName, p.title, locale)} locale={locale} />
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Area maps & custom area photos moved into the hero gallery at the top (2026-07-16). */}
             {showAreaLinks && listing.neighborhood && (
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-primary">{L('صفحات المنطقة', 'Area pages')}</h3>
@@ -531,13 +525,6 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
             )}
           </div>
         </details>
-      )}
-
-      {genImgs.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-semibold text-primary">{L('صور العرض', 'Listing posters')}</h2>
-          <PhotoGallery photos={genImgs.map((g) => g.path)} alt={photoAlt} locale={locale} />
-        </section>
       )}
 
       {listing.buildingConditions.length > 0 && (

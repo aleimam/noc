@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@noc/db';
-import { PhotoGallery, TrackView, AreaAdvantages } from '@noc/ui';
+import { PhotoGallery, HeroGallery, TrackView, AreaAdvantages } from '@noc/ui';
 import { StoreShell } from '../../_components/StoreShell';
 import { advantagesForNeighborhood } from '../../../lib/advantages';
 import { updatesForListing, customPhotosForListing, areaMapsForListing } from '../../../lib/geoInheritance';
@@ -16,7 +16,6 @@ import { getStorefront } from '../../../lib/storefront';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../lib/seo';
 import { listingAlt, geoPhotoAlt } from '../../../lib/imageAlt';
 import { BuyButton } from './BuyButton';
-import { HeroGallery } from './HeroGallery';
 import { ShareButtons } from './ShareButtons';
 import { WishlistButton } from '../../_components/WishlistButton';
 
@@ -115,6 +114,20 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     orderBy: { stampCategory: 'asc' },
     select: { path: true },
   });
+
+  // ── Hero gallery (ecommerce-style, one strip at the top): photos → posters → maps ──
+  const heroItems: { src: string; label?: string }[] = [];
+  const heroSeen = new Set<string>();
+  const pushHero = (src: string | null | undefined, label?: string) => {
+    if (!src || heroSeen.has(src)) return;
+    heroSeen.add(src);
+    heroItems.push(label ? { src, label } : { src });
+  };
+  for (const g of land.gallery) pushHero(g);
+  for (const r of genRows) pushHero(r.path, L('صورة العرض', 'Listing poster'));
+  pushHero(land.locationMap, L('موقع القطعة على المخطط', 'Plot location on the masterplan'));
+  for (const p of areaPhotos) pushHero(p.path, p.title || L('صور المنطقة', 'Area photo'));
+  for (const mp of areaMaps) pushHero(mp.path, `${L(MAP_LEVEL_LABEL[mp.level].ar, MAP_LEVEL_LABEL[mp.level].en)} — ${mp.title || L(MAP_KIND_LABEL[mp.kind]?.ar ?? mp.kind, MAP_KIND_LABEL[mp.kind]?.en ?? mp.kind)}`);
   const isAdminViewer = !!(await getAdminViewer());
   // Cross-domain deep link: the admin panel lives on the portal domain, not this one.
   const portalBase = (process.env.PORTAL_URL || 'https://newobour.com').replace(/\/$/, '');
@@ -188,7 +201,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
 
         <div className="mt-3 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div>
-            <HeroGallery photos={land.gallery} alt={photoAlt} locale={locale} />
+            <HeroGallery items={heroItems} alt={photoAlt} locale={locale} />
           </div>
 
           <aside className="space-y-4">
@@ -297,28 +310,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
           </section>
         )}
 
-        {land.locationMap && (
-          <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
-            <h2 className="mb-3 text-lg font-bold text-navy-800">{L('الموقع على الخريطة', 'Location on the map')}</h2>
-            <HeroGallery photos={[land.locationMap]} alt={geoPhotoAlt(areaName, L('موقع القطعة على المخطط', 'Plot location on the masterplan'), locale)} locale={locale} />
-            <p className="mt-2 text-center text-sm text-ink-500">{L('خريطة المجاورة موضّح عليها موقع القطعة', 'Neighborhood masterplan with the plot marked')}</p>
-          </section>
-        )}
-
-        {areaPhotos.length > 0 && (
-          <section className="mt-6 rounded-2xl bg-white p-5 shadow-md">
-            <h2 className="mb-3 text-lg font-bold text-navy-800">{L('صور المنطقة', 'Area photos')}</h2>
-            <div className="space-y-4">
-              {areaPhotos.map((p) => (
-                <div key={p.kind} className="space-y-2">
-                  {p.title && <div className="font-semibold text-navy-800">{p.title}</div>}
-                  <PhotoGallery photos={[p.path]} alt={geoPhotoAlt(areaName, p.title, locale)} locale={locale} />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
+        {/* Location map, area photos & area maps moved into the hero gallery at the top (2026-07-16). */}
         {advGroups.length > 0 && (
           <div className="mt-6 rounded-2xl bg-white p-5 shadow-md">
             <AreaAdvantages heading={L('مميزات المنطقة', 'Area advantages')} groups={advGroups} />
@@ -327,7 +319,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
 
         {/* Inherited area content (geo.inheritance matrix — updates.toListing / maps.toListing).
             Collapsed by default so the listing itself stays the star. */}
-        {(areaUpdates.length > 0 || areaMaps.length > 0) && (
+        {areaUpdates.length > 0 && (
           <details className="mt-6 rounded-2xl bg-white p-5 shadow-md">
             <summary className="cursor-pointer text-lg font-bold text-navy-800">{L('عن المنطقة', 'About the area')}</summary>
             <div className="mt-3 space-y-6">
@@ -349,31 +341,8 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
                   </ul>
                 </div>
               )}
-              {areaMaps.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-bold text-navy-800">{L('خرائط المنطقة', 'Area maps')}</h3>
-                  <div className="space-y-4">
-                    {areaMaps.map((mp) => {
-                      const label = `${L(MAP_LEVEL_LABEL[mp.level].ar, MAP_LEVEL_LABEL[mp.level].en)} — ${mp.title || L(MAP_KIND_LABEL[mp.kind]?.ar ?? mp.kind, MAP_KIND_LABEL[mp.kind]?.en ?? mp.kind)}`;
-                      return (
-                        <div key={`${mp.level}:${mp.kind}`} className="space-y-2">
-                          <div className="font-semibold text-navy-800">{label}</div>
-                          <PhotoGallery photos={[mp.path]} alt={geoPhotoAlt(areaName, label, locale)} locale={locale} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           </details>
-        )}
-
-        {genRows.length > 0 && (
-          <div className="mt-6 rounded-2xl bg-white p-5 shadow-md">
-            <h2 className="mb-3 text-lg font-bold text-navy-800">{L('صور العرض', 'Listing posters')}</h2>
-            <PhotoGallery photos={genRows.map((r) => r.path)} alt={photoAlt} locale={locale} />
-          </div>
         )}
 
         {specGroups.map((g) => (

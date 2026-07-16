@@ -14,6 +14,7 @@ export { ImageAttachment, type UploadedAttachment } from './components/ImageAtta
 export { FileDropzone } from './components/FileDropzone';
 export { Lightbox } from './components/Lightbox';
 export { PhotoGallery } from './components/PhotoGallery';
+export { HeroGallery, type GalleryItem } from './components/HeroGallery';
 export { ListingCard } from './components/ListingCard';
 export { SearchSelectTracker } from './components/SearchSelectTracker';
 export { trackSelect, trackConvert, type SearchSite } from './lib/searchEvent';
