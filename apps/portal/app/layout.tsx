@@ -23,7 +23,10 @@ export async function generateMetadata(): Promise<Metadata> {
     title: en
       ? 'New Obour | Free services portal'
       : 'العبور الجديدة | بوابة الخدمات المجانية',
-    description: en ? 'New Obour City — free community services portal' : 'بوابة الخدمات المجانية لمدينة العبور الجديدة',
+    // Base description for pages without their own (the homepage overrides with a richer one).
+    description: en
+      ? 'Free portal for New Obour City residents: legalization-ledger search, lands and units for sale, district and neighborhood guides, city news and per-m² prices.'
+      : 'بوابة مجانية لأهالي مدينة العبور الجديدة: البحث في كشوف التقنين، أراضٍ ووحدات معروضة للبيع، دليل الأحياء والمجاورات، وأخبار المدينة ومتوسط أسعار المتر.',
     icons: { icon: '/brand/favicon' },
     alternates: { types: { 'application/rss+xml': [{ url: '/feed.xml', title: en ? 'New Obour — feed' : 'العبور الجديدة — آخر التحديثات' }] } },
   };

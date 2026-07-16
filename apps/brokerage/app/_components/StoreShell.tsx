@@ -144,6 +144,22 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
           <div className="font-bold text-white">{Lc(content.footer.name)}</div>
           {Lc(content.footer.slogan) && <div className="mt-0.5 text-sm text-white/70">{Lc(content.footer.slogan)}</div>}
         </div>
+        {/* Useful official links (owner request, 2026-07-16). */}
+        <div className="mx-auto max-w-6xl px-4 pb-4">
+          <div className="mb-2 text-center text-xs font-bold uppercase tracking-wide text-gold">{L('روابط مفيدة', 'Useful links')}</div>
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-center text-sm">
+            {[
+              { href: 'https://newobour.com/', ar: 'بوابة العبور الجديدة', en: 'New Obour portal' },
+              { href: 'https://nuca-services.gov.eg/#/home', ar: 'خدمات هيئة المجتمعات العمرانية', en: 'NUCA e-services' },
+              { href: 'http://www.newcities.gov.eg/know_cities/NewObour/default.aspx', ar: 'مدينة العبور الجديدة — هيئة المجتمعات', en: 'New Obour — New Cities Authority' },
+              { href: 'https://www.facebook.com/profile.php?id=100069065355149', ar: 'جهاز المدينة على فيسبوك', en: 'City authority on Facebook' },
+            ].map((l) => (
+              <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-gold">
+                {L(l.ar, l.en)} <span aria-hidden className="text-xs">↗</span>
+              </a>
+            ))}
+          </div>
+        </div>
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 pb-4 text-center text-sm">
           {footerPages.map((p) => (
             <Link key={p.slug} href={`/p/${p.slug}`} className="text-white/70 hover:text-gold">{locale === 'en' ? p.titleEn || p.titleAr : p.titleAr}</Link>

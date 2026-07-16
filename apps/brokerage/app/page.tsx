@@ -21,10 +21,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const hero = await prisma.setting.findUnique({ where: { key: 'brand_alsawarey_hero' } });
   return pageMeta({
     title: locale === 'en' ? 'Al Sawarey Real-estate Investment' : 'الصواري للاستثمار العقاري',
+    // ~155 chars, human-written — too-short descriptions get ignored and Google scrapes page text.
     description:
       locale === 'en'
-        ? 'Al Sawarey Real-estate Investment — selected lands for sale in New Obour and beyond'
-        : 'الصواري للاستثمار العقاري — أراضٍ مختارة للبيع في العبور الجديدة وما حولها',
+        ? 'Al Sawarey Real-estate Investment — selected lands for sale in New Obour City: residential plots in a range of areas and prices, full details with plot-location maps, and free brokerage for buyers.'
+        : 'الصواري للاستثمار العقاري — أراضٍ مختارة للبيع في مدينة العبور الجديدة: قطع سكنية بمساحات وأسعار متنوعة، تفاصيل كاملة وخريطة لموقع كل قطعة، ووساطة مجانية للمشتري.',
     path: '/',
     images: [hero?.value || '/brand/logo'],
     locale,

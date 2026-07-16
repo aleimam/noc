@@ -21,8 +21,8 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(process.env.BROKERAGE_URL || 'https://alsawarey.com'),
     title: en ? 'Al Sawarey Real-estate Investment' : 'الصواري للاستثمار العقاري',
     description: en
-      ? 'Al Sawarey Real-estate Investment — selected lands for sale in New Obour and beyond'
-      : 'الصواري للاستثمار العقاري — أراضٍ مختارة للبيع في العبور الجديدة وما حولها',
+      ? 'Al Sawarey Real-estate Investment — selected lands for sale in New Obour City: residential plots in a range of areas and prices, full details with plot-location maps, and free brokerage for buyers.'
+      : 'الصواري للاستثمار العقاري — أراضٍ مختارة للبيع في مدينة العبور الجديدة: قطع سكنية بمساحات وأسعار متنوعة، تفاصيل كاملة وخريطة لموقع كل قطعة، ووساطة مجانية للمشتري.',
     icons: { icon: '/brand/favicon' },
   };
 }
