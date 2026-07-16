@@ -14,6 +14,7 @@ import { SiteShell } from '../../../_components/SiteShell';
 import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
 import { geoPhotoAlt } from '../../../../lib/imageAlt';
 import { neighborhoodSummary } from '../../../../lib/geoSummary';
+import { derivePlotAreas, mergeAreas } from '../../../../lib/neighborhoodAreas';
 import { GeoSummary } from '../../../_components/SeoText';
 import { districtHref, neighborhoodHref, neighborhoodParam, resolveNeighborhoodId } from '../../../../lib/geoHref';
 
@@ -101,7 +102,8 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
   const sourceChip = (s: 'city' | 'district' | 'neighborhood') =>
     s === 'city' ? L('المدينة', 'City') : s === 'district' ? L('الحي', 'District') : L('المجاورة', 'Neighborhood');
 
-  const areas = (n.areas as number[] | null) ?? [];
+  const derivedMap = await derivePlotAreas([id]);
+  const areas = mergeAreas((n.areas as number[] | null) ?? [], derivedMap.get(id) ?? []);
   const buildingTypes = labels((n.buildingTypes as string[] | null) ?? [], BUILDING_TYPES, locale);
   const mainRoads = labels((n.mainRoads as string[] | null) ?? [], MAIN_ROADS, locale);
   const summary = neighborhoodSummary({

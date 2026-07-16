@@ -13,6 +13,7 @@ import { pageMeta, breadcrumbLd, ldJson } from '../../../../lib/seo';
 import { geoPhotoAlt } from '../../../../lib/imageAlt';
 import { getSeoIntro } from '../../../../lib/seoContent';
 import { districtSummary } from '../../../../lib/geoSummary';
+import { derivePlotAreas, mergeAreas } from '../../../../lib/neighborhoodAreas';
 import { SeoIntro, GeoSummary } from '../../../_components/SeoText';
 import { districtHref, neighborhoodHref, resolveDistrictId } from '../../../../lib/geoHref';
 
@@ -67,8 +68,11 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
   ]);
   const listingCards = await areaListings({ neighborhood: { districtId: id } });
 
+  // Available areas per neighborhood = manual list ∪ sizes of the plots placed there (PUBLISHED+SOLD).
+  const nbDerived = await derivePlotAreas(d.neighborhoods.map((n) => n.id));
+  const nbAreasOf = (n: (typeof d.neighborhoods)[number]) => mergeAreas((n.areas as number[] | null) ?? [], nbDerived.get(n.id) ?? []);
   // Auto SEO summary: neighborhood count + plot-area range across this district's neighborhoods.
-  const nbAreas = d.neighborhoods.flatMap((n) => ((n.areas as number[] | null) ?? [])).filter((x) => typeof x === 'number' && isFinite(x) && x > 0);
+  const nbAreas = d.neighborhoods.flatMap((n) => nbAreasOf(n)).filter((x) => typeof x === 'number' && isFinite(x) && x > 0);
   const summary = districtSummary({
     name: L(d.nameAr, d.nameEn),
     neighborhoodCount: d.neighborhoods.length,
@@ -120,7 +124,7 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
           <h2 className="font-semibold text-primary">{t('neighborhoods')}</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {d.neighborhoods.map((n) => {
-              const areas = (n.areas as number[] | null) ?? [];
+              const areas = nbAreasOf(n);
               return (
                 <a key={n.id} href={neighborhoodHref({ id: n.id, nameAr: n.nameAr, district: { nameAr: d.nameAr } })} className="rounded-lg border border-graphite/15 p-4 transition-colors hover:border-accent">
                   <div className="font-semibold">{L(n.nameAr, n.nameEn)}</div>

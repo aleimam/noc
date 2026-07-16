@@ -7,6 +7,7 @@ import { pageMeta } from '../../lib/seo';
 import { SeoIntro } from '../_components/SeoText';
 import { getSeoIntro } from '../../lib/seoContent';
 import { cityHref, districtHref, neighborhoodHref } from '../../lib/geoHref';
+import { derivePlotAreas, mergeAreas } from '../../lib/neighborhoodAreas';
 import { GeoTree, type TreeCity } from './GeoTree';
 
 export const dynamic = 'force-dynamic';
@@ -34,6 +35,8 @@ export default async function ExplorePage() {
     include: { city: true, neighborhoods: { where: { isActive: true }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }] } },
   });
   const withNb = districts.filter((d) => d.neighborhoods.length > 0);
+  // Available areas per neighborhood = manual list ∪ plot sizes (PUBLISHED+SOLD listings placed there).
+  const nbDerived = await derivePlotAreas(withNb.flatMap((d) => d.neighborhoods.map((n) => n.id)));
 
   // Group districts under their city (City → District → Neighborhood). Districts with no
   // city (shouldn't happen after backfill) fall into an unlabeled bucket at the end.
@@ -98,7 +101,7 @@ export default async function ExplorePage() {
               </h3>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {d.neighborhoods.map((n) => {
-                  const areas = (n.areas as number[] | null) ?? [];
+                  const areas = mergeAreas((n.areas as number[] | null) ?? [], nbDerived.get(n.id) ?? []);
                   return (
                     <a key={n.id} href={neighborhoodHref({ id: n.id, nameAr: n.nameAr, district: { nameAr: d.nameAr } })} className="rounded-lg border border-graphite/15 p-4 transition-colors hover:border-accent">
                       <div className="font-semibold">{L(n.nameAr, n.nameEn)}</div>

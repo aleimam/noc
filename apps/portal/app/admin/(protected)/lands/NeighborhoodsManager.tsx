@@ -13,6 +13,7 @@ type N = {
   nameEn: string;
   assortedAreas: boolean;
   areas: number[];
+  derivedAreas: number[]; // plot-derived sizes NOT already in the manual list (auto, from listed plots)
   order: number;
   isActive: boolean;
   hasMasterplan: boolean;
@@ -107,7 +108,18 @@ export function NeighborhoodsManager({ neighborhoods, districts, locale }: { nei
                   <a href={`/admin/lands/neighborhoods/${n.id}/edit`} className="text-accent hover:underline">{L(n.nameAr, n.nameEn)}</a>
                   {!n.isActive && <span className="opacity-50"> · {t('active')}: —</span>}
                 </td>
-                <td className="p-2 text-xs opacity-70">{n.assortedAreas ? t('assorted') : n.areas.join(', ') || '—'}</td>
+                <td className="p-2 text-xs opacity-70">
+                  {n.assortedAreas ? t('assorted') : (n.areas.length || n.derivedAreas.length) ? (
+                    <>
+                      {n.areas.join('، ')}
+                      {n.derivedAreas.length > 0 && (
+                        <span className="text-accent" title={L('مضافة تلقائياً من القطع المعروضة', 'auto-added from listed plots')}>
+                          {n.areas.length ? '، ' : ''}🏷️ {n.derivedAreas.join('، ')}
+                        </span>
+                      )}
+                    </>
+                  ) : '—'}
+                </td>
                 {/* Map coverage at a glance: masterplan + location map, green when present. */}
                 <td className="whitespace-nowrap p-2">
                   <span className={`me-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${n.hasMasterplan ? 'bg-green/15 text-green' : 'bg-graphite/10 text-graphite/50'}`} title={t('masterplan')}>

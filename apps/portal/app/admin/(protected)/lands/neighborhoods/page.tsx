@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { NeighborhoodsManager } from '../NeighborhoodsManager';
+import { derivePlotAreas } from '../../../../../lib/neighborhoodAreas';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,9 @@ export default async function NeighborhoodsPage() {
   ]);
   const hasMap = (id: string, kind: string) => maps.some((m) => m.areaId === id && m.kind === kind);
 
+  // Plot-derived sizes (PUBLISHED+SOLD listings) that aren't already in the manual list, per neighborhood.
+  const derived = await derivePlotAreas(neighborhoods.map((n) => n.id));
+
   const rows = neighborhoods.map((n) => ({
     id: n.id,
     districtId: n.districtId,
@@ -28,6 +32,7 @@ export default async function NeighborhoodsPage() {
     hasBlocks: n.hasBlocks,
     assortedAreas: n.assortedAreas,
     areas: (n.areas as number[] | null) ?? [],
+    derivedAreas: (derived.get(n.id) ?? []).filter((a) => !(((n.areas as number[] | null) ?? []).includes(a))),
     buildingTypes: (n.buildingTypes as string[] | null) ?? [],
     mainRoads: (n.mainRoads as string[] | null) ?? [],
     order: n.order,
