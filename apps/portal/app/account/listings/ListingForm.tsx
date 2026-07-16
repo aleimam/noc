@@ -50,6 +50,9 @@ export type ListingFormInitial = {
   priceNegotiable: boolean;
   priceNote: string;
   lowestPrice: string; // internal floor — admins & owner only, never public
+  /** Current listing status (edit pages). Auto-save runs only for new forms and DRAFTs —
+   *  it must never silently pull a PENDING/PUBLISHED listing back to draft. */
+  status?: string;
   isPartnership?: boolean;
   partnershipType?: string;
   partnershipNote?: string;
@@ -123,6 +126,68 @@ export function ListingForm({
   const [pending, start] = useTransition();
   const [error, setError] = useState('');
   const [zoom, setZoom] = useState<string | null>(null);
+
+  // ── Auto-save as draft (new forms + existing DRAFTs only) ──────────────────────────
+  // Every 15s the form serializes itself; if anything changed since the last save AND the
+  // server-side minimum is met (classifiers + title + valid phone), it saves as DRAFT.
+  // The first auto-save CREATES the listing — its id is adopted so every later save
+  // (auto or the manual buttons) updates that same row, never a duplicate.
+  const draftIdRef = useRef(initial.id ?? '');
+  const autosaveOn = !initial.id || initial.status === 'DRAFT';
+  const submittedRef = useRef(false); // manual submit succeeded → stop auto-saving
+  const autosavingRef = useRef(false);
+  const pendingRef = useRef(false);
+  const lastSnapRef = useRef('');
+  const buildInputRef = useRef<(() => ListingInput) | null>(null);
+  const [draftState, setDraftState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [draftSavedAt, setDraftSavedAt] = useState('');
+  pendingRef.current = pending;
+
+  useEffect(() => {
+    if (!autosaveOn) return;
+    // Editing an existing draft: seed the snapshot so an untouched form never re-saves.
+    if (draftIdRef.current && buildInputRef.current) {
+      try { lastSnapRef.current = JSON.stringify(buildInputRef.current()); } catch { /* ignore */ }
+    }
+    const tick = async () => {
+      if (submittedRef.current || autosavingRef.current || pendingRef.current) return;
+      const build = buildInputRef.current;
+      if (!build) return;
+      const input = build();
+      // Below the server-side minimum → wait (the hint under the buttons explains this).
+      if (!input.typeOptionId || !input.purposeOptionId || !input.conditionOptionId) return;
+      if (!input.title.trim() || !input.contactPhone.trim() || !isValidPhone(input.contactPhone)) return;
+      const snap = JSON.stringify(input);
+      if (snap === lastSnapRef.current) return;
+      autosavingRef.current = true;
+      setDraftState('saving');
+      try {
+        const r = await saveListing(input);
+        if (r.ok) {
+          lastSnapRef.current = snap;
+          if (!draftIdRef.current) {
+            draftIdRef.current = r.id;
+            // Reload-safe: silently swap the /new URL for the draft's edit page (no remount).
+            if (!partnerMode) {
+              const base = staffMode ? '/admin/marketplace/listings' : '/account/listings';
+              try { window.history.replaceState(null, '', `${base}/${r.id}/edit`); } catch { /* ignore */ }
+            }
+          }
+          setDraftSavedAt(new Date().toLocaleTimeString(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { hour: '2-digit', minute: '2-digit' }));
+          setDraftState('saved');
+        } else {
+          setDraftState('idle'); // silent — the manual buttons surface real errors
+        }
+      } catch {
+        setDraftState('idle');
+      } finally {
+        autosavingRef.current = false;
+      }
+    };
+    const timer = setInterval(tick, 15000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autosaveOn]);
   // The submit buttons live at the bottom of a long form — scroll the error into view so
   // a failed validation never goes unnoticed.
   const errorRef = useRef<HTMLParagraphElement>(null);
@@ -351,28 +416,11 @@ export function ListingForm({
     return out;
   }
 
-  function submit(status: 'DRAFT' | 'PENDING') {
-    setError('');
-    if (!allChosen || !title.trim() || !contactPhone.trim()) {
-      setError(tc('fillRequired'));
-      return;
-    }
-    if (!isValidPhone(contactPhone)) { setError(tc('phoneInvalid')); return; }
-    // Mandatory basic details (e.g. the city) must be filled before PUBLISHING —
-    // a rough DRAFT may stay incomplete (matches the server-side guard).
-    if (status === 'PENDING') {
-      const missingRequired = attributes.find((a) => {
-        if (!isRequiredAttr(a) || !applies(a)) return false;
-        const v = vals[a.id];
-        return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : !v;
-      });
-      if (missingRequired) {
-        setError(`${tc('fillRequired')} — ${L(missingRequired.labelAr, missingRequired.labelEn)}`);
-        return;
-      }
-    }
-    const input: ListingInput = {
-      id: initial.id,
+  // Single source for the save payload — shared by the manual buttons AND auto-save, so
+  // both always carry the same id (an auto-created draft is updated, never duplicated).
+  function buildInput(status: 'DRAFT' | 'PENDING'): ListingInput {
+    return {
+      id: draftIdRef.current || undefined,
       typeOptionId: selOf('type'),
       purposeOptionId: selOf('purpose'),
       conditionOptionId: selOf('condition'),
@@ -405,9 +453,35 @@ export function ListingForm({
       buildingConditionIds: condIds,
       status,
     };
+  }
+  buildInputRef.current = () => buildInput('DRAFT');
+
+  function submit(status: 'DRAFT' | 'PENDING') {
+    setError('');
+    if (!allChosen || !title.trim() || !contactPhone.trim()) {
+      setError(tc('fillRequired'));
+      return;
+    }
+    if (!isValidPhone(contactPhone)) { setError(tc('phoneInvalid')); return; }
+    // Mandatory basic details (e.g. the city) must be filled before PUBLISHING —
+    // a rough DRAFT may stay incomplete (matches the server-side guard).
+    if (status === 'PENDING') {
+      const missingRequired = attributes.find((a) => {
+        if (!isRequiredAttr(a) || !applies(a)) return false;
+        const v = vals[a.id];
+        return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : !v;
+      });
+      if (missingRequired) {
+        setError(`${tc('fillRequired')} — ${L(missingRequired.labelAr, missingRequired.labelEn)}`);
+        return;
+      }
+    }
+    const input = buildInput(status);
     start(async () => {
       const r = await saveListing(input);
       if (r.ok) {
+        submittedRef.current = true; // the form is done — no auto-save may fire after this
+        draftIdRef.current = r.id;
         // Persist the location map drawn in-form now that the listing id exists.
         if (staffMode && pendingMap && pendingMap.nbId === nbId) {
           try {
@@ -974,6 +1048,17 @@ export function ListingForm({
         <button disabled={pending} onClick={() => submit('DRAFT')} className="rounded-md border border-graphite/25 px-4 py-2 text-sm">{t('saveDraft')}</button>
         <a href={returnTo ?? (staffMode ? '/admin/marketplace/listings' : partnerMode ? '/partner' : '/account/listings')} className="px-4 py-2 text-sm opacity-70">{t('cancel')}</a>
       </div>
+
+      {/* Auto-save status — explicit so no one wonders whether their work is safe. */}
+      {autosaveOn && (
+        <p className="text-xs opacity-60" aria-live="polite">
+          {draftState === 'saving'
+            ? `💾 ${L('جارٍ الحفظ التلقائي…', 'Auto-saving…')}`
+            : draftState === 'saved'
+              ? `✓ ${L('حُفِظ تلقائياً كمسودة', 'Auto-saved as a draft')} — ${draftSavedAt}`
+              : `✨ ${L('يُحفَظ تلقائياً كمسودة كل ١٥ ثانية بعد اختيار التصنيفات وكتابة العنوان ورقم التواصل', 'Auto-saves as a draft every 15s once the categories, title and contact phone are filled')}`}
+        </p>
+      )}
 
       {zoom && <Lightbox src={zoom} onClose={() => setZoom(null)} />}
     </div>
