@@ -4,6 +4,7 @@ import { prisma } from '@noc/db';
 import { currency } from '@noc/i18n';
 import { ownerKeyForRead } from '@/lib/wishlist';
 import { marketHref } from '@/lib/listings';
+import { coversForListings } from '@/lib/listingCovers';
 import { WishlistRemove } from './WishlistRemove';
 
 export const dynamic = 'force-dynamic';
@@ -21,11 +22,8 @@ export default async function WishlistPage() {
         include: { listing: { select: { id: true, title: true, price: true, adNumber: true, area: true, typeOption: { select: { nameAr: true, nameEn: true } } } } },
       })
     : [];
-  const covers = new Map<string, string>();
-  if (items.length) {
-    const rows = await prisma.attachment.findMany({ where: { ownerType: 'Listing', ownerId: { in: items.map((i) => i.listing.id) }, attributeId: null }, orderBy: { createdAt: 'asc' }, select: { ownerId: true, path: true } });
-    for (const r of rows) if (r.ownerId && !covers.has(r.ownerId)) covers.set(r.ownerId, r.path);
-  }
+  // Cover chain (location map → photo) — plot listings have maps, not photos.
+  const covers = await coversForListings(items.map((i) => i.listing.id));
 
   return (
     <div className="space-y-4">

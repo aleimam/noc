@@ -8,6 +8,7 @@ import { SiteShell } from './_components/SiteShell';
 import { SeoIntro } from './_components/SeoText';
 import { getSeoIntro } from '../lib/seoContent';
 import { marketHref } from '../lib/listings';
+import { coversForListings } from '../lib/listingCovers';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,17 +27,8 @@ export default async function Home() {
     include: { typeOption: true },
   });
   const ids = listings.map((l) => l.id);
-  const covers = ids.length
-    ? await prisma.attachment.findMany({ where: { ownerType: 'Listing', ownerId: { in: ids }, attributeId: null }, orderBy: { createdAt: 'asc' }, select: { ownerId: true, path: true } })
-    : [];
-  const cover = new Map<string, string>();
-  for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
-  // Fall back to each listing's annotated location map when it has no uploaded photo.
-  const missingCover = ids.filter((id) => !cover.has(id));
-  if (missingCover.length) {
-    const maps = await prisma.areaMap.findMany({ where: { level: 'listing', areaId: { in: missingCover }, kind: 'location' }, select: { areaId: true, cleanPath: true } });
-    for (const m of maps) if (m.areaId && m.cleanPath && !cover.has(m.areaId)) cover.set(m.areaId, m.cleanPath);
-  }
+  // Cover chain (location map → photo) — shared with market/similar/owner cards.
+  const cover = await coversForListings(ids);
 
   const vis = await getModuleVisibility();
   const homeIntro = await getSeoIntro('home', locale);

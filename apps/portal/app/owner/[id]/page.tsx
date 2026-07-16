@@ -6,6 +6,7 @@ import { ListingCard, Badge } from '@noc/ui';
 import { SiteShell } from '../../_components/SiteShell';
 import { currency } from '@noc/i18n';
 import { marketHref } from '../../../lib/listings';
+import { coversForListings } from '../../../lib/listingCovers';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,9 +26,8 @@ export default async function OwnerProfile({ params }: { params: Promise<{ id: s
     include: { typeOption: true },
   });
   const ids = listings.map((l) => l.id);
-  const covers = ids.length ? await prisma.attachment.findMany({ where: { ownerType: 'Listing', ownerId: { in: ids }, attributeId: null }, orderBy: { createdAt: 'asc' }, select: { ownerId: true, path: true } }) : [];
-  const cover = new Map<string, string>();
-  for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
+  // Cover chain (location map → photo) — plot listings have maps, not photos.
+  const cover = await coversForListings(ids);
 
   const typeLabel: Record<string, string> = { PERSONAL: t('typePERSONAL'), COMPANY: t('typeCOMPANY'), BROKER: t('typeBROKER') };
 

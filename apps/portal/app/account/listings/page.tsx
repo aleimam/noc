@@ -4,6 +4,7 @@ import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { currency } from '@noc/i18n';
 import { MyListingActions } from './MyListingActions';
+import { coversForListings } from '../../../lib/listingCovers';
 
 const STATUS_COLOR: Record<string, string> = {
   PUBLISHED: 'bg-green/15 text-green',
@@ -27,15 +28,8 @@ export default async function MyListings() {
     include: { typeOption: { select: { nameAr: true, nameEn: true } } },
   });
   const ids = listings.map((l) => l.id);
-  const covers = ids.length
-    ? await prisma.attachment.findMany({
-        where: { ownerType: 'Listing', ownerId: { in: ids }, attributeId: null },
-        orderBy: { createdAt: 'asc' },
-        select: { ownerId: true, path: true },
-      })
-    : [];
-  const cover = new Map<string, string>();
-  for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
+  // Cover chain (location map → photo) — plot listings have maps, not photos.
+  const cover = await coversForListings(ids);
 
   return (
     <div className="space-y-4">

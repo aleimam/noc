@@ -21,6 +21,7 @@ import { SiteShell } from '../../_components/SiteShell';
 import { AdminEditButton } from '../../_components/AdminEditButton';
 import { pageMeta, breadcrumbLd, ldJson, abs } from '../../../lib/seo';
 import { listingAlt } from '../../../lib/imageAlt';
+import { coversForListings } from '../../../lib/listingCovers';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id: param } = await params;
@@ -167,9 +168,10 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
 
   // Gallery images (SEO/JSON-LD + recently-viewed cover). When the listing has no uploaded
   // photos (e.g. land plots), fall back to its annotated location map.
-  const listingLocMap = await prisma.areaMap.findFirst({ where: { level: 'listing', areaId: id, kind: 'location' }, select: { cleanPath: true } });
+  const listingLocMap = await prisma.areaMap.findFirst({ where: { level: 'listing', areaId: id, kind: 'location' }, select: { newobourPath: true, cleanPath: true } });
+  const locMapPath = listingLocMap?.newobourPath || listingLocMap?.cleanPath || null;
   let galleryPaths = photos.map((p) => p.path);
-  if (galleryPaths.length === 0 && listingLocMap?.cleanPath) galleryPaths = [listingLocMap.cleanPath];
+  if (galleryPaths.length === 0 && locMapPath) galleryPaths = [locMapPath];
 
   const attrIds = [...new Set(listing.values.map((v) => v.attributeId))];
   const attrs = attrIds.length
@@ -204,11 +206,20 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     heroSeen.add(src);
     heroItems.push(label ? { src, label } : { src });
   };
+  // Order (owner, 2026-07-16): ① the plot's annotated location map ② the big poster
+  // ③ real photos ④ remaining generated cards ⑤ area photos + other inherited maps.
+  pushHero(locMapPath, L('موقع القطعة', 'Plot location'));
+  const bigPoster = genImgs.find((g) => g.kind === 'poster');
+  pushHero(bigPoster?.path, L('صورة العرض', 'Listing poster'));
   for (const p of photos) pushHero(p.path);
   for (const g of genImgs) pushHero(g.path, L(POSTER_LABEL[g.kind]?.ar ?? 'صورة العرض', POSTER_LABEL[g.kind]?.en ?? 'Listing poster'));
-  pushHero(listingLocMap?.cleanPath, L('موقع القطعة', 'Plot location'));
-  for (const mp of areaMaps) pushHero(mp.path, `${L(MAP_LEVEL_LABEL[mp.level].ar, MAP_LEVEL_LABEL[mp.level].en)} — ${mp.title || L(MAP_KIND_LABEL[mp.kind]?.ar ?? mp.kind, MAP_KIND_LABEL[mp.kind]?.en ?? mp.kind)}`);
   for (const p of areaPhotos) pushHero(p.path, p.title || L('صور المنطقة', 'Area photo'));
+  for (const mp of areaMaps) {
+    // The listing's location map IS the annotated neighborhood masterplan — don't show the
+    // clean masterplan again beside it (owner request).
+    if (locMapPath && mp.level === 'neighborhood' && mp.kind === 'masterplan') continue;
+    pushHero(mp.path, `${L(MAP_LEVEL_LABEL[mp.level].ar, MAP_LEVEL_LABEL[mp.level].en)} — ${mp.title || L(MAP_KIND_LABEL[mp.kind]?.ar ?? mp.kind, MAP_KIND_LABEL[mp.kind]?.en ?? mp.kind)}`);
+  }
 
   // Recommendations: other published listings of the same type ("like what you're viewing").
   const similar = listing.typeOptionId
@@ -219,15 +230,8 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         select: { id: true, title: true, price: true, adNumber: true, area: true, typeOption: { select: { nameAr: true, nameEn: true } } },
       })
     : [];
-  const simCovers = new Map<string, string>();
-  if (similar.length) {
-    const rows = await prisma.attachment.findMany({
-      where: { ownerType: 'Listing', ownerId: { in: similar.map((s) => s.id) }, attributeId: null },
-      orderBy: { createdAt: 'asc' },
-      select: { ownerId: true, path: true },
-    });
-    for (const r of rows) if (r.ownerId && !simCovers.has(r.ownerId)) simCovers.set(r.ownerId, r.path);
-  }
+  // Cover chain (location map → photo) — plot listings have maps, not photos.
+  const simCovers = await coversForListings(similar.map((s) => s.id));
 
   // Resolve DISTRICT / NEIGHBORHOOD values (stored as geo ids) to localized names.
   const geoIds = listing.values

@@ -112,7 +112,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
   const genRows = await prisma.attachment.findMany({
     where: { ownerType: 'ListingPoster', ownerId: listingId, stampCategory: { contains: 'alsawarey' } },
     orderBy: { stampCategory: 'asc' },
-    select: { path: true },
+    select: { path: true, stampCategory: true }, // stampCategory = `${kind}:${brand}` — kind picks the big poster
   });
 
   // ── Hero gallery (ecommerce-style, one strip at the top): photos → posters → maps ──
@@ -123,11 +123,19 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     heroSeen.add(src);
     heroItems.push(label ? { src, label } : { src });
   };
+  // Order (owner, 2026-07-16): ① the plot's annotated location map ② the big poster
+  // ③ real photos ④ remaining generated cards ⑤ area photos + other inherited maps.
+  pushHero(land.locationMap, L('موقع القطعة على المخطط', 'Plot location on the masterplan'));
+  const bigPoster = genRows.find((r) => (r.stampCategory ?? '').startsWith('poster'));
+  pushHero(bigPoster?.path, L('صورة العرض', 'Listing poster'));
   for (const g of land.gallery) pushHero(g);
   for (const r of genRows) pushHero(r.path, L('صورة العرض', 'Listing poster'));
-  pushHero(land.locationMap, L('موقع القطعة على المخطط', 'Plot location on the masterplan'));
   for (const p of areaPhotos) pushHero(p.path, p.title || L('صور المنطقة', 'Area photo'));
-  for (const mp of areaMaps) pushHero(mp.path, `${L(MAP_LEVEL_LABEL[mp.level].ar, MAP_LEVEL_LABEL[mp.level].en)} — ${mp.title || L(MAP_KIND_LABEL[mp.kind]?.ar ?? mp.kind, MAP_KIND_LABEL[mp.kind]?.en ?? mp.kind)}`);
+  for (const mp of areaMaps) {
+    // The listing's location map IS the annotated neighborhood masterplan — skip the duplicate.
+    if (land.locationMap && mp.level === 'neighborhood' && mp.kind === 'masterplan') continue;
+    pushHero(mp.path, `${L(MAP_LEVEL_LABEL[mp.level].ar, MAP_LEVEL_LABEL[mp.level].en)} — ${mp.title || L(MAP_KIND_LABEL[mp.kind]?.ar ?? mp.kind, MAP_KIND_LABEL[mp.kind]?.en ?? mp.kind)}`);
+  }
 
   // Gallery extras (admin-switchable from the portal admin → إعدادات الموقع; default ON):
   // «اسأل عن هذه الصورة» WhatsApp button + first-party photo analytics.

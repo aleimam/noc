@@ -10,6 +10,7 @@ import { MarketFilters } from './MarketFilters';
 import { MarketCardActions } from '../_components/MarketCardActions';
 import { CompareBar } from '../_components/CompareBar';
 import { wishedSet } from '../../lib/wishlist';
+import { coversForListings } from '../../lib/listingCovers';
 import { pageMeta } from '../../lib/seo';
 import { SeoIntro } from '../_components/SeoText';
 import { getSeoIntro } from '../../lib/seoContent';
@@ -127,15 +128,8 @@ export default async function MarketPage({
   }
 
   const ids = listings.map((l) => l.id);
-  const covers = ids.length
-    ? await prisma.attachment.findMany({
-        where: { ownerType: 'Listing', ownerId: { in: ids }, attributeId: null },
-        orderBy: { createdAt: 'asc' },
-        select: { ownerId: true, path: true },
-      })
-    : [];
-  const cover = new Map<string, string>();
-  for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
+  // Cover chain (location map → photo) — plot listings have maps, not photos.
+  const cover = await coversForListings(ids);
   const wished = await wishedSet(ids);
 
   return (

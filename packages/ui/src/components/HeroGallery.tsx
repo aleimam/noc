@@ -154,11 +154,7 @@ export function HeroGallery({
           style={{ touchAction: 'pan-y' }}
           className="aspect-[4/3] w-full cursor-zoom-in select-none object-contain"
         />
-        {cur!.label && (
-          <span dir={locale === 'ar' ? 'rtl' : 'ltr'} className="absolute top-3 rounded-full bg-navy/60 px-3 py-1 text-xs font-semibold text-white" style={{ [locale === 'ar' ? 'right' : 'left']: '0.75rem' } as React.CSSProperties}>
-            {cur!.label}
-          </span>
-        )}
+        {/* No visible photo-title chip (owner request 2026-07-16) — labels still feed alt text. */}
         <button
           type="button"
           onClick={openBox}

@@ -4,6 +4,7 @@ import { prisma } from '@noc/db';
 import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { currency } from '@noc/i18n';
 import { marketHref } from '../../../lib/listings';
+import { coversForListings } from '../../../lib/listingCovers';
 import { SiteShell } from '../../_components/SiteShell';
 
 export const dynamic = 'force-dynamic';
@@ -20,11 +21,8 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
     : [];
   const byId = new Map(listings.map((l) => [l.id, l]));
   const ordered = ids.map((i) => byId.get(i)).filter((l): l is NonNullable<typeof l> => !!l);
-  const covers = new Map<string, string>();
-  if (ordered.length) {
-    const rows = await prisma.attachment.findMany({ where: { ownerType: 'Listing', ownerId: { in: ordered.map((l) => l.id) }, attributeId: null }, orderBy: { createdAt: 'asc' }, select: { ownerId: true, path: true } });
-    for (const r of rows) if (r.ownerId && !covers.has(r.ownerId)) covers.set(r.ownerId, r.path);
-  }
+  // Cover chain (location map → photo) — plot listings have maps, not photos.
+  const covers = await coversForListings(ordered.map((l) => l.id));
 
   const fields: { label: string; get: (l: (typeof ordered)[number]) => string }[] = [
     { label: L('السعر', 'Price'), get: (l) => (l.price != null ? `${Number(l.price).toLocaleString('en')} ${currency(locale)}` : '—') },

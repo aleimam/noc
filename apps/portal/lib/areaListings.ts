@@ -1,6 +1,7 @@
 import { prisma, type Prisma } from '@noc/db';
 import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { marketHref } from './listings';
+import { coversForListings } from './listingCovers';
 
 export type AreaListingCard = { id: string; href: string; title: string; price: string | null; typeAr: string; typeEn: string; cover: string | null };
 
@@ -13,11 +14,8 @@ export async function areaListings(where: Prisma.ListingWhereInput): Promise<Are
     select: { id: true, title: true, price: true, adNumber: true, area: true, typeOption: { select: { nameAr: true, nameEn: true } } },
   });
   const ids = listings.map((l) => l.id);
-  const covers = ids.length
-    ? await prisma.attachment.findMany({ where: { ownerType: 'Listing', ownerId: { in: ids }, attributeId: null }, orderBy: { createdAt: 'asc' }, select: { ownerId: true, path: true } })
-    : [];
-  const cover = new Map<string, string>();
-  for (const c of covers) if (c.ownerId && !cover.has(c.ownerId)) cover.set(c.ownerId, c.path);
+  // Cover chain (location map → photo) — plot listings have maps, not photos.
+  const cover = await coversForListings(ids);
   return listings.map((l) => ({
     id: l.id,
     href: marketHref({ id: l.id, adNumber: l.adNumber, typeEn: l.typeOption?.nameEn ?? null, area: l.area != null ? Number(l.area) : null }),
