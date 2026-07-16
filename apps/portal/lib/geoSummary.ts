@@ -8,7 +8,8 @@ const CITY_EN = 'New Obour City';
 const joinAr = (a: string[]) => a.join('، ');
 const joinEn = (a: string[]) => a.join(', ');
 
-/** "مجاورة {name} في {district} بمدينة العبور الجديدة، بمساحات …، {types}، على {roads}." */
+/** "{name} في {district} بمدينة العبور الجديدة، بمساحات …، {types}، على {roads}."
+ *  (name already carries its «مجاورة»/«Neighborhood» word, so we don't prepend one.) */
 export function neighborhoodSummary(o: {
   name: string;
   district: string;
@@ -19,14 +20,14 @@ export function neighborhoodSummary(o: {
   locale: Loc;
 }): string {
   if (o.locale === 'ar') {
-    const parts = [`مجاورة ${o.name} في ${o.district} ب${CITY_AR}`];
+    const parts = [`${o.name} في ${o.district} ب${CITY_AR}`];
     if (o.assorted) parts.push('بمساحات قطع متنوعة');
     else if (o.areas.length) parts.push(`بمساحات قطع ${joinAr(o.areas.map(String))} م²`);
     if (o.buildingTypes.length) parts.push(joinAr(o.buildingTypes));
     if (o.mainRoads.length) parts.push(`على ${joinAr(o.mainRoads)}`);
     return parts.join('، ') + '.';
   }
-  const parts = [`${o.name} neighborhood in ${o.district}, ${CITY_EN}`];
+  const parts = [`${o.name} in ${o.district}, ${CITY_EN}`];
   if (o.assorted) parts.push('with assorted plot areas');
   else if (o.areas.length) parts.push(`with plot areas of ${joinEn(o.areas.map(String))} m²`);
   if (o.buildingTypes.length) parts.push(joinEn(o.buildingTypes));
@@ -34,7 +35,8 @@ export function neighborhoodSummary(o: {
   return parts.join(', ') + '.';
 }
 
-/** "حي {name} بمدينة العبور الجديدة، يضم {n} من المجاورات، بمساحات قطع من {min} إلى {max} م²." */
+/** "{name} بمدينة العبور الجديدة، يضم {n} من المجاورات، بمساحات قطع من {min} إلى {max} م²."
+ *  (name already carries its «الحي»/«District» word, so we don't prepend one.) */
 export function districtSummary(o: {
   name: string;
   neighborhoodCount: number;
@@ -44,12 +46,12 @@ export function districtSummary(o: {
 }): string {
   const hasRange = o.areaMin != null && o.areaMax != null;
   if (o.locale === 'ar') {
-    const parts = [`حي ${o.name} ب${CITY_AR}`];
+    const parts = [`${o.name} ب${CITY_AR}`];
     if (o.neighborhoodCount > 0) parts.push(`يضم ${o.neighborhoodCount} من المجاورات`);
     if (hasRange) parts.push(o.areaMin === o.areaMax ? `بمساحات قطع ${o.areaMin} م²` : `بمساحات قطع من ${o.areaMin} إلى ${o.areaMax} م²`);
     return parts.join('، ') + '.';
   }
-  const parts = [`${o.name} district in ${CITY_EN}`];
+  const parts = [`${o.name} in ${CITY_EN}`];
   if (o.neighborhoodCount > 0) parts.push(`comprises ${o.neighborhoodCount} neighborhood${o.neighborhoodCount === 1 ? '' : 's'}`);
   if (hasRange) parts.push(o.areaMin === o.areaMax ? `with plot areas of ${o.areaMin} m²` : `with plot areas from ${o.areaMin} to ${o.areaMax} m²`);
   return parts.join(', ') + '.';
