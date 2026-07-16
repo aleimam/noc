@@ -43,8 +43,8 @@ export default async function Home() {
     recentlySold(6),
     wishlistListingIds(),
     prisma.setting.findUnique({ where: { key: 'brand_alsawarey_hero' } }),
-    prisma.listing.count({ where: { showOnBrokerage: true, status: 'PUBLISHED' } }),
-    prisma.listing.count({ where: { showOnBrokerage: true, status: 'SOLD' } }),
+    prisma.listing.count({ where: { showOnBrokerage: true, status: 'PUBLISHED', deletedAt: null } }),
+    prisma.listing.count({ where: { showOnBrokerage: true, status: 'SOLD', deletedAt: null } }),
   ]);
   // Full-bleed hero → 960px thumb (the admin may upload a multi-MB original).
   const heroUrl = heroSetting?.value ? thumbUrl(heroSetting.value, 960) : null;

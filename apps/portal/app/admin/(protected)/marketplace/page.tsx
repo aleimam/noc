@@ -18,7 +18,7 @@ export default async function MarketplaceHub() {
     prisma.attribute.count(),
     prisma.optionList.count(),
     prisma.owner.count(),
-    prisma.listing.count({ where: { status: 'PENDING' } }),
+    prisma.listing.count({ where: { status: 'PENDING', deletedAt: null } }),
     prisma.landOffer.count({ where: { status: { in: ['NEW', 'REVIEWING'] } } }),
     prisma.setting.findMany({ where: { key: { in: ['alswarey_phone', 'alswarey_whatsapp'] } } }),
     prisma.classifierOption.findMany({

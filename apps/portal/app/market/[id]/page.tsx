@@ -102,7 +102,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         include: { values: { include: { option: true, listItem: true } }, typeOption: true, purposeOption: true, conditionOption: true, owner: { include: { portalUser: { select: { id: true } } } }, buildingConditions: { include: { condition: true } }, neighborhood: { include: { district: { include: { city: { select: { id: true, key: true, nameAr: true, nameEn: true } } } } } } },
       })
     : null;
-  if (!listing || listing.status !== 'PUBLISHED') notFound();
+  if (!listing || listing.status !== 'PUBLISHED' || listing.deletedAt) notFound();
   // Phase 4 — a partner listing whose partner isn't enabled for New Obour is hidden here (direct link → 404).
   if (!listingVisibleOnNewObour(listing)) notFound();
   const id = listing.id;

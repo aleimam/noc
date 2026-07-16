@@ -116,7 +116,7 @@ function buildVals(values: RawValue[], attrType: Map<string, string>): Record<st
  *  value map (ready for the form), and its gallery photos. Returns null if not theirs. */
 export async function loadPartnerListing(listingId: string, ownerId: string) {
   const l = await prisma.listing.findFirst({
-    where: { id: listingId, ownerId },
+    where: { id: listingId, ownerId, deletedAt: null },
     select: {
       id: true, typeOptionId: true, purposeOptionId: true, conditionOptionId: true, title: true, description: true,
       price: true, priceUnit: true, contactPhone: true, contactWhatsapp: true, status: true,

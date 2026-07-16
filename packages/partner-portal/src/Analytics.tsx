@@ -16,7 +16,7 @@ export async function PartnerAnalytics() {
 
   const [listings, days] = await Promise.all([
     prisma.listing.findMany({
-      where: { ownerId },
+      where: { ownerId, deletedAt: null },
       orderBy: { views: 'desc' },
       select: {
         id: true, title: true, adNumber: true, status: true, views: true,

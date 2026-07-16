@@ -14,7 +14,7 @@ export default async function StaffEditListing({ params }: { params: Promise<{ i
   await requirePermission('listings', 'UPDATE');
   const { id } = await params;
   const listing = await prisma.listing.findUnique({ where: { id }, include: { values: true, buildingConditions: { select: { conditionId: true } } } });
-  if (!listing) notFound();
+  if (!listing || listing.deletedAt) notFound(); // trashed listings are restore-only (admin trash page)
 
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';

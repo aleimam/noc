@@ -10,6 +10,7 @@ export { EnterToSubmit } from './components/EnterToSubmit';
 export { toast, Toaster } from './components/Toast';
 export { AdminShell, type AdminNavGroup, type AdminNavItem } from './components/AdminShell';
 export { AdminSidebar, ICONS as AdminNavIcons } from './components/AdminSidebar';
+export { RecentFeaturesTracker, RecentFeaturesGrid } from './components/RecentFeatures';
 export { ImageAttachment, type UploadedAttachment } from './components/ImageAttachment';
 export { FileDropzone } from './components/FileDropzone';
 export { Lightbox } from './components/Lightbox';

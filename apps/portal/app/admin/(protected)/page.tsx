@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auth, hasPermission } from '@noc/auth';
 import { prisma } from '@noc/db';
+import { RecentFeaturesGrid } from '@noc/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,10 +39,10 @@ export default async function AdminDashboard() {
     count(canLands, () => prisma.district.count()),
     count(canLands, () => prisma.neighborhood.count()),
     count(canLands, () => prisma.landFollow.count()),
-    count(canListings, () => prisma.listing.count()),
-    count(canListings, () => prisma.listing.count({ where: { status: 'PENDING' } })),
-    count(canListings, () => prisma.listing.count({ where: { status: 'PUBLISHED' } })),
-    count(canListings, () => prisma.listing.count({ where: { status: 'SOLD' } })),
+    count(canListings, () => prisma.listing.count({ where: { deletedAt: null } })),
+    count(canListings, () => prisma.listing.count({ where: { status: 'PENDING', deletedAt: null } })),
+    count(canListings, () => prisma.listing.count({ where: { status: 'PUBLISHED', deletedAt: null } })),
+    count(canListings, () => prisma.listing.count({ where: { status: 'SOLD', deletedAt: null } })),
     count(canListings, () => prisma.listing.count({ where: { showOnBrokerage: true } })),
     count(canListings, () => prisma.landOffer.count({ where: { status: { in: ['NEW', 'REVIEWING'] } } })),
     count(canOwners, () => prisma.owner.count()),
@@ -83,6 +84,13 @@ export default async function AdminDashboard() {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-primary">{t('dashboard')}</h1>
+
+      {/* Per-user one-tap shortcuts to the features this admin actually uses (device-local). */}
+      <RecentFeaturesGrid
+        userKey={user.id}
+        title={L('استخدمتها مؤخراً', 'Recently used')}
+        emptyHint={L('اختصاراتك ستظهر هنا تلقائياً مع استخدامك لأقسام اللوحة.', 'Your shortcuts will appear here automatically as you use the admin sections.')}
+      />
 
       {canSheets && (
         <Section

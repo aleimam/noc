@@ -106,6 +106,8 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
       userLabel={user.email ?? user.id}
       nav={nav}
       search={<AdminSearch pages={searchPages} action={adminSearch} />}
+      quickAction={hasPermission(user.perms, 'listings', 'CREATE') ? { label: L('إضافة عرض', 'Add listing'), href: '/admin/marketplace/listings/new' } : undefined}
+      recentKey={user.id}
       backToSiteLabel={tc('backToSite')}
       collapseLabel={L('طيّ القائمة', 'Collapse menu')}
       expandLabel={L('فتح القائمة', 'Expand menu')}

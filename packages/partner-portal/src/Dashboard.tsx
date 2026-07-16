@@ -12,7 +12,7 @@ export async function PartnerDashboard() {
 
   const [listings, grantCount] = await Promise.all([
     prisma.listing.findMany({
-      where: { ownerId },
+      where: { ownerId, deletedAt: null },
       orderBy: { updatedAt: 'desc' },
       select: { id: true, title: true, adNumber: true, status: true, price: true, soldPrice: true, views: true, rejectionReason: true },
     }),

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { AdminSidebar } from './AdminSidebar';
+import { RecentFeaturesTracker } from './RecentFeatures';
 
 export interface AdminNavItem {
   href: string;
@@ -27,6 +28,8 @@ export function AdminShell({
   storeLinks,
   signOut,
   search,
+  quickAction,
+  recentKey,
   collapseLabel = 'Collapse menu',
   expandLabel = 'Expand menu',
   children,
@@ -39,6 +42,10 @@ export function AdminShell({
   signOut?: ReactNode;
   /** Optional global-search box rendered in the topbar. */
   search?: ReactNode;
+  /** Always-visible primary action in the topbar (e.g. «+ إضافة عرض») — permission-gated by the caller. */
+  quickAction?: { label: string; href: string };
+  /** STAFF user id: records visited features per user for the dashboard's recently-used grid. */
+  recentKey?: string;
   /** aria-label/tooltip for the sidebar toggle (pass localized copy). */
   collapseLabel?: string;
   expandLabel?: string;
@@ -49,6 +56,7 @@ export function AdminShell({
   // without a hardcoded column width.
   return (
     <div className="flex min-h-screen">
+      {recentKey && <RecentFeaturesTracker nav={nav} userKey={recentKey} />}
       <AdminSidebar brand={brand} nav={nav} collapseLabel={collapseLabel} expandLabel={expandLabel} />
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
@@ -58,6 +66,17 @@ export function AdminShell({
             <span className="hidden shrink-0 text-sm opacity-80 lg:inline">{userLabel}</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {quickAction && (
+              <a
+                href={quickAction.href}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-bold text-soft shadow-sm hover:opacity-90"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" className="h-4 w-4" aria-hidden>
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                {quickAction.label}
+              </a>
+            )}
             <LanguageSwitcher />
             {(storeLinks ?? [{ label: backToSiteLabel, href: '/' }]).map((s) => (
               <a

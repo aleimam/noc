@@ -548,6 +548,7 @@ model Listing {
   priceNegotiable Boolean       @default(false)
   soldPrice       Decimal?      @db.Decimal(14, 2) // set by staff when marked SOLD; optionally shown publicly
   lowestPrice     Decimal?      @db.Decimal(14, 2) // internal floor / walk-away price — admins & owner only, NEVER rendered publicly
+  deletedAt       DateTime? // soft delete: hidden everywhere except the admin trash; purged for good after 90 days (cron)
   adNumber        String?       @unique // public ad reference YYMM+owner(2)+seq, frozen at publish
   cardTitle       String? // RETIRED 2026-07-12 (input removed; cards use `title`) — dormant column, kept to avoid a destructive migration
   postersStale    Boolean       @default(false) // generated images out of date vs listing/area data
@@ -601,6 +602,7 @@ model Listing {
   @@index([showOnBrokerage, status])
   @@index([isPartnership, status])
   @@index([neighborhoodId])
+  @@index([deletedAt])
   @@index([publishedAt])
 }
 

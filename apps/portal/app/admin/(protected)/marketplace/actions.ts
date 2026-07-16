@@ -612,14 +612,45 @@ export async function setListingArchived(id: string, archived: boolean): Promise
   }
 }
 
-/** Permanently delete a listing. Its EAV values, contact requests, wishlist items, view
- *  days and building conditions cascade at the DB; negotiations + a source Land row are
- *  SetNull. The loose polymorphic references (uploaded photos/documents + generated
- *  poster/card images as Attachment rows, and the listing location map as an AreaMap)
- *  carry no FK, so clear them explicitly first. */
+/** SOFT-delete a listing (owner decision 2026-07-16): it disappears from every public and
+ *  admin surface (the visibility helpers + admin lists all filter `deletedAt: null`) but
+ *  keeps its photos/values, shows in the admin trash (/admin/marketplace/listings/deleted),
+ *  can be restored, and is purged for good by the daily cron after 90 days. */
 export async function deleteListing(id: string): Promise<Result> {
   await requirePermission('listings', 'DELETE');
   try {
+    await prisma.listing.update({ where: { id }, data: { deletedAt: new Date() } });
+    revalidatePath('/admin/marketplace/listings', 'page');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Bring a trashed listing back exactly as it was (status untouched). */
+export async function restoreListing(id: string): Promise<Result> {
+  await requirePermission('listings', 'DELETE');
+  try {
+    await prisma.listing.update({ where: { id }, data: { deletedAt: null } });
+    revalidatePath('/admin/marketplace/listings', 'page');
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** PERMANENTLY delete a trashed listing right now (the trash page's «حذف نهائي»).
+ *  EAV values, contact requests, wishlist items, view days and building conditions cascade
+ *  at the DB; negotiations + a source Land row are SetNull. The loose polymorphic references
+ *  (uploaded photos/documents + generated poster/card images as Attachment rows, and the
+ *  listing location map as an AreaMap) carry no FK, so clear them explicitly first.
+ *  ⚠️ MIRROR of ops/purge-deleted-listings.ts — keep the cleanup lists in sync. */
+export async function purgeListing(id: string): Promise<Result> {
+  await requirePermission('listings', 'DELETE');
+  try {
+    // Only rows already in the trash may be purged — a stray id can't nuke a live listing.
+    const row = await prisma.listing.findUnique({ where: { id }, select: { deletedAt: true } });
+    if (!row?.deletedAt) return { ok: false, error: 'not_deleted' };
     await prisma.$transaction([
       prisma.attachment.deleteMany({ where: { ownerId: id, ownerType: { in: ['Listing', 'ListingPoster'] } } }),
       prisma.areaMap.deleteMany({ where: { level: 'listing', areaId: id } }),

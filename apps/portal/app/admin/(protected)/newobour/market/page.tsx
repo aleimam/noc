@@ -25,6 +25,7 @@ export default async function NewObourMarket() {
   const L = (ar: string, en: string) => (locale === 'en' ? en : ar);
 
   const listings = await prisma.listing.findMany({
+    where: { deletedAt: null },
     orderBy: { updatedAt: 'desc' },
     take: 40,
     select: { id: true, title: true, status: true, price: true, showOnBrokerage: true },
@@ -37,7 +38,10 @@ export default async function NewObourMarket() {
           <h1 className="text-2xl font-bold text-primary">{L('سوق العبور الجديدة', 'New Obour market')}</h1>
           <p className="text-sm opacity-70">{L('أضف وأدر عروض السوق. العرض يظهر على الصواري فقط عند تفعيل خيار النشر.', 'Add & manage market listings. A listing shows on Al Sawarey only when its publish toggle is on.')}</p>
         </div>
-        <a href="/admin/newobour/market/new" className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-soft">+ {L('إضافة عرض جديد', 'Add listing')}</a>
+        <div className="flex items-center gap-3">
+          <a href="/admin/marketplace/listings/deleted" className="text-sm opacity-70 hover:opacity-100">🗑️ {L('المحذوفات', 'Trash')}</a>
+          <a href="/admin/newobour/market/new" className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-soft">+ {L('إضافة عرض جديد', 'Add listing')}</a>
+        </div>
       </div>
 
       {listings.length === 0 ? (

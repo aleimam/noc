@@ -23,7 +23,7 @@ export default async function MyListings() {
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
   const listings = await prisma.listing.findMany({
-    where: { sellerId: session.user.id },
+    where: { sellerId: session.user.id, deletedAt: null },
     orderBy: { updatedAt: 'desc' },
     include: { typeOption: { select: { nameAr: true, nameEn: true } } },
   });

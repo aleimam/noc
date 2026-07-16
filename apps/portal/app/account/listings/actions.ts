@@ -248,6 +248,7 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         // Edit rights: the original seller, staff, or the partner whose Owner holds the listing.
         const partnerOwns = isPartner && existing?.ownerId === user.ownerId;
         if (!existing || (existing.sellerId !== user.id && !isStaff && !partnerOwns)) throw new Error('forbidden');
+        if (existing.deletedAt) throw new Error('forbidden'); // trashed — restore it from the admin trash first
         await tx.listing.update({
           where: { id: input.id },
           data: { ...base, rejectionReason: null, postersStale: true }, // data changed → generated images out of date

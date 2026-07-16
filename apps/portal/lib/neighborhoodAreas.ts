@@ -29,7 +29,7 @@ export async function derivePlotAreas(neighborhoodIds: string[]): Promise<Map<st
   const [standardAreas, listings] = await Promise.all([
     getStandardAreas(),
     prisma.listing.findMany({
-      where: { neighborhoodId: { in: ids }, status: { in: ['PUBLISHED', 'SOLD'] } },
+      where: { neighborhoodId: { in: ids }, status: { in: ['PUBLISHED', 'SOLD'] }, deletedAt: null },
       select: {
         neighborhoodId: true,
         area: true,

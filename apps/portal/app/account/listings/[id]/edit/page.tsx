@@ -12,7 +12,7 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
   const { id } = await params;
 
   const listing = await prisma.listing.findUnique({ where: { id }, include: { values: true, buildingConditions: { select: { conditionId: true } } } });
-  if (!listing) notFound();
+  if (!listing || listing.deletedAt) notFound(); // trashed listings are restore-only (admin trash page)
   if (listing.sellerId !== session.user.id && session.user.type !== 'STAFF') notFound();
 
   const t = await getTranslations('mp');

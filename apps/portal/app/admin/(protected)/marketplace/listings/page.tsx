@@ -22,7 +22,7 @@ export default async function ModerationPage() {
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
   const pending = await prisma.listing.findMany({
-    where: { status: 'PENDING' },
+    where: { status: 'PENDING', deletedAt: null },
     orderBy: { createdAt: 'asc' },
     include: {
       typeOption: { select: { nameAr: true, nameEn: true } },
@@ -31,7 +31,7 @@ export default async function ModerationPage() {
     },
   });
   const recent = await prisma.listing.findMany({
-    where: { status: { not: 'PENDING' } },
+    where: { status: { not: 'PENDING' }, deletedAt: null },
     orderBy: { updatedAt: 'desc' },
     take: 30,
     include: { typeOption: { select: { nameAr: true, nameEn: true } } },
@@ -43,6 +43,7 @@ export default async function ModerationPage() {
         <h1 className="text-2xl font-bold text-primary">{t('moderation')}</h1>
         <div className="flex items-center gap-3">
           <a href="/admin/marketplace/listings/new" className="rounded-md bg-primary px-3 py-1.5 text-sm text-soft">+ {t('addLand')}</a>
+          <a href="/admin/marketplace/listings/deleted" className="text-sm opacity-70 hover:opacity-100">🗑️ المحذوفات</a>
           <a href="/admin/marketplace" className="text-sm text-accent">← {t('title')}</a>
         </div>
       </div>
