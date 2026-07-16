@@ -67,9 +67,12 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
   const cw = Object.fromEntries(copyrightRows.map((r) => [r.key, r.value]));
   const whatsappFloat = cw['whatsapp_float_alsawarey'] === '1';
   const whatsappFloatMsg = cw['whatsapp_float_msg_alsawarey'] || '';
+  // EN must NEVER fall back to the Arabic setting — an untranslated copyright line on the
+  // English site reads as a bug. Missing EN setting → the built-in English default.
   const copyright =
-    (locale === 'en' ? cw['copyright_alsawarey_en'] || cw['copyright_alsawarey'] : cw['copyright_alsawarey']) ||
-    (locale === 'en' ? '© Al Sawarey Real-estate Investment' : `© ${new Date().getFullYear()} alsawarey.com`);
+    locale === 'en'
+      ? cw['copyright_alsawarey_en'] || `© ${new Date().getFullYear()} Al Sawarey Real-estate Investment — all rights reserved`
+      : cw['copyright_alsawarey'] || `© ${new Date().getFullYear()} alsawarey.com`;
   const adminView = await getAdminViewer();
 
   return (

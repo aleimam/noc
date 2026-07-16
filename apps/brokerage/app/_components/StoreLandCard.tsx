@@ -10,8 +10,9 @@ export function StoreLandCard({ land, locale, wishlisted = false, owner }: { lan
   const sold = land.status === 'SOLD';
   const meta = [
     land.area ? `${fmt(land.area)} ${L('م²', 'm²')}` : null,
-    land.districtAr,
-    land.cityAr,
+    // Geo chips localize; a missing EN label falls back to the Arabic one (never blank).
+    locale === 'en' ? land.districtEn || land.districtAr : land.districtAr,
+    locale === 'en' ? land.cityEn || land.cityAr : land.cityAr,
   ].filter(Boolean).join(' · ');
 
   return (

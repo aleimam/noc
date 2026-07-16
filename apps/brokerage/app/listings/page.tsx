@@ -11,6 +11,7 @@ import { getAdminViewer, ownerBadges } from '../../lib/adminView';
 import { wishlistListingIds } from '../../lib/wishlist';
 import { headers } from 'next/headers';
 import { pageMeta } from '../../lib/seo';
+import { localizeUnit } from '@noc/i18n';
 import { logSearch, normalizeSearch, expandSearchTerms } from '../../lib/search';
 import { rateLimit, clientIp } from '../../lib/rateLimit';
 
@@ -194,7 +195,7 @@ export default async function Catalogue({
 
             {rangeAttrs.map((fa) => (
               <div key={fa.key} className="text-sm">
-                <span className="mb-1 block">{L(fa.labelAr, fa.labelEn)}{fa.unit ? ` (${fa.unit})` : ''}</span>
+                <span className="mb-1 block">{L(fa.labelAr, fa.labelEn)}{fa.unit ? ` (${localizeUnit(fa.unit, locale)})` : ''}</span>
                 <div className="flex gap-2">
                   <input name={`fmin_${fa.key}`} type="number" inputMode="numeric" dir="ltr" defaultValue={str(sp[`fmin_${fa.key}`])} placeholder={L('من', 'Min')} className="w-full rounded-md border border-ink-200 px-2 py-1.5 text-sm" />
                   <input name={`fmax_${fa.key}`} type="number" inputMode="numeric" dir="ltr" defaultValue={str(sp[`fmax_${fa.key}`])} placeholder={L('إلى', 'Max')} className="w-full rounded-md border border-ink-200 px-2 py-1.5 text-sm" />

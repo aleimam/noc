@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Fragment } from 'react';
+import type { Metadata } from 'next';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { SearchAutocomplete } from '@noc/ui';
@@ -9,8 +10,26 @@ import { StoreLandCard } from './_components/StoreLandCard';
 import { latestLands, featuredLands, recentlySold } from '../lib/listings';
 import { wishlistListingIds } from '../lib/wishlist';
 import { getStorefront } from '../lib/storefront';
+import { pageMeta } from '../lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+// OG/Twitter card for the homepage — sharing alsawarey.com on WhatsApp/Facebook gets a
+// real preview (hero image when set, else the brand logo).
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = (await getLocale()) as 'ar' | 'en';
+  const hero = await prisma.setting.findUnique({ where: { key: 'brand_alsawarey_hero' } });
+  return pageMeta({
+    title: locale === 'en' ? 'Al Sawarey Real-estate Investment' : 'الصواري للاستثمار العقاري',
+    description:
+      locale === 'en'
+        ? 'Al Sawarey Real-estate Investment — selected lands for sale in New Obour and beyond'
+        : 'الصواري للاستثمار العقاري — أراضٍ مختارة للبيع في العبور الجديدة وما حولها',
+    path: '/',
+    images: [hero?.value || '/brand/logo'],
+    locale,
+  });
+}
 
 export default async function Home() {
   const locale = (await getLocale()) as 'ar' | 'en';

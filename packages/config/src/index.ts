@@ -215,6 +215,20 @@ export type DetailConfig = {
   multiple?: boolean;
 };
 
+// Unit labels are stored in Arabic; only the SUFFIX is localized for EN display.
+// Keep in sync with @noc/i18n's UNIT_EN (neither package may depend on the other).
+const UNIT_EN_LABEL: Record<string, string> = {
+  'م²': 'm²',
+  'م': 'm',
+  'غرفة': 'room',
+  'حمام': 'bath',
+  'قطعة': 'pc',
+  'واجهة': 'frontage',
+  'سنة': 'yr',
+  '%': '%',
+  'ج.م': 'EGP',
+};
+
 /** Format a stored listing-detail value for public display, by its value type.
  *  SELECT/MULTI_SELECT are resolved by the caller (option labels); this covers the rest. */
 export function formatDetailValue(opts: {
@@ -241,8 +255,11 @@ export function formatDetailValue(opts: {
       return number != null ? formatArea(number, locale) : null;
     case 'AREA_ALLOCATED':
       return number != null ? formatArea(roundToStandardArea(number, standardAreas ?? AREA_PRESETS), locale) : null;
-    case 'NUMBER':
-      return number != null ? `${number.toLocaleString('en-US')}${unit ? ` ${unit}` : ''}` : null;
+    case 'NUMBER': {
+      if (number == null) return null;
+      const u = unit ? (locale === 'en' ? (UNIT_EN_LABEL[unit] ?? unit) : unit) : '';
+      return `${number.toLocaleString('en-US')}${u ? ` ${u}` : ''}`;
+    }
     case 'YESNO':
       if (bool == null) return null;
       return bool ? L(config?.yesLabelAr || 'نعم', config?.yesLabelEn || 'Yes') : L(config?.noLabelAr || 'لا', config?.noLabelEn || 'No');

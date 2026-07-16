@@ -46,7 +46,9 @@ export type LandCard = {
   cover: string | null;
   area: number | null;
   cityAr: string | null;
+  cityEn: string | null;
   districtAr: string | null;
+  districtEn: string | null;
   /** Geo-hierarchy names (District/Neighborhood) for search — the EAV district/city labels above
    *  don't cover geo-only listings, which made "الحى العاشر" return nothing. Not shown on the card. */
   geoText: string | null;
@@ -88,12 +90,15 @@ function resolve(values: ValueRow[]) {
   // migration; pre-migration rows still carry the legacy `option`. Read BOTH — reading only
   // `option` silently dropped city/district from every post-migration card.
   const optAr = (k: string) => by.get(k)?.listItem?.labelAr ?? by.get(k)?.option?.labelAr ?? null;
+  const optEn = (k: string) => by.get(k)?.listItem?.labelEn ?? by.get(k)?.option?.labelEn ?? null;
   return {
     area: num(ATTR.area),
     corner: bool(ATTR.corner),
     onMainStreet: bool(ATTR.mainStreet),
     districtAr: optAr(ATTR.district),
+    districtEn: optEn(ATTR.district),
     cityAr: optAr(ATTR.city),
+    cityEn: optEn(ATTR.city),
   };
 }
 
@@ -160,7 +165,9 @@ function toCard(l: Prisma.ListingGetPayload<{ select: typeof cardSelect }>, cove
     cover: cover.get(l.id) ?? null,
     area: r.area,
     cityAr: r.cityAr,
+    cityEn: r.cityEn,
     districtAr: r.districtAr,
+    districtEn: r.districtEn,
     geoText: [l.neighborhood?.district?.nameAr, l.neighborhood?.district?.nameEn, l.neighborhood?.nameAr, l.neighborhood?.nameEn].filter(Boolean).join(' ') || null,
     corner: r.corner,
     onMainStreet: r.onMainStreet,
