@@ -19,9 +19,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const en = locale === 'en';
   return {
     metadataBase: new URL(process.env.BROKERAGE_URL || 'https://alsawarey.com'),
-    title: en ? 'Al Sawarey Real-estate Investment' : 'الصواري للاستثمار العقاري',
+    title: en ? 'Al Sawarey Real Estate Investment' : 'الصواري للاستثمار العقاري',
     description: en
-      ? 'Al Sawarey Real-estate Investment — selected lands for sale in New Obour City: residential plots in a range of areas and prices, full details with plot-location maps, and free brokerage for buyers.'
+      ? 'Al Sawarey Real Estate Investment — selected lands for sale in New Obour City: residential plots in a range of areas and prices, full details with plot-location maps, and free brokerage for buyers.'
       : 'الصواري للاستثمار العقاري — أراضٍ مختارة للبيع في مدينة العبور الجديدة: قطع سكنية بمساحات وأسعار متنوعة، تفاصيل كاملة وخريطة لموقع كل قطعة، ووساطة مجانية للمشتري.',
     icons: { icon: '/brand/favicon' },
   };
@@ -40,7 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       '@context': 'https://schema.org',
       '@type': 'RealEstateAgent',
       name: 'الصواري للاستثمار العقاري',
-      alternateName: 'Al Sawarey Real-estate Investment',
+      alternateName: 'Al Sawarey Real Estate Investment',
       url: siteUrl,
       logo: `${siteUrl}/brand/logo`,
       image: `${siteUrl}/brand/logo`,

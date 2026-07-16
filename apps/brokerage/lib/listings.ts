@@ -3,6 +3,7 @@
 import { prisma, Prisma } from '@noc/db';
 import { alsawareyVisibility } from '@noc/partner-portal/visibility';
 import { AREA_PRESETS, formatDetailValue, type DetailConfig } from '@noc/config';
+import { thumbUrl } from './thumb';
 
 /** Admin-editable standard plot areas (m²) used to round Allocated-Area details. */
 async function getStandardAreas(): Promise<number[]> {
@@ -136,7 +137,8 @@ async function coversFor(ids: string[]): Promise<Map<string, string>> {
   });
   for (const m of maps) {
     const p = m.alswareyPath || m.cleanPath;
-    if (m.areaId && p && !cover.has(m.areaId)) cover.set(m.areaId, p);
+    // 480px WebP thumbnail — the sources are full-size stamped PNGs, too heavy for card grids.
+    if (m.areaId && p && !cover.has(m.areaId)) cover.set(m.areaId, thumbUrl(p));
   }
   // Fall back to the first uploaded photo for any listing without a location map.
   const missing = ids.filter((id) => !cover.has(id));
@@ -146,7 +148,7 @@ async function coversFor(ids: string[]): Promise<Map<string, string>> {
       orderBy: { createdAt: 'asc' },
       select: { ownerId: true, path: true },
     });
-    for (const r of rows) if (r.ownerId && !cover.has(r.ownerId)) cover.set(r.ownerId, r.path);
+    for (const r of rows) if (r.ownerId && !cover.has(r.ownerId)) cover.set(r.ownerId, thumbUrl(r.path));
   }
   return cover;
 }

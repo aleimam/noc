@@ -23,7 +23,8 @@ export function WishlistButton({ listingId, initialSaved, size = 'sm', locale = 
     });
   }
 
-  const cls = size === 'lg' ? 'h-11 w-11 text-2xl' : 'h-9 w-9 text-lg';
+  // ≥40px both sizes (golden rule: big tap targets — low-tech users on phones).
+  const cls = size === 'lg' ? 'h-11 w-11 text-2xl' : 'h-10 w-10 text-xl';
   return (
     <button
       onClick={toggle}

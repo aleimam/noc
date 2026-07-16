@@ -22,6 +22,7 @@ import { AdminEditButton } from '../../_components/AdminEditButton';
 import { pageMeta, breadcrumbLd, ldJson, abs } from '../../../lib/seo';
 import { listingAlt } from '../../../lib/imageAlt';
 import { coversForListings } from '../../../lib/listingCovers';
+import { thumbUrl } from '../../../lib/thumb';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id: param } = await params;
@@ -373,7 +374,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     <SiteShell active="market">
       <main className="mx-auto max-w-3xl space-y-6 p-6 pb-24">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([listingLd, crumbsLd]) }} />
-      <TrackView item={{ id: listing.id, title: listing.title, cover: galleryPaths[0] ?? null, price: listing.price != null ? String(listing.price) : null, href: canonicalPath }} />
+      <TrackView item={{ id: listing.id, title: listing.title, cover: galleryPaths[0] ? thumbUrl(galleryPaths[0], 320) : null, price: listing.price != null ? String(listing.price) : null, href: canonicalPath }} />
       <div className="flex justify-end"><MarketCardActions listingId={listing.id} initialSaved={saved} compareLabel={t('compare')} /></div>
       <a href="/market" className="text-sm text-accent">‹ {t('title')}</a>
       <HeroGallery items={heroItems} alt={photoAlt} locale={locale} whatsapp={heroWhatsapp} trackKey={heroTrackKey} />

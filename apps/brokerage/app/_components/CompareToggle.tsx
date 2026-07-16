@@ -24,7 +24,7 @@ export function CompareToggle({ id, label, locale = 'ar' }: { id: string; label:
         if (r === 'full') toast(L('الحد الأقصى ٤ أراضٍ', 'Maximum of 4 lands'), 'error');
         setOn(r === 'added');
       }}
-      className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${on ? 'bg-navy-700 text-white' : 'bg-white/90 text-navy-700'} shadow`}
+      className={`inline-flex min-h-10 items-center rounded-md px-3 text-xs font-bold ${on ? 'bg-navy-700 text-white' : 'bg-white/90 text-navy-700'} shadow`}
     >
       ⇄ {label}
     </button>

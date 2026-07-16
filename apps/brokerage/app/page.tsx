@@ -10,6 +10,7 @@ import { StoreLandCard } from './_components/StoreLandCard';
 import { latestLands, featuredLands, recentlySold } from '../lib/listings';
 import { wishlistListingIds } from '../lib/wishlist';
 import { getStorefront } from '../lib/storefront';
+import { thumbUrl } from '../lib/thumb';
 import { pageMeta } from '../lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -20,14 +21,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as 'ar' | 'en';
   const hero = await prisma.setting.findUnique({ where: { key: 'brand_alsawarey_hero' } });
   return pageMeta({
-    title: locale === 'en' ? 'Al Sawarey Real-estate Investment' : 'الصواري للاستثمار العقاري',
+    title: locale === 'en' ? 'Al Sawarey Real Estate Investment' : 'الصواري للاستثمار العقاري',
     // ~155 chars, human-written — too-short descriptions get ignored and Google scrapes page text.
     description:
       locale === 'en'
-        ? 'Al Sawarey Real-estate Investment — selected lands for sale in New Obour City: residential plots in a range of areas and prices, full details with plot-location maps, and free brokerage for buyers.'
+        ? 'Al Sawarey Real Estate Investment — selected lands for sale in New Obour City: residential plots in a range of areas and prices, full details with plot-location maps, and free brokerage for buyers.'
         : 'الصواري للاستثمار العقاري — أراضٍ مختارة للبيع في مدينة العبور الجديدة: قطع سكنية بمساحات وأسعار متنوعة، تفاصيل كاملة وخريطة لموقع كل قطعة، ووساطة مجانية للمشتري.',
     path: '/',
-    images: [hero?.value || '/brand/logo'],
+    images: [hero?.value ? thumbUrl(hero.value, 960) : '/brand/logo'],
     locale,
   });
 }
@@ -45,7 +46,8 @@ export default async function Home() {
     prisma.listing.count({ where: { showOnBrokerage: true, status: 'PUBLISHED' } }),
     prisma.listing.count({ where: { showOnBrokerage: true, status: 'SOLD' } }),
   ]);
-  const heroUrl = heroSetting?.value || null;
+  // Full-bleed hero → 960px thumb (the admin may upload a multi-MB original).
+  const heroUrl = heroSetting?.value ? thumbUrl(heroSetting.value, 960) : null;
 
   const sectionNode = (key: StoreSectionKey) => {
     switch (key) {
@@ -92,7 +94,7 @@ export default async function Home() {
           <section key="ft" className="mx-auto max-w-6xl px-4 pt-8">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-xl font-bold text-navy-800 dark:text-soft"><span className="text-gold-600">★</span> {L(c.titles.featured)}</h2>
-              <Link href="/listings?featured=1" className="text-sm font-bold text-gold-700">{locale === 'ar' ? 'عرض الكل ←' : 'View all →'}</Link>
+              <Link href="/listings?featured=1" className="inline-flex min-h-10 items-center px-2 text-sm font-bold text-gold-700">{locale === 'ar' ? 'عرض الكل ←' : 'View all →'}</Link>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {featured.map((land) => <StoreLandCard key={land.id} land={land} locale={locale} wishlisted={wished.has(land.id)} />)}
@@ -104,7 +106,7 @@ export default async function Home() {
           <section key="lt" className="mx-auto max-w-6xl px-4 pb-10 pt-8">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-navy-800 dark:text-soft">{L(c.titles.latest)}</h2>
-              <Link href="/listings" className="text-sm font-bold text-gold-700">{locale === 'ar' ? 'عرض الكل ←' : 'View all →'}</Link>
+              <Link href="/listings" className="inline-flex min-h-10 items-center px-2 text-sm font-bold text-gold-700">{locale === 'ar' ? 'عرض الكل ←' : 'View all →'}</Link>
             </div>
             {lands.length === 0 ? (
               <p className="py-12 text-center text-ink-500">{locale === 'ar' ? 'لا توجد أراضٍ متاحة حالياً' : 'No lands available yet'}</p>
@@ -172,7 +174,9 @@ export default async function Home() {
 
           {c.hero.stats.show && (
             <div className="mt-9 flex flex-wrap justify-center gap-x-10 gap-y-4">
-              <Stat value={availableCount.toLocaleString('en')} label={L(c.hero.stats.availableLabel)} />
+              {/* A tiny inventory count ("2 lands available") undermines trust — show it only once
+                  there's something to brag about (site review, 2026-07-16). */}
+              {availableCount >= 5 && <Stat value={availableCount.toLocaleString('en')} label={L(c.hero.stats.availableLabel)} />}
               {soldCount > 0 && <Stat value={soldCount.toLocaleString('en')} label={L(c.hero.stats.soldLabel)} />}
               <Stat value={L(c.hero.stats.extraValue)} label={L(c.hero.stats.extraLabel)} />
             </div>

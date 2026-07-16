@@ -37,6 +37,7 @@ const MAP_KIND_LABEL: Record<string, { ar: string; en: string }> = {
 };
 
 import { waPhone } from '@noc/config';
+import { thumbUrl } from '../../../lib/thumb';
 
 /** Owner phone in the staff card: the number on desktop, plus tap-to-call and (when the
  *  line has WhatsApp) tap-to-WhatsApp icons. On mobile only the icons show. */
@@ -220,7 +221,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     <StoreShell>
       {/* Escape "<" so seller-authored fields (name/description) can't break out of the script tag. */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([jsonLd, crumbsLd]) }} />
-      <TrackView item={{ id: land.id, title: land.title, cover: land.gallery[0] ?? null, price: land.price != null ? String(land.price) : null, href: land.canonicalPath }} />
+      <TrackView item={{ id: land.id, title: land.title, cover: land.gallery[0] ? thumbUrl(land.gallery[0], 320) : null, price: land.price != null ? String(land.price) : null, href: land.canonicalPath }} />
       <div className="mx-auto max-w-5xl px-4 pt-6 pb-24 lg:pb-6">
         <Link href="/listings" className="text-sm text-navy-600">‹ {L('كل الأراضي', 'All lands')}</Link>
 

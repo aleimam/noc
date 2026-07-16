@@ -524,7 +524,7 @@ export const DEFAULT_STOREFRONT: StorefrontContent = {
   },
   footer: {
     name: loc('الصواري', 'Al Sawarey'),
-    slogan: loc('للاستثمار العقاري', 'Real-estate investment'),
+    slogan: loc('للاستثمار العقاري', 'Real Estate Investment'),
   },
 };
 

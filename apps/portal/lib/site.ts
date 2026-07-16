@@ -34,7 +34,7 @@ export const DEFAULT_SLOGAN_NEWOBOUR_EN = 'Free services portal';
 export const DEFAULT_COPYRIGHT_NEWOBOUR = '© بوابة خدمات مدينة العبور الجديدة';
 export const DEFAULT_COPYRIGHT_NEWOBOUR_EN = '© New Obour City Services Portal';
 export const DEFAULT_COPYRIGHT_ALSAWAREY = '© الصواري للاستثمار العقاري';
-export const DEFAULT_COPYRIGHT_ALSAWAREY_EN = '© Al Sawarey Real-estate Investment';
+export const DEFAULT_COPYRIGHT_ALSAWAREY_EN = '© Al Sawarey Real Estate Investment';
 
 export async function getSiteConfig(): Promise<SiteConfig> {
   try {

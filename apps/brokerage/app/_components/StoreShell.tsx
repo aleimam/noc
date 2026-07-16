@@ -71,7 +71,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
   // English site reads as a bug. Missing EN setting → the built-in English default.
   const copyright =
     locale === 'en'
-      ? cw['copyright_alsawarey_en'] || `© ${new Date().getFullYear()} Al Sawarey Real-estate Investment — all rights reserved`
+      ? cw['copyright_alsawarey_en'] || `© ${new Date().getFullYear()} Al Sawarey Real Estate Investment — all rights reserved`
       : cw['copyright_alsawarey'] || `© ${new Date().getFullYear()} alsawarey.com`;
   const adminView = await getAdminViewer();
 
@@ -153,9 +153,10 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
               { href: 'https://nuca-services.gov.eg/#/home', ar: 'خدمات هيئة المجتمعات العمرانية', en: 'NUCA e-services' },
               { href: 'http://www.newcities.gov.eg/know_cities/NewObour/default.aspx', ar: 'مدينة العبور الجديدة — هيئة المجتمعات', en: 'New Obour — New Cities Authority' },
               { href: 'https://www.facebook.com/profile.php?id=100069065355149', ar: 'جهاز المدينة على فيسبوك', en: 'City authority on Facebook' },
+              { href: 'https://www.newobour.city/', ar: 'newobour.city', en: 'newobour.city' },
             ].map((l) => (
-              <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-gold">
-                {L(l.ar, l.en)} <span aria-hidden className="text-xs">↗</span>
+              <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center text-white/70 hover:text-gold">
+                {L(l.ar, l.en)}&nbsp;<span aria-hidden className="text-xs">↗</span>
               </a>
             ))}
           </div>
@@ -164,7 +165,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
           {footerPages.map((p) => (
             <Link key={p.slug} href={`/p/${p.slug}`} className="text-white/70 hover:text-gold">{locale === 'en' ? p.titleEn || p.titleAr : p.titleAr}</Link>
           ))}
-          <a href={`https://wa.me/${waPhone(whatsapp)}`} aria-label="WhatsApp" className="inline-flex items-center gap-1.5 text-gold" dir="ltr">
+          <a href={`https://wa.me/${waPhone(whatsapp)}`} aria-label="WhatsApp" className="inline-flex min-h-10 items-center gap-1.5 py-2 text-gold" dir="ltr">
             <WhatsAppIcon className="h-4 w-4" />
             {whatsapp}
           </a>
