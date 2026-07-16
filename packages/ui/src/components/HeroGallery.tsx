@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Lightbox } from './Lightbox';
+import { nocEvent } from './Tracker';
 
 export type GalleryItem = { src: string; label?: string };
 
@@ -15,6 +16,8 @@ export function HeroGallery({
   alt,
   locale = 'ar',
   autoPlayMs = 4000,
+  whatsapp,
+  trackKey,
 }: {
   items?: GalleryItem[];
   /** Back-compat: plain paths (no labels). */
@@ -23,6 +26,11 @@ export function HeroGallery({
   locale?: 'ar' | 'en';
   /** 0 disables auto-advance. */
   autoPlayMs?: number;
+  /** "Ask about this photo" WhatsApp button in the fullscreen viewer (phone in wa.me form). */
+  whatsapp?: { phone: string; text: string };
+  /** First-party photo analytics: set to the listing id to log photo_open / photo_nav /
+   *  photo_action events (label = image path). Omit to disable tracking entirely. */
+  trackKey?: string;
 }) {
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const list: GalleryItem[] = items ?? (photos ?? []).map((src) => ({ src }));
@@ -39,17 +47,33 @@ export function HeroGallery({
   const stop = useCallback(() => {
     stopped.current = true;
   }, []);
-  const go = useCallback(
-    (d: number) => {
-      if (n < 2) return;
-      setI((v) => (v + d + n) % n);
+  // First-party photo analytics (only when the page opted in with trackKey).
+  const fire = useCallback(
+    (type: string, idx: number, action?: string) => {
+      if (!trackKey) return;
+      const it = list[idx];
+      if (!it) return;
+      nocEvent(type, it.src, idx, { listing: trackKey, kind: it.label ?? 'photo', ...(action ? { action } : {}) });
     },
-    [n],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [trackKey],
   );
+  // Visitor-driven navigation (arrows / swipe / thumbs) — autoplay never logs events.
+  const nav = (d: number) => {
+    if (n < 2) return;
+    const ni = (i + d + n) % n;
+    setI(ni);
+    fire('photo_nav', ni);
+  };
   // Physical arrows: each moves the image strip in its own visual direction.
   // RTL reads right→left, so the visually-left arrow advances (matches Lightbox keys).
-  const goLeft = () => { stop(); go(locale === 'ar' ? 1 : -1); };
-  const goRight = () => { stop(); go(locale === 'ar' ? -1 : 1); };
+  const goLeft = () => { stop(); nav(locale === 'ar' ? 1 : -1); };
+  const goRight = () => { stop(); nav(locale === 'ar' ? -1 : 1); };
+  const openBox = () => {
+    stop();
+    fire('photo_open', i);
+    setOpen(true);
+  };
 
   // Auto-advance: skipped for reduced-motion, hidden tabs, off-screen galleries,
   // an open lightbox, or once the visitor has interacted.
@@ -105,10 +129,9 @@ export function HeroGallery({
     if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
       stop();
       // Swiping drags the strip: swipe left = reveal what's after in LTR / before in RTL.
-      go(locale === 'ar' ? (dx > 0 ? 1 : -1) : dx < 0 ? 1 : -1);
+      nav(locale === 'ar' ? (dx > 0 ? 1 : -1) : dx < 0 ? 1 : -1);
     } else if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
-      stop();
-      setOpen(true); // treat as a tap
+      openBox(); // treat as a tap
     }
   };
 
@@ -138,7 +161,7 @@ export function HeroGallery({
         )}
         <button
           type="button"
-          onClick={() => { stop(); setOpen(true); }}
+          onClick={openBox}
           aria-label={L('تكبير الصورة', 'Zoom image')}
           className="absolute bottom-3 rounded-xl bg-navy/60 px-3 py-1.5 text-lg leading-none text-white hover:bg-navy/75"
           style={{ [locale === 'ar' ? 'right' : 'left']: '0.75rem' } as React.CSSProperties}
@@ -165,7 +188,7 @@ export function HeroGallery({
             <button
               key={k}
               type="button"
-              onClick={() => { stop(); setI(k); }}
+              onClick={() => { stop(); setI(k); fire('photo_nav', k); }}
               aria-label={altFor(k) || L(`صورة ${k + 1}`, `Photo ${k + 1}`)}
               aria-current={k === i}
               className={`relative h-16 w-20 flex-none overflow-hidden rounded-lg ring-2 transition ${k === i ? 'ring-accent' : 'ring-transparent hover:ring-graphite/25'}`}
@@ -184,6 +207,8 @@ export function HeroGallery({
           alt={alt}
           locale={locale}
           onIndexChange={setI}
+          whatsapp={whatsapp}
+          onEvent={(name, idx) => (name === 'nav' ? fire('photo_nav', idx) : fire('photo_action', idx, name))}
           onClose={() => setOpen(false)}
         />
       )}

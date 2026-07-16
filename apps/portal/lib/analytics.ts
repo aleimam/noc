@@ -162,6 +162,9 @@ export async function getEventStats({ from, to, site }: Range) {
 
   const byType = topBy(events, (e) => e.type, 12);
 
+  // Photo analytics — which listing images visitors actually open / browse to (label = image path).
+  const topPhotos = topBy(events.filter((e) => e.type === 'photo_open' || e.type === 'photo_nav'), (e) => e.label, 10);
+
   // Search intelligence — top queries + those that returned zero results (unmet demand).
   const searches = events.filter((e) => e.type === 'search' || e.type === 'market_search');
   const topSearches = topBy(searches, (e) => e.label, 12);
@@ -183,5 +186,5 @@ export async function getEventStats({ from, to, site }: Range) {
   const rageClicks = events.filter((e) => e.type === 'rage_click').length;
   const ragePages = topBy(events.filter((e) => e.type === 'rage_click'), (e) => e.label, 8);
 
-  return { totalEvents: events.length, byType, topSearches, zeroResults, funnel, webVitals, rageClicks, ragePages };
+  return { totalEvents: events.length, byType, topPhotos, topSearches, zeroResults, funnel, webVitals, rageClicks, ragePages };
 }

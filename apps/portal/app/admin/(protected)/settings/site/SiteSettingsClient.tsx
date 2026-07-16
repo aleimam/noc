@@ -18,6 +18,8 @@ type Initial = {
   whatsappFloatMsgNewobour: string;
   whatsappFloatAlsawarey: boolean;
   whatsappFloatMsgAlsawarey: string;
+  galleryWaPhoto: boolean;
+  galleryPhotoAnalytics: boolean;
 };
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
 
@@ -52,6 +54,8 @@ export function SiteSettingsClient({ initial }: { initial: Initial }) {
         whatsapp_float_msg_newobour: s.whatsappFloatMsgNewobour,
         whatsapp_float_alsawarey: s.whatsappFloatAlsawarey ? '1' : '0',
         whatsapp_float_msg_alsawarey: s.whatsappFloatMsgAlsawarey,
+        'gallery.waPhoto': s.galleryWaPhoto ? '1' : '0',
+        'gallery.photoAnalytics': s.galleryPhotoAnalytics ? '1' : '0',
       });
       if (r.ok) {
         setSaved(true);
@@ -119,6 +123,20 @@ export function SiteSettingsClient({ initial }: { initial: Initial }) {
         <label className="block text-sm">رسالة مبدئية (اختياري) / Prefilled message
           <input value={s.whatsappFloatMsgAlsawarey} onChange={(e) => setS((x) => ({ ...x, whatsappFloatMsgAlsawarey: e.target.value }))} className={inp} placeholder="مرحباً، لدي استفسار" />
         </label>
+      </section>
+
+      <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
+        <h2 className="font-semibold text-primary">معرض صور الإعلان / Listing photo gallery</h2>
+        <div className="space-y-1">
+          <p className="text-sm font-medium">زر «اسأل عن هذه الصورة» (واتساب) / "Ask about this photo" WhatsApp button</p>
+          <p className="text-xs opacity-60">يظهر داخل عارض الصور بملء الشاشة على صفحات الإعلانات في الموقعين، ويفتح واتساب برسالة تتضمن رابط الصورة والإعلان.</p>
+          <OnOff on={s.galleryWaPhoto} onChange={(v) => setS((x) => ({ ...x, galleryWaPhoto: v }))} />
+        </div>
+        <div className="space-y-1 border-t border-graphite/10 pt-3">
+          <p className="text-sm font-medium">إحصاءات الصور / Photo analytics</p>
+          <p className="text-xs opacity-60">تسجيل فتح الصور والتنقّل بينها والتكبير والمشاركة (بدون بيانات شخصية) — تظهر «أكثر الصور مشاهدة» في لوحة تحليلات الزوّار.</p>
+          <OnOff on={s.galleryPhotoAnalytics} onChange={(v) => setS((x) => ({ ...x, galleryPhotoAnalytics: v }))} />
+        </div>
       </section>
 
       <div className="flex items-center gap-3">

@@ -15,12 +15,17 @@ type Props = {
   locale?: 'ar' | 'en';
   /** Keeps the caller's gallery in sync while the visitor browses in here. */
   onIndexChange?: (i: number) => void;
+  /** "Ask about THIS photo" — a WhatsApp button that opens a chat with `text` + the image URL.
+   *  `phone` must already be in international wa.me form (e.g. 2010…). */
+  whatsapp?: { phone: string; text: string };
+  /** Analytics hook: fired on user actions ('nav' | 'zoom' | 'copy' | 'share' | 'download' | 'open_tab' | 'whatsapp'). */
+  onEvent?: (name: string, index: number) => void;
   onClose: () => void;
 };
 
 /** Fullscreen image viewer: zoomable (wheel / double-tap / +− buttons, drag to pan)
  *  and, when given `photos`, swipeable between images. Closes on ESC or backdrop click. */
-export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexChange, onClose }: Props) {
+export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexChange, whatsapp, onEvent, onClose }: Props) {
   const list = photos && photos.length ? photos : src ? [src] : [];
   const [i, setI] = useState(index);
   const [scale, setScale] = useState(1);
@@ -35,18 +40,26 @@ export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexCh
     setScale(1);
     setPos({ x: 0, y: 0 });
   }, []);
+  const zoomFired = useRef(false); // report zoom once per image, not per wheel-tick
   const go = useCallback(
     (d: number) => {
       if (!many) return;
       setI((v) => {
         const next = (v + d + list.length) % list.length;
         onIndexChange?.(next);
+        onEvent?.('nav', next);
         return next;
       });
+      zoomFired.current = false;
       reset();
     },
-    [many, list.length, reset, onIndexChange],
+    [many, list.length, reset, onIndexChange, onEvent],
   );
+  const reportZoom = () => {
+    if (zoomFired.current) return;
+    zoomFired.current = true;
+    onEvent?.('zoom', i);
+  };
 
   // ── Actions on the current image (ecommerce lightbox): copy / share / download / open ──
   const absUrl = () => new URL(cur!, window.location.href).href;
@@ -55,6 +68,7 @@ export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexCh
     toast(L('تم نسخ رابط الصورة', 'Image link copied'));
   };
   const copyImage = async () => {
+    onEvent?.('copy', i);
     try {
       // Clipboard accepts PNG only → recompress through a canvas when needed (same-origin, untainted).
       if (!navigator.clipboard || !('write' in navigator.clipboard) || typeof ClipboardItem === 'undefined') throw new Error('unsupported');
@@ -75,6 +89,7 @@ export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexCh
     }
   };
   const share = async () => {
+    onEvent?.('share', i);
     const url = absUrl();
     if (navigator.share) {
       try { await navigator.share({ url, title: alt || undefined }); } catch { /* visitor cancelled */ }
@@ -83,6 +98,7 @@ export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexCh
     try { await copyLink(); } catch { /* clipboard unavailable */ }
   };
   const download = () => {
+    onEvent?.('download', i);
     const a = document.createElement('a');
     a.href = cur!;
     a.download = '';
@@ -90,7 +106,15 @@ export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexCh
     a.click();
     a.remove();
   };
-  const openTab = () => window.open(absUrl(), '_blank', 'noopener');
+  const openTab = () => {
+    onEvent?.('open_tab', i);
+    window.open(absUrl(), '_blank', 'noopener');
+  };
+  const askWhatsapp = () => {
+    if (!whatsapp) return;
+    onEvent?.('whatsapp', i);
+    window.open(`https://wa.me/${whatsapp.phone}?text=${encodeURIComponent(`${whatsapp.text}\n${absUrl()}`)}`, '_blank', 'noopener');
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -108,13 +132,20 @@ export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexCh
     };
   }, [onClose, go]);
 
-  const zoomBy = (d: number) => setScale((s) => Math.min(4, Math.max(1, +(s + d).toFixed(2))));
+  const zoomBy = (d: number) => {
+    if (d > 0) reportZoom();
+    setScale((s) => Math.min(4, Math.max(1, +(s + d).toFixed(2))));
+  };
 
   const onWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     zoomBy(e.deltaY < 0 ? 0.3 : -0.3);
   };
-  const onDblClick = () => (scale > 1 ? reset() : setScale(2.4));
+  const onDblClick = () => {
+    if (scale > 1) return reset();
+    reportZoom();
+    setScale(2.4);
+  };
   const onPointerDown = (e: React.PointerEvent) => {
     (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
     if (scale <= 1) {
@@ -189,6 +220,11 @@ export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexCh
       {/* actions + prev / next + counter */}
       <div className="fixed inset-x-0 bottom-4 flex flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-wrap items-center justify-center gap-2">
+          {whatsapp && (
+            <button type="button" onClick={askWhatsapp} className="rounded-full bg-[#25D366] px-4 py-1.5 text-sm font-bold text-white hover:brightness-110">
+              🟢 {L('اسأل عن هذه الصورة', 'Ask about this photo')}
+            </button>
+          )}
           <button type="button" onClick={copyImage} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">📋 {L('نسخ', 'Copy')}</button>
           <button type="button" onClick={share} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">📤 {L('مشاركة', 'Share')}</button>
           <button type="button" onClick={download} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">⬇️ {L('تنزيل', 'Download')}</button>

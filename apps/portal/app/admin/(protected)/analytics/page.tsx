@@ -169,6 +169,22 @@ export default async function VisitorAnalyticsPage({ searchParams }: { searchPar
         )}
       </div>
 
+      {/* ── Most-viewed listing photos (photo_open + photo_nav; label = image path) ── */}
+      {ev.topPhotos.length > 0 && (
+        <div className="rounded-lg border border-graphite/15 p-4">
+          <h3 className="mb-2 text-sm font-bold text-primary">{L('أكثر الصور مشاهدة', 'Most-viewed photos')}</h3>
+          <div className="flex flex-wrap gap-3">
+            {ev.topPhotos.map((p) => (
+              <a key={p.label} href={p.label} target="_blank" rel="noopener noreferrer" className="group relative block overflow-hidden rounded-lg ring-1 ring-graphite/15 hover:ring-accent" title={p.label}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.label} alt="" loading="lazy" className="h-20 w-28 bg-graphite/5 object-cover" />
+                <span className="font-num absolute bottom-1 end-1 rounded-full bg-navy/70 px-2 py-0.5 text-xs font-bold text-white">{p.count}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Phase 2: events + search intelligence ── */}
       <div className="grid gap-3 lg:grid-cols-3">
         <Table title={L('التفاعلات', 'Events')} rows={ev.byType} />
