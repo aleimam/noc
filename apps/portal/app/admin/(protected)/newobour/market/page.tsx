@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { currency } from '@noc/i18n';
+import { DeleteListingButton } from './DeleteListingButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,7 +61,12 @@ export default async function NewObourMarket() {
                   <td className="p-2 font-num" dir="ltr">{l.price != null ? `${String(l.price)} ${currency(locale)}` : '—'}</td>
                   <td className="p-2"><span className={`rounded px-2 py-0.5 text-xs ${STATUS_COLOR[l.status] ?? ''}`}>{t(`status${l.status}`)}</span></td>
                   <td className="p-2">{l.showOnBrokerage ? '✔' : '—'}</td>
-                  <td className="p-2 text-end"><a href={`/admin/marketplace/listings/${l.id}/edit`} className="text-accent hover:underline">{t('edit')}</a></td>
+                  <td className="p-2 text-end">
+                    <span className="inline-flex items-center gap-3">
+                      <a href={`/admin/marketplace/listings/${l.id}/edit`} className="text-accent hover:underline">{t('edit')}</a>
+                      <DeleteListingButton id={l.id} title={l.title} />
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
