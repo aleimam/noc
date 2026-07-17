@@ -68,6 +68,16 @@ export function PosterIdentityForm({
             {POSTER_FONTS.map((x) => (<option key={x} value={x}>{x}</option>))}
           </select>
         </label>
+        <label className="text-sm">
+          {L('تخطيط رأس البوستر', 'Poster header layout')}
+          <select value={f.headerLayout} onChange={(e) => set({ headerLayout: e.target.value })} className={`${inp} mt-1`}>
+            <option value="side">{L('مضغوط — جدول البيانات بجوار العنوان', 'Compact — info table beside the title')}</option>
+            <option value="row">{L('صف كامل — جدول البيانات أسفل العنوان', 'Full row — info table below the title')}</option>
+          </select>
+          <span className="mt-1 block text-xs opacity-60">
+            {L('«صف كامل» يمنح العنوان عرض البوستر كاملًا (أفضل للعناوين الطويلة)', '“Full row” gives the title the whole width (better for long titles)')}
+          </span>
+        </label>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

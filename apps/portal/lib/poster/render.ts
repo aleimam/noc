@@ -31,7 +31,16 @@ export type PosterData = {
 };
 export type PosterBrand = 'newobour' | 'alsawarey' | 'unbranded';
 export type PosterTheme = { navy: string; gold: string; cream: string; tint: string; ink: string; font: string };
-export type BrandCfg = { logoPath: string | null; domain: string; phone: string; headerLogoPath?: string | null; theme?: Partial<PosterTheme> };
+export type BrandCfg = {
+  logoPath: string | null;
+  domain: string;
+  phone: string;
+  headerLogoPath?: string | null;
+  /** Poster header arrangement: 'side' (default — info table beside the title) or
+   *  'row' (info table as one full-width row below the band; title gets the whole line). */
+  headerLayout?: 'side' | 'row';
+  theme?: Partial<PosterTheme>;
+};
 export type CardRow = { label: string; value: string };
 export type CardData = { name: string; icon: PosterIconKey; rows: CardRow[]; title: string; ad: string };
 export type AdvGroup = { title: string; items: string[] };
@@ -342,32 +351,65 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
   }
   const logoBox = { left: plate.x + 6, top: plate.y + 5, w: plate.w - 12, h: plate.h - 10 };
 
-  // content-width table: ad number + Area attributes (bigger values)
-  const tableCols = [
+  // Header info pairs (ad number + up to 3 Area attributes) — used by BOTH header layouts.
+  const infoPairs = [
     ...(d.ad ? [{ title: 'رقم الإعلان', value: d.ad, ltr: true }] : []),
     ...d.areaRows.slice(0, 3).map((r) => ({ title: r.label, value: r.value, ltr: false })),
-  ].map((c) => ({ ...c, cw: Math.max(Math.max(estTextW(c.title, 17, false), estTextW(c.value, 27, c.ltr)) + 30, 96) }));
-  const tabW = tableCols.reduce((a, c) => a + c.cw, 0);
-  const tabX = plate.x + plate.w + 24;
-  const r1H = 38, r2H = 52, tabY = cy - (r1H + r2H) / 2, r1Y = tabY, r2Y = tabY + r1H;
-  let cxp = tabX + tabW;
-  for (const c of tableCols) {
-    cxp -= c.cw;
-    const mid = cxp + c.cw / 2;
-    parts.push(
-      `<rect x="${cxp}" y="${r1Y}" width="${c.cw}" height="${r1H}" fill="${th.gold}" stroke="${th.navy}" stroke-width="1.5"/>`,
-      T(mid, r1Y + 26, c.title, { s: 17, w: 800, fill: th.navy }),
-      `<rect x="${cxp}" y="${r2Y}" width="${c.cw}" height="${r2H}" fill="${th.cream}" stroke="${th.navy}" stroke-width="1.5"/>`,
-      T(mid, r2Y + 35, c.value, { s: 27, w: 800, fill: th.navy, ltr: c.ltr }),
-    );
+  ];
+  // Header layout (admin switch, Setting posterTheme.<brand>.headerLayout, 2026-07-17):
+  //   'side' (default) — classic compact: 2-row info table BESIDE the title in the band.
+  //   'row'            — owner's alternative: the info table becomes ONE full-width row of
+  //                      label|value cells BELOW the band, so the title gets the whole line.
+  const layoutRow = cfg.headerLayout === 'row';
+
+  let titleStart = branded ? plate.x + plate.w + 24 : M + 16; // 'row': title runs to the logo
+  if (!layoutRow) {
+    // content-width table: ad number + Area attributes (bigger values)
+    const tableCols = infoPairs.map((c) => ({ ...c, cw: Math.max(Math.max(estTextW(c.title, 17, false), estTextW(c.value, 27, c.ltr)) + 30, 96) }));
+    const tabW = tableCols.reduce((a, c) => a + c.cw, 0);
+    const tabX = plate.x + plate.w + 24;
+    const r1H = 38, r2H = 52, tabY = cy - (r1H + r2H) / 2, r1Y = tabY, r2Y = tabY + r1H;
+    let cxp = tabX + tabW;
+    for (const c of tableCols) {
+      cxp -= c.cw;
+      const mid = cxp + c.cw / 2;
+      parts.push(
+        `<rect x="${cxp}" y="${r1Y}" width="${c.cw}" height="${r1H}" fill="${th.gold}" stroke="${th.navy}" stroke-width="1.5"/>`,
+        T(mid, r1Y + 26, c.title, { s: 17, w: 800, fill: th.navy }),
+        `<rect x="${cxp}" y="${r2Y}" width="${c.cw}" height="${r2H}" fill="${th.cream}" stroke="${th.navy}" stroke-width="1.5"/>`,
+        T(mid, r2Y + 35, c.value, { s: 27, w: 800, fill: th.navy, ltr: c.ltr }),
+      );
+    }
+    titleStart = tabX + tabW + 20;
   }
 
-  // Title on the right, up to two lines — CAPPED to the space right of the ad/area table.
-  // Long titles used to run leftward over the رقم الإعلان pill and the area values
-  // (fixed 2026-07-17): shrink the font to fit (floor 20px), then ellipsis-clip as a
-  // last resort so the header never overprints.
+  // One-row info table below the band ('row' layout): [label|value] × pairs, right→left.
+  let infoRowH = 0;
+  if (layoutRow && infoPairs.length) {
+    infoRowH = 56;
+    const infoY = headY + headH + gap;
+    const cw2 = (w - 2 * M) / (infoPairs.length * 2);
+    let cx2 = w - M;
+    for (const p of infoPairs) {
+      cx2 -= cw2;
+      parts.push(
+        `<rect x="${cx2}" y="${infoY}" width="${cw2}" height="${infoRowH}" fill="${th.gold}" stroke="${th.navy}" stroke-width="1.5"/>`,
+        T(cx2 + cw2 / 2, infoY + 36, p.title, { s: 20, w: 800, fill: th.navy }),
+      );
+      cx2 -= cw2;
+      parts.push(
+        `<rect x="${cx2}" y="${infoY}" width="${cw2}" height="${infoRowH}" fill="${th.cream}" stroke="${th.navy}" stroke-width="1.5"/>`,
+        T(cx2 + cw2 / 2, infoY + 38, p.value, { s: 26, w: 800, fill: th.navy, ltr: p.ltr }),
+      );
+    }
+  }
+
+  // Title on the right, up to two lines — CAPPED to the space left of it (the ad/area
+  // table in 'side' layout, the logo in 'row' layout). Long titles used to run leftward
+  // over the رقم الإعلان pill and the area values (fixed 2026-07-17): shrink the font to
+  // fit (floor 20px), then ellipsis-clip as a last resort so the header never overprints.
   const titleEnd = w - M - 16;
-  const titleMax = Math.max(titleEnd - (tabX + tabW) - 20, 200);
+  const titleMax = Math.max(titleEnd - titleStart, 200);
   const tl = splitTwoLines(d.title);
   const widest = Math.max(...tl.map((s) => estTextW(s, 33, false)));
   const ts = widest > titleMax ? Math.max(20, Math.floor((33 * titleMax) / widest)) : 33;
@@ -391,7 +433,7 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
   if (d.neighborhoodMap) {
     try { const m = await sharp(absU(d.neighborhoodMap)).metadata(); if (m.width && m.height) bigH = Math.round(bigW * (m.height / m.width)); } catch { /* keep fallback */ }
   }
-  const bigY = headY + headH + gap;
+  const bigY = headY + headH + gap + (infoRowH ? infoRowH + gap : 0);
   let y = bigY;
   let bigBox: { top: number; left: number; w: number; h: number } | null = null;
   if (d.neighborhoodMap) {

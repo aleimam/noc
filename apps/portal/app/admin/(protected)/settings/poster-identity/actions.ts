@@ -16,6 +16,7 @@ export type PosterThemeInput = {
   font: string;
   logoPath: string; // seal-badge logo; '' = use the brand's default logo setting
   headerLogo: string; // horizontal logo shown in the poster header; '' = placeholder
+  headerLayout: string; // 'side' (info table beside the title) | 'row' (full-width row below)
   phone: string; // '' = default
   domain: string; // '' = default
 };
@@ -30,9 +31,11 @@ export async function savePosterTheme(brand: 'newobour' | 'alsawarey', input: Po
     if (!HEX.test(input[k])) return { ok: false, error: 'bad_color' };
   }
   if (!(POSTER_FONTS as readonly string[]).includes(input.font)) return { ok: false, error: 'bad_font' };
+  if (!['side', 'row'].includes(input.headerLayout)) return { ok: false, error: 'bad_layout' };
   const value = JSON.stringify({
     navy: input.navy, gold: input.gold, cream: input.cream, tint: input.tint, ink: input.ink, font: input.font,
-    logoPath: input.logoPath.trim(), headerLogo: input.headerLogo.trim(), phone: input.phone.trim(), domain: input.domain.trim(),
+    logoPath: input.logoPath.trim(), headerLogo: input.headerLogo.trim(), headerLayout: input.headerLayout,
+    phone: input.phone.trim(), domain: input.domain.trim(),
   });
   try {
     const key = `posterTheme.${brand}`;

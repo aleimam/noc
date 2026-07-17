@@ -201,6 +201,8 @@ export async function regenerateListingImages(listingId: string): Promise<void> 
       // The poster header logo (horizontal). Uploaded via the poster identity settings
       // (posterTheme.<brand>.headerLogo); until then the poster shows a placeholder.
       headerLogoPath: pick('headerLogo') ?? null,
+      // Header arrangement (admin switch): 'row' = info table below the band; else 'side'.
+      headerLayout: (pick('headerLayout') === 'row' ? 'row' : 'side') as 'side' | 'row',
       domain: pick('domain') ?? base.domain,
       phone: pick('phone') ?? base.phone,
       theme: {
