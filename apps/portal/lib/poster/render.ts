@@ -113,9 +113,10 @@ function helpers(th: PosterTheme) {
     POSTER_ICONS[key].split(DEFAULT_POSTER_THEME.gold).join(th.gold).split(DEFAULT_POSTER_THEME.navy).join(th.navy);
   const phoneGlyph = (c: string) =>
     `<path d="M-11,-5 C-11,-8 -8,-11 -5,-11 L-3,-6 C-3,-4 -5,-3 -6,-2 C-5,1 -1,5 2,6 C3,5 4,3 6,3 L11,5 C11,8 8,11 5,11 C-3,10 -10,3 -11,-5 Z" fill="${c}"/>`;
-  const whatsappGlyph = (bubble: string, hand: string) =>
-    `<path d="M0,-12 A12,12 0 1 0 -10.4,6 L-12.2,12.2 L-5.4,10.2 A12,12 0 0 0 0,-12 Z" fill="${bubble}"/>` +
-    `<path d="M-4.5,-4.8 C-5.1,-4.7 -5.6,-4 -5.5,-3.1 C-5.1,0.7 -1.3,4.6 2.5,4.9 C3.4,5 4.1,4.4 4.2,3.7 L4.4,2.6 C4.5,2.1 4.2,1.6 3.6,1.5 L1.6,1.1 C1.1,1 0.7,1.2 0.5,1.6 L0,2.4 C-1.8,1.5 -3.2,0.1 -4,-1.7 L-3.2,-2.3 C-2.9,-2.5 -2.7,-2.9 -2.8,-3.4 L-3.2,-5.4 C-3.3,-6 -3.8,-6.3 -4.4,-6.1 Z" fill="${hand}"/>`;
+  // The recognizable WhatsApp mark (Font Awesome outline path, single color), centered at 0,0
+  // ~27px tall. Second param kept for call-site compatibility (the mark is one-color).
+  const whatsappGlyph = (bubble: string, _hand: string) =>
+    `<g transform="scale(0.052) translate(-224 -256)"><path fill="${bubble}" d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></g>`;
   const globeGlyph = (c: string) =>
     `<circle cx="0" cy="0" r="11" fill="none" stroke="${c}" stroke-width="2"/>` +
     `<line x1="-11" y1="0" x2="11" y2="0" stroke="${c}" stroke-width="1.5"/>` +
@@ -280,21 +281,61 @@ export async function renderAdvantages(
   head?: { title: string; ad: string },
 ): Promise<Buffer> {
   const th = resolveTheme(cfg);
-  const { T, dvd, glyph, cardChrome, sealFooter } = helpers(th);
-  const w = W, h = H;
+  const { T, dvd, glyph, estTextW, sealFooter } = helpers(th);
+  const w = W, M = 24;
   const usable = groups.filter((g) => g.items.length > 0);
-  // Measure, then center the block between the group badge row and the footer.
-  const blockH = usable.reduce((a, g) => a + 64 + g.items.length * 64 + 26, 0) - (usable.length ? 26 : 0);
-  const top = 240, bottom = h - 190;
-  let y = top + Math.max(0, (bottom - top - blockH) / 2);
   const parts: string[] = [];
+
+  // ── Header band (frameless, like the big poster — owner fixes 2026-07-17): cream bg,
+  // navy band with the ad pill on the left and the title width-capped up to TWO lines. ──
+  const headY = M, headH = 110, cy = headY + headH / 2;
+  parts.push(`<rect x="${M}" y="${headY}" width="${w - 2 * M}" height="${headH}" rx="18" fill="${th.navy}"/>`);
+  const title = head?.title ?? heading;
+  const ad = head?.ad ?? '';
+  let titleStart = M + 24;
+  if (ad) {
+    parts.push(
+      `<rect x="${M + 24}" y="${cy - 24}" width="170" height="48" rx="12" fill="none" stroke="${th.gold}" stroke-width="2.5"/>`,
+      T(M + 24 + 85, cy + 8, ad, { s: 25, w: 700, fill: th.gold, ltr: true }),
+    );
+    titleStart = M + 24 + 170 + 22;
+  }
+  const titleEnd = w - M - 24;
+  const titleMax = Math.max(titleEnd - titleStart, 200);
+  const tl = splitTwoLines(title);
+  const widest = Math.max(...tl.map((s) => estTextW(s, 33, false)));
+  const ts = widest > titleMax ? Math.max(20, Math.floor((33 * titleMax) / widest)) : 33;
+  const fitLine = (s: string): string => {
+    if (estTextW(s, ts, false) <= titleMax) return s;
+    let out = s;
+    while (out.length > 1 && estTextW(out + '…', ts, false) > titleMax) out = out.slice(0, -1);
+    return out.trimEnd() + '…';
+  };
+  const lines = tl.map(fitLine);
+  if (lines.length === 2) {
+    parts.push(T(titleEnd, cy - 6, lines[0]!, { s: ts, w: 800, fill: '#ffffff', anchor: 'end' }));
+    parts.push(T(titleEnd, cy + 34, lines[1]!, { s: ts, w: 800, fill: '#ffffff', anchor: 'end' }));
+  } else {
+    parts.push(T(titleEnd, cy + 11, lines[0]!, { s: ts, w: 800, fill: '#ffffff', anchor: 'end' }));
+  }
+
+  // ── Section heading (star badge + «مميزات المنطقة») — the divider is MEASURED to stop
+  // before the heading text instead of running underneath it. ──
+  const hy = headY + headH + 62;
+  parts.push(`<circle cx="${w - 92}" cy="${hy}" r="30" fill="${th.navy}"/><g transform="translate(${w - 92} ${hy}) scale(1.1)">${glyph('star')}</g>`);
+  parts.push(T(w - 140, hy + 12, heading, { s: 34, w: 800, fill: th.navy, anchor: 'end' }));
+  const headingLeft = w - 140 - estTextW(heading, 34, false);
+  const dvdRight = headingLeft - 34, dvdLeft = 100;
+  if (dvdRight - dvdLeft > 70) dvd((dvdLeft + dvdRight) / 2, hy, (dvdRight - dvdLeft) / 2);
+
+  // ── Content flows top-down; the poster HEIGHT adapts to it (no fixed-canvas centering,
+  // no dropped rows). ──
+  let y = hy + 52;
   for (const g of usable) {
-    if (y > bottom - 64) continue;
     parts.push(`<rect x="60" y="${y}" width="${w - 120}" height="54" rx="12" fill="${th.gold}"/>` + T(w - 90, y + 37, g.title, { s: 29, w: 800, fill: th.navy, anchor: 'end' }));
     y += 64;
     let i = 0;
     for (const it of g.items) {
-      if (y > bottom - 58) break;
       parts.push(
         `<rect x="60" y="${y}" width="${w - 120}" height="58" fill="${i % 2 ? '#ffffff' : th.tint}" stroke="${th.gold}" stroke-width="1" opacity="0.97"/>`,
         `<rect x="${w - 86}" y="${y + 23}" width="12" height="12" fill="${th.gold}" transform="rotate(45 ${w - 80} ${y + 29})"/>`,
@@ -305,13 +346,13 @@ export async function renderAdvantages(
     }
     y += 26;
   }
+
   const badge = await badgeLogo(cfg, th);
-  const foot = sealFooter(w, h - 174, cfg, badge.fill);
+  const fy = y - 26 + 18;
+  const h = Math.max(fy + 174, 640); // seal footer block ≈174 tall; keep a sane minimum
+  const foot = sealFooter(w, fy, cfg, badge.fill);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-${cardChrome(w, h, head?.title ?? heading, head?.ad ?? '')}
-<circle cx="${w - 92}" cy="196" r="30" fill="${th.navy}"/><g transform="translate(${w - 92} 196) scale(1.1)">${glyph('star')}</g>
-${T(w - 140, 208, heading, { s: 34, w: 800, fill: th.navy, anchor: 'end' })}
-${dvd(430, 196, 330)}
+<rect width="${w}" height="${h}" fill="${th.cream}"/>
 ${parts.join('')}
 ${foot.svg}
 </svg>`;
@@ -442,12 +483,14 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
     y = bigY + bigH + gap;
   }
 
-  // ── 2-col grid, COLUMN-major (owner's numbered mock, corrected 2026-07-17): slot 1 =
-  // the city/district location map (top-left), then the group cards in form order reading
-  // down the LEFT column and continuing down the RIGHT (…map, group1, group2, group3…).
+  // ── 2-col grid, COLUMN-major (owner rules, 2026-07-17): slot 1 = the city/district
+  // location map (top-left), then the group cards ordered BIGGEST-first (most words across
+  // their values — the heaviest card right after the map), reading down the LEFT column and
+  // continuing down the RIGHT. Ties keep form order (stable sort).
   const colW = (bigW - gap) / 2;
   type Cell = { kind: 'card'; g: PosterCardGroup } | { kind: 'city' };
-  const cells: Cell[] = d.groups.map((g) => ({ kind: 'card' as const, g }));
+  const wordsOf = (g: PosterCardGroup) => g.rows.reduce((a, r) => a + r.value.trim().split(/\s+/).filter(Boolean).length, 0);
+  const cells: Cell[] = [...d.groups].sort((a, b) => wordsOf(b) - wordsOf(a)).map((g) => ({ kind: 'card' as const, g }));
   if (d.cityMap) cells.unshift({ kind: 'city' });
 
   const half = Math.ceil(cells.length / 2);
