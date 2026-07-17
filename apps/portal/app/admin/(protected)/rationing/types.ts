@@ -21,7 +21,11 @@ export type ScanRow = {
   matchedRows: number; // applicant rows whose sourceFile == fileName
 };
 
-export type MissingFile = { sourceFile: string; rows: number };
+export type MissingFile = { sourceFile: string; rows: number; batches: string[] };
+
+/** A date group («23 04 2026») whose page serials skip numbers: neither a photo nor any
+ *  sheet row knows about the missing serials — the page was likely never scanned NOR typed. */
+export type SerialGap = { label: string; presentCount: number; maxSerial: number; missing: string[] };
 
 export type ScanReport = {
   matchedScans: number;
@@ -30,6 +34,8 @@ export type ScanReport = {
   rowsMissing: number; // distinct sourceFile values with no scan
   scans: ScanRow[];
   missingFiles: MissingFile[]; // the actual sourceFile values behind rowsMissing
+  serialGaps: SerialGap[];
+  gapCount: number; // total missing serials across all groups
 };
 
 export type PreviewResult =

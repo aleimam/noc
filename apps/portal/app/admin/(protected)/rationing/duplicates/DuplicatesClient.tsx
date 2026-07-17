@@ -104,6 +104,7 @@ export function DuplicatesClient({ groups }: { groups: Group[] }) {
               <table className="w-full text-sm">
                 <thead className="opacity-60">
                   <tr>
+                    <th className="p-2 text-start">{t('preview')}</th>
                     <th className="p-2 text-start">{t('colApplicant')}</th>
                     <th className="p-2 text-start">{t('colPlot')}</th>
                     <th className="p-2 text-start">{t('colCity')}</th>
@@ -118,6 +119,7 @@ export function DuplicatesClient({ groups }: { groups: Group[] }) {
                     <tr key={r.id} className="border-t border-graphite/10">
                       {editId === r.id && draft ? (
                         <>
+                          <td className="p-2"><PhotoCell row={r} onZoom={setZoom} noPhotoLabel={t('noPhoto')} title={t('viewPhoto')} /></td>
                           <td className="p-2"><input value={draft.applicantName} onChange={(e) => setDraft({ ...draft, applicantName: e.target.value })} className={edInp} /></td>
                           <td className="p-2">
                             <div className="flex gap-1" dir="ltr">
@@ -136,16 +138,9 @@ export function DuplicatesClient({ groups }: { groups: Group[] }) {
                         </>
                       ) : (
                         <>
+                          <td className="p-2"><PhotoCell row={r} onZoom={setZoom} noPhotoLabel={t('noPhoto')} title={t('viewPhoto')} /></td>
                           <td className="p-2 font-medium">{r.applicantName}</td>
-                          <td className="p-2">
-                            {r.scanPath ? (
-                              <button type="button" onClick={() => setZoom(r.scanPath)} className="inline-flex items-center gap-1 text-accent hover:underline" title={t('viewPhoto')}>
-                                🖼 {r.plotFullRef || `${r.plotNo}${r.blockNo ? ' / ' + r.blockNo : ''}`}
-                              </button>
-                            ) : (
-                              r.plotFullRef || `${r.plotNo}${r.blockNo ? ' / ' + r.blockNo : ''}`
-                            )}
-                          </td>
+                          <td className="p-2">{r.plotFullRef || `${r.plotNo}${r.blockNo ? ' / ' + r.blockNo : ''}`}</td>
                           <td className="p-2">{r.cityName ?? '—'}</td>
                           <td className="p-2">{r.originalOwner ?? '—'}</td>
                           <td className="p-2 text-xs opacity-70">{r.batchFile ?? r.sourceFile ?? '—'}</td>
@@ -166,5 +161,16 @@ export function DuplicatesClient({ groups }: { groups: Group[] }) {
       })}
       {zoom && <Lightbox src={zoom} onClose={() => setZoom(null)} />}
     </div>
+  );
+}
+
+/** Thumbnail of the record's sheet photo — click to enlarge (Lightbox closes on ESC / ✕ / backdrop). */
+function PhotoCell({ row, onZoom, noPhotoLabel, title }: { row: Row; onZoom: (path: string) => void; noPhotoLabel: string; title: string }) {
+  if (!row.scanPath) return <span className="whitespace-nowrap rounded bg-graphite/10 px-2 py-0.5 text-xs opacity-60">{noPhotoLabel}</span>;
+  return (
+    <button type="button" onClick={() => onZoom(row.scanPath!)} title={title}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={row.scanPath} alt="" className="h-12 w-16 cursor-zoom-in rounded border border-graphite/15 object-cover hover:ring-2 hover:ring-accent" />
+    </button>
   );
 }

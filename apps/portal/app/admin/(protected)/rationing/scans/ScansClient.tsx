@@ -7,6 +7,8 @@ import { compressImage, FileDropzone } from '@noc/ui';
 import { registerScans, deleteScan, renameScan, recordsForScan, type ScanRecord } from './actions';
 import type { ScanReport, ScanRow, MissingFile } from '../types';
 
+type PanelKind = 'orphans' | 'missing' | 'gaps';
+
 /** Filename similarity for mismatch suggestions: strip the extension, unify separators,
  *  drop leading zeros in number tokens — «01 07 2026 1.jpeg» ≈ «1 7 2026 01.jpg». */
 function normName(s: string): string {
@@ -59,8 +61,9 @@ export function ScansManager({ report }: { report: ScanReport }) {
   const [pending, start] = useTransition();
   const [open, setOpen] = useState<{ fileName: string; path: string | null } | null>(null);
   const [records, setRecords] = useState<ScanRecord[] | null>(null);
-  const [panel, setPanel] = useState<'orphans' | 'missing' | null>(null);
+  const [panel, setPanel] = useState<PanelKind | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const togglePanel = (k: PanelKind) => setPanel((p) => (p === k ? null : k));
 
   const orphans = useMemo(() => report.scans.filter((s) => s.matchedRows === 0), [report.scans]);
   // Cross-suggestions between the two problem lists (both are small, so this is cheap).
@@ -170,14 +173,14 @@ export function ScansManager({ report }: { report: ScanReport }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Stat label={t('matchedScans')} value={report.matchedScans} tone="green" />
         <Stat label={t('rowsCovered')} value={report.rowsCovered} />
         <Stat
           label={t('orphanScans')}
           value={report.orphanScans}
           tone="amber"
-          onClick={report.orphanScans > 0 ? () => setPanel((p) => (p === 'orphans' ? null : 'orphans')) : undefined}
+          onClick={report.orphanScans > 0 ? () => togglePanel('orphans') : undefined}
           active={panel === 'orphans'}
           hint={report.orphanScans > 0 ? t('clickToView') : undefined}
         />
@@ -185,9 +188,17 @@ export function ScansManager({ report }: { report: ScanReport }) {
           label={t('rowsMissingScan')}
           value={report.rowsMissing}
           tone="amber"
-          onClick={report.rowsMissing > 0 ? () => setPanel((p) => (p === 'missing' ? null : 'missing')) : undefined}
+          onClick={report.rowsMissing > 0 ? () => togglePanel('missing') : undefined}
           active={panel === 'missing'}
           hint={report.rowsMissing > 0 ? t('clickToView') : undefined}
+        />
+        <Stat
+          label={t('gapsStat')}
+          value={report.gapCount}
+          tone="amber"
+          onClick={report.gapCount > 0 ? () => togglePanel('gaps') : undefined}
+          active={panel === 'gaps'}
+          hint={report.gapCount > 0 ? t('clickToView') : undefined}
         />
       </div>
 
@@ -240,6 +251,28 @@ export function ScansManager({ report }: { report: ScanReport }) {
             <button onClick={() => setPanel(null)} className="rounded-lg bg-graphite/10 px-3 py-1.5 text-sm" aria-label={t('close')}>✕ {t('close')}</button>
           </div>
           <p className="text-xs leading-relaxed opacity-70">{t('missingPanelHint')}</p>
+          {/* Per-import coverage: which Excel import(s) the missing photos came from. */}
+          {report.missingFiles.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-semibold text-amber-900">{t('byImportFile')}:</span>
+              {(() => {
+                const byBatch = new Map<string, { files: number; rows: number }>();
+                for (const f of report.missingFiles) {
+                  for (const b of f.batches.length ? f.batches : ['—']) {
+                    const cur = byBatch.get(b) ?? { files: 0, rows: 0 };
+                    cur.files += 1;
+                    cur.rows += f.rows;
+                    byBatch.set(b, cur);
+                  }
+                }
+                return [...byBatch.entries()].sort((a, b) => b[1].files - a[1].files).map(([b, v]) => (
+                  <span key={b} className="rounded-full border border-amber-300 bg-paper px-2.5 py-1" dir="ltr">
+                    {b} · {t('filesN', { n: v.files })} · {t('rowsN', { n: v.rows })}
+                  </span>
+                ));
+              })()}
+            </div>
+          )}
           {report.missingFiles.length === 0 ? (
             <p className="text-sm opacity-60">{t('nonePanel')}</p>
           ) : (
@@ -250,6 +283,7 @@ export function ScansManager({ report }: { report: ScanReport }) {
                   <li key={f.sourceFile} className="flex flex-wrap items-center gap-3 rounded-lg border border-graphite/15 bg-paper p-2">
                     <span className="font-mono text-xs" dir="ltr">{f.sourceFile}</span>
                     <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{t('rowsN', { n: f.rows })}</span>
+                    {f.batches.length > 0 && <span className="text-xs opacity-60" dir="ltr">⬅ {f.batches.join(', ')}</span>}
                     {sug && (
                       <span className="flex flex-wrap items-center gap-2 rounded-md bg-green/10 px-2 py-1.5 text-xs">
                         {t('closestPhoto')}:
@@ -270,6 +304,42 @@ export function ScansManager({ report }: { report: ScanReport }) {
                   </li>
                 );
               })}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {panel === 'gaps' && (
+        <div className="space-y-3 rounded-xl border-2 border-amber-300 bg-amber-50/60 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-bold text-amber-900">{t('gapsPanelTitle')} ({report.gapCount})</h3>
+            <button onClick={() => setPanel(null)} className="rounded-lg bg-graphite/10 px-3 py-1.5 text-sm" aria-label={t('close')}>✕ {t('close')}</button>
+          </div>
+          <p className="text-xs leading-relaxed opacity-70">{t('gapsPanelHint')}</p>
+          {report.serialGaps.length === 0 ? (
+            <p className="text-sm opacity-60">{t('nonePanel')}</p>
+          ) : (
+            <ul className="space-y-2">
+              {report.serialGaps.map((g) => (
+                <li key={g.label} className="flex flex-wrap items-center gap-3 rounded-lg border border-graphite/15 bg-paper p-2">
+                  <span className="font-mono text-sm font-bold" dir="ltr">{g.label}</span>
+                  <span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{t('presentOfMax', { n: g.presentCount, max: g.maxSerial })}</span>
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    {g.missing.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => copyName(name)}
+                        title={t('copyName')}
+                        className="min-h-[36px] rounded-md border border-amber-300 bg-amber-100/60 px-2.5 py-1 font-mono text-xs text-amber-900 hover:bg-amber-200/70"
+                        dir="ltr"
+                      >
+                        {copied === name ? t('copied') : `📋 ${name}`}
+                      </button>
+                    ))}
+                  </span>
+                </li>
+              ))}
             </ul>
           )}
         </div>
