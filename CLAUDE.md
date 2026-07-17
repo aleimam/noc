@@ -2,7 +2,7 @@
 
 Master onboarding for anyone (human or Claude session) picking up this repo. It captures the
 architecture, the production runbook, and every hard-won gotcha. Deeper docs are linked at the
-bottom. Last full update: **2026-07-14**.
+bottom. Last full update: **2026-07-17**. Mid-flight state (if any) lives in `HANDOFF.md`.
 
 ## What this is
 
@@ -104,7 +104,8 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   `noc-offsite` 03:30 (rsync push to owner's server — activates when configured) ·
   `noc-backup-alert` 04:00 (emails/SMSes owner if backups are stale) ·
   `noc-analytics-rollup` 03:05 · `noc-analytics-prune` 03:15 ·
-  `noc-price-snapshot` 03:20 on the 1st (monthly per-district price capture → /price-index trend).
+  `noc-price-snapshot` 03:20 on the 1st (monthly per-district price capture → /price-index trend) ·
+  `noc-purge-deleted` 03:40 (hard-deletes listings trashed >90 days — see soft delete rule below).
 - **Backups admin UI:** `/admin/settings/backups` — status, per-file downloads, instant backup,
   integrity check, schedule/retention editors, off-site config + connection test, failure alerts
   (currently: aleimam@live.com + ebmta17@gmail.com + SMS 01225227677). **Restore stays CLI-only**
@@ -155,12 +156,28 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   ~20/min/IP (feature keeps working over the cap — only the WRITE stops), beacons ~60/min/IP,
   lead-style forms get per-IP + a global ceiling + dedupe + a honeypot field. Anything derived
   from unauthenticated writes (e.g. trending suggestions) must be windowed + cached + length-capped.
+- **Listing deletion is SOFT (2026-07-16):** `Listing.deletedAt` + 90-day trash. The central
+  public gates `newObourVisibility()`/`alsawareyVisibility()` in
+  `packages/partner-portal/src/visibility.ts` filter `deletedAt: null` — route any new public
+  listing read through them; direct `prisma.listing` reads (admin lists, counts, sitemaps,
+  aggregates) must add the filter themselves. Trash UI (admins only):
+  `/admin/marketplace/listings/deleted` (restore / purge). Hard delete happens ONLY via
+  `purgeListing` (refuses non-trashed ids) or the `noc-purge-deleted` cron
+  (`ops/purge-deleted-listings.ts`) — the cleanup transaction (attachments incl. posters +
+  listing-level area maps + row) is MIRRORED in both; change them together.
+- **Card covers go through the thumbnail pipeline:** `/thumb/w{320|480|640|960}/<uploads-relpath>`
+  routes exist in BOTH apps and are MIRRORS (like `lib/search.ts`) — sharp→WebP q72, disk cache
+  under `<uploadRoot>/.thumbs/`, immutable cache headers, path-traversal + width + extension
+  whitelists. Build card image URLs with each app's `thumbUrl()` helper (portal `lib/thumb.ts` +
+  `lib/listingCovers.ts` coversForListings; brokerage `lib/thumb.ts` + `coversFor` in
+  `lib/listings.ts`). Full-size originals stay for detail pages/lightbox.
 
 ## Feature map (all live in production)
 
 | Module | Where | Notes |
 |---|---|---|
-| Marketplace (listings) | portal `/market`, admin `/admin/marketplace` | EAV + classifiers + moderation queue (PENDING→PUBLISHED) |
+| Marketplace (listings) | portal `/market`, admin `/admin/marketplace` | EAV + classifiers + moderation queue (PENDING→PUBLISHED); auto-save-as-draft while writing (create-once-update-after, 15s interval, only for new/DRAFT); soft delete → 90-day trash (see Architecture rules) |
+| Listing hero gallery | listing detail pages, BOTH sites | ecommerce-style `HeroGallery`+`Lightbox` in @noc/ui: order = location map → big branded poster → photos → generated → area photos/maps (nb-masterplan skipped when the location map exists); autoplay 4s stop-on-touch (+reduced-motion/hidden-tab/off-screen guards); fullscreen zoom/copy/share/download/open-tab. First-party photo analytics (photo_open/nav/action → AnalyticsEvent, «أكثر الصور مشاهدة» card in the dashboard) — admin toggle Setting `gallery.photoAnalytics` (≠'0'=on). The «اسأل عن هذه الصورة» WhatsApp button was REMOVED entirely 2026-07-17 (owner request) — don't re-add |
 | Al Sawarey storefront | brokerage `/` `/listings` | display-only; `showOnBrokerage` + Type/Purpose gates; customer OTP login, wishlist |
 | **Partner portal (multi-site)** | `/partner` on BOTH domains | 100% shared via `@noc/partner-portal`; per-partner site access (`Owner.siteNewObour/siteAlsawary`); partner listings show only on enabled sites; lean listing form both sides; login = password OR OTP (SMS/email) |
 | Rationing (كشوف التقنين) | portal `/rationing`, admin sheets/scans/**watchers** | Excel import, soft Arabic search, quotas by security level; name-watch follow-ups (`/admin/rationing/watchers`) → auto-alert + curated congrats SMS + phone-contact «Done» queue |
@@ -173,7 +190,9 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 | Appearance/theming | admin settings | per-site colors/fonts via Setting `theme.<brand>` |
 | Security posture | admin settings | `security.level` LIGHT/MEDIUM/HIGH gates scans/maps/quotas |
 
-## Current state & pending (as of 2026-07-14)
+## Current state & pending (as of 2026-07-17)
+
+**Everything below is deployed + live-verified; the tree is clean; local `main` = prod.**
 
 **Owner-blocked (waiting on the owner, everything else is prepped):**
 1. **Cloudflare proxy flip (Part C)** — pure dashboard task now; ordered checklist in
@@ -190,6 +209,47 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 5. `/code-review ultra` — owner-triggered, billed; fold findings into `security.md` §7.
 6. **Enable the Price Index module** (Settings → Modules → مؤشر الأسعار) when the owner wants
    `/price-index` public — the page + monthly snapshot cron are live but hidden by this toggle.
+7. **English content entry (owner paused 2026-07-16 — "later"):** alsawarey.com EN pages fall
+   back to Arabic where admin EN fields are empty — biggest gaps: the whole `/sell` page content
+   + storefront hero title/subtitle (Admin → Storefront editor). Same visit: upload a hero image
+   (improves homepage + OG share preview, which falls back to the logo today). Pure content entry.
+8. **GSC check-up ~2026-07-23:** Google Search Console was connected for BOTH domains on
+   2026-07-16 (HTML-tag verified — tokens live in Settings `gsc_newobour`/`gsc_alsawarey`,
+   rendered as meta tags; **never delete them**, verification depends on them). Sitemaps
+   submitted, homepage indexing requested. A week later: check coverage + that the alsawarey
+   sitemap moved from "Couldn't fetch" to Success.
+
+**2026-07-15→17: gallery/perf/admin-UX batch (commits `eaf3708`→`df78560`, all deployed+verified).**
+- **Hero gallery + lightbox** on both sites' listing pages (see Feature map) + **first-party photo
+  analytics** with admin toggle. The WhatsApp "ask about this photo" button was built, then toggled
+  off, then **fully deleted 2026-07-17** at the owner's request (code + setting + prod row).
+- **Thumbnail pipeline** for card covers (mirrored `/thumb` routes; a 2.0MB cover → 33KB WebP);
+  covers everywhere now resolve location-map-first → first photo (`coversForListings`/`coversFor`).
+- **Soft delete** (migration `20260716140000_listing_soft_delete`): delete buttons in admin lists
+  → trash with restore/purge at `/admin/marketplace/listings/deleted` (admins only), purge cron
+  daily 03:40, ~15 query sites gained the `deletedAt: null` filter (see Architecture rules).
+- **Auto-save-as-draft** on the listing form (all portal entry points): create-once-update-after
+  via draftIdRef, 15s snapshot diff, only when new or still DRAFT — never demotes PENDING/PUBLISHED.
+- **Admin QoL:** global «+ إضافة عرض» quick-add button in the admin topbar; per-user
+  «استخدمتها مؤخراً» recently-used-features grid on the dashboard (localStorage, up to 8, filtered
+  by the user's RBAC nav); city detail/edit split under `/admin/lands/cities/[id]` (read-only
+  detail like districts; editor at `/edit`); watermark settings page now uses **brand tabs**
+  (state stays mounted — unsaved edits survive switching).
+- **Al Sawarey site review round:** EN-version language fixes, favicon.ico route (relative-Location
+  308 — the reverse-proxy redirect landmine applies), homepage OG, footer «روابط مفيدة» (5 external
+  links incl. newobour.city), richer services cards on the portal home, ≥40px tap targets,
+  listings counter hidden below 5.
+- **SEO:** meta descriptions rewritten to ~155-char human text on key pages of both sites (Google
+  was scraping card fragments because the old ones were too short) + **GSC connected** (item 8).
+- **Search Intelligence review (2026-07-17):** only 12 searches logged so far; the single real
+  zero-result term («الحي العاشر», logged pre-fix on 07-12) now returns its listing (live-verified
+  incl. the «الحى» variant); the rest were test probes. SearchSynonym + SearchLead still empty —
+  synonym curation waits for real traffic.
+- Also 07-15: admin-only «أقل سعر» (walk-away price) field beside the price note; neighborhood
+  «available areas» now auto-merge the standard sizes of PUBLISHED+SOLD plots placed there
+  (`apps/portal/lib/neighborhoodAreas.ts`, both explore pages); geo-summary word-duplication fix
+  («حي الحي الأول»); staff ✎-edit button on Al Sawarey listing pages (needs the sw_admin token);
+  admin-editable congratulations-SMS text.
 
 **2026-07-14: rationing name-watch admin + follow-up workflow (commits `7f9f49a`→`d99345f`,
 deployed+verified).** The public «تنبيهني عند ظهور اسمي» requests (`RationingFollow` kind=WATCH)
@@ -279,6 +339,7 @@ visibility verified with a live truth-table; backups restore-tested.
 
 ## Doc index
 
+- `HANDOFF.md` — cross-account/session continuation: current status + how to pick up
 - `README.md` — quickstart + stack
 - `DEPLOY.md` — original server setup narrative (this file supersedes it where they differ)
 - `ROADMAP.md` — feature scoping + status log

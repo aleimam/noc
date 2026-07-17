@@ -11,7 +11,20 @@ SMS gateway, and next-intl ar/en.
 
 ---
 
-## 📌 Current status (2026-07-13)
+## 📌 Current status (2026-07-17)
+
+**Shipped 2026-07-14→17 (commits `7f9f49a` → `df78560`, all deployed+verified — details in
+`CLAUDE.md` → Current state):** rationing watchers admin + follow-up workflow (congrats SMS /
+phone-contact queue) with the staff-session SMS fix; watermark overhaul (live preview, dual-layer
+stamping, per-brand map settings, brand tabs); unified geo create/edit with auto-save + the
+city detail/edit split; admin-only «أقل سعر»; neighborhood available-areas auto-derived from
+PUBLISHED+SOLD plots; ecommerce hero gallery + lightbox on both sites + first-party photo
+analytics (WhatsApp-photo button later removed at owner request); thumbnail pipeline for card
+covers; Al Sawarey review round (EN fixes, favicon, OG, useful-links footer, richer services
+cards); SEO meta-description overhaul + **Google Search Console connected for both domains**;
+auto-save-as-draft on the listing form; **soft delete with 90-day trash + purge cron**; global
+quick-add + recently-used-features grid on the admin dashboard. Zero-result search terms
+reviewed 2026-07-17 — nothing actionable yet (12 searches total). Backlog is 100% owner-action.
 
 **Shipped 2026-07-13 (commits `32c9194` → `4a77aa2`):**
 - **Al Sawarey listing defaults** — toggling «عرض هذا الإعلان على الصواري» on a fresh staff form

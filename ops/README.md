@@ -25,6 +25,7 @@ The big picture (deploy runbook, server map, gotchas) lives in the repo root **C
 | `analytics-rollup.sh` → `.ts` | Aggregate raw visits into `AnalyticsDaily` | `/etc/cron.d/noc-analytics-rollup` 03:05 |
 | `analytics-prune.sh` → `.ts` | Retention prune of raw analytics | `/etc/cron.d/noc-analytics-prune` 03:15 |
 | `price-snapshot.sh` → `.ts` | Monthly per-district price snapshot (avg EGP/m² from published listings + lands) feeding the `/price-index` trend. Idempotent; the admin "Snapshot now" button does the same | `/etc/cron.d/noc-price-snapshot` 03:20 on the 1st |
+| `purge-deleted-listings.ts` | Hard-deletes listings soft-deleted (trashed) more than `LISTING_TRASH_DAYS` (default 90) days ago — same cleanup transaction as the admin trash page's purge action (attachments + area maps + row). Log: `/var/log/noc-purge-deleted.log` | `/etc/cron.d/noc-purge-deleted` 03:40 |
 | `install-backups.sh` | One-time: backup tree + daily cron + first run | — |
 | `cloudflare-realip.sh` | Regenerate Nginx real-IP + CSF ignore from Cloudflare's published ranges (already applied; rerun a few times/year) | — |
 | `mail-relay-brevo.sh` | (Re)configure Postfix→Brevo relay creds (`/etc/postfix/sasl_passwd`). Use after rotating the Brevo key | — |

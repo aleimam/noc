@@ -1,11 +1,12 @@
 # Project Handoff — NOC platform (newobour.com + alsawarey.com)
 
-_Last updated: 2026-07-16 03:10 EDT · Written so a new Claude session (on any account) can continue this project._
+_Last updated: 2026-07-17 · Written so a new Claude session (on any account, same device) can continue this project._
 
 > **Read `CLAUDE.md` first — it is the master onboarding doc** (architecture, the production
-> deploy runbook with every gotcha, the server map, feature map, and the owner-blocked list).
-> This HANDOFF only covers **what's mid-flight right now** and how to pick it up. Where the two
-> disagree, CLAUDE.md wins on architecture; this file wins on "what was I doing last".
+> deploy runbook with every gotcha, the server map, feature map, architecture rules, and the
+> owner-blocked list; last full update 2026-07-17 — same day as this file). This HANDOFF only
+> covers **session-transition facts**: what state you're inheriting and what lives on this
+> device but outside the repo.
 
 ## What this project is
 
@@ -15,165 +16,79 @@ explorer, rationing lists, marketplace, calculator) and **alsawarey.com** (`apps
 commercial land-brokerage storefront. Both are managed from a single admin inside the portal.
 Users are low-literacy/low-tech on phones — the design rule is *biggest, simplest, most explicit*.
 
-## Current status
+## Current status — NOTHING is mid-flight
 
-**Live, healthy, and fully deployed.** Local `main` and production are both at **`eaf3708`**;
-both pm2 apps online; all public surfaces returning 200. The platform is feature-rich and stable —
-recent months added the multi-site partner portal, Search Intelligence, SEO phases, a backups
-admin suite, the rationing watcher workflow, and a watermark overhaul.
+**Live, healthy, fully deployed, clean tree.** Local `main` and production are both at
+**`df78560`** (verified 2026-07-17). Both pm2 apps online. Every feature requested to date is
+shipped, deployed, and live-verified — there is **no half-finished work** in the tree (the
+build passes 3/3; `git status` is clean).
 
-**There is ONE unfinished feature in the working tree** (uncommitted — see next section). The tree
-**does build cleanly** (`npm run build` → 3/3), so you are not inheriting a broken state — just a
-half-wired feature.
+The complete change log for 2026-07-15→17 (hero gallery + photo analytics, thumbnail pipeline,
+soft delete + 90-day trash, auto-save drafts, admin quick-add + recent-features grid, city
+detail/edit split, watermark brand tabs, Al Sawarey review round, SEO descriptions + Google
+Search Console, WhatsApp-photo-button removal, zero-result search review) is in
+`CLAUDE.md` → *Current state & pending*.
 
-## Done in the latest session
+## What lives on this device but NOT in the repo
 
-This session (2026-07-11, then a review pass on 2026-07-16) did **infrastructure and
-documentation**, not product features:
+These carry over automatically if the new account runs under the **same Windows user** on this
+PC; if it's a different Windows profile, copy/recreate them:
 
-- **Security hardening round 3** (commit `89aa435`, all verified live): disabled + firewalled
-  **pure-ftpd** (unused, and it was under active brute-force) and **BIND/named** (no delegated
-  zones — DNS is Cloudflare); trimmed CSF to web + SSH + mail + CWP-panel only; enabled
-  **TLSv1.3**; `server_tokens off`; `.env` → 600; **bound both Next apps to 127.0.0.1**.
-  Documented in `security.md` §5 + findings **F9–F12**.
-- **Kernel reboot** (owner-approved): now on `5.14.0-687.23.1`, `needs-restarting` clear, all
-  services and pm2 apps returned unattended (~90s downtime).
-- **Documentation pass** (commit `3d02bfc`): **created `CLAUDE.md`** (the master onboarding file,
-  auto-loaded by Claude Code in every session on any account), rewrote `ops/README.md`, refreshed
-  `ROADMAP.md`/`README.md`/`DEPLOY.md`. This existed because project knowledge previously lived
-  only in one account's local memory.
-- **Reviewed the other account's work** (39 commits, ~9.5k lines: Search Intelligence, RBAC
-  section split, SEO, price heatmap, geo directory, the 07-13 admin batch). **Verdict: no defects
-  found — nothing needed fixing.** Verified the house invariants all hold (search.ts mirrors are
-  functionally identical, all 7 new migrations are PascalCase, all 5 new public endpoints are
-  rate-limited, the lead inbox is `analytics:MANAGE`-gated, the 12-section RBAC split is live on
-  prod with zero lockout, and the calculator's 330→180 fee change is correct in **both** the code
-  default and the live prod Setting).
-- **This handoff**: fixed a stale line in `security.md` (it claimed the reboot was still pending),
-  added the hardening/attack-surface facts to the `CLAUDE.md` server map, and wrote this file.
+| Thing | Where | Notes |
+|---|---|---|
+| Local env | `C:\Claude\NOC\.env` | gitignored; copy of `.env.example` + local values. Prod secrets live only in `/root/noc/.env` on the server (600). |
+| Dev database | `C:\Claude\NOC\.devdb\` | portable MariaDB started by `npm run db:start`; gitignored but on disk, survives account switch. |
+| SSH access | `~/.ssh/config` alias **`noc`** → `root@77.42.66.76` (key-only) | Deploys depend on `ssh noc` working. Per-Windows-user, not per-Claude-account. |
+| Claude auto-memory | `C:\Users\aleim\.claude\projects\C--Claude-NOC\memory\` | Convenience only — **everything essential has been folded into `CLAUDE.md`**, so losing it costs nothing. If it loads, treat it as background hints. |
+| Chat history | previous account's sessions | Does NOT carry. That's why CLAUDE.md + this file exist. |
 
-## In progress / not finished
+Root reference material (in the folder, not code): `NOC00-02.docx`, `SMS-Partners.docx`,
+`NewObour Design System/`, `input data/`, `Identity/` (real logos: ALSWARY =
+`Identity/1000X1000.png`, New Obour = `Identity/New Obour.png`).
 
-### ⚠️ Neighborhood "available areas" = manual list MERGED with plot-derived sizes
+## Next steps (ALL owner-action — nothing is dev-blocked)
 
-**Owner's rule (2026-07-15):** every plot (listing) placed in a neighborhood should contribute its
-standard/allocated size to that neighborhood's displayed area list — merged with the manually
-curated `Neighborhood.areas`. Only `PUBLISHED` + `SOLD` plots count. Computed live at read time
-(no schema column, so it's always current).
+Full detail in `CLAUDE.md` → owner-blocked list. Short version, roughly by effort:
 
-**Three uncommitted files** (`git status` shows them):
+1. **Partner portal click-test** (5 min) — log in as `testpartner` on both `/partner` sites,
+   submit the lean form once, confirm PENDING in moderation. **Then delete the test owner+user.**
+2. **Off-site backups** (10 min) — `/admin/settings/backups`: enter host/user/port/path, add the
+   shown VPS pubkey to the remote's `authorized_keys`, click Test. Cron already installed.
+3. **Rotate the Brevo SMTP key**, then re-apply via `ops/mail-relay-brevo.sh`.
+4. **Price Index toggle** — Settings → Modules → مؤشر الأسعار, whenever wanted.
+5. **Cloudflare proxy flip (Part C)** — biggest remaining security win; ordered checklist in
+   `ops/CLOUDFLARE.md`; fully pre-flighted, grey-cloud is the instant rollback.
+6. **English content entry** (owner paused "later") — `/sell` page + storefront hero
+   title/subtitle + hero image, all in the admin Storefront editor.
+7. **~2026-07-23: GSC check-up** — coverage on both domains + alsawarey sitemap → Success.
+8. `/code-review ultra` whenever the owner wants it (billed); fold findings into `security.md` §7.
 
-| File | State |
-|---|---|
-| `apps/portal/lib/neighborhoodAreas.ts` | ✅ **NEW + complete.** Exports `derivePlotAreas(neighborhoodIds[])` → `Map<nbId, number[]>` (batch-capable by design) and `mergeAreas(manual, derived)` → unique ascending union. Uses «أصل المساحة» (`original_area`) when present, else rounds the actual area to the nearest standard bucket. |
-| `apps/portal/app/explore/neighborhood/[id]/page.tsx` | ✅ **DONE + wired.** Lines ~105–106 call `derivePlotAreas([id])` + `mergeAreas(...)`. |
-| `apps/portal/app/explore/district/[id]/page.tsx` | ⚠️ **HALF-DONE — this is exactly where work stopped.** The import was added (line 16) but **is never used**; the page still reads raw `n.areas`. |
+Also: revisit `/admin/analytics/search` zero-result terms once real traffic accumulates
+(reviewed 2026-07-17 — only 12 searches so far, nothing actionable, synonym dictionary empty).
 
-**To finish the district page** — it needs the merge applied in **two** places, fed by **one**
-batched call (that's why `derivePlotAreas` takes an array):
+## The five things most likely to bite you
 
-1. Call once near the top, after `d.neighborhoods` is loaded:
-   `const derivedMap = await derivePlotAreas(d.neighborhoods.map((n) => n.id));`
-2. **Line ~72** — `nbAreas` (the district-level aggregate of all neighborhood areas) currently
-   flatMaps raw `n.areas`; it should flatMap `mergeAreas(n.areas ?? [], derivedMap.get(n.id) ?? [])`.
-3. **Line ~124** — the per-neighborhood card does `const areas = (n.areas as number[] | null) ?? []`;
-   it should be `mergeAreas((n.areas as number[] | null) ?? [], derivedMap.get(n.id) ?? [])`.
-   (Line ~128 renders it, and respects an `assortedAreas` flag — leave that behavior alone.)
-
-Then: `npm run build`, commit, and deploy with the standard runbook in `CLAUDE.md`. Worth a quick
-sanity check on a real district page that the areas shown now include plot sizes.
-
-**Note:** the unused import currently produces only a lint warning — the build passes — so nothing
-is broken; the feature is just inconsistent between the two pages until this is done.
-
-## Next steps
-
-1. **Finish the district page merge** (exact instructions above), build, commit, deploy, verify.
-2. **Partner portal UI click-test** — the last unverified piece of a completed feature. Log in as
-   the `testpartner` account on **both** newobour.com/partner and alsawarey.com/partner, submit
-   the listing form once, confirm it lands PENDING in admin moderation. **Then delete that test
-   owner+user.** (Backend was already verified end-to-end by script; only the browser UI is
-   unproven.)
-3. **Cloudflare proxy flip (Part C)** — owner's dashboard task, ~10 min, fully prepped and
-   pre-flighted. Ordered checklist in `ops/CLOUDFLARE.md`. Biggest remaining security win.
-4. **Off-site backup target** — owner enters host/user/port/path at `/admin/settings/backups`,
-   adds the shown VPS public key to that server's `authorized_keys`, clicks Test. Script + cron
-   are already installed and will activate automatically.
-5. **Rotate the Brevo SMTP key** (it was pasted into a chat once), then re-apply via
-   `ops/mail-relay-brevo.sh`.
-6. Optional/when wanted: enable the **Price Index** module toggle; run `/code-review ultra`.
-
-## Key files — where everything is
-
-**Start here**
-- `CLAUDE.md` — **the master doc.** Architecture, repo map, dev quickstart, the deploy runbook
-  with all six gotchas, the production server map, architecture rules, feature map, and the
-  owner-blocked list. Auto-loads in every Claude Code session. Read this first.
-- `HANDOFF.md` — this file (what's mid-flight).
-
-**The unfinished feature**
-- `apps/portal/lib/neighborhoodAreas.ts` — new, complete helper (see above).
-- `apps/portal/app/explore/neighborhood/[id]/page.tsx` — done reference implementation.
-- `apps/portal/app/explore/district/[id]/page.tsx` — **needs finishing.**
-
-**Other docs**
-- `ops/README.md` — every server script, runbook, and cron, indexed.
-- `ops/CLOUDFLARE.md` — the proxy-flip checklist (next owner task).
-- `ops/OFFSITE.md` · `ops/RESTORE.md` · `ops/MAIL-DELIVERABILITY.md` · `ops/HARDENING.md` ·
-  `ops/SEO-REGISTRATION.md` — task runbooks.
-- `ops/nginx-noc.conf` — mirror of the live nginx vhost config (disaster recovery).
-- `security.md` — security standard + posture + findings register F1–F12.
-- `ROADMAP.md` — feature scoping + status log. `README.md` — quickstart. `DEPLOY.md` — original
-  server-build narrative (superseded by CLAUDE.md where they differ).
-
-**Code layout** — `apps/portal` (newobour.com + the one `/admin`), `apps/brokerage`
-(alsawarey.com), `packages/{db,auth,ui,partner-portal,mail,sms,analytics,config,i18n}`.
-Full map in CLAUDE.md.
-
-**Root reference material (not code, left as-is):** `NOC00-02.docx`, `SMS-Partners.docx`,
-`NewObour Design System/`, `NewObour Design System 2.zip`, `input data/`, `Identity/` (brand
-assets — the real logos are `Identity/1000X1000.png` for ALSWARY and `Identity/New Obour.png`).
-
-## Important context, decisions & gotchas
-
-**Deploy — read the runbook in CLAUDE.md before deploying.** The two that have burned real
-deploys: (1) always `git checkout -- package-lock.json` before `git pull --ff-only`, because a
-dirty tree makes the pull abort and the chained `&& build && reload` then silently deploys STALE
-code while reporting success — **always verify `git log --oneline -1` on the server afterwards**;
-(2) `db:release` must NEVER seed (a seed once wiped the admin's attribute organization).
-
-**Owner decisions — don't re-litigate:**
-- Card Title was **retired** (cards use the listing title); the DB column stays dormant on purpose.
-- The reconciliation auto-calc requires **both** «أصل المساحة» and «المساحة» — the standard is
-  never derived. Deliberate.
-- Ownership-transfer fee is **180/م²** (the Authority halved it) — correct in both the code
-  default and the live prod Setting.
-- Restore stays **CLI-only** by design (too dangerous as a button) — `ops/RESTORE.md`.
-- A neighborhood with no location map inherits its **district's** map on `/explore` only —
-  **never** in listings.
-
-**Mail deliverability — settled, do not chase:** both domains are fully Brevo-authenticated
-(SPF + DKIM verified). Gmail → inbox. **Outlook/live.com → spam** purely from shared-IP
-reputation. This is not fixable with more DNS. Backup alerts therefore go to **SMS + Gmail +
-Outlook**, and SMS is the reliable channel.
-
-**Fragile things to avoid breaking:**
-- `apps/portal/lib/search.ts` and `apps/brokerage/lib/search.ts` are **mirrors** — keep them
-  identical (there's no build-time guard; it's discipline only. *Suggested improvement: add a
-  script that diffs them and fails the build on drift.*)
-- Any new shared package with Tailwind classes must be added to **both** apps' `globals.css`
-  `@source` globs, or its classes silently purge.
-- Don't rebind the Next apps to 0.0.0.0 (see the hardening note in CLAUDE.md).
-- Never run `certbot --nginx` on this box — renewal is **webroot**-based (the nginx authenticator
-  does not work here and would break renewal).
-
-**Credentials / secrets** — never in this repo. Production secrets live in `/root/noc/.env` on the
-server (mode 600). SSH is key-only: `ssh noc` from the owner's PC. Panel recovery: CWP on :2087.
-The `testpartner` password is resettable from the admin panel (Owners → the owner editor's
-partner card).
+1. **The deploy runbook gotchas** (CLAUDE.md §deploy — memorize): `git checkout --
+   package-lock.json` BEFORE pulling, and **always verify `git log --oneline -1` on the server
+   afterwards** — a dirty tree makes the pull abort while the chained build "succeeds" on stale
+   code. `db:release` NEVER seeds. Env changes need `pm2 restart ecosystem.config.js --update-env`.
+2. **Mirrors kept identical by discipline only:** `apps/{portal,brokerage}/lib/search.ts` AND
+   `apps/{portal,brokerage}/app/thumb/[...path]/route.ts`. Change one → change both.
+3. **Soft delete:** any new public listing read must respect `deletedAt: null` (use the central
+   visibility helpers in `@noc/partner-portal`); the purge cleanup transaction is mirrored in the
+   admin action + `ops/purge-deleted-listings.ts`.
+4. **Owner decisions — don't re-litigate:** Card Title retired; both areas required for the
+   reconcile auto-fill; transfer fee 180/م²; restore stays CLI-only; neighborhood map inheritance
+   is explore-only; the gallery WhatsApp button is deliberately deleted (don't re-add);
+   Outlook→spam is shared-IP reputation, not DNS — don't chase it.
+5. **Never delete Settings `gsc_newobour`/`gsc_alsawarey`** — Google Search Console verification
+   renders from them.
 
 ## How to continue
 
-Open a new session on the other account, connect this folder (`C:\Claude\NOC`), and say:
+Open a session in this folder (`C:\Claude\NOC`) — `CLAUDE.md` auto-loads. Say:
 
 **"Read HANDOFF.md and continue this project."**
+
+Expected workflow for every task (the owner expects the full cycle): build → typecheck/build →
+commit (Arabic-safe heredoc message) → push → deploy via the runbook → **verify live**.
