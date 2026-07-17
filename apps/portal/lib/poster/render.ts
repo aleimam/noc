@@ -442,13 +442,13 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
     y = bigY + bigH + gap;
   }
 
-  // ── 2-col grid, COLUMN-major (owner's numbered mock, 2026-07-17): the group cards read
-  // down the LEFT column first (card 1 = first details group, card 2 = second, …), then
-  // continue down the RIGHT column; the city map takes the LAST slot instead of interleaving.
+  // ── 2-col grid, COLUMN-major (owner's numbered mock, corrected 2026-07-17): slot 1 =
+  // the city/district location map (top-left), then the group cards in form order reading
+  // down the LEFT column and continuing down the RIGHT (…map, group1, group2, group3…).
   const colW = (bigW - gap) / 2;
   type Cell = { kind: 'card'; g: PosterCardGroup } | { kind: 'city' };
   const cells: Cell[] = d.groups.map((g) => ({ kind: 'card' as const, g }));
-  if (d.cityMap) cells.push({ kind: 'city' });
+  if (d.cityMap) cells.unshift({ kind: 'city' });
 
   const half = Math.ceil(cells.length / 2);
   const leftCol = cells.slice(0, half);
