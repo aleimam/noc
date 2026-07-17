@@ -971,32 +971,10 @@ export function ListingForm({
         )}
       </section>
 
-      {/* ── Official papers (internal): staff edit; partners see the two switches only ── */}
-      {(staffMode || partnerMode) && (
-        <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
-          <div>
-            <h3 className="font-bold text-primary">🗂️ {L('الأوراق الرسمية (داخلي)', 'Official papers (internal)')}</h3>
-            <p className="text-xs opacity-60">
-              {staffMode
-                ? L('لا تظهر هذه الأوراق للعملاء. الشركاء يرون حالة كل ورقة فقط.', "Not shown to customers. Partners see only each paper's status.")
-                : L('يديرها فريقنا — تظهر لك حالة كل ورقة فقط.', "Managed by our team — you see each paper's status only.")}
-            </p>
-          </div>
-          {staffMode ? (
-            <>
-              {paperRow(L('جواب التحصيص', 'Allocation letter'), hasAllocation, setHasAllocation, allocationDate, setAllocationDate, allocationPhoto, setAllocationPhoto)}
-              {paperRow(L('توكيل بيع', 'Sale mandate'), hasMandate, setHasMandate, mandateDate, setMandateDate, mandatePhoto, setMandatePhoto)}
-            </>
-          ) : (
-            <div className="space-y-2">
-              {paperBadge(L('جواب التحصيص', 'Allocation letter'), initial.hasAllocationLetter ?? false)}
-              {paperBadge(L('توكيل بيع', 'Sale mandate'), initial.hasSaleMandate ?? false)}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ── Listing location map: annotate the selected neighborhood's masterplan (staff) ── */}
+      {/* ── Listing location map: annotate the selected neighborhood's masterplan (staff) ──
+           Sits ABOVE the papers so the last two blocks are always الأوراق الرسمية then رقم
+           التواصل + the save buttons (owner request 2026-07-17). Keep any NEW section above
+           this line — nothing may come between the papers and the contact/actions. */}
       {staffMode && nbId && (
         <section className="space-y-2 rounded-lg border border-graphite/15 p-4">
           <h3 className="font-bold text-primary">{t('listingLocationMap')}</h3>
@@ -1037,6 +1015,33 @@ export function ListingForm({
         </section>
       )}
 
+      {/* ── Official papers (internal): staff edit; partners see the two switches only ──
+           Second-to-last by design: papers → contact + actions close every form. ── */}
+      {(staffMode || partnerMode) && (
+        <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
+          <div>
+            <h3 className="font-bold text-primary">🗂️ {L('الأوراق الرسمية (داخلي)', 'Official papers (internal)')}</h3>
+            <p className="text-xs opacity-60">
+              {staffMode
+                ? L('لا تظهر هذه الأوراق للعملاء. الشركاء يرون حالة كل ورقة فقط.', "Not shown to customers. Partners see only each paper's status.")
+                : L('يديرها فريقنا — تظهر لك حالة كل ورقة فقط.', "Managed by our team — you see each paper's status only.")}
+            </p>
+          </div>
+          {staffMode ? (
+            <>
+              {paperRow(L('جواب التحصيص', 'Allocation letter'), hasAllocation, setHasAllocation, allocationDate, setAllocationDate, allocationPhoto, setAllocationPhoto)}
+              {paperRow(L('توكيل بيع', 'Sale mandate'), hasMandate, setHasMandate, mandateDate, setMandateDate, mandatePhoto, setMandatePhoto)}
+            </>
+          ) : (
+            <div className="space-y-2">
+              {paperBadge(L('جواب التحصيص', 'Allocation letter'), initial.hasAllocationLetter ?? false)}
+              {paperBadge(L('توكيل بيع', 'Sale mandate'), initial.hasSaleMandate ?? false)}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── رقم التواصل + the save actions: ALWAYS the last block on the form ── */}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm">{t('contactPhone')}<input type="tel" dir="ltr" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inp} /></label>
         <label className="flex items-end gap-2 text-sm"><input type="checkbox" checked={contactWhatsapp} onChange={(e) => setContactWhatsapp(e.target.checked)} /> {t('whatsapp')}</label>
