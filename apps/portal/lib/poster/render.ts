@@ -330,18 +330,42 @@ export async function renderAdvantages(
 
   // ── Content flows top-down; the poster HEIGHT adapts to it (no fixed-canvas centering,
   // no dropped rows). ──
+  // Long items WRAP to a second line inside a taller row (owner request 2026-07-17 — the old
+  // single line hard-truncated at 62 chars, cutting words like «بجميع الط…»); only if even two
+  // lines overflow does the tail get an ellipsis.
+  const rowMaxW = (w - 112) - 84;
+  const wrapItem = (s: string): string[] => {
+    if (estTextW(s, 26, false) <= rowMaxW) return [s];
+    const words = s.trim().split(/\s+/);
+    const l1: string[] = [];
+    while (words.length && estTextW([...l1, words[0]!].join(' '), 26, false) <= rowMaxW) l1.push(words.shift()!);
+    if (!l1.length && words.length) l1.push(words.shift()!); // single overlong word
+    let l2 = words.join(' ');
+    if (estTextW(l2, 26, false) > rowMaxW) {
+      while (l2.length > 1 && estTextW(l2 + '…', 26, false) > rowMaxW) l2 = l2.slice(0, -1);
+      l2 = l2.trimEnd() + '…';
+    }
+    return l2 ? [l1.join(' '), l2] : [l1.join(' ')];
+  };
   let y = hy + 52;
   for (const g of usable) {
     parts.push(`<rect x="60" y="${y}" width="${w - 120}" height="54" rx="12" fill="${th.gold}"/>` + T(w - 90, y + 37, g.title, { s: 29, w: 800, fill: th.navy, anchor: 'end' }));
     y += 64;
     let i = 0;
     for (const it of g.items) {
+      const ls = wrapItem(it);
+      const rh = ls.length === 2 ? 96 : 58;
       parts.push(
-        `<rect x="60" y="${y}" width="${w - 120}" height="58" fill="${i % 2 ? '#ffffff' : th.tint}" stroke="${th.gold}" stroke-width="1" opacity="0.97"/>`,
-        `<rect x="${w - 86}" y="${y + 23}" width="12" height="12" fill="${th.gold}" transform="rotate(45 ${w - 80} ${y + 29})"/>`,
-        T(w - 112, y + 39, it.slice(0, 62), { s: 26, w: 500, fill: th.ink, anchor: 'end' }),
+        `<rect x="60" y="${y}" width="${w - 120}" height="${rh}" fill="${i % 2 ? '#ffffff' : th.tint}" stroke="${th.gold}" stroke-width="1" opacity="0.97"/>`,
+        `<rect x="${w - 86}" y="${y + rh / 2 - 6}" width="12" height="12" fill="${th.gold}" transform="rotate(45 ${w - 80} ${y + rh / 2})"/>`,
       );
-      y += 64;
+      if (ls.length === 2) {
+        parts.push(T(w - 112, y + 38, ls[0]!, { s: 26, w: 500, fill: th.ink, anchor: 'end' }));
+        parts.push(T(w - 112, y + 74, ls[1]!, { s: 26, w: 500, fill: th.ink, anchor: 'end' }));
+      } else {
+        parts.push(T(w - 112, y + rh / 2 + 10, ls[0]!, { s: 26, w: 500, fill: th.ink, anchor: 'end' }));
+      }
+      y += rh + 6;
       i++;
     }
     y += 26;
