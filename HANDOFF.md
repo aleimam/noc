@@ -24,13 +24,18 @@ on the server). Both pm2 apps online. Every feature requested to date is shipped
 live-verified — there is **no half-finished work** in the tree (the build passes 3/3;
 `git status` is clean).
 
-**2026-07-17 (later): listing-form layout batch — all owner-confirmed live** (commits
-`f19acb5` → `bbcf4c3`): the shared `ListingForm` was reordered so it now reads
-types → category details (moved INTO معلومات اساسية from the retired «تفاصيل إضافية» heading)
+**2026-07-17 (later): listing-form + poster layout batch — all owner-confirmed live** (commits
+`f19acb5` → `69d477e`): the shared `ListingForm` was reordered so it now reads
+types → category details (moved INTO معلومات اساسية from the retired «تفاصيل إضافية» heading,
+with the 🗺️ location-map annotator directly below the group holding the neighborhood picker)
 → title → price row [السعر · السعر لـ · 🔒 أقل سعر] → [ملاحظة · قابل للتفاوض؟] → partnerships
-→ 🗺️ map → 🗂️ papers → 📞 contact → «تفاصيل أخرى + صور أخرى» (COLLAPSED by default, mounts
+→ 🗂️ papers → 📞 contact → «تفاصيل أخرى + صور أخرى» (COLLAPSED by default, mounts
 only when open, header flags «يوجد محتوى» + photo count) → save actions (full-width on mobile).
 All presentation-only; save path untouched; applies to all five entry points sharing the form.
+Poster (`lib/poster/render.ts`, verified by regenerating prod posters + viewing the PNG):
+card grid is now COLUMN-major per the owner's numbered mock (cards down the LEFT column then
+the RIGHT, city map last) and the header title is width-capped (shrink→ellipsis) so it never
+overprints the ad pill / area table again.
 
 The complete change log for 2026-07-15→17 (hero gallery + photo analytics, thumbnail pipeline,
 soft delete + 90-day trash, auto-save drafts, admin quick-add + recent-features grid, city
