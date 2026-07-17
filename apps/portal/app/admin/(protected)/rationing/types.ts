@@ -21,12 +21,15 @@ export type ScanRow = {
   matchedRows: number; // applicant rows whose sourceFile == fileName
 };
 
+export type MissingFile = { sourceFile: string; rows: number };
+
 export type ScanReport = {
   matchedScans: number;
   orphanScans: number;
   rowsCovered: number;
   rowsMissing: number; // distinct sourceFile values with no scan
   scans: ScanRow[];
+  missingFiles: MissingFile[]; // the actual sourceFile values behind rowsMissing
 };
 
 export type PreviewResult =

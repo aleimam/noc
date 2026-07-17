@@ -96,8 +96,28 @@ export async function buildScanReport(): Promise<ScanReport> {
   });
 
   // distinct source files that have no uploaded scan yet
-  let rowsMissing = 0;
-  for (const file of countByFile.keys()) if (!scanFileNames.has(file)) rowsMissing++;
+  const missingFiles: { sourceFile: string; rows: number }[] = [];
+  for (const [file, n] of countByFile) if (!scanFileNames.has(file)) missingFiles.push({ sourceFile: file, rows: n });
+  missingFiles.sort((a, b) => a.sourceFile.localeCompare(b.sourceFile, undefined, { numeric: true }));
 
-  return { matchedScans, orphanScans, rowsCovered, rowsMissing, scans: rows };
+  return { matchedScans, orphanScans, rowsCovered, rowsMissing: missingFiles.length, scans: rows, missingFiles };
+}
+
+/** Fix a filename mismatch: rename a scan's match key to the sourceFile the sheet rows carry.
+ *  Only touches the DB key (the stored image path is untouched), so it's fully reversible. */
+export async function renameScan(id: string, newFileName: string): Promise<Result> {
+  await requirePermission('sheets', 'UPDATE');
+  const fileName = newFileName.trim();
+  if (!fileName) return { ok: false, error: 'no_name' };
+  try {
+    const clash = await prisma.rationingScan.findUnique({ where: { fileName } });
+    if (clash && clash.id !== id) return { ok: false, error: 'name_taken' };
+    await prisma.rationingScan.update({ where: { id }, data: { fileName } });
+    revalidatePath('/admin/rationing/scans');
+    revalidatePath('/admin/rationing');
+    return { ok: true };
+  } catch (e) {
+    console.error('renameScan failed', e);
+    return { ok: false, error: 'failed' };
+  }
 }
