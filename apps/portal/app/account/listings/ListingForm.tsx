@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -823,36 +823,81 @@ export function ListingForm({
         )}
         {allChosen ? (
           grouped.map((g) => (
-            <div key={g.section.id} className="space-y-3 rounded-lg border border-graphite/15 p-4">
-              <h4 className="font-semibold text-primary">{L(g.section.nameAr, g.section.nameEn)}</h4>
-              {/* «مستحقات جهاز المدينة»: one-tap auto-fill from the reconciliation calculator. */}
-              {calcConfig && g.attrs.some((a) => AUTHORITY_FEE_KEYS.has(a.key)) && (
-                <div className="rounded-lg border border-gold-300/60 bg-gold/10 p-3">
-                  <button
-                    type="button"
-                    onClick={autoCalcAuthorityFees}
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-soft hover:brightness-110"
-                  >
-                    🧮 {L('احسب تلقائيًا من حاسبة التصالح', 'Auto-calculate from the reconciliation calculator')}
-                  </button>
-                  <p className="mt-1.5 text-xs opacity-70">
-                    {L('يعتمد الحساب على «أصل المساحة» و«المساحة» (الفعلية المستلمة). تُملأ القيم ويمكنك تعديلها قبل الحفظ.', 'Uses the original area and the actual received area. Values are filled in and stay editable.')}
-                  </p>
+            <Fragment key={g.section.id}>
+              <div className="space-y-3 rounded-lg border border-graphite/15 p-4">
+                <h4 className="font-semibold text-primary">{L(g.section.nameAr, g.section.nameEn)}</h4>
+                {/* «مستحقات جهاز المدينة»: one-tap auto-fill from the reconciliation calculator. */}
+                {calcConfig && g.attrs.some((a) => AUTHORITY_FEE_KEYS.has(a.key)) && (
+                  <div className="rounded-lg border border-gold-300/60 bg-gold/10 p-3">
+                    <button
+                      type="button"
+                      onClick={autoCalcAuthorityFees}
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-soft hover:brightness-110"
+                    >
+                      🧮 {L('احسب تلقائيًا من حاسبة التصالح', 'Auto-calculate from the reconciliation calculator')}
+                    </button>
+                    <p className="mt-1.5 text-xs opacity-70">
+                      {L('يعتمد الحساب على «أصل المساحة» و«المساحة» (الفعلية المستلمة). تُملأ القيم ويمكنك تعديلها قبل الحفظ.', 'Uses the original area and the actual received area. Values are filled in and stay editable.')}
+                    </p>
+                  </div>
+                )}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {g.attrs.map((a) => (
+                    <label key={a.id} className="text-sm">
+                      <span className="mb-1 block opacity-80">
+                        {L(a.labelAr, a.labelEn)}
+                        {/* explicit word, not just an asterisk — low-literacy audience */}
+                        {isRequiredAttr(a) && <span className="font-semibold text-red-600"> ({L('مطلوب', 'required')})</span>}
+                      </span>
+                      {control(a)}
+                    </label>
+                  ))}
                 </div>
-              )}
-              <div className="grid gap-3 sm:grid-cols-2">
-                {g.attrs.map((a) => (
-                  <label key={a.id} className="text-sm">
-                    <span className="mb-1 block opacity-80">
-                      {L(a.labelAr, a.labelEn)}
-                      {/* explicit word, not just an asterisk — low-literacy audience */}
-                      {isRequiredAttr(a) && <span className="font-semibold text-red-600"> ({L('مطلوب', 'required')})</span>}
-                    </span>
-                    {control(a)}
-                  </label>
-                ))}
               </div>
-            </div>
+
+              {/* ── Listing location map: directly below the الموقع group (the one holding the
+                   neighborhood picker) — owner request 2026-07-17. Staff-only, needs a chosen
+                   neighborhood; annotates that neighborhood's masterplan. ── */}
+              {staffMode && nbId && g.attrs.some((a) => a.type === 'NEIGHBORHOOD') && (
+                <section className="space-y-2 rounded-lg border border-graphite/15 p-4">
+                  <h3 className="font-bold text-primary">{t('listingLocationMap')}</h3>
+                  {nbMasterplan ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setAnnotating(true)}
+                        className="rounded-lg border border-accent/40 px-3 py-1.5 text-sm text-accent hover:bg-accent/5"
+                      >
+                        ✎ {t('genFromNbMasterplan')}
+                      </button>
+                      {pendingValid && <p className="text-sm text-green">✓ {t('locationMapReady')}</p>}
+                      {!pendingValid && savedNeighborhoodId && nbId === savedNeighborhoodId && locationAnnotation && (
+                        <p className="text-xs opacity-60">{t('locationMapHasSaved')}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm opacity-60">{t('nbNoMasterplan')}</p>
+                  )}
+                  {annotating && nbMasterplan && (
+                    <MapAnnotator
+                      src={nbMasterplan}
+                      initialShapes={
+                        pendingValid
+                          ? pendingMap!.shapes
+                          : nbId === savedNeighborhoodId
+                            ? locationAnnotation ?? undefined
+                            : undefined
+                      }
+                      onClose={() => setAnnotating(false)}
+                      onSaved={(attachmentId, shapes) => {
+                        setAnnotating(false);
+                        setPendingMap({ attachmentId, shapes, src: nbMasterplan, nbId });
+                      }}
+                    />
+                  )}
+                </section>
+              )}
+            </Fragment>
           ))
         ) : (
           <p className="rounded-lg border border-dashed border-graphite/25 p-4 text-sm opacity-60">{t('pickClassifiers')}</p>
@@ -957,49 +1002,8 @@ export function ListingForm({
             bottom, just above the save buttons (owner request 2026-07-17). */}
       </section>
 
-      {/* ── Listing location map: annotate the selected neighborhood's masterplan (staff) ──
-           Sits ABOVE the papers so the last two blocks are always الأوراق الرسمية then رقم
-           التواصل + the save buttons (owner request 2026-07-17). Keep any NEW section above
-           this line — nothing may come between the papers and the contact/actions. */}
-      {staffMode && nbId && (
-        <section className="space-y-2 rounded-lg border border-graphite/15 p-4">
-          <h3 className="font-bold text-primary">{t('listingLocationMap')}</h3>
-          {nbMasterplan ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setAnnotating(true)}
-                className="rounded-lg border border-accent/40 px-3 py-1.5 text-sm text-accent hover:bg-accent/5"
-              >
-                ✎ {t('genFromNbMasterplan')}
-              </button>
-              {pendingValid && <p className="text-sm text-green">✓ {t('locationMapReady')}</p>}
-              {!pendingValid && savedNeighborhoodId && nbId === savedNeighborhoodId && locationAnnotation && (
-                <p className="text-xs opacity-60">{t('locationMapHasSaved')}</p>
-              )}
-            </>
-          ) : (
-            <p className="text-sm opacity-60">{t('nbNoMasterplan')}</p>
-          )}
-          {annotating && nbMasterplan && (
-            <MapAnnotator
-              src={nbMasterplan}
-              initialShapes={
-                pendingValid
-                  ? pendingMap!.shapes
-                  : nbId === savedNeighborhoodId
-                    ? locationAnnotation ?? undefined
-                    : undefined
-              }
-              onClose={() => setAnnotating(false)}
-              onSaved={(attachmentId, shapes) => {
-                setAnnotating(false);
-                setPendingMap({ attachmentId, shapes, src: nbMasterplan, nbId });
-              }}
-            />
-          )}
-        </section>
-      )}
+      {/* (The listing location-map annotator lives inside the details groups now — right below
+           the الموقع group. Keep the papers + contact as the closing blocks of the form.) */}
 
       {/* ── Official papers (internal): staff edit; partners see the two switches only ──
            Second-to-last by design: papers → contact + actions close every form. ── */}
