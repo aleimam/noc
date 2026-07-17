@@ -867,7 +867,9 @@ export function ListingForm({
           <input value={title} onChange={(e) => setTitle(e.target.value)} className={inp} />
         </div>
 
-        {/* Price + price-per + negotiable. (The area field moved to the Area attribute
+        {/* Price row: السعر · السعر لـ · أقل سعر (internal). Then: ملاحظة على السعر · قابل للتفاوض؟
+            — «أقل سعر» and «قابل للتفاوض؟» were swapped on 2026-07-17 (owner request), keeping the
+            two money inputs together on the top row. (The area field lives in the Area attribute
             group — the legacy Listing.area column stays untouched on old listings.) */}
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="text-sm">{t('price')}<input type="number" dir="ltr" value={price} onChange={(e) => setPrice(e.target.value)} className={inp} /></label>
@@ -878,6 +880,15 @@ export function ListingForm({
               <option value="SQM">{t('pricePerSqm')}</option>
             </select>
           </label>
+          {/* Internal floor / walk-away price — admins & owner only. Never rendered on any public page. */}
+          <label className="block text-sm">
+            <span className="flex items-center gap-1">🔒 {t('lowestPrice')}</span>
+            <input type="number" dir="ltr" value={lowestPrice} onChange={(e) => setLowestPrice(e.target.value)} className={inp} />
+            <span className="mt-1 block text-xs opacity-60">{t('lowestPriceHint')}</span>
+          </label>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm">{t('priceNote')}<input value={priceNote} onChange={(e) => setPriceNote(e.target.value)} className={inp} /></label>
           <div className="text-sm">
             <span className="mb-1 block">{t('negotiable')}</span>
             <div className="flex gap-2">
@@ -885,15 +896,6 @@ export function ListingForm({
               <button type="button" onClick={() => setPriceNegotiable(false)} className={`flex-1 rounded-lg px-3 py-2 font-semibold ${!priceNegotiable ? 'bg-primary text-soft' : 'border border-graphite/25'}`}>{t('no')}</button>
             </div>
           </div>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm">{t('priceNote')}<input value={priceNote} onChange={(e) => setPriceNote(e.target.value)} className={inp} /></label>
-          {/* Internal floor / walk-away price — admins & owner only. Never rendered on any public page. */}
-          <label className="block text-sm">
-            <span className="flex items-center gap-1">🔒 {t('lowestPrice')}</span>
-            <input type="number" dir="ltr" value={lowestPrice} onChange={(e) => setLowestPrice(e.target.value)} className={inp} />
-            <span className="mt-1 block text-xs opacity-60">{t('lowestPriceHint')}</span>
-          </label>
         </div>
 
         {/* ── Plot consolidation & partnerships (تجميع الملاك والشراكات) opt-in ── */}
