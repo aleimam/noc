@@ -35,7 +35,12 @@ All presentation-only; save path untouched; applies to all five entry points sha
 Poster (`lib/poster/render.ts`, verified by regenerating prod posters + viewing the PNG):
 card grid is now COLUMN-major per the owner's numbered mock (cards down the LEFT column then
 the RIGHT, city map last) and the header title is width-capped (shrink→ellipsis) so it never
-overprints the ad pill / area table again.
+overprints the ad pill / area table again. Later the same day (commits `827808e` → `121a38e`,
+each visually verified by regenerating prod posters): header layout became ADMIN-SWITCHABLE
+per brand (Settings → هوية الصور المولّدة — both brands run «صف كامل»/row since 2026-07-17);
+grid corrected to map-in-slot-1 then BIGGEST-first cards; footer got the real WhatsApp mark;
+and the مميزات المنطقة image was overhauled (frameless, 2-line capped title, measured divider,
+content-adaptive height, rows word-wrap to a 2nd line). Full pins in CLAUDE.md's marketplace row.
 
 The complete change log for 2026-07-15→17 (hero gallery + photo analytics, thumbnail pipeline,
 soft delete + 90-day trash, auto-save drafts, admin quick-add + recent-features grid, city
