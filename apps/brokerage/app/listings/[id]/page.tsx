@@ -138,11 +138,9 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     pushHero(mp.path, `${L(MAP_LEVEL_LABEL[mp.level].ar, MAP_LEVEL_LABEL[mp.level].en)} — ${mp.title || L(MAP_KIND_LABEL[mp.kind]?.ar ?? mp.kind, MAP_KIND_LABEL[mp.kind]?.en ?? mp.kind)}`);
   }
 
-  // Gallery extras (admin-switchable from the portal admin → إعدادات الموقع; default ON):
-  // «اسأل عن هذه الصورة» WhatsApp button + first-party photo analytics.
-  const galleryFlags = await prisma.setting.findMany({ where: { key: { in: ['gallery.waPhoto', 'gallery.photoAnalytics'] } } });
-  const galleryOn = (k: string) => galleryFlags.find((r) => r.key === k)?.value !== '0';
-  const heroTrackKey = galleryOn('gallery.photoAnalytics') ? land.id : undefined;
+  // First-party photo analytics (admin-switchable from the portal admin; default ON).
+  const analyticsFlag = await prisma.setting.findFirst({ where: { key: 'gallery.photoAnalytics' } });
+  const heroTrackKey = analyticsFlag?.value !== '0' ? land.id : undefined;
   const isAdminViewer = !!(await getAdminViewer());
   // Cross-domain deep link: the admin panel lives on the portal domain, not this one.
   const portalBase = (process.env.PORTAL_URL || 'https://newobour.com').replace(/\/$/, '');
@@ -164,17 +162,6 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
     `مرحباً، أستفسر عن الأرض${adRef}:\n${land.title}\n${listingUrl}`,
     `Hello, I'm interested in this land${adRef}:\n${land.title}\n${listingUrl}`,
   );
-  // «اسأل عن هذه الصورة» in the gallery's fullscreen viewer → storefront WhatsApp.
-  const heroWhatsapp =
-    galleryOn('gallery.waPhoto') && store.contact.whatsapp
-      ? {
-          phone: waPhone(store.contact.whatsapp),
-          text: L(
-            `مرحباً، أستفسر عن هذه الصورة من الإعلان${adRef}:\n${land.title}\n${listingUrl}`,
-            `Hello, I'm asking about this photo from the listing${adRef}:\n${land.title}\n${listingUrl}`,
-          ),
-        }
-      : undefined;
 
   // Group specs into their detail-group (section), preserving section then attribute order.
   const specGroups = land.specs.reduce<{ title: string; items: typeof land.specs }[]>((acc, s) => {
@@ -227,7 +214,7 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
 
         <div className="mt-3 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div>
-            <HeroGallery items={heroItems} alt={photoAlt} locale={locale} whatsapp={heroWhatsapp} trackKey={heroTrackKey} />
+            <HeroGallery items={heroItems} alt={photoAlt} locale={locale} trackKey={heroTrackKey} />
           </div>
 
           <aside className="space-y-4">

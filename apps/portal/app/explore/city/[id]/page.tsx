@@ -84,7 +84,7 @@ export default async function CityPublic({ params }: { params: Promise<{ id: str
       <div className="mx-auto max-w-3xl space-y-6 p-6">
         <a href="/explore" className="text-sm text-accent">‹ {t('exploreTitle')}</a>
         <h1 className="text-2xl font-bold text-primary">{L(city.nameAr, city.nameEn)}</h1>
-        <div className="mt-2"><AdminEditButton href={`/admin/lands/cities/${id}`} section="lands" /></div>
+        <div className="mt-2"><AdminEditButton href={`/admin/lands/cities/${id}/edit`} section="lands" /></div>
         <SeoIntro text={intro} />
         <GeoSummary text={summary} />
 

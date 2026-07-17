@@ -319,23 +319,9 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   }
   const waNumber = waPhone(contactPhone); // wa.me needs international form (01x → 201x)
 
-  // Gallery extras (admin-switchable in Settings → إعدادات الموقع → معرض صور الإعلان; default ON):
-  // «اسأل عن هذه الصورة» WhatsApp button + first-party photo analytics.
-  const galleryFlags = await prisma.setting.findMany({ where: { key: { in: ['gallery.waPhoto', 'gallery.photoAnalytics'] } } });
-  const galleryOn = (k: string) => galleryFlags.find((r) => r.key === k)?.value !== '0';
-  const portalBase = (process.env.PORTAL_URL || 'https://newobour.com').replace(/\/$/, '');
-  const waPhotoRef = listing.adNumber ? L(` رقم ${listing.adNumber}`, ` #${listing.adNumber}`) : '';
-  const heroWhatsapp =
-    galleryOn('gallery.waPhoto') && waNumber
-      ? {
-          phone: waNumber,
-          text: L(
-            `مرحباً، أستفسر عن هذه الصورة من الإعلان${waPhotoRef}:\n${listing.title}\n${portalBase}${canonicalPath}`,
-            `Hello, I'm asking about this photo from the listing${waPhotoRef}:\n${listing.title}\n${portalBase}${canonicalPath}`,
-          ),
-        }
-      : undefined;
-  const heroTrackKey = galleryOn('gallery.photoAnalytics') ? listing.id : undefined;
+  // First-party photo analytics (admin-switchable in Settings → إعدادات الموقع; default ON).
+  const analyticsFlag = await prisma.setting.findFirst({ where: { key: 'gallery.photoAnalytics' } });
+  const heroTrackKey = analyticsFlag?.value !== '0' ? listing.id : undefined;
 
   const perLabel =
     listing.priceUnit === 'UNIT' ? (locale === 'ar' ? 'للوحدة' : 'per unit') : listing.priceUnit === 'SQM' ? (locale === 'ar' ? 'للمتر' : 'per m²') : '';
@@ -377,7 +363,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       <TrackView item={{ id: listing.id, title: listing.title, cover: galleryPaths[0] ? thumbUrl(galleryPaths[0], 320) : null, price: listing.price != null ? String(listing.price) : null, href: canonicalPath }} />
       <div className="flex justify-end"><MarketCardActions listingId={listing.id} initialSaved={saved} compareLabel={t('compare')} /></div>
       <a href="/market" className="text-sm text-accent">‹ {t('title')}</a>
-      <HeroGallery items={heroItems} alt={photoAlt} locale={locale} whatsapp={heroWhatsapp} trackKey={heroTrackKey} />
+      <HeroGallery items={heroItems} alt={photoAlt} locale={locale} trackKey={heroTrackKey} />
 
       <div>
         <div className="flex flex-wrap gap-1">

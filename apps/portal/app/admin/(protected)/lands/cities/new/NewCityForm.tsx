@@ -20,7 +20,7 @@ export function NewCityForm() {
     setErr('');
     start(async () => {
       const r = await upsertCity({ nameAr: ar.trim(), nameEn: en.trim() || ar.trim() });
-      if (r.ok && r.id) router.push(`/admin/lands/cities/${r.id}`);
+      if (r.ok && r.id) router.push(`/admin/lands/cities/${r.id}/edit`);
       else setErr(t('actionFailed'));
     });
   }

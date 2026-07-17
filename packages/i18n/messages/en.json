@@ -972,6 +972,7 @@
     "pickNeighborhood": "Choose neighborhood",
     "pickBlock": "No block",
     "openInternal": "Internal entry (visible to our team until published)",
+    "maps": "Maps",
     "locationMap": "Location map",
     "adjacency": "Adjacent areas",
     "adjacencyHint": "Pick directly-adjacent areas — the link is saved both ways automatically.",

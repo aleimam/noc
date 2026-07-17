@@ -17,7 +17,6 @@ const ALLOWED = new Set([
   'whatsapp_float_msg_newobour',
   'whatsapp_float_alsawarey',
   'whatsapp_float_msg_alsawarey',
-  'gallery.waPhoto',
   'gallery.photoAnalytics',
 ]);
 

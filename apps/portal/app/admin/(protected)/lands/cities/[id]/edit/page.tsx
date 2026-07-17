@@ -1,0 +1,89 @@
+import { notFound } from 'next/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { requirePermission } from '@noc/auth';
+import { prisma } from '@noc/db';
+import { AdvantagesEditor, AreaMapEditor, UpdatesEditor, CustomPhotosEditor, GeoBasics } from '../../../GeoContentEditors';
+import { GeoSeoIntroEditor } from '../../../GeoSeoIntroEditor';
+import { loadAreaMaps, loadUpdates } from '../../../geo';
+import { getSeoIntroRaw } from '@/lib/seoContent';
+import { DoneButton } from '@/app/_components/DoneButton';
+
+export const dynamic = 'force-dynamic';
+
+export default async function CityEdit({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission('lands', 'UPDATE');
+  const { id } = await params;
+  const city = await prisma.city.findUnique({ where: { id } });
+  if (!city) notFound();
+
+  const t = await getTranslations('lands');
+  const locale = (await getLocale()) as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
+
+  const [advantages, maps, updates, seoIntro] = await Promise.all([
+    prisma.advantage.findMany({ where: { cityId: id }, orderBy: { order: 'asc' } }),
+    loadAreaMaps('city', id),
+    loadUpdates({ cityId: id }),
+    getSeoIntroRaw(`city.${id}`),
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-primary">{t('edit')}: {L(city.nameAr, city.nameEn)}</h1>
+        <div className="flex items-center gap-3">
+          <a href={`/admin/lands/cities/${id}`} className="text-sm text-accent">← {t('details')}</a>
+          <span className="text-xs opacity-60">{t('autosaveHint')}</span>
+        </div>
+      </div>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold text-primary">{t('basics')}</h2>
+        <GeoBasics level="city" id={id} locale={locale} initial={{ nameAr: city.nameAr, nameEn: city.nameEn, order: city.order, isActive: city.isActive, parentId: null }} />
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold text-primary">{L('نص SEO التعريفي', 'SEO intro')}</h2>
+        <GeoSeoIntroEditor level="city" targetId={id} initial={seoIntro} locale={locale} />
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold text-primary">{t('advantages')}</h2>
+        <AdvantagesEditor level="city" targetId={id} advantages={advantages.map((a) => ({ id: a.id, textAr: a.textAr, textEn: a.textEn, order: a.order }))} locale={locale} />
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold text-primary">{t('updates')}</h2>
+        {/* City-level updates inherit down to districts/neighborhoods per the inheritance matrix. */}
+        <UpdatesEditor level="city" targetId={id} updates={updates} followerCount={0} locale={locale} />
+      </section>
+
+      {/* City maps are all uploaded (the city is the top of the chain; nothing to annotate). */}
+      <div className="grid gap-6 sm:grid-cols-2">
+        <section className="space-y-2">
+          <h2 className="font-semibold text-primary">{t('masterplan')}</h2>
+          <AreaMapEditor level="city" targetId={id} kind="masterplan" map={maps.masterplan} annotatable={false} />
+        </section>
+        <section className="space-y-2">
+          <h2 className="font-semibold text-primary">{t('locationMap')}</h2>
+          <AreaMapEditor level="city" targetId={id} kind="location" map={maps.location} annotatable={false} />
+        </section>
+        <section className="space-y-2">
+          <h2 className="font-semibold text-primary">{t('servicesMap')}</h2>
+          <AreaMapEditor level="city" targetId={id} kind="services" map={maps.services} annotatable={false} />
+        </section>
+        <section className="space-y-2">
+          <h2 className="font-semibold text-primary">{t('mainRoadsMap')}</h2>
+          <AreaMapEditor level="city" targetId={id} kind="mainroads" map={maps.mainroads} annotatable={false} />
+        </section>
+      </div>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold text-primary">{L('صور إضافية', 'Extra photos')}</h2>
+        <CustomPhotosEditor level="city" targetId={id} photos={maps.custom} />
+      </section>
+
+      <div className="flex justify-end border-t border-graphite/15 pt-4"><DoneButton href="/admin/lands/cities" /></div>
+    </div>
+  );
+}

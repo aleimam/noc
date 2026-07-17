@@ -91,6 +91,7 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState('');
   const [addSel, setAddSel] = useState('');
+  const [brandTab, setBrandTab] = useState(BRANDS[0]!.brand);
   // Unsaved-changes tracking: compare against the last saved snapshot, not the mount prop.
   const [savedSnap, setSavedSnap] = useState(() => JSON.stringify(initial));
   const dirty = JSON.stringify(s) !== savedSnap;
@@ -270,12 +271,33 @@ export function WatermarkClient({ initial, contacts, typeOptions }: { initial: S
         <p className="text-xs opacity-60">عند إيقافه لا تُختم أي صورة في أي قسم. عند تشغيله تعمل كل فئة مُفعَّلة حسب تنسيقها.</p>
       </section>
 
-      {BRANDS.map((b) => (
+      {/* Brand tabs — the settings for BOTH brands stay loaded in state; the tabs only switch
+          which one is visible, so unsaved edits survive switching back and forth. */}
+      <div className="flex gap-2" role="tablist" aria-label="العلامة التجارية">
+        {BRANDS.map((b) => (
+          <button
+            key={b.brand}
+            type="button"
+            role="tab"
+            aria-selected={brandTab === b.brand}
+            onClick={() => setBrandTab(b.brand)}
+            className={`min-h-[44px] flex-1 rounded-xl border-2 px-4 py-2 text-base font-black transition ${
+              brandTab === b.brand
+                ? 'border-navy-800 bg-navy-800 text-soft shadow'
+                : 'border-navy-800/25 bg-navy-800/[0.03] text-navy-800 hover:bg-navy-800/10'
+            }`}
+          >
+            🏷️ {b.label}
+            <span className={`block text-[11px] font-normal ${brandTab === b.brand ? 'opacity-80' : 'opacity-60'}`} dir="ltr">
+              {b.brand === 'alsawarey' ? 'alsawarey.com' : 'newobour.com'}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {BRANDS.filter((b) => b.brand === brandTab).map((b) => (
         <div key={b.brand} className="space-y-3 rounded-xl border-2 border-navy-800/20 bg-navy-800/[0.03] p-3">
-          <div className="px-1">
-            <h2 className="text-lg font-black text-navy-800">🏷️ {b.label}</h2>
-            <p className="text-xs opacity-60">إعدادات ختم صور موقع {b.brand === 'alsawarey' ? 'alsawarey.com' : 'newobour.com'} — بيانات التواصل والفئات أدناه تخص هذا الموقع فقط.</p>
-          </div>
+          <p className="px-1 text-xs opacity-60">إعدادات ختم صور موقع {b.brand === 'alsawarey' ? 'alsawarey.com' : 'newobour.com'} — بيانات التواصل والفئات أدناه تخص هذا الموقع فقط.</p>
           <ContactsManager brand={b.brand} brandLabel={b.label} contacts={contacts.filter((c) => c.brand === b.brand)} />
           {b.cats.map((cat) => <div key={cat}>{catSection(cat)}</div>)}
         </div>

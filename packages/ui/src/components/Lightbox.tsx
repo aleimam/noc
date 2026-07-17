@@ -15,17 +15,14 @@ type Props = {
   locale?: 'ar' | 'en';
   /** Keeps the caller's gallery in sync while the visitor browses in here. */
   onIndexChange?: (i: number) => void;
-  /** "Ask about THIS photo" — a WhatsApp button that opens a chat with `text` + the image URL.
-   *  `phone` must already be in international wa.me form (e.g. 2010…). */
-  whatsapp?: { phone: string; text: string };
-  /** Analytics hook: fired on user actions ('nav' | 'zoom' | 'copy' | 'share' | 'download' | 'open_tab' | 'whatsapp'). */
+  /** Analytics hook: fired on user actions ('nav' | 'zoom' | 'copy' | 'share' | 'download' | 'open_tab'). */
   onEvent?: (name: string, index: number) => void;
   onClose: () => void;
 };
 
 /** Fullscreen image viewer: zoomable (wheel / double-tap / +− buttons, drag to pan)
  *  and, when given `photos`, swipeable between images. Closes on ESC or backdrop click. */
-export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexChange, whatsapp, onEvent, onClose }: Props) {
+export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexChange, onEvent, onClose }: Props) {
   const list = photos && photos.length ? photos : src ? [src] : [];
   const [i, setI] = useState(index);
   const [scale, setScale] = useState(1);
@@ -109,11 +106,6 @@ export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexCh
   const openTab = () => {
     onEvent?.('open_tab', i);
     window.open(absUrl(), '_blank', 'noopener');
-  };
-  const askWhatsapp = () => {
-    if (!whatsapp) return;
-    onEvent?.('whatsapp', i);
-    window.open(`https://wa.me/${whatsapp.phone}?text=${encodeURIComponent(`${whatsapp.text}\n${absUrl()}`)}`, '_blank', 'noopener');
   };
 
   useEffect(() => {
@@ -220,11 +212,6 @@ export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexCh
       {/* actions + prev / next + counter */}
       <div className="fixed inset-x-0 bottom-4 flex flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-wrap items-center justify-center gap-2">
-          {whatsapp && (
-            <button type="button" onClick={askWhatsapp} className="rounded-full bg-[#25D366] px-4 py-1.5 text-sm font-bold text-white hover:brightness-110">
-              🟢 {L('اسأل عن هذه الصورة', 'Ask about this photo')}
-            </button>
-          )}
           <button type="button" onClick={copyImage} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">📋 {L('نسخ', 'Copy')}</button>
           <button type="button" onClick={share} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">📤 {L('مشاركة', 'Share')}</button>
           <button type="button" onClick={download} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">⬇️ {L('تنزيل', 'Download')}</button>

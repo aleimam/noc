@@ -2,15 +2,11 @@ import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
-import { AdvantagesEditor, AreaMapEditor, UpdatesEditor, CustomPhotosEditor, GeoBasics } from '../../GeoContentEditors';
-import { GeoSeoIntroEditor } from '../../GeoSeoIntroEditor';
-import { loadAreaMaps, loadUpdates } from '../../geo';
-import { getSeoIntroRaw } from '@/lib/seoContent';
-import { DoneButton } from '@/app/_components/DoneButton';
+import { loadUpdates, loadAreaMaps } from '../../geo';
 
 export const dynamic = 'force-dynamic';
 
-export default async function CityEdit({ params }: { params: Promise<{ id: string }> }) {
+export default async function CityDetail({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission('lands', 'VIEW');
   const { id } = await params;
   const city = await prisma.city.findUnique({ where: { id } });
@@ -20,70 +16,81 @@ export default async function CityEdit({ params }: { params: Promise<{ id: strin
   const locale = (await getLocale()) as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
 
-  const [advantages, maps, updates, seoIntro] = await Promise.all([
+  const [districts, advantages, maps, updates] = await Promise.all([
+    prisma.district.findMany({ where: { cityId: id }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }], select: { id: true, nameAr: true, nameEn: true } }),
     prisma.advantage.findMany({ where: { cityId: id }, orderBy: { order: 'asc' } }),
     loadAreaMaps('city', id),
     loadUpdates({ cityId: id }),
-    getSeoIntroRaw(`city.${id}`),
   ]);
+
+  const fmt = (s: string) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
+  const mapThumbs = [
+    { map: maps.location, title: t('locationMap') },
+    { map: maps.masterplan, title: t('masterplan') },
+    { map: maps.services, title: t('servicesMap') },
+    { map: maps.mainroads, title: t('mainRoadsMap') },
+  ].filter((m) => m.map);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-primary">{t('edit')}: {L(city.nameAr, city.nameEn)}</h1>
+        <h1 className="text-2xl font-bold text-primary">{L(city.nameAr, city.nameEn)}</h1>
         <div className="flex items-center gap-3">
           <a href="/admin/lands/cities" className="text-sm text-accent">← {t('cities')}</a>
-          <span className="text-xs opacity-60">{t('autosaveHint')}</span>
+          <a href={`/admin/lands/cities/${id}/edit`} className="rounded-md bg-primary px-4 py-1.5 text-sm text-soft">{t('edit')}</a>
         </div>
       </div>
 
       <section className="space-y-2">
-        <h2 className="font-semibold text-primary">{t('basics')}</h2>
-        <GeoBasics level="city" id={id} locale={locale} initial={{ nameAr: city.nameAr, nameEn: city.nameEn, order: city.order, isActive: city.isActive, parentId: null }} />
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-semibold text-primary">{t('districts')} ({districts.length})</h2>
+          <a href="/admin/lands/districts/new" className="rounded-md bg-primary px-3 py-1.5 text-sm text-soft">+ {t('addDistrict')}</a>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {districts.length === 0 && <span className="text-sm opacity-60">{t('noDistricts')}</span>}
+          {districts.map((d) => (
+            <a key={d.id} href={`/admin/lands/districts/${d.id}`} className="rounded-full border border-graphite/25 px-3 py-1 text-sm hover:bg-graphite/10">{L(d.nameAr, d.nameEn)}</a>
+          ))}
+        </div>
       </section>
 
-      <section className="space-y-2">
-        <h2 className="font-semibold text-primary">{L('نص SEO التعريفي', 'SEO intro')}</h2>
-        <GeoSeoIntroEditor level="city" targetId={id} initial={seoIntro} locale={locale} />
-      </section>
+      {advantages.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold text-primary">{t('advantages')}</h2>
+          <ul className="list-disc space-y-1 ps-5 text-sm">
+            {advantages.map((a) => <li key={a.id}>{locale === 'ar' ? a.textAr : a.textEn || a.textAr}</li>)}
+          </ul>
+        </section>
+      )}
 
-      <section className="space-y-2">
-        <h2 className="font-semibold text-primary">{t('advantages')}</h2>
-        <AdvantagesEditor level="city" targetId={id} advantages={advantages.map((a) => ({ id: a.id, textAr: a.textAr, textEn: a.textEn, order: a.order }))} locale={locale} />
-      </section>
+      {mapThumbs.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold text-primary">{t('maps')}</h2>
+          <div className="flex flex-wrap gap-3">
+            {mapThumbs.map((m) => (
+              <figure key={m.title} className="space-y-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={m.map!.clean} alt={m.title} className="h-28 w-40 rounded object-cover ring-1 ring-graphite/20" />
+                <figcaption className="text-xs opacity-60">{m.title}</figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="space-y-2">
         <h2 className="font-semibold text-primary">{t('updates')}</h2>
-        {/* City-level updates inherit down to districts/neighborhoods per the inheritance matrix. */}
-        <UpdatesEditor level="city" targetId={id} updates={updates} followerCount={0} locale={locale} />
+        {updates.length === 0 && <p className="text-sm opacity-60">{t('noUpdates')}</p>}
+        <ul className="space-y-2">
+          {updates.slice(0, 10).map((u) => (
+            <li key={u.id} className="rounded-lg border border-graphite/15 p-3">
+              <div className="text-xs opacity-60" dir="ltr">{fmt(u.happenedAt)}{u.author ? ` · ${u.author}` : ''}{u.notifiedAt ? ' · 📣' : ''}</div>
+              {u.title && <div className="mt-1 font-bold text-primary">{u.title}</div>}
+              <div className="page-content mt-1 text-sm" dangerouslySetInnerHTML={{ __html: u.body }} />
+            </li>
+          ))}
+        </ul>
       </section>
-
-      {/* City maps are all uploaded (the city is the top of the chain; nothing to annotate). */}
-      <div className="grid gap-6 sm:grid-cols-2">
-        <section className="space-y-2">
-          <h2 className="font-semibold text-primary">{t('masterplan')}</h2>
-          <AreaMapEditor level="city" targetId={id} kind="masterplan" map={maps.masterplan} annotatable={false} />
-        </section>
-        <section className="space-y-2">
-          <h2 className="font-semibold text-primary">{t('locationMap')}</h2>
-          <AreaMapEditor level="city" targetId={id} kind="location" map={maps.location} annotatable={false} />
-        </section>
-        <section className="space-y-2">
-          <h2 className="font-semibold text-primary">{t('servicesMap')}</h2>
-          <AreaMapEditor level="city" targetId={id} kind="services" map={maps.services} annotatable={false} />
-        </section>
-        <section className="space-y-2">
-          <h2 className="font-semibold text-primary">{t('mainRoadsMap')}</h2>
-          <AreaMapEditor level="city" targetId={id} kind="mainroads" map={maps.mainroads} annotatable={false} />
-        </section>
-      </div>
-
-      <section className="space-y-2">
-        <h2 className="font-semibold text-primary">{L('صور إضافية', 'Extra photos')}</h2>
-        <CustomPhotosEditor level="city" targetId={id} photos={maps.custom} />
-      </section>
-
-      <div className="flex justify-end border-t border-graphite/15 pt-4"><DoneButton href="/admin/lands/cities" /></div>
     </div>
   );
 }

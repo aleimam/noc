@@ -16,7 +16,6 @@ export function HeroGallery({
   alt,
   locale = 'ar',
   autoPlayMs = 4000,
-  whatsapp,
   trackKey,
 }: {
   items?: GalleryItem[];
@@ -26,8 +25,6 @@ export function HeroGallery({
   locale?: 'ar' | 'en';
   /** 0 disables auto-advance. */
   autoPlayMs?: number;
-  /** "Ask about this photo" WhatsApp button in the fullscreen viewer (phone in wa.me form). */
-  whatsapp?: { phone: string; text: string };
   /** First-party photo analytics: set to the listing id to log photo_open / photo_nav /
    *  photo_action events (label = image path). Omit to disable tracking entirely. */
   trackKey?: string;
@@ -203,7 +200,6 @@ export function HeroGallery({
           alt={alt}
           locale={locale}
           onIndexChange={setI}
-          whatsapp={whatsapp}
           onEvent={(name, idx) => (name === 'nav' ? fire('photo_nav', idx) : fire('photo_action', idx, name))}
           onClose={() => setOpen(false)}
         />

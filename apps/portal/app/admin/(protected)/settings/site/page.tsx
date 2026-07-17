@@ -9,7 +9,7 @@ import { SiteSettingsClient } from './SiteSettingsClient';
 
 export const dynamic = 'force-dynamic';
 
-const KEYS = ['site.mobileMenu', 'site.slogan', 'site.slogan_en', 'copyright_newobour', 'copyright_newobour_en', 'copyright_alsawarey', 'copyright_alsawarey_en', 'site.whatsappHelp', 'whatsapp_float_newobour', 'whatsapp_float_msg_newobour', 'whatsapp_float_alsawarey', 'whatsapp_float_msg_alsawarey', 'gallery.waPhoto', 'gallery.photoAnalytics'];
+const KEYS = ['site.mobileMenu', 'site.slogan', 'site.slogan_en', 'copyright_newobour', 'copyright_newobour_en', 'copyright_alsawarey', 'copyright_alsawarey_en', 'site.whatsappHelp', 'whatsapp_float_newobour', 'whatsapp_float_msg_newobour', 'whatsapp_float_alsawarey', 'whatsapp_float_msg_alsawarey', 'gallery.photoAnalytics'];
 
 export default async function SiteSettingsPage() {
   await requirePermission('settings', 'VIEW');
@@ -29,8 +29,7 @@ export default async function SiteSettingsPage() {
     whatsappFloatMsgNewobour: v['whatsapp_float_msg_newobour'] ?? '',
     whatsappFloatAlsawarey: v['whatsapp_float_alsawarey'] === '1',
     whatsappFloatMsgAlsawarey: v['whatsapp_float_msg_alsawarey'] ?? '',
-    // Listing photo gallery extras — both default ON (any value except '0').
-    galleryWaPhoto: v['gallery.waPhoto'] !== '0',
+    // Photo analytics — default ON (any value except '0').
     galleryPhotoAnalytics: v['gallery.photoAnalytics'] !== '0',
   };
 
