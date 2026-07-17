@@ -806,6 +806,58 @@ export function ListingForm({
           })}
         </div>
 
+        {/* ── Category-gated details — moved in from the old «تفاصيل إضافية» section so they sit
+             directly after the types and before the price (owner request 2026-07-17). Each group
+             keeps its own heading («المساحات» …). Filling the area here first also makes the
+             ✨ auto-title button produce a better title. ── */}
+        {allChosen && grouped.length === 0 && (
+          <p className="rounded-lg border border-graphite/15 p-4 text-sm opacity-70">
+            {t('noAttrsForCategory')}
+            {staffMode && (
+              <>
+                {' '}{t('noAttrsForCategoryStaff')}{' '}
+                <a href="/admin/marketplace/category-attributes" className="text-accent underline">{t('categoryAttrs')}</a>
+              </>
+            )}
+          </p>
+        )}
+        {allChosen ? (
+          grouped.map((g) => (
+            <div key={g.section.id} className="space-y-3 rounded-lg border border-graphite/15 p-4">
+              <h4 className="font-semibold text-primary">{L(g.section.nameAr, g.section.nameEn)}</h4>
+              {/* «مستحقات جهاز المدينة»: one-tap auto-fill from the reconciliation calculator. */}
+              {calcConfig && g.attrs.some((a) => AUTHORITY_FEE_KEYS.has(a.key)) && (
+                <div className="rounded-lg border border-gold-300/60 bg-gold/10 p-3">
+                  <button
+                    type="button"
+                    onClick={autoCalcAuthorityFees}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-soft hover:brightness-110"
+                  >
+                    🧮 {L('احسب تلقائيًا من حاسبة التصالح', 'Auto-calculate from the reconciliation calculator')}
+                  </button>
+                  <p className="mt-1.5 text-xs opacity-70">
+                    {L('يعتمد الحساب على «أصل المساحة» و«المساحة» (الفعلية المستلمة). تُملأ القيم ويمكنك تعديلها قبل الحفظ.', 'Uses the original area and the actual received area. Values are filled in and stay editable.')}
+                  </p>
+                </div>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {g.attrs.map((a) => (
+                  <label key={a.id} className="text-sm">
+                    <span className="mb-1 block opacity-80">
+                      {L(a.labelAr, a.labelEn)}
+                      {/* explicit word, not just an asterisk — low-literacy audience */}
+                      {isRequiredAttr(a) && <span className="font-semibold text-red-600"> ({L('مطلوب', 'required')})</span>}
+                    </span>
+                    {control(a)}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="rounded-lg border border-dashed border-graphite/25 p-4 text-sm opacity-60">{t('pickClassifiers')}</p>
+        )}
+
         {/* Title (+ auto-generate) */}
         <div>
           <div className="mb-1 flex items-center justify-between gap-2">
@@ -901,58 +953,6 @@ export function ListingForm({
 
         {/* «تفاصيل أخرى» + «صور أخرى» used to live here; they now render collapsed at the very
             bottom, just above the save buttons (owner request 2026-07-17). */}
-      </section>
-
-      {/* ── Extra details (category-gated attribute pool) ── */}
-      <section className="space-y-4">
-        <h3 className="font-bold text-primary">{t('extraDetails')}</h3>
-        {allChosen && grouped.length === 0 && (
-          <p className="rounded-lg border border-graphite/15 p-4 text-sm opacity-70">
-            {t('noAttrsForCategory')}
-            {staffMode && (
-              <>
-                {' '}{t('noAttrsForCategoryStaff')}{' '}
-                <a href="/admin/marketplace/category-attributes" className="text-accent underline">{t('categoryAttrs')}</a>
-              </>
-            )}
-          </p>
-        )}
-        {allChosen ? (
-          grouped.map((g) => (
-            <div key={g.section.id} className="space-y-3 rounded-lg border border-graphite/15 p-4">
-              <h4 className="font-semibold text-primary">{L(g.section.nameAr, g.section.nameEn)}</h4>
-              {/* «مستحقات جهاز المدينة»: one-tap auto-fill from the reconciliation calculator. */}
-              {calcConfig && g.attrs.some((a) => AUTHORITY_FEE_KEYS.has(a.key)) && (
-                <div className="rounded-lg border border-gold-300/60 bg-gold/10 p-3">
-                  <button
-                    type="button"
-                    onClick={autoCalcAuthorityFees}
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-soft hover:brightness-110"
-                  >
-                    🧮 {L('احسب تلقائيًا من حاسبة التصالح', 'Auto-calculate from the reconciliation calculator')}
-                  </button>
-                  <p className="mt-1.5 text-xs opacity-70">
-                    {L('يعتمد الحساب على «أصل المساحة» و«المساحة» (الفعلية المستلمة). تُملأ القيم ويمكنك تعديلها قبل الحفظ.', 'Uses the original area and the actual received area. Values are filled in and stay editable.')}
-                  </p>
-                </div>
-              )}
-              <div className="grid gap-3 sm:grid-cols-2">
-                {g.attrs.map((a) => (
-                  <label key={a.id} className="text-sm">
-                    <span className="mb-1 block opacity-80">
-                      {L(a.labelAr, a.labelEn)}
-                      {/* explicit word, not just an asterisk — low-literacy audience */}
-                      {isRequiredAttr(a) && <span className="font-semibold text-red-600"> ({L('مطلوب', 'required')})</span>}
-                    </span>
-                    {control(a)}
-                  </label>
-                ))}
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="rounded-lg border border-dashed border-graphite/25 p-4 text-sm opacity-60">{t('pickClassifiers')}</p>
-        )}
       </section>
 
       {/* ── Listing location map: annotate the selected neighborhood's masterplan (staff) ──
