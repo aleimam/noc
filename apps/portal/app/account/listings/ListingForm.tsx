@@ -126,6 +126,10 @@ export function ListingForm({
   const [pending, start] = useTransition();
   const [error, setError] = useState('');
   const [zoom, setZoom] = useState<string | null>(null);
+  // «تفاصيل أخرى + صور أخرى» is optional, so it sits collapsed at the bottom (owner request).
+  // Closed by default; its contents mount only when open — TipTap misbehaves if mounted hidden,
+  // and the text/photos live in parent state so collapsing never loses anything.
+  const [extrasOpen, setExtrasOpen] = useState(false);
 
   // ── Auto-save as draft (new forms + existing DRAFTs only) ──────────────────────────
   // Every 15s the form serializes itself; if anything changed since the last save AND the
@@ -217,6 +221,9 @@ export function ListingForm({
   };
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description);
+  // The editor stores HTML, so "empty" arrives as '' or '<p></p>' — strip tags/spaces before
+  // deciding whether to flag real content on the collapsed «تفاصيل أخرى» header.
+  const hasDescription = description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim().length > 0;
   // Legacy Listing.area passthrough — the visible input moved to the Area attribute group.
   const [area] = useState(initial.area);
   const [price, setPrice] = useState(initial.price);
@@ -892,31 +899,8 @@ export function ListingForm({
           </div>
         )}
 
-        {/* Other details (rich text) */}
-        <div>
-          <span className="mb-1 block text-sm">{t('otherDetails')}</span>
-          <RichEditor value={description} onChange={setDescription} />
-        </div>
-
-        {/* Other photos */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-semibold">{t('otherPhotos')}</h4>
-          <div className="flex flex-wrap gap-3">
-            {photos.map((p) => (
-              <div key={p.id} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.path} alt="" onClick={() => setZoom(p.path)} className="h-20 w-20 cursor-pointer rounded-md object-cover ring-1 ring-graphite/20" />
-                <button type="button" onClick={() => setPhotos(photos.filter((x) => x.id !== p.id))} className="absolute -end-1 -top-1 rounded-full bg-red-600 px-1.5 text-xs text-white">✕</button>
-              </div>
-            ))}
-            <div className="w-48">
-              {/* nameHint → keyword-rich saved filename (image SEO): type + geo (district,
-                  neighborhood, city) + title. Empty before anything is picked → route falls
-                  back to a uuid. */}
-              <ImageAttachment stampCategory="listing" nameHint={photoNameHint} value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} />
-            </div>
-          </div>
-        </div>
+        {/* «تفاصيل أخرى» + «صور أخرى» used to live here; they now render collapsed at the very
+            bottom, just above the save buttons (owner request 2026-07-17). */}
       </section>
 
       {/* ── Extra details (category-gated attribute pool) ── */}
@@ -1041,17 +1025,69 @@ export function ListingForm({
         </section>
       )}
 
-      {/* ── رقم التواصل + the save actions: ALWAYS the last block on the form ── */}
+      {/* ── رقم التواصل ── */}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm">{t('contactPhone')}<input type="tel" dir="ltr" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inp} /></label>
         <label className="flex items-end gap-2 text-sm"><input type="checkbox" checked={contactWhatsapp} onChange={(e) => setContactWhatsapp(e.target.checked)} /> {t('whatsapp')}</label>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      {/* ── «تفاصيل أخرى» + «صور أخرى» — optional, collapsed, the last block before the actions ── */}
+      <section className="rounded-lg border border-graphite/15">
+        <button
+          type="button"
+          onClick={() => setExtrasOpen((v) => !v)}
+          aria-expanded={extrasOpen}
+          className="flex w-full items-center justify-between gap-3 p-4 text-start"
+        >
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-bold text-primary">📝 {t('otherDetails')} + {t('otherPhotos')}</span>
+            {/* Say when something's inside — a low-literacy user must never lose content behind a fold. */}
+            {(hasDescription || photos.length > 0) && (
+              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">
+                {photos.length > 0
+                  ? L(`يوجد محتوى · ${photos.length} صورة`, `has content · ${photos.length} photo${photos.length === 1 ? '' : 's'}`)
+                  : L('يوجد محتوى', 'has content')}
+              </span>
+            )}
+            <span className="text-xs opacity-60">{L('اختياري', 'optional')}</span>
+          </span>
+          <span className={`shrink-0 text-lg transition-transform ${extrasOpen ? 'rotate-180' : ''}`} aria-hidden="true">▾</span>
+        </button>
+        {extrasOpen && (
+          <div className="space-y-4 border-t border-graphite/10 p-4">
+            <div>
+              <span className="mb-1 block text-sm">{t('otherDetails')}</span>
+              <RichEditor value={description} onChange={setDescription} />
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold">{t('otherPhotos')}</h4>
+              <div className="flex flex-wrap gap-3">
+                {photos.map((p) => (
+                  <div key={p.id} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.path} alt="" onClick={() => setZoom(p.path)} className="h-20 w-20 cursor-pointer rounded-md object-cover ring-1 ring-graphite/20" />
+                    <button type="button" onClick={() => setPhotos(photos.filter((x) => x.id !== p.id))} className="absolute -end-1 -top-1 rounded-full bg-red-600 px-1.5 text-xs text-white">✕</button>
+                  </div>
+                ))}
+                <div className="w-48">
+                  {/* nameHint → keyword-rich saved filename (image SEO): type + geo (district,
+                      neighborhood, city) + title. Empty before anything is picked → route falls
+                      back to a uuid. */}
+                  <ImageAttachment stampCategory="listing" nameHint={photoNameHint} value={null} onChange={(a) => a && setPhotos((prev) => [...prev, a])} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Actions — full-width stacked on phones (golden rule: big, obvious tap targets). */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         {error && <p ref={errorRef} className="w-full text-sm font-semibold text-red-600">{error}</p>}
-        <button disabled={pending} onClick={() => submit('PENDING')} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{t('submitOffer')}</button>
-        <button disabled={pending} onClick={() => submit('DRAFT')} className="rounded-md border border-graphite/25 px-4 py-2 text-sm">{t('saveDraft')}</button>
-        <a href={returnTo ?? (staffMode ? '/admin/marketplace/listings' : partnerMode ? '/partner' : '/account/listings')} className="px-4 py-2 text-sm opacity-70">{t('cancel')}</a>
+        <button disabled={pending} onClick={() => submit('PENDING')} className="w-full rounded-md bg-primary px-4 py-3 text-base font-bold text-soft disabled:opacity-50 sm:w-auto sm:py-2 sm:text-sm sm:font-normal">{t('submitOffer')}</button>
+        <button disabled={pending} onClick={() => submit('DRAFT')} className="w-full rounded-md border border-graphite/25 px-4 py-3 text-base disabled:opacity-50 sm:w-auto sm:py-2 sm:text-sm">{t('saveDraft')}</button>
+        <a href={returnTo ?? (staffMode ? '/admin/marketplace/listings' : partnerMode ? '/partner' : '/account/listings')} className="w-full px-4 py-3 text-center text-base opacity-70 sm:w-auto sm:py-2 sm:text-sm">{t('cancel')}</a>
       </div>
 
       {/* Auto-save status — explicit so no one wonders whether their work is safe. */}
