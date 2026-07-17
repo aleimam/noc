@@ -19,10 +19,18 @@ Users are low-literacy/low-tech on phones — the design rule is *biggest, simpl
 ## Current status — NOTHING is mid-flight
 
 **Live, healthy, fully deployed, clean tree.** Local `main` and production are in sync — last
-feature commit **`e6794c1`** (verified 2026-07-17; always re-verify with `git log --oneline -1`
+feature commit **`bbcf4c3`** (verified 2026-07-17; always re-verify with `git log --oneline -1`
 on the server). Both pm2 apps online. Every feature requested to date is shipped, deployed, and
 live-verified — there is **no half-finished work** in the tree (the build passes 3/3;
 `git status` is clean).
+
+**2026-07-17 (later): listing-form layout batch — all owner-confirmed live** (commits
+`f19acb5` → `bbcf4c3`): the shared `ListingForm` was reordered so it now reads
+types → category details (moved INTO معلومات اساسية from the retired «تفاصيل إضافية» heading)
+→ title → price row [السعر · السعر لـ · 🔒 أقل سعر] → [ملاحظة · قابل للتفاوض؟] → partnerships
+→ 🗺️ map → 🗂️ papers → 📞 contact → «تفاصيل أخرى + صور أخرى» (COLLAPSED by default, mounts
+only when open, header flags «يوجد محتوى» + photo count) → save actions (full-width on mobile).
+All presentation-only; save path untouched; applies to all five entry points sharing the form.
 
 The complete change log for 2026-07-15→17 (hero gallery + photo analytics, thumbnail pipeline,
 soft delete + 90-day trash, auto-save drafts, admin quick-add + recent-features grid, city
