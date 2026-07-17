@@ -12,10 +12,10 @@ export { POSTER_FONTS } from './icons';
 // Requires the fonts installed on the host (prod: /usr/share/fonts/ — Almarai/Tajawal/
 // Cairo/Changa).
 //
-// Poster = consolidated Layout A (owner-approved 2026-07-08): header band (Card Title +
-// ad pill), big listing location map, then a 2-column grid of the city map + the marked
-// group tables (compact, no logo/contacts/ad inside; grid grows past 3 groups), seal
-// footer. Unbranded version drops the logo + contacts.
+// Poster = consolidated Layout A (owner-approved 2026-07-08): header band (title + ad
+// pill), big listing location map, then a 2-column COLUMN-major grid of the marked group
+// tables — cards read down the LEFT column then the RIGHT, city map in the last slot
+// (owner's numbered mock 2026-07-17) — then the footer strip. Unbranded drops logo+contacts.
 //
 // All colors + the font come from a per-brand PosterTheme (admin-editable via the
 // Setting `posterTheme.<brand>`); the defaults below are the owner-approved identity.
@@ -386,26 +386,28 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
     y = bigY + bigH + gap;
   }
 
-  // ── 2-col grid: [group0 | city map 5:4] then remaining groups pairwise ──
+  // ── 2-col grid, COLUMN-major (owner's numbered mock, 2026-07-17): the group cards read
+  // down the LEFT column first (card 1 = first details group, card 2 = second, …), then
+  // continue down the RIGHT column; the city map takes the LAST slot instead of interleaving.
   const colW = (bigW - gap) / 2;
   type Cell = { kind: 'card'; g: PosterCardGroup } | { kind: 'city' };
-  const cells: Cell[] = [];
-  if (d.groups[0]) cells.push({ kind: 'card', g: d.groups[0] });
+  const cells: Cell[] = d.groups.map((g) => ({ kind: 'card' as const, g }));
   if (d.cityMap) cells.push({ kind: 'city' });
-  for (const g of d.groups.slice(1)) cells.push({ kind: 'card', g });
+
+  const half = Math.ceil(cells.length / 2);
+  const leftCol = cells.slice(0, half);
+  const rightCol = cells.slice(half);
 
   const cardH = (g: PosterCardGroup) => 46 + Math.min(g.rows.length, 5) * 42 + 10;
   const CITY_H = Math.round(colW * 4 / 5);
   let cityBox: { top: number; left: number; w: number; h: number } | null = null;
-  for (let i = 0; i < cells.length; i += 2) {
-    const row = [cells[i]!, cells[i + 1]].filter(Boolean) as Cell[];
-    const hasCity = row.some((c) => c.kind === 'city');
-    const rowH = Math.max(...row.map((c) => (c.kind === 'card' ? cardH(c.g) : 0)), hasCity ? CITY_H : 256);
-    for (let j = 0; j < row.length; j++) {
-      const c = row[j]!;
-      // RTL: the FIRST cell of each pair sits in the right column, the second on the left
-      // (owner request 2026-07-09 — swap paired card/group positions).
-      const x = j === 0 ? M + colW + gap : M;
+  for (let i = 0; i < half; i++) {
+    const row: Array<{ c: Cell; x: number }> = [];
+    if (leftCol[i]) row.push({ c: leftCol[i]!, x: M });
+    if (rightCol[i]) row.push({ c: rightCol[i]!, x: M + colW + gap });
+    const hasCity = row.some((r) => r.c.kind === 'city');
+    const rowH = Math.max(...row.map((r) => (r.c.kind === 'card' ? cardH(r.c.g) : 0)), hasCity ? CITY_H : 256);
+    for (const { c, x } of row) {
       if (c.kind === 'card') parts.push(compactCard(x, y, colW, c.g, rowH).svg);
       else {
         parts.push(`<rect x="${x}" y="${y}" width="${colW}" height="${rowH}" rx="14" fill="#eef0f4" stroke="${th.gold}" stroke-width="2"/>`);
