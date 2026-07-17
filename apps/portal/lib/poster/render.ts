@@ -507,30 +507,26 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
     y = bigY + bigH + gap;
   }
 
-  // ── 2-col grid, COLUMN-major (owner rules, 2026-07-17): slot 1 = the city/district
-  // location map (top-left), then the group cards ordered BIGGEST-first (most words across
-  // their values — the heaviest card right after the map), reading down the LEFT column and
-  // continuing down the RIGHT. Ties keep form order (stable sort).
+  // ── 2-col grid, ROW-major in FORM order (owner's numbered mock 2026-07-17): slot 1 = the
+  // city/district location map (top-left), then the detail groups in their section order,
+  // filling each row left→right, top→bottom — cell 1 top-left, 2 top-right, 3 bottom-left,
+  // 4 bottom-right (map · الموقع · مميزات · مستحقات).
   const colW = (bigW - gap) / 2;
   type Cell = { kind: 'card'; g: PosterCardGroup } | { kind: 'city' };
-  const wordsOf = (g: PosterCardGroup) => g.rows.reduce((a, r) => a + r.value.trim().split(/\s+/).filter(Boolean).length, 0);
-  const cells: Cell[] = [...d.groups].sort((a, b) => wordsOf(b) - wordsOf(a)).map((g) => ({ kind: 'card' as const, g }));
-  if (d.cityMap) cells.unshift({ kind: 'city' });
-
-  const half = Math.ceil(cells.length / 2);
-  const leftCol = cells.slice(0, half);
-  const rightCol = cells.slice(half);
+  const cells: Cell[] = [];
+  if (d.cityMap) cells.push({ kind: 'city' });
+  for (const g of d.groups) cells.push({ kind: 'card', g });
 
   const cardH = (g: PosterCardGroup) => 46 + Math.min(g.rows.length, 5) * 42 + 10;
   const CITY_H = Math.round(colW * 4 / 5);
   let cityBox: { top: number; left: number; w: number; h: number } | null = null;
-  for (let i = 0; i < half; i++) {
-    const row: Array<{ c: Cell; x: number }> = [];
-    if (leftCol[i]) row.push({ c: leftCol[i]!, x: M });
-    if (rightCol[i]) row.push({ c: rightCol[i]!, x: M + colW + gap });
-    const hasCity = row.some((r) => r.c.kind === 'city');
-    const rowH = Math.max(...row.map((r) => (r.c.kind === 'card' ? cardH(r.c.g) : 0)), hasCity ? CITY_H : 256);
-    for (const { c, x } of row) {
+  for (let i = 0; i < cells.length; i += 2) {
+    const pair = [cells[i], cells[i + 1]].filter(Boolean) as Cell[];
+    const hasCity = pair.some((c) => c.kind === 'city');
+    const rowH = Math.max(...pair.map((c) => (c.kind === 'card' ? cardH(c.g) : 0)), hasCity ? CITY_H : 256);
+    for (let j = 0; j < pair.length; j++) {
+      const c = pair[j]!;
+      const x = j === 0 ? M : M + colW + gap; // first of the pair → left, second → right
       if (c.kind === 'card') parts.push(compactCard(x, y, colW, c.g, rowH).svg);
       else {
         parts.push(`<rect x="${x}" y="${y}" width="${colW}" height="${rowH}" rx="14" fill="#eef0f4" stroke="${th.gold}" stroke-width="2"/>`);
