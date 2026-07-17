@@ -180,7 +180,7 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 | Listing hero gallery | listing detail pages, BOTH sites | ecommerce-style `HeroGallery`+`Lightbox` in @noc/ui: order = location map → big branded poster → photos → generated → area photos/maps (nb-masterplan skipped when the location map exists); autoplay 4s stop-on-touch (+reduced-motion/hidden-tab/off-screen guards); fullscreen zoom/copy/share/download/open-tab. First-party photo analytics (photo_open/nav/action → AnalyticsEvent, «أكثر الصور مشاهدة» card in the dashboard) — admin toggle Setting `gallery.photoAnalytics` (≠'0'=on). The «اسأل عن هذه الصورة» WhatsApp button was REMOVED entirely 2026-07-17 (owner request) — don't re-add |
 | Al Sawarey storefront | brokerage `/` `/listings` | display-only; `showOnBrokerage` + Type/Purpose gates; customer OTP login, wishlist |
 | **Partner portal (multi-site)** | `/partner` on BOTH domains | 100% shared via `@noc/partner-portal`; per-partner site access (`Owner.siteNewObour/siteAlsawary`); partner listings show only on enabled sites; lean listing form both sides; login = password OR OTP (SMS/email) |
-| Rationing (كشوف التقنين) | portal `/rationing`, admin sheets/scans/**watchers** | Excel import, soft Arabic search, quotas by security level; name-watch follow-ups (`/admin/rationing/watchers`) → auto-alert + curated congrats SMS + phone-contact «Done» queue |
+| Rationing (كشوف التقنين) | portal `/rationing`, admin sheets/scans/**watchers** | Excel import, soft Arabic search, quotas by security level; name-watch follow-ups (`/admin/rationing/watchers`) → auto-alert + curated congrats SMS + phone-contact «Done» queue; scans page = full photo↔rows reconciliation suite (clickable orphan/missing/serial-gap drill-downs, one-click filename fixes, per-import coverage) |
 | Lands/geo explorer | portal `/explore` | city→district→neighborhood→block, masterplans, advantages, amenities. Neighborhood inherits district LOCATION map if it has none (explore only, never listings) |
 | Calculator | portal `/calculator` | area + تصالح cost calc, admin-editable rates (transfer 180/م² since the Authority's 2026-07 cut); the listing form's «مستحقات جهاز المدينة» auto-fills from the same `reconcile()` (🧮 button, needs أصل المساحة + المساحة) |
 | News / Guide / Price index / Owner profiles | portal | public surfaces |
@@ -250,6 +250,20 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   (`apps/portal/lib/neighborhoodAreas.ts`, both explore pages); geo-summary word-duplication fix
   («حي الحي الأول»); staff ✎-edit button on Al Sawarey listing pages (needs the sw_admin token);
   admin-editable congratulations-SMS text.
+- **07-17 (later, commits `730fcb4`+`e6794c1`): rationing scan-reconciliation suite.** The scans
+  page (`/admin/rationing/scans`) stats are now clickable drill-downs: «صور بلا صفوف» (orphan
+  photos: preview/delete + near-match suggestion with one-click **«اعتماد هذا الاسم»** rename —
+  normalization ignores extension/separators/leading zeros, edit distance ≤2; `renameScan` action
+  only changes the DB match key, image untouched) · «صفوف بلا صورة» (per-file rows count,
+  show-rows modal, copy-name, reverse «ربط هذه الصورة» suggestion, **per-import coverage chips**
+  grouped by SheetImportBatch) · new 5th stat **«فجوات ترقيم محتملة»** (`findSerialGaps`: serials
+  skipped mid-sequence in the `DD MM YYYY NN` filename pattern with neither photo nor rows =
+  pages probably never scanned nor typed; copy-chips give ready file names). Duplicates page
+  got a real photo-thumbnail column (click→Lightbox, ESC/✕/backdrop closes; «لا توجد صورة» badge).
+  **Prod diagnosis recorded:** the review queue's 181 photo-less records = ~166 rows from
+  8 unscanned April pages (23/26/29-04, mostly in `Digitized.csv_2026_04`) + 3 rows whose Excel
+  wrote `12_07_2026_0X.jpg` (underscores) vs the uploaded `12 07 2026 0X.jpg` (spaces) — the
+  latter are one-click fixable in the new panel; the April pages need scanning (owner).
 
 **2026-07-14: rationing name-watch admin + follow-up workflow (commits `7f9f49a`→`d99345f`,
 deployed+verified).** The public «تنبيهني عند ظهور اسمي» requests (`RationingFollow` kind=WATCH)

@@ -24,7 +24,10 @@ covers; Al Sawarey review round (EN fixes, favicon, OG, useful-links footer, ric
 cards); SEO meta-description overhaul + **Google Search Console connected for both domains**;
 auto-save-as-draft on the listing form; **soft delete with 90-day trash + purge cron**; global
 quick-add + recently-used-features grid on the admin dashboard. Zero-result search terms
-reviewed 2026-07-17 — nothing actionable yet (12 searches total). Backlog is 100% owner-action.
+reviewed 2026-07-17 — nothing actionable yet (12 searches total). Later same day (`730fcb4` +
+`e6794c1`): rationing scan-reconciliation suite — clickable orphan/missing/serial-gap drill-downs
+on the scans page with one-click filename fixes + per-import coverage, and photo thumbnails with
+lightbox on the duplicates page. Backlog is 100% owner-action.
 
 **Shipped 2026-07-13 (commits `32c9194` → `4a77aa2`):**
 - **Al Sawarey listing defaults** — toggling «عرض هذا الإعلان على الصواري» on a fresh staff form

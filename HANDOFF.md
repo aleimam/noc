@@ -1,6 +1,6 @@
 # Project Handoff — NOC platform (newobour.com + alsawarey.com)
 
-_Last updated: 2026-07-17 · Written so a new Claude session (on any account, same device) can continue this project._
+_Last updated: 2026-07-17 (end of day) · Written so a new Claude session (on any account, same device) can continue this project._
 
 > **Read `CLAUDE.md` first — it is the master onboarding doc** (architecture, the production
 > deploy runbook with every gotcha, the server map, feature map, architecture rules, and the
@@ -18,15 +18,18 @@ Users are low-literacy/low-tech on phones — the design rule is *biggest, simpl
 
 ## Current status — NOTHING is mid-flight
 
-**Live, healthy, fully deployed, clean tree.** Local `main` and production are both at
-**`df78560`** (verified 2026-07-17). Both pm2 apps online. Every feature requested to date is
-shipped, deployed, and live-verified — there is **no half-finished work** in the tree (the
-build passes 3/3; `git status` is clean).
+**Live, healthy, fully deployed, clean tree.** Local `main` and production are in sync — last
+feature commit **`e6794c1`** (verified 2026-07-17; always re-verify with `git log --oneline -1`
+on the server). Both pm2 apps online. Every feature requested to date is shipped, deployed, and
+live-verified — there is **no half-finished work** in the tree (the build passes 3/3;
+`git status` is clean).
 
 The complete change log for 2026-07-15→17 (hero gallery + photo analytics, thumbnail pipeline,
 soft delete + 90-day trash, auto-save drafts, admin quick-add + recent-features grid, city
 detail/edit split, watermark brand tabs, Al Sawarey review round, SEO descriptions + Google
-Search Console, WhatsApp-photo-button removal, zero-result search review) is in
+Search Console, WhatsApp-photo-button removal, zero-result search review, and the **rationing
+scan-reconciliation suite** — clickable orphan/missing/serial-gap drill-downs with one-click
+filename fixes, per-import coverage chips, photo thumbnails on the duplicates page) is in
 `CLAUDE.md` → *Current state & pending*.
 
 ## What lives on this device but NOT in the repo
@@ -62,6 +65,11 @@ Full detail in `CLAUDE.md` → owner-blocked list. Short version, roughly by eff
    title/subtitle + hero image, all in the admin Storefront editor.
 7. **~2026-07-23: GSC check-up** — coverage on both domains + alsawarey sitemap → Success.
 8. `/code-review ultra` whenever the owner wants it (billed); fold findings into `security.md` §7.
+9. **Rationing photo backlog (diagnosed 2026-07-17):** the review queue's 181 photo-less records
+   trace to (a) 3 rows with underscore-vs-space filename typos — fix with one click in
+   `/admin/rationing/scans` → «صفوف بلا صورة» → «ربط هذه الصورة»; (b) ~166 rows from 8 unscanned
+   April pages (23/26/29-04) — the owner needs to photograph those pages; the «فجوات ترقيم»
+   panel provides copy-ready file names.
 
 Also: revisit `/admin/analytics/search` zero-result terms once real traffic accumulates
 (reviewed 2026-07-17 — only 12 searches so far, nothing actionable, synonym dictionary empty).
