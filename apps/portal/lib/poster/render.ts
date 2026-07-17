@@ -362,13 +362,27 @@ export async function renderPoster(d: PosterData, brand: PosterBrand, cfg: Brand
     );
   }
 
-  // title on the right, up to two lines
+  // Title on the right, up to two lines — CAPPED to the space right of the ad/area table.
+  // Long titles used to run leftward over the رقم الإعلان pill and the area values
+  // (fixed 2026-07-17): shrink the font to fit (floor 20px), then ellipsis-clip as a
+  // last resort so the header never overprints.
+  const titleEnd = w - M - 16;
+  const titleMax = Math.max(titleEnd - (tabX + tabW) - 20, 200);
   const tl = splitTwoLines(d.title);
-  if (tl.length === 2) {
-    parts.push(T(w - M - 16, cy - 8, tl[0]!, { s: 33, w: 800, fill: hb.text, anchor: 'end' }));
-    parts.push(T(w - M - 16, cy + 32, tl[1]!, { s: 33, w: 800, fill: hb.text, anchor: 'end' }));
+  const widest = Math.max(...tl.map((s) => estTextW(s, 33, false)));
+  const ts = widest > titleMax ? Math.max(20, Math.floor((33 * titleMax) / widest)) : 33;
+  const fitLine = (s: string): string => {
+    if (estTextW(s, ts, false) <= titleMax) return s;
+    let out = s;
+    while (out.length > 1 && estTextW(out + '…', ts, false) > titleMax) out = out.slice(0, -1);
+    return out.trimEnd() + '…';
+  };
+  const lines = tl.map(fitLine);
+  if (lines.length === 2) {
+    parts.push(T(titleEnd, cy - 8, lines[0]!, { s: ts, w: 800, fill: hb.text, anchor: 'end' }));
+    parts.push(T(titleEnd, cy + 32, lines[1]!, { s: ts, w: 800, fill: hb.text, anchor: 'end' }));
   } else {
-    parts.push(T(w - M - 16, cy + 12, tl[0]!, { s: 33, w: 800, fill: hb.text, anchor: 'end' }));
+    parts.push(T(titleEnd, cy + 12, lines[0]!, { s: ts, w: 800, fill: hb.text, anchor: 'end' }));
   }
 
   // ── Big listing location map: full width, height from the map's own aspect ratio ──
