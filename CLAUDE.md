@@ -224,7 +224,11 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   analytics** with admin toggle. The WhatsApp "ask about this photo" button was built, then toggled
   off, then **fully deleted 2026-07-17** at the owner's request (code + setting + prod row).
 - **Thumbnail pipeline** for card covers (mirrored `/thumb` routes; a 2.0MB cover → 33KB WebP);
-  covers everywhere now resolve location-map-first → first photo (`coversForListings`/`coversFor`).
+  covers everywhere resolve location-map → first photo → **neighborhood masterplan fallback**
+  (`coversForListings`/`coversFor`, both mirrors — so a new listing with no drawn map/photos still
+  shows its area map, never a blank card). **0/blank price** anywhere public renders «السعر عند
+  الطلب / تواصل لمعرفة السعر» (normalized 0⇒null in the brokerage card+detail builders, guarded on
+  the portal market card/detail/compare/similar + the structured-data Offer) — added 2026-07-18.
 - **Soft delete** (migration `20260716140000_listing_soft_delete`): delete buttons in admin lists
   → trash with restore/purge at `/admin/marketplace/listings/deleted` (admins only), purge cron
   daily 03:40, ~15 query sites gained the `deletedAt: null` filter (see Architecture rules).
