@@ -2,7 +2,7 @@
 
 Master onboarding for anyone (human or Claude session) picking up this repo. It captures the
 architecture, the production runbook, and every hard-won gotcha. Deeper docs are linked at the
-bottom. Last full update: **2026-07-17**. Mid-flight state (if any) lives in `HANDOFF.md`.
+bottom. Last full update: **2026-07-19**. Mid-flight state (if any) lives in `HANDOFF.md`.
 
 ## What this is
 
@@ -190,9 +190,46 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 | Appearance/theming | admin settings | per-site colors/fonts via Setting `theme.<brand>` |
 | Security posture | admin settings | `security.level` LIGHT/MEDIUM/HIGH gates scans/maps/quotas |
 
-## Current state & pending (as of 2026-07-17)
+## Current state & pending (as of 2026-07-19)
 
-**Everything below is deployed + live-verified; the tree is clean; local `main` = prod.**
+**Everything below is deployed + live-verified; the tree is clean; local `main` = prod (`751c5cd`).**
+
+**2026-07-18→19: listings/poster/partner batch (commits `a207826`→`751c5cd`, all deployed + live-verified).**
+- **Poster big-card grid order** finalised to a FIXED order keyed to STABLE section keys
+  (`POSTER_CARD_ORDER` in `lib/poster/generate.ts`): `location-pros → auth_pay → location`, row-major =
+  map · مميزات الموقع · مستحقات · الموقع (cells 1 TL, 2 TR, 3 BL, 4 BR). Owner iterated on this a few
+  times — this is the final; don't reshuffle. (Reorder happens in generate.ts by section KEY; render.ts
+  is unchanged row-major, map in slot 1.)
+- **0/blank price ⇒ «السعر عند الطلب / تواصل لمعرفة السعر»** everywhere public (brokerage card+detail
+  builders normalise 0⇒null; portal market card/detail/compare/similar + structured-data Offer guard
+  `> 0`). See the Feature-map thumbnail row.
+- **Card covers gained a neighborhood-masterplan fallback** (`coversFor`/`coversForListings`, both
+  mirrors) → a new listing with no drawn location map AND no photos still shows its area map, never a
+  blank card.
+- **⭐ Partner listing-visibility DECOUPLED from site-access (owner decision):** `Owner.siteNewObour`/
+  `siteAlsawary` now gate partner **login only** — a partner's listings show on **BOTH** public sites
+  regardless (editing from portal or admin is global, one shared `Listing` row). `newObourVisibility()`
+  ⇒ `{deletedAt:null}`; `alsawareyVisibility()` ⇒ any partner-owned OR `showOnBrokerage`;
+  `listingVisibleOnNewObour()` ⇒ `true` (see `packages/partner-portal/src/visibility.ts`). **This
+  SUPERSEDES the earlier "partner listings only on enabled sites" rule** — don't reinstate it. (Concrete
+  effect: owner «عقيد إسلام البربري» / partner `elbarbary` is Al-Sawarey-login-only but his 3 listings
+  now show on both sites; New Obour `/market` went 3→6.)
+- **Partner portal nav** split/renamed: **عروضي** (own listings, editable = the dashboard) · **عروض
+  الصواري** (view-only browse of every Al Sawarey offer, no editing). Account page got a reveal-password
+  (👁) toggle on the new-password field (can't show the stored hash — it's encrypted).
+- **Admin label «البائع» → «أضيف بواسطة» / "Posted by"** (the `seller` i18n key) — it's the account that
+  posted the listing (staff), distinct from the recorded «المالك» (real owner, internal contact).
+- **«شوهدت مؤخرًا» auto-prunes deleted listings:** `RecentlyViewed` (@noc/ui) validates its localStorage
+  snapshot against the new **mirrored** route `POST /api/listings/alive` (both apps; returns ids still
+  PUBLISHED/SOLD & not soft-deleted, 60/min/IP) on mount, drops dead entries, renders nothing until
+  validated. Fixed the "blank اختبار SEO cards" the owner saw.
+- **Data cleanup:** deleted one ORPHANED neighborhood-masterplan `areaMap` (row + 3 image files) that
+  pointed to a deleted neighborhood; verified (md5 + 32×32 perceptual diff) all 24 live neighborhood
+  masterplans are otherwise distinct — no neighborhood shares another's map. Listing **#2607501** still
+  has **no drawn location map** (owner must draw it via admin Edit → ✎ «إنشاء خريطة الموقع من مخطط الأصل»
+  if they want the big annotated map on its poster; the card thumbnail is covered by the masterplan
+  fallback regardless). An optional `ops/find-orphan-maps.ts` sweeper was offered but **not built**
+  (zero orphans remain).
 
 **Owner-blocked (waiting on the owner, everything else is prepped):**
 1. **Cloudflare proxy flip (Part C)** — pure dashboard task now; ordered checklist in
