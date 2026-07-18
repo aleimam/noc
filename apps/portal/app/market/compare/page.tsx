@@ -25,7 +25,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
   const covers = await coversForListings(ordered.map((l) => l.id));
 
   const fields: { label: string; get: (l: (typeof ordered)[number]) => string }[] = [
-    { label: L('السعر', 'Price'), get: (l) => (l.price != null ? `${Number(l.price).toLocaleString('en')} ${currency(locale)}` : '—') },
+    { label: L('السعر', 'Price'), get: (l) => (l.price != null && Number(l.price) > 0 ? `${Number(l.price).toLocaleString('en')} ${currency(locale)}` : L('السعر عند الطلب', 'On request')) },
     { label: L('المساحة الفعلية', 'Actual area'), get: (l) => (l.area != null ? `${Number(l.area)} ${L('م²', 'm²')}` : '—') },
     { label: L('النوع', 'Type'), get: (l) => L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '') || '—' },
     { label: L('المنطقة', 'Location'), get: (l) => (l.neighborhood ? `${L(l.neighborhood.district.nameAr, l.neighborhood.district.nameEn)} · ${L(l.neighborhood.nameAr, l.neighborhood.nameEn)}` : '—') },

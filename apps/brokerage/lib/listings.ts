@@ -150,6 +150,23 @@ async function coversFor(ids: string[]): Promise<Map<string, string>> {
     });
     for (const r of rows) if (r.ownerId && !cover.has(r.ownerId)) cover.set(r.ownerId, thumbUrl(r.path));
   }
+  // Final fallback: the listing's neighborhood masterplan (a generic area map — no plot marker,
+  // but far better than a blank card) — covers new listings that have neither a location map nor
+  // photos yet, so cards never render an empty placeholder.
+  const stillMissing = ids.filter((id) => !cover.has(id));
+  if (stillMissing.length) {
+    const ls = await prisma.listing.findMany({ where: { id: { in: stillMissing } }, select: { id: true, neighborhoodId: true } });
+    const nbIds = [...new Set(ls.map((l) => l.neighborhoodId).filter((x): x is string => !!x))];
+    if (nbIds.length) {
+      const nbMaps = await prisma.areaMap.findMany({
+        where: { level: 'neighborhood', areaId: { in: nbIds }, kind: 'masterplan' },
+        select: { areaId: true, alswareyPath: true, cleanPath: true },
+      });
+      const byNb = new Map<string, string>();
+      for (const m of nbMaps) { const p = m.alswareyPath || m.cleanPath; if (m.areaId && p && !byNb.has(m.areaId)) byNb.set(m.areaId, p); }
+      for (const l of ls) { const p = l.neighborhoodId ? byNb.get(l.neighborhoodId) : null; if (p && !cover.has(l.id)) cover.set(l.id, thumbUrl(p)); }
+    }
+  }
   return cover;
 }
 
@@ -161,7 +178,7 @@ function toCard(l: Prisma.ListingGetPayload<{ select: typeof cardSelect }>, cove
     title: l.title,
     typeAr: l.typeOption?.nameAr ?? null,
     typeEn: l.typeOption?.nameEn ?? null,
-    price: l.price != null ? Number(l.price) : null,
+    price: l.price != null && Number(l.price) > 0 ? Number(l.price) : null, // 0/blank ⇒ «السعر عند الطلب»
     soldPrice: l.soldPrice != null ? Number(l.soldPrice) : null,
     status: l.status,
     cover: cover.get(l.id) ?? null,
@@ -393,7 +410,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
     title: l.title,
     description: l.description,
     actualArea: l.area != null ? Number(l.area) : null,
-    price: l.price != null ? Number(l.price) : null,
+    price: l.price != null && Number(l.price) > 0 ? Number(l.price) : null, // 0/blank ⇒ «السعر عند الطلب»
     priceUnit: l.priceUnit,
     priceNegotiable: l.priceNegotiable,
     soldPrice: l.soldPrice != null ? Number(l.soldPrice) : null,
