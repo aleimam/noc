@@ -86,7 +86,7 @@ async function gather(listingId: string): Promise<Gathered | null> {
           number: true, bool: true, text: true,
           option: { select: { labelAr: true } },
           listItem: { select: { labelAr: true } },
-          attribute: { select: { labelAr: true, type: true, unit: true, config: true, section: { select: { id: true, nameAr: true, order: true, icon: true } } } },
+          attribute: { select: { labelAr: true, type: true, unit: true, config: true, section: { select: { id: true, key: true, nameAr: true, order: true, icon: true } } } },
         },
       },
     },
@@ -111,13 +111,13 @@ async function gather(listingId: string): Promise<Gathered | null> {
 
   // Rows keep label + value (one attribute = one table row); PHOTOS/DOCUMENTS carry
   // file markers, not display values, so they never appear on cards.
-  const bySec = new Map<string, { id: string; name: string; order: number; icon: string | null; rows: { label: string; value: string }[] }>();
+  const bySec = new Map<string, { id: string; key: string; name: string; order: number; icon: string | null; rows: { label: string; value: string }[] }>();
   for (const v of l.values) {
     const sec = v.attribute.section;
     if (!sec || v.attribute.type === 'PHOTOS' || v.attribute.type === 'DOCUMENTS') continue;
     const s = valStr(v, ctx);
     if (!s) continue;
-    const g = bySec.get(sec.id) ?? { id: sec.id, name: sec.nameAr, order: sec.order, icon: sec.icon, rows: [] };
+    const g = bySec.get(sec.id) ?? { id: sec.id, key: sec.key, name: sec.nameAr, order: sec.order, icon: sec.icon, rows: [] };
     // MULTI_SELECT stores one row per choice — merge repeats into one table row.
     const prev = g.rows.find((r) => r.label === v.attribute.labelAr);
     if (prev) prev.value = `${prev.value} · ${s}`;
@@ -151,7 +151,13 @@ async function gather(listingId: string): Promise<Gathered | null> {
   // its attributes become table columns beside the ad number. Its marks aren't configurable.
   const areaGroup = ordered[0];
   const areaRows = areaGroup ? areaGroup.rows.slice(0, 3) : [];
-  const posterCards: CardData[] = (posterOn.size ? nonArea.filter((s) => posterOn.has(s.id)) : nonArea.slice(0, 3)).map(toCard);
+  // Poster card ORDER (owner's numbered mock 2026-07-18): the big poster reads
+  // map → مميزات الموقع → مستحقات → الموقع. Ordered by STABLE section key (not the Arabic
+  // heading, which admins rename); sections outside this list keep their section order after.
+  const POSTER_CARD_ORDER = ['location-pros', 'auth_pay', 'location'];
+  const cardRank = (k: string) => { const i = POSTER_CARD_ORDER.indexOf(k); return i === -1 ? 999 : i; };
+  const posterSecs = posterOn.size ? nonArea.filter((s) => posterOn.has(s.id)) : nonArea.slice(0, 3);
+  const posterCards: CardData[] = [...posterSecs].sort((a, b) => cardRank(a.key) - cardRank(b.key) || a.order - b.order).map(toCard);
 
   const nbMap = await prisma.areaMap.findFirst({ where: { level: 'listing', areaId: listingId, kind: 'location' }, select: { cleanPath: true } });
   let cityMap: { cleanPath: string } | null = null;
