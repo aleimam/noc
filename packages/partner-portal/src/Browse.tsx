@@ -52,8 +52,8 @@ export async function PartnerBrowse() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-black text-navy-800 dark:text-soft">{L('جميع العروض', 'All offers')}</h1>
-        <p className="mt-1 text-sm text-ink-500">{L('تصفّح كل عروضنا المنشورة — للاطّلاع فقط.', 'Browse all our published offers — view only.')} ({listings.length})</p>
+        <h1 className="text-2xl font-black text-navy-800 dark:text-soft">{L('عروض الصواري', 'Al Sawarey offers')}</h1>
+        <p className="mt-1 text-sm text-ink-500">{L('كل عروض الصواري المنشورة — للاطّلاع فقط (لا يمكن التعديل).', 'Every published Al Sawarey offer — view only (no editing).')} ({listings.length})</p>
       </div>
 
       {listings.length === 0 ? (
