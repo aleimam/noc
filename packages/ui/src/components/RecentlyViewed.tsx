@@ -40,19 +40,51 @@ function fmtPrice(p: string): string {
   return Number.isFinite(n) ? n.toLocaleString('en-US') : p;
 }
 
-/** Horizontal "recently viewed" row, excluding the current listing. Hidden when empty. */
+/** Horizontal "recently viewed" row, excluding the current listing. Hidden when empty.
+ *  On mount it asks the server which stored ids still exist (POST /api/listings/alive) and
+ *  PRUNES any listing that was deleted/unpublished from localStorage — so a trashed listing
+ *  never lingers as a blank dead card. Renders nothing until validated (no flash of dead cards);
+ *  if the check fails (offline) it falls back to the stored list. */
 export function RecentlyViewed({ title, excludeId, currency = 'ج.م' }: { title: string; excludeId?: string; currency?: string }) {
-  const [items, setItems] = useState<ViewedItem[]>([]);
+  const [items, setItems] = useState<ViewedItem[] | null>(null);
   useEffect(() => {
-    setItems(read().filter((x) => x.id !== excludeId));
-  }, [excludeId]);
-  if (items.length === 0) return null;
+    const stored = read();
+    if (stored.length === 0) {
+      setItems([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      let live = stored;
+      try {
+        const res = await fetch('/api/listings/alive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: stored.map((x) => x.id) }),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { alive?: string[] };
+          const alive = new Set(data.alive ?? []);
+          live = stored.filter((x) => alive.has(x.id));
+          localStorage.setItem(KEY, JSON.stringify(live)); // permanently drop dead entries
+        }
+      } catch {
+        /* offline / error → keep the stored list rather than blanking the row */
+      }
+      if (!cancelled) setItems(live);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const shown = (items ?? []).filter((x) => x.id !== excludeId);
+  if (shown.length === 0) return null;
 
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-bold text-navy-800 dark:text-soft">{title}</h2>
       <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
-        {items.map((it) => (
+        {shown.map((it) => (
           <a key={it.id} href={it.href} className="w-40 flex-none overflow-hidden rounded-lg border border-ink-200 bg-white shadow-sm transition hover:shadow-md dark:bg-navy-800">
             <div className="aspect-[16/10] bg-navy-100 dark:bg-navy-900">
               {it.cover ? (
