@@ -129,7 +129,7 @@ export default function StaffLoginPage() {
           <form onSubmit={loginWithPassword} className="space-y-4">
             <label className="block text-sm font-semibold">
               {L('كلمة المرور', 'Password')}
-              <span className="mt-1 block"><PasswordInput value={password} onChange={setPassword} autoComplete="current-password" className={inp} /></span>
+              <span className="mt-1 block"><PasswordInput value={password} onChange={setPassword} autoComplete="current-password" className={inp} locale={locale} /></span>
             </label>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button type="submit" disabled={loading || !password} className="w-full rounded-lg bg-primary px-4 py-3 text-base font-bold text-soft disabled:opacity-50">

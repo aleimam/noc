@@ -40,7 +40,7 @@ body {
    In the Arabic UI every placeholder reads RTL — even inside deliberately dir="ltr" inputs
    (phone / email / password), whose Arabic hints otherwise render left-aligned because the
    empty value resolves as LTR. Typed values are unaffected; the English UI is unaffected. */
-[dir='rtl'] input::placeholder,
+[dir='rtl'] input:not([type='url'])::placeholder,
 [dir='rtl'] textarea::placeholder {
   direction: rtl;
   text-align: right;

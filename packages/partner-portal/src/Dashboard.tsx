@@ -14,7 +14,12 @@ export async function PartnerDashboard() {
     prisma.listing.findMany({
       where: { ownerId, deletedAt: null },
       orderBy: { updatedAt: 'desc' },
-      select: { id: true, title: true, adNumber: true, status: true, price: true, soldPrice: true, views: true, rejectionReason: true },
+      select: {
+        id: true, title: true, adNumber: true, status: true, price: true, soldPrice: true, views: true, rejectionReason: true,
+        // Storefront eligibility: the Al Sawarey detail page 404s Types/Purposes not allowed there.
+        typeOption: { select: { allowedOnAlsawarey: true } },
+        purposeOption: { select: { allowedOnAlsawarey: true } },
+      },
     }),
     prisma.ownerAllowedCategory.count({ where: { ownerId } }),
   ]);
@@ -34,6 +39,9 @@ export async function PartnerDashboard() {
     { label: L('المشاهدات', 'Views'), value: fmt(totalViews), tone: 'text-navy-800' },
   ];
 
+  // On alsawarey the public detail page only serves Types/Purposes flagged allowedOnAlsawarey —
+  // pointing the «عرض في السوق» button at anything else would 404. The portal shows everything.
+  const onAlsawarey = process.env.NOC_SITE === 'alsawarey';
   const rows: PartnerRow[] = listings.map((l) => ({
     id: l.id,
     title: l.title,
@@ -42,6 +50,7 @@ export async function PartnerDashboard() {
     price: l.price != null ? String(l.price) : '',
     views: l.views,
     rejectionReason: l.rejectionReason,
+    publicOk: !onAlsawarey || (!!l.typeOption?.allowedOnAlsawarey && !!l.purposeOption?.allowedOnAlsawarey),
   }));
 
   return (
@@ -65,7 +74,7 @@ export async function PartnerDashboard() {
       </div>
       {/* NOC_SITE is the server-trusted brand identity — it decides which public path the
           «عرض في السوق» button opens ('/listings' on alsawarey.com, '/market' on newobour.com). */}
-      <PartnerListings rows={rows} locale={locale} publicBase={process.env.NOC_SITE === 'alsawarey' ? '/listings' : '/market'} />
+      <PartnerListings rows={rows} locale={locale} publicBase={onAlsawarey ? '/listings' : '/market'} />
     </div>
   );
 }

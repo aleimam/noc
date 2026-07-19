@@ -538,6 +538,7 @@
     "negoLoginToOffer": "Sign in to make an offer",
     "negoOwnListing": "You can't negotiate on your own listing",
     "requiredField": "Required field",
+    "requiredNA": "Photos & documents upload as attachments and cannot be marked required",
     "requiredHint": "When on, this detail becomes mandatory: a ★ shows next to it on the listing form and the listing can't be published until it's filled (enforced only where the detail is shown for the chosen Type/Purpose/Condition).",
     "groupRequired": "All fields in this group",
     "makeAllRequired": "Make all required",

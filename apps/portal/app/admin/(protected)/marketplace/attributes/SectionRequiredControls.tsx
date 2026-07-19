@@ -3,6 +3,7 @@
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { toast } from '@noc/ui';
 import { setSectionRequired } from '../actions';
 
 /** Group-level bulk toggle: make every detail in this section required / optional in one click.
@@ -15,8 +16,13 @@ export function SectionRequiredControls({ sectionId }: { sectionId: string }) {
   const run = (required: boolean) => {
     if (!confirm(required ? t('confirmAllRequired') : t('confirmAllOptional'))) return;
     start(async () => {
-      await setSectionRequired(sectionId, required);
-      router.refresh();
+      try {
+        const r = await setSectionRequired(sectionId, required);
+        if (!r.ok) { toast(t('saveFailed'), 'error'); return; }
+        router.refresh();
+      } catch {
+        toast(t('saveFailed'), 'error'); // e.g. VIEW-only staff — requirePermission throws
+      }
     });
   };
 

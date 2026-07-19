@@ -111,7 +111,9 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
   // Required details: admin-set DB flag (attr.required) is the source of truth; the hard-coded
   // REQUIRED_LISTING_ATTR_KEYS (city) is a fallback. A single-option required SELECT auto-selects
   // its one choice so a locked field (one city) never blocks the seller.
-  const isRequiredAttr = (a: Attr) => !!a.required || REQUIRED_ATTR_KEYS.has(a.key);
+  // PHOTOS/DOCUMENTS can never be required (attachments — see the server exemption).
+  const isRequiredAttr = (a: Attr) =>
+    a.type !== 'PHOTOS' && a.type !== 'DOCUMENTS' && (!!a.required || REQUIRED_ATTR_KEYS.has(a.key));
   useEffect(() => {
     for (const a of applicable) {
       if (!isRequiredAttr(a) || a.type !== 'SELECT') continue;
@@ -180,7 +182,8 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
     const missingList = applicable.filter((a) => {
       if (!isRequiredAttr(a)) return false;
       const v = vals[a.id];
-      return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : !v;
+      // A boolean is an ANSWER either way — «لا» (false) on a required YESNO must pass.
+      return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : typeof v === 'boolean' ? false : !v;
     });
     if (missingList.length) {
       setMissingAttrIds(new Set(missingList.map((a) => a.id)));

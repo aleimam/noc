@@ -150,8 +150,10 @@ export async function saveListing(input: ListingInput): Promise<Result> {
   // server-side too. Only publishing (PENDING) requires them — a rough DRAFT may stay incomplete.
   if (input.status === 'PENDING') {
     const required = await prisma.attribute.findMany({
-      // DB flag is the source of truth; the city key is a defensive fallback.
-      where: { isActive: true, OR: [{ required: true }, { key: { in: [...REQUIRED_LISTING_ATTR_KEYS] } }] },
+      // DB flag is the source of truth; the city key is a defensive fallback. PHOTOS/DOCUMENTS
+      // are exempt — their data rides Attachment rows, which this values-based check can't see,
+      // so requiring them would block publishing forever (hardening pass 2026-07-20).
+      where: { isActive: true, type: { notIn: ['PHOTOS', 'DOCUMENTS'] }, OR: [{ required: true }, { key: { in: [...REQUIRED_LISTING_ATTR_KEYS] } }] },
       select: { id: true, classifierLinks: { select: { optionId: true, option: { select: { classifierId: true } } } } },
     });
     const chosen = new Set([input.typeOptionId, input.purposeOptionId, input.conditionOptionId]);

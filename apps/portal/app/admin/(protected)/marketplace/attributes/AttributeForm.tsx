@@ -192,7 +192,11 @@ export function AttributeForm({
       )}
 
       <div className="flex flex-wrap gap-5 text-sm">
-        <label className="flex items-center gap-2"><input type="checkbox" checked={f.required} onChange={(e) => set({ required: e.target.checked })} /> <span className="font-semibold text-red-600">★ {t('requiredField')}</span></label>
+        {f.type === 'PHOTOS' || f.type === 'DOCUMENTS' ? (
+          <span className="text-xs opacity-60">{t('requiredNA')}</span>
+        ) : (
+          <label className="flex items-center gap-2"><input type="checkbox" checked={f.required} onChange={(e) => set({ required: e.target.checked })} /> <span className="font-semibold text-red-600">★ {t('requiredField')}</span></label>
+        )}
         <label className="flex items-center gap-2"><input type="checkbox" checked={f.filterable} onChange={(e) => set({ filterable: e.target.checked })} /> {t('filterable')}</label>
         <label className="flex items-center gap-2"><input type="checkbox" checked={f.isActive} onChange={(e) => set({ isActive: e.target.checked })} /> {t('active')}</label>
         <label className="flex items-center gap-2">{t('order')} <input type="number" value={f.order} onChange={(e) => set({ order: +e.target.value })} className="w-20 rounded-md border border-graphite/20 bg-transparent px-2 py-1" /></label>

@@ -364,7 +364,10 @@ export function ListingForm({
   // Required details: the admin-set DB flag (attr.required) is the source of truth; the hard-coded
   // REQUIRED_LISTING_ATTR_KEYS (city) is kept as a defensive fallback. A single-option required
   // SELECT auto-selects its one choice so a locked field (one city) never blocks save.
-  const isRequiredAttr = (a: Attr) => !!a.required || REQUIRED_ATTR_KEYS.has(a.key);
+  // PHOTOS/DOCUMENTS can never be required — they save as attachments, invisible to the
+  // value checks here and on the server (a required one would block publishing forever).
+  const isRequiredAttr = (a: Attr) =>
+    a.type !== 'PHOTOS' && a.type !== 'DOCUMENTS' && (!!a.required || REQUIRED_ATTR_KEYS.has(a.key));
   useEffect(() => {
     for (const a of attributes) {
       if (!isRequiredAttr(a) || a.type !== 'SELECT' || !applies(a)) continue;
@@ -483,7 +486,8 @@ export function ListingForm({
       const missingList = attributes.filter((a) => {
         if (!isRequiredAttr(a) || !applies(a)) return false;
         const v = vals[a.id];
-        return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : !v;
+        // A boolean is an ANSWER either way — «لا» (false) on a required YESNO must pass.
+        return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : typeof v === 'boolean' ? false : !v;
       });
       if (missingList.length) {
         setMissingAttrIds(new Set(missingList.map((a) => a.id)));

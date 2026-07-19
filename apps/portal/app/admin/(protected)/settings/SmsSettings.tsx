@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { PasswordInput } from '@noc/ui';
 import { setSetting, sendTestSms } from './actions';
 
@@ -11,6 +11,7 @@ const inp = 'block w-full rounded-md border border-graphite/20 bg-transparent px
 
 export function SmsSettings({ initial }: { initial: S }) {
   const t = useTranslations('admin');
+  const locale = useLocale() as 'ar' | 'en';
   const tc = useTranslations('common');
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -61,7 +62,7 @@ export function SmsSettings({ initial }: { initial: S }) {
           </select>
         </label>
         <label className="text-sm">{t('smsUsername')}<input value={f.username} onChange={up('username')} dir="ltr" className={inp} /></label>
-        <label className="text-sm">{t('smsPassword')}<PasswordInput value={f.password} onChange={(v) => setF((x) => ({ ...x, password: v }))} placeholder="••••••" className={inp} /></label>
+        <label className="text-sm">{t('smsPassword')}<PasswordInput value={f.password} onChange={(v) => setF((x) => ({ ...x, password: v }))} placeholder="••••••" className={inp} locale={locale} /></label>
         <label className="text-sm sm:col-span-2">{t('smsSender')}
           <input value={f.sender} onChange={up('sender')} dir="ltr" className={inp} />
           <span className="mt-1 block text-xs opacity-70">{t('smsSenderHint')}</span>

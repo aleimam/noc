@@ -231,6 +231,16 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   fallback regardless). An optional `ops/find-orphan-maps.ts` sweeper was offered but **not built**
   (zero orphans remain).
 
+**2026-07-20 polish+harden pass over the 07-19→20 batch (self-review + independent agent, 6
+verified fixes):** required-attribute enforcement now EXEMPTS PHOTOS/DOCUMENTS at all six layers
+(their data rides Attachment rows the value checks can't see — a required one would have
+soft-locked publishing; admin UI hides the ★ checkbox for file types, `upsertAttribute` +
+`setSectionRequired` force/skip them); boolean `false` («لا» on YESNO) now counts as answered in
+both client forms (was client-blocked, server-accepted); «عرض في السوق» hides on alsawarey rows
+whose Type/Purpose isn't `allowedOnAlsawarey` (detail page would 404); the bulk required toggle
+surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` (bidi reordered
+`https://`); PasswordInput's eye label follows the UI locale at every call site.
+
 **Owner-blocked (waiting on the owner, everything else is prepped):**
 1. **Cloudflare proxy flip (Part C)** — pure dashboard task now; ordered checklist in
    `ops/CLOUDFLARE.md` (TLS-first, one zone at a time; www is proxy-safe since the SAN reissue).

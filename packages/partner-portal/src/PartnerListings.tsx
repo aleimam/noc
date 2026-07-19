@@ -13,6 +13,7 @@ export type PartnerRow = {
   price: string; // decimal as string
   views: number;
   rejectionReason: string | null;
+  publicOk: boolean; // this site's public detail page will actually serve the listing
 };
 
 const FAST = ['PUBLISHED', 'SOLD', 'ARCHIVED'];
@@ -106,7 +107,7 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
                 <span className="text-xs text-ink-400">👁 {r.views}</span>
                 {statusBadge(r.status)}
                 {/* Public page exists only once PUBLISHED; the site 308s the raw id to its slug. */}
-                {r.status === 'PUBLISHED' && (
+                {r.status === 'PUBLISHED' && r.publicOk && (
                   <a
                     href={`${publicBase}/${r.id}`}
                     target="_blank"

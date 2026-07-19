@@ -388,7 +388,9 @@ export async function upsertAttribute(input: {
     config: cfg ?? Prisma.JsonNull,
     optionListId: usesList ? input.optionListId || null : null,
     filterable: input.filterable ?? false,
-    required: input.required ?? false,
+    // File types save as attachments — the publish checks can't see them, so required
+    // would soft-lock publishing. Forced off here regardless of what the client sent.
+    required: input.type === 'PHOTOS' || input.type === 'DOCUMENTS' ? false : (input.required ?? false),
     order: input.order ?? 0,
     isActive: input.isActive ?? true,
   };
@@ -426,7 +428,12 @@ export async function upsertAttribute(input: {
 export async function setSectionRequired(sectionId: string, required: boolean): Promise<Result> {
   await requirePermission('catalog', 'UPDATE');
   try {
-    await prisma.attribute.updateMany({ where: { sectionId }, data: { required } });
+    // Setting TRUE skips file-type attributes (they can never be required — see upsertAttribute);
+    // clearing to FALSE sweeps everything, which also repairs any bad legacy state.
+    await prisma.attribute.updateMany({
+      where: required ? { sectionId, type: { notIn: ['PHOTOS', 'DOCUMENTS'] } } : { sectionId },
+      data: { required },
+    });
     revalidate();
     return { ok: true };
   } catch (e) {
