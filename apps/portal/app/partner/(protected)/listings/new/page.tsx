@@ -22,7 +22,7 @@ export default async function PartnerNewListing() {
         <div className="text-4xl">🔒</div>
         <h1 className="text-xl font-bold text-navy-800">{L('لا توجد فئات مسموح بالنشر فيها بعد', 'No posting categories granted yet')}</h1>
         <p className="text-sm text-ink-500">{L('تواصل مع الإدارة لتفعيل فئات النشر لحسابك.', 'Contact us to enable posting categories for your account.')}</p>
-        <a href="/partner" className="inline-block rounded-md bg-primary px-4 py-2 text-sm font-bold text-soft">{L('رجوع للوحتي', 'Back to dashboard')}</a>
+        <a href="/partner" className="inline-block rounded-md bg-primary px-4 py-2 text-sm font-bold text-soft">{L('رجوع إلى إعلاناتي', 'Back to my listings')}</a>
       </div>
     );
   }
@@ -31,7 +31,7 @@ export default async function PartnerNewListing() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">{t('newOffer')}</h1>
-        <a href="/partner" className="text-sm text-accent">← {L('لوحتي', 'Dashboard')}</a>
+        <a href="/partner" className="text-sm text-accent">← {L('إعلاناتي', 'My listings')}</a>
       </div>
       <p className="rounded-lg border border-gold-300/50 bg-gold/10 p-3 text-sm">
         {L('سيُراجع الإعلان من الإدارة قبل النشر.', 'Your listing will be reviewed by staff before it goes public.')}

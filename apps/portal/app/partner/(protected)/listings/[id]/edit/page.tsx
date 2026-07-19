@@ -21,7 +21,7 @@ export default async function PartnerEditListing({ params }: { params: Promise<{
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">{t('edit')}: {listing.title}</h1>
-        <a href="/partner" className="text-sm text-accent">← {L('لوحتي', 'Dashboard')}</a>
+        <a href="/partner" className="text-sm text-accent">← {L('إعلاناتي', 'My listings')}</a>
       </div>
       <p className="rounded-lg border border-gold-300/50 bg-gold/10 p-3 text-sm">
         {L('تعديل البيانات يعيد الإعلان لمراجعة الإدارة قبل نشره من جديد.', 'Content changes send the listing back to staff review before republishing.')}

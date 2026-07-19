@@ -19,11 +19,11 @@ export default async function PartnerLayout({ children }: { children: React.Reac
     prisma.ownerAllowedCategory.count({ where: { ownerId } }),
   ]);
 
-  // «عروضي» = the partner's own listings (the dashboard: stats + editable listings table with a
-  // ✎ Edit button per row). «عروض الصواري» = view-only browse of every Al Sawarey offer. Kept
-  // identical to the portal partner nav (owner decision 2026-07-18) — change both together.
+  // «إعلاناتي» = the partner's own listings (the dashboard: stats + editable listings table with a
+  // ✎ Edit button per row; matches the Dashboard heading). «عروض الصواري» = view-only browse of
+  // every Al Sawarey offer. Kept identical to the portal partner nav — change both together.
   const nav = [
-    { href: '/partner', label: L('عروضي', 'My offers') },
+    { href: '/partner', label: L('إعلاناتي', 'My listings') },
     ...(grantCount > 0 ? [{ href: '/partner/listings/new', label: L('+ إضافة إعلان', '+ Add listing') }] : []),
     ...(canBrowse ? [{ href: '/partner/browse', label: L('عروض الصواري', 'Al Sawarey offers') }] : []),
     { href: '/partner/analytics', label: L('الإحصائيات', 'Analytics') },

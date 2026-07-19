@@ -15,10 +15,11 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   const owner = await prisma.owner.findUnique({ where: { id: ownerId }, select: { name: true } });
   const canBrowse = await partnerCanBrowseListings(ownerId);
 
-  // «عروضي» = the partner's own listings (the dashboard: stats + editable listings table).
-  // «عروض الصواري» = view-only browse of every Al Sawarey offer (owner request 2026-07-18).
+  // «إعلاناتي» = the partner's own listings (the dashboard: stats + editable listings table;
+  // matches the Dashboard heading). «عروض الصواري» = view-only browse of every Al Sawarey offer
+  // (owner request 2026-07-18). Kept identical to the brokerage partner nav — change both together.
   const nav = [
-    { href: '/partner', label: L('عروضي', 'My offers') },
+    { href: '/partner', label: L('إعلاناتي', 'My listings') },
     { href: '/partner/listings/new', label: L('+ إضافة إعلان', '+ Add listing') },
     ...(canBrowse ? [{ href: '/partner/browse', label: L('عروض الصواري', 'Al Sawarey offers') }] : []),
     { href: '/partner/analytics', label: L('الإحصائيات', 'Analytics') },
