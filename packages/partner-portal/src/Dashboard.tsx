@@ -63,7 +63,9 @@ export async function PartnerDashboard() {
           </a>
         )}
       </div>
-      <PartnerListings rows={rows} locale={locale} />
+      {/* NOC_SITE is the server-trusted brand identity — it decides which public path the
+          «عرض في السوق» button opens ('/listings' on alsawarey.com, '/market' on newobour.com). */}
+      <PartnerListings rows={rows} locale={locale} publicBase={process.env.NOC_SITE === 'alsawarey' ? '/listings' : '/market'} />
     </div>
   );
 }

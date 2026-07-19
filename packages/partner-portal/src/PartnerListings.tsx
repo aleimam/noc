@@ -23,8 +23,10 @@ const toAsciiDigits = (s: string) =>
     .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
     .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
 
-/** The partner's listings with inline fast edit: price + availability, one tap each. */
-export function PartnerListings({ rows, locale }: { rows: PartnerRow[]; locale: 'ar' | 'en' }) {
+/** The partner's listings with inline fast edit: price + availability, one tap each.
+ *  `publicBase` = this site's public listing path ('/listings' on Al Sawarey, '/market' on the
+ *  portal) — powers the «عرض في السوق» button on PUBLISHED rows. */
+export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows: PartnerRow[]; locale: 'ar' | 'en'; publicBase?: string }) {
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -103,6 +105,17 @@ export function PartnerListings({ rows, locale }: { rows: PartnerRow[]; locale: 
               <div className="flex items-center gap-2">
                 <span className="text-xs text-ink-400">👁 {r.views}</span>
                 {statusBadge(r.status)}
+                {/* Public page exists only once PUBLISHED; the site 308s the raw id to its slug. */}
+                {r.status === 'PUBLISHED' && (
+                  <a
+                    href={`${publicBase}/${r.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-md border border-gold-400/60 bg-gold/10 px-3 py-1 text-xs font-semibold text-gold-700 hover:bg-gold/20"
+                  >
+                    🛒 {L('عرض في السوق', 'View in market')}
+                  </a>
+                )}
                 <a href={`/partner/listings/${r.id}/edit`} className="rounded-md border border-graphite/25 px-3 py-1 text-xs font-semibold hover:bg-graphite/10">
                   ✎ {L('تعديل', 'Edit')}
                 </a>
