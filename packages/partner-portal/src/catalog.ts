@@ -15,6 +15,7 @@ export type LeanAttr = {
   options: LeanOption[];
   usesList: boolean; // true → choices are shared OptionListItem ids; false → legacy AttributeOption ids
   optionIds: string[]; // classifier option ids this attribute is curated for
+  required: boolean; // admin-set: mandatory before publishing
 };
 
 /** Catalog for the lean partner form. Type options are flagged `granted` per the owner's
@@ -62,6 +63,7 @@ export async function loadPartnerCatalog(ownerId: string) {
     options: a.type === 'DISTRICT' ? districtOpts : a.type === 'NEIGHBORHOOD' ? neighborhoodOpts : a.optionListId && a.optionList ? a.optionList.items : a.options,
     usesList: !!a.optionListId,
     optionIds: a.classifierLinks.map((l) => l.optionId),
+    required: a.required,
   }));
 
   return {

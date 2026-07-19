@@ -442,6 +442,10 @@ model Attribute {
   // or { multiple: true } for PHOTOS/DOCUMENTS. Shape depends on `type`.
   config     Json?
   filterable Boolean  @default(false)
+  // Admin-configurable: when true this detail is MANDATORY before a listing may publish
+  // (a red ★ marks it on the forms; publish is blocked until filled). Only enforced where the
+  // attribute is actually applicable for the chosen Type/Purpose/Condition. Default optional.
+  required   Boolean  @default(false)
   order      Int      @default(0)
   isActive   Boolean  @default(true)
   // SELECT / MULTI_SELECT choices come from a shared, reusable OptionList. The legacy

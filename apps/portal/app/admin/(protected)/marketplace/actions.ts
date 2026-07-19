@@ -368,6 +368,7 @@ export async function upsertAttribute(input: {
   helpEn?: string | null;
   config?: Record<string, string | boolean> | null;
   filterable?: boolean;
+  required?: boolean;
   order?: number;
   isActive?: boolean;
   optionListId?: string | null; // shared OptionList for SELECT / MULTI_SELECT
@@ -387,6 +388,7 @@ export async function upsertAttribute(input: {
     config: cfg ?? Prisma.JsonNull,
     optionListId: usesList ? input.optionListId || null : null,
     filterable: input.filterable ?? false,
+    required: input.required ?? false,
     order: input.order ?? 0,
     isActive: input.isActive ?? true,
   };
@@ -413,6 +415,18 @@ export async function upsertAttribute(input: {
         await tx.attributeClassifier.create({ data: { optionId: o, attributeId: attr.id } });
       }
     });
+    revalidate();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Group-level bulk: mark every attribute in a section required (or optional) in one click. */
+export async function setSectionRequired(sectionId: string, required: boolean): Promise<Result> {
+  await requirePermission('catalog', 'UPDATE');
+  try {
+    await prisma.attribute.updateMany({ where: { sectionId }, data: { required } });
     revalidate();
     return { ok: true };
   } catch (e) {

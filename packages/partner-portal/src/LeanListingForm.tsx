@@ -10,7 +10,7 @@ import { savePartnerListing, type LeanListingInput, type LeanValueInput } from '
 type COption = { id: string; nameAr: string; nameEn: string; granted: boolean; parentIds: string[] };
 type Classifier = { id: string; key: string; nameAr: string; nameEn: string; options: COption[] };
 type AttrOption = { id: string; labelAr: string; labelEn: string; districtId?: string };
-type Attr = { id: string; key: string; sectionId: string; labelAr: string; labelEn: string; type: string; unit: string | null; options: AttrOption[]; usesList: boolean; optionIds: string[] };
+type Attr = { id: string; key: string; sectionId: string; labelAr: string; labelEn: string; type: string; unit: string | null; options: AttrOption[]; usesList: boolean; optionIds: string[]; required?: boolean };
 
 const REQUIRED_ATTR_KEYS = new Set<string>(REQUIRED_LISTING_ATTR_KEYS);
 type Section = { id: string; nameAr: string; nameEn: string };
@@ -100,12 +100,18 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
     return catalog.sections.map((s) => ({ section: s, attrs: g.get(s.id) ?? [] })).filter((x) => x.attrs.length);
   }, [applicable, catalog.sections]);
 
-  const setVal = (id: string, v: string | boolean | string[]) => setVals((p) => ({ ...p, [id]: v }));
+  // Ids of required details left empty at the last submit — highlighted red on the form.
+  const [missingAttrIds, setMissingAttrIds] = useState<Set<string>>(new Set());
+  const setVal = (id: string, v: string | boolean | string[]) => {
+    setVals((p) => ({ ...p, [id]: v }));
+    setMissingAttrIds((m) => { if (!m.has(id)) return m; const n = new Set(m); n.delete(id); return n; });
+  };
   const label = (o: { nameAr?: string; nameEn?: string; labelAr?: string; labelEn?: string }) => L(o.nameAr ?? o.labelAr ?? '', o.nameEn ?? o.labelEn ?? '');
 
-  // Mandatory basic details (e.g. the city). A single-option required SELECT auto-selects its one
-  // choice so a locked field (one city) never blocks the seller.
-  const isRequiredAttr = (a: Attr) => REQUIRED_ATTR_KEYS.has(a.key);
+  // Required details: admin-set DB flag (attr.required) is the source of truth; the hard-coded
+  // REQUIRED_LISTING_ATTR_KEYS (city) is a fallback. A single-option required SELECT auto-selects
+  // its one choice so a locked field (one city) never blocks the seller.
+  const isRequiredAttr = (a: Attr) => !!a.required || REQUIRED_ATTR_KEYS.has(a.key);
   useEffect(() => {
     for (const a of applicable) {
       if (!isRequiredAttr(a) || a.type !== 'SELECT') continue;
@@ -171,12 +177,20 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
     e.preventDefault();
     if (!typeId || !purposeId || !condId || !title.trim() || !contactPhone.trim()) { setError(L('أكمل الحقول المطلوبة', 'Fill the required fields')); return; }
     // Mandatory basic details (e.g. the city) must be filled.
-    const missingRequired = applicable.find((a) => {
+    const missingList = applicable.filter((a) => {
       if (!isRequiredAttr(a)) return false;
       const v = vals[a.id];
       return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : !v;
     });
-    if (missingRequired) { setError(`${L('أكمل الحقول المطلوبة', 'Fill the required fields')} — ${label(missingRequired)}`); return; }
+    if (missingList.length) {
+      setMissingAttrIds(new Set(missingList.map((a) => a.id)));
+      setError(`${L('أكمل الحقول المطلوبة', 'Fill the required fields')} — ${missingList.map((a) => label(a)).join('، ')}`);
+      if (typeof document !== 'undefined') {
+        setTimeout(() => document.getElementById(`attr-${missingList[0]!.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+      }
+      return;
+    }
+    setMissingAttrIds(new Set());
     setError('');
     start(async () => {
       const input: LeanListingInput = {
@@ -339,13 +353,18 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
         <fieldset key={section.id} className="space-y-3 rounded-lg border border-graphite/15 p-3">
           <legend className="px-1 text-sm font-bold text-primary">{label(section)}</legend>
           <div className="grid gap-3 sm:grid-cols-2">
-            {attrs.map((a) => (
-              <div key={a.id} className="text-sm">
-                {/* explicit word, not just an asterisk — low-literacy audience */}
-                <div className="mb-1 font-semibold">{label(a)}{a.unit ? ` (${a.unit})` : ''}{isRequiredAttr(a) && <span className="text-red-600"> ({L('مطلوب', 'required')})</span>}</div>
-                {renderAttr(a)}
-              </div>
-            ))}
+            {attrs.map((a) => {
+              const req = isRequiredAttr(a);
+              const miss = missingAttrIds.has(a.id);
+              return (
+                <div key={a.id} id={`attr-${a.id}`} className={`text-sm ${miss ? 'rounded-lg bg-red-50 p-2 ring-2 ring-red-400' : ''}`}>
+                  {/* red ★ marks a required detail; the explicit «مطلوب» word stays for the low-literacy audience */}
+                  <div className="mb-1 font-semibold">{req && <span className="font-bold text-red-600" title={L('مطلوب', 'required')}>★ </span>}{label(a)}{a.unit ? ` (${a.unit})` : ''}{req && <span className="text-red-600"> ({L('مطلوب', 'required')})</span>}</div>
+                  {renderAttr(a)}
+                  {miss && <div className="mt-1 text-xs font-semibold text-red-600">{L('هذا الحقل مطلوب', 'This field is required')}</div>}
+                </div>
+              );
+            })}
           </div>
         </fieldset>
       ))}

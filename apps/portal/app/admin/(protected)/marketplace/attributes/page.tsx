@@ -4,6 +4,7 @@ import { prisma } from '@noc/db';
 import { getStandardAreas } from '../../../../../lib/marketplace';
 import { StandardAreasEditor } from './StandardAreasEditor';
 import { OrderableList } from '../OrderableList';
+import { SectionRequiredControls } from './SectionRequiredControls';
 import { reorderAttributes } from '../actions';
 
 export default async function AttributesPage() {
@@ -44,15 +45,19 @@ export default async function AttributesPage() {
 
       {sections.map((s) => (
         <div key={s.id} className="space-y-2">
-          <h2 className="font-semibold text-primary">
-            {s.nameAr} <span className="opacity-50" dir="ltr">/ {s.nameEn}</span>
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold text-primary">
+              {s.nameAr} <span className="opacity-50" dir="ltr">/ {s.nameEn}</span>
+            </h2>
+            <SectionRequiredControls sectionId={s.id} />
+          </div>
           <div className="overflow-x-auto rounded-lg border border-graphite/15">
             <table className="w-full text-sm">
               <tbody>
                 {s.attributes.map((a) => (
                   <tr key={a.id} className="border-t border-graphite/10 first:border-t-0">
                     <td className="p-2">
+                      {a.required && <span className="font-bold text-red-600" title={t('requiredField')}>★ </span>}
                       {a.labelAr} <span className="opacity-50" dir="ltr">/ {a.labelEn}</span>
                     </td>
                     <td className="p-2"><span className="rounded bg-graphite/10 px-2 py-0.5 text-xs">{a.type}</span></td>

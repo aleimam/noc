@@ -78,6 +78,7 @@ export async function loadCatalog() {
     unit: a.unit,
     config: (a.config as AttrConfig | null) ?? {},
     order: a.order,
+    required: a.required,
     // SELECT/MULTI_SELECT choices come from the linked shared list; fall back to legacy inline
     // options. DISTRICT/NEIGHBORHOOD choices come straight from the geo DB.
     options:

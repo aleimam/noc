@@ -35,6 +35,7 @@ export default async function EditAttribute({ params }: { params: Promise<{ id: 
     helpEn: attr.helpEn ?? '',
     config: (attr.config as AttrData['config']) ?? {},
     filterable: attr.filterable,
+    required: attr.required,
     order: attr.order,
     isActive: attr.isActive,
     options: attr.options.map((o) => ({ id: o.id, key: o.key, labelAr: o.labelAr, labelEn: o.labelEn })),

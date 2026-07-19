@@ -27,6 +27,7 @@ export default async function NewAttribute() {
     helpEn: '',
     config: {},
     filterable: false,
+    required: false,
     order: 0,
     isActive: true,
     options: [],

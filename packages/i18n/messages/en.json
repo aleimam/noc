@@ -536,7 +536,14 @@
     "negoInvalidAmount": "Enter a valid amount",
     "negoError": "Couldn't complete, please try again",
     "negoLoginToOffer": "Sign in to make an offer",
-    "negoOwnListing": "You can't negotiate on your own listing"
+    "negoOwnListing": "You can't negotiate on your own listing",
+    "requiredField": "Required field",
+    "requiredHint": "When on, this detail becomes mandatory: a ★ shows next to it on the listing form and the listing can't be published until it's filled (enforced only where the detail is shown for the chosen Type/Purpose/Condition).",
+    "groupRequired": "All fields in this group",
+    "makeAllRequired": "Make all required",
+    "makeAllOptional": "Make all optional",
+    "confirmAllRequired": "Make every field in this group required?",
+    "confirmAllOptional": "Make every field in this group optional?"
   },
   "rationing": {
     "title": "Rationing Sheets",
@@ -631,7 +638,7 @@
     "didYouMean": "Did you mean?",
     "resultsN": "{n} matches",
     "browsingN": "Showing {n} rows",
-    "clickToView": "click a name to view details",
+    "clickToView": "Click to view",
     "gapsStat": "Possible numbering gaps",
     "gapsPanelTitle": "Page numbers missing from the sequence",
     "gapsPanelHint": "File names follow a (day month year number) pattern. The numbers below are skipped mid-sequence with no photo AND no typed rows — the page was probably never scanned nor entered. Check the original paper sheets; click any name to copy it for naming the photo when you upload it.",
@@ -769,7 +776,6 @@
     "preview": "Preview",
     "matchedNRows": "matched · {n} rows",
     "orphanNoRows": "orphan · no rows",
-    "clickToView": "Click to view",
     "orphanPanelTitle": "Photos that matched no rows",
     "orphanPanelHint": "Usually the photo file name differs slightly from the sheet's «source file» column (extra space, missing zero, different extension). When a close suggestion appears, click «Adopt this name» to match the photo to its rows instantly — the image itself is untouched.",
     "missingPanelTitle": "Rows that have no photo",

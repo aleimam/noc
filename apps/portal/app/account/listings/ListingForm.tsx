@@ -22,7 +22,7 @@ type AttrType =
   | 'DISTRICT' | 'NEIGHBORHOOD';
 type AttrCfg = { yesLabelAr?: string; yesLabelEn?: string; noLabelAr?: string; noLabelEn?: string; multiple?: boolean };
 type Opt = { id: string; labelAr: string; labelEn: string; districtId?: string };
-type Attr = { id: string; key: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; config?: AttrCfg; order: number; options: Opt[]; optionIds: string[] };
+type Attr = { id: string; key: string; sectionId: string; labelAr: string; labelEn: string; type: AttrType; unit: string | null; config?: AttrCfg; order: number; options: Opt[]; optionIds: string[]; required?: boolean };
 
 const REQUIRED_ATTR_KEYS = new Set<string>(REQUIRED_LISTING_ATTR_KEYS);
 
@@ -262,7 +262,13 @@ export function ListingForm({
   const pendingValid = !!pendingMap && pendingMap.nbId === nbId; // discard if the neighborhood changed after drawing
 
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
-  const setVal = (id: string, v: string | boolean | string[]) => setVals((p) => ({ ...p, [id]: v }));
+  // Ids of required details left empty at the last publish attempt — highlighted red on the form.
+  const [missingAttrIds, setMissingAttrIds] = useState<Set<string>>(new Set());
+  const setVal = (id: string, v: string | boolean | string[]) => {
+    setVals((p) => ({ ...p, [id]: v }));
+    // Clear the red highlight for a field the moment it gets a value.
+    setMissingAttrIds((m) => { if (!m.has(id)) return m; const n = new Set(m); n.delete(id); return n; });
+  };
 
   // Al-Sawarey channel is only chosen in staff mode; gating applies while it's on.
   const alsawarey = staffMode && showOnBrokerage;
@@ -355,9 +361,10 @@ export function ListingForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attributes, sections, selected, optCls]);
 
-  // Mandatory basic details (e.g. the city): required on every listing. A single-option
-  // required SELECT auto-selects its one choice so a locked field (one city) never blocks save.
-  const isRequiredAttr = (a: Attr) => REQUIRED_ATTR_KEYS.has(a.key);
+  // Required details: the admin-set DB flag (attr.required) is the source of truth; the hard-coded
+  // REQUIRED_LISTING_ATTR_KEYS (city) is kept as a defensive fallback. A single-option required
+  // SELECT auto-selects its one choice so a locked field (one city) never blocks save.
+  const isRequiredAttr = (a: Attr) => !!a.required || REQUIRED_ATTR_KEYS.has(a.key);
   useEffect(() => {
     for (const a of attributes) {
       if (!isRequiredAttr(a) || a.type !== 'SELECT' || !applies(a)) continue;
@@ -473,15 +480,21 @@ export function ListingForm({
     // Mandatory basic details (e.g. the city) must be filled before PUBLISHING —
     // a rough DRAFT may stay incomplete (matches the server-side guard).
     if (status === 'PENDING') {
-      const missingRequired = attributes.find((a) => {
+      const missingList = attributes.filter((a) => {
         if (!isRequiredAttr(a) || !applies(a)) return false;
         const v = vals[a.id];
         return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : !v;
       });
-      if (missingRequired) {
-        setError(`${tc('fillRequired')} — ${L(missingRequired.labelAr, missingRequired.labelEn)}`);
+      if (missingList.length) {
+        setMissingAttrIds(new Set(missingList.map((a) => a.id)));
+        setError(`${tc('fillRequired')} — ${missingList.map((a) => L(a.labelAr, a.labelEn)).join('، ')}`);
+        // Bring the first highlighted field into view.
+        if (typeof document !== 'undefined') {
+          setTimeout(() => document.getElementById(`attr-${missingList[0]!.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+        }
         return;
       }
+      setMissingAttrIds(new Set());
     }
     const input = buildInput(status);
     start(async () => {
@@ -842,16 +855,22 @@ export function ListingForm({
                   </div>
                 )}
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {g.attrs.map((a) => (
-                    <label key={a.id} className="text-sm">
-                      <span className="mb-1 block opacity-80">
-                        {L(a.labelAr, a.labelEn)}
-                        {/* explicit word, not just an asterisk — low-literacy audience */}
-                        {isRequiredAttr(a) && <span className="font-semibold text-red-600"> ({L('مطلوب', 'required')})</span>}
-                      </span>
-                      {control(a)}
-                    </label>
-                  ))}
+                  {g.attrs.map((a) => {
+                    const req = isRequiredAttr(a);
+                    const miss = missingAttrIds.has(a.id);
+                    return (
+                      <label key={a.id} id={`attr-${a.id}`} className={`text-sm ${miss ? 'rounded-lg bg-red-50 p-2 ring-2 ring-red-400' : ''}`}>
+                        <span className="mb-1 block opacity-80">
+                          {/* red ★ marks a required detail; the explicit «مطلوب» word stays for the low-literacy audience */}
+                          {req && <span className="font-bold text-red-600" title={L('مطلوب', 'required')}>★ </span>}
+                          {L(a.labelAr, a.labelEn)}
+                          {req && <span className="font-semibold text-red-600"> ({L('مطلوب', 'required')})</span>}
+                        </span>
+                        {control(a)}
+                        {miss && <span className="mt-1 block text-xs font-semibold text-red-600">{L('هذا الحقل مطلوب', 'This field is required')}</span>}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 

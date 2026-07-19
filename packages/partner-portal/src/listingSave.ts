@@ -102,7 +102,8 @@ export async function savePartnerListing(input: LeanListingInput): Promise<Resul
   // publish into moderation (PENDING), so the requirement always applies here.
   {
     const required = await prisma.attribute.findMany({
-      where: { key: { in: [...REQUIRED_LISTING_ATTR_KEYS] }, isActive: true },
+      // DB flag is the source of truth; the city key is a defensive fallback.
+      where: { isActive: true, OR: [{ required: true }, { key: { in: [...REQUIRED_LISTING_ATTR_KEYS] } }] },
       select: { id: true, classifierLinks: { select: { optionId: true, option: { select: { classifierId: true } } } } },
     });
     const chosen = new Set([input.typeOptionId, input.purposeOptionId, input.conditionOptionId]);
