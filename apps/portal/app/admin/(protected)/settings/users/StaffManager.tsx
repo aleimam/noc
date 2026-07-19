@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { PasswordInput } from '@noc/ui';
 import { upsertStaff, deleteUser } from './actions';
 
 type RoleOption = { key: string; name: string };
@@ -82,7 +83,7 @@ export function StaffManager({ staff, roleOptions }: { staff: Staff[]; roleOptio
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-sm">{t('name')}<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={inp} /></label>
             <label className="text-sm">{t('email')}<input value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} dir="ltr" className={inp} /></label>
-            <label className="text-sm">{draft.id ? t('newPasswordOptional') : t('password')}<input type="password" value={draft.password} onChange={(e) => setDraft({ ...draft, password: e.target.value })} dir="ltr" placeholder={draft.id ? '••••••' : ''} className={inp} /></label>
+            <label className="text-sm">{draft.id ? t('newPasswordOptional') : t('password')}<PasswordInput value={draft.password} onChange={(v) => setDraft({ ...draft, password: v })} autoComplete="new-password" placeholder={draft.id ? '••••••' : ''} className={inp} /></label>
             <label className="flex items-end gap-2 text-sm"><input type="checkbox" checked={draft.isActive} onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })} /> {t('active')}</label>
           </div>
           <div className="text-sm">

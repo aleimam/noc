@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { PasswordInput } from '@noc/ui';
 import { setSetting, sendTestSms } from './actions';
 
 type S = { provider: string; username: string; password: string; sender: string; environment: string };
@@ -60,7 +61,7 @@ export function SmsSettings({ initial }: { initial: S }) {
           </select>
         </label>
         <label className="text-sm">{t('smsUsername')}<input value={f.username} onChange={up('username')} dir="ltr" className={inp} /></label>
-        <label className="text-sm">{t('smsPassword')}<input value={f.password} onChange={up('password')} type="password" dir="ltr" placeholder="••••••" className={inp} /></label>
+        <label className="text-sm">{t('smsPassword')}<PasswordInput value={f.password} onChange={(v) => setF((x) => ({ ...x, password: v }))} placeholder="••••••" className={inp} /></label>
         <label className="text-sm sm:col-span-2">{t('smsSender')}
           <input value={f.sender} onChange={up('sender')} dir="ltr" className={inp} />
           <span className="mt-1 block text-xs opacity-70">{t('smsSenderHint')}</span>

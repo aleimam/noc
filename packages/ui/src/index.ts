@@ -14,6 +14,7 @@ export { RecentFeaturesTracker, RecentFeaturesGrid } from './components/RecentFe
 export { ImageAttachment, type UploadedAttachment } from './components/ImageAttachment';
 export { FileDropzone } from './components/FileDropzone';
 export { Lightbox } from './components/Lightbox';
+export { PasswordInput } from './components/PasswordInput';
 export { PhotoGallery } from './components/PhotoGallery';
 export { HeroGallery, type GalleryItem } from './components/HeroGallery';
 export { ListingCard } from './components/ListingCard';

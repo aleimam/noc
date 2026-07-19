@@ -35,3 +35,13 @@ body {
 .page-content th { background: rgba(0,0,0,.04); font-weight: 700; }
 .tiptap table { border-collapse: collapse; }
 .tiptap th, .tiptap td { border: 1px solid rgba(0,0,0,.2); padding: .4rem; min-width: 3rem; }
+
+/* ── RTL placeholders (global, 2026-07-19) ─────────────────────────────────────────────
+   In the Arabic UI every placeholder reads RTL — even inside deliberately dir="ltr" inputs
+   (phone / email / password), whose Arabic hints otherwise render left-aligned because the
+   empty value resolves as LTR. Typed values are unaffected; the English UI is unaffected. */
+[dir='rtl'] input::placeholder,
+[dir='rtl'] textarea::placeholder {
+  direction: rtl;
+  text-align: right;
+}

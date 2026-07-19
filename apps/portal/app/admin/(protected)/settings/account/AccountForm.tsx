@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { PasswordInput } from '@noc/ui';
 import { updateAccount, changePassword } from './actions';
 
 const inp = 'block w-full rounded-md border border-graphite/20 bg-transparent px-3 py-2 text-sm';
@@ -59,8 +60,8 @@ export function AccountForm({ initial }: { initial: { name: string; email: strin
       <div className="space-y-3 rounded-lg border border-graphite/15 p-4">
         <h2 className="font-semibold text-primary">{t('changePassword')}</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm">{t('currentPassword')}<input type="password" value={cur} onChange={(e) => setCur(e.target.value)} dir="ltr" className={inp} /></label>
-          <label className="text-sm">{t('newPassword')}<input type="password" value={next} onChange={(e) => setNext(e.target.value)} dir="ltr" className={inp} /></label>
+          <label className="text-sm">{t('currentPassword')}<PasswordInput value={cur} onChange={setCur} autoComplete="current-password" className={inp} /></label>
+          <label className="text-sm">{t('newPassword')}<PasswordInput value={next} onChange={setNext} autoComplete="new-password" className={inp} /></label>
         </div>
         <div className="flex items-center gap-3">
           <button disabled={pending || !cur || !next} onClick={savePassword} className="rounded-md bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{t('changePassword')}</button>

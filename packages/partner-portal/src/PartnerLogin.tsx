@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
+import { PasswordInput } from '@noc/ui';
 import { isValidPhone } from '@noc/config';
 
 const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-3 text-base';
@@ -131,7 +132,7 @@ export function PartnerLogin() {
           <form onSubmit={loginWithPassword} className="space-y-4">
             <label className="block text-sm font-semibold">
               {L('كلمة المرور', 'Password')}
-              <input dir="ltr" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={`${inp} mt-1`} />
+              <span className="mt-1 block"><PasswordInput value={password} onChange={setPassword} autoComplete="current-password" className={inp} /></span>
             </label>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button type="submit" disabled={loading || !password} className="w-full rounded-lg bg-primary px-4 py-3 text-base font-bold text-soft disabled:opacity-50">
