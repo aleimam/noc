@@ -60,11 +60,13 @@ export function AccountForm({
         {L('كلمة مرور جديدة', 'New password')}
         <span className="relative mt-1 block">
           <input
-            dir="ltr"
+            // Follow the UI locale so the Arabic guidance placeholder reads RTL and stays clear of
+            // the reveal button; a typed password (Latin) just right-aligns, which is fine when masked.
+            dir={locale === 'ar' ? 'rtl' : 'ltr'}
             type={showPw ? 'text' : 'password'}
             value={f.password}
             onChange={(e) => setF({ ...f, password: e.target.value })}
-            placeholder={initial.hasPassword ? L('اتركها فارغة للإبقاء على الحالية', 'Leave empty to keep the current one') : L('اختياري', 'Optional')}
+            placeholder={initial.hasPassword ? L('اتركها فارغة للإبقاء على كلمة المرور الحالية', 'Leave empty to keep your current password') : L('اختياري — يمكنك الدخول برمز يصلك على الهاتف', 'Optional — you can also log in with an SMS code')}
             className={`${inp} pe-16`}
           />
           <button

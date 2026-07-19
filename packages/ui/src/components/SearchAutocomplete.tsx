@@ -103,7 +103,9 @@ export function SearchAutocomplete({
           aria-label={placeholder}
           autoComplete="off"
           className={baseInput}
-          dir="auto"
+          // dir="auto" resolves from the (empty) VALUE → LTR, which left-aligns the Arabic
+          // placeholder. Follow the UI locale instead; typed text still reads fine both ways.
+          dir={locale === 'ar' ? 'rtl' : 'ltr'}
         />
         <button type="submit" aria-label={locale === 'ar' ? 'بحث' : 'Search'} className={buttonClassName ?? 'shrink-0 rounded-full bg-primary px-5 py-2.5 text-base font-bold text-soft'}>
           {buttonLabel ?? (locale === 'ar' ? 'بحث' : 'Search')}

@@ -144,7 +144,7 @@ export default async function MarketPage({
         action="/market"
         initialQuery={q}
         locale={locale}
-        placeholder={L('ابحث بالعنوان أو المنطقة أو رقم الإعلان…', 'Search by title, area or ad number…')}
+        placeholder={L('اكتب هنا… مثال: أرض 500 متر أو الحي 23', 'Type here… e.g. District 23 or a 500 m² plot')}
         extraParams={{ type: typeKey || '', partnership: partnershipsOn && get('partnership') === '1' ? '1' : '' }}
         inputClassName="min-w-0 flex-1 rounded-2xl bg-white px-4 py-3 text-lg text-navy-800 shadow-sm outline-none ring-1 ring-graphite/15 placeholder:text-ink-400"
       />
