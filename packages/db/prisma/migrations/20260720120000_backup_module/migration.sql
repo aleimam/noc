@@ -73,7 +73,7 @@ VALUES ('bkcfg_singleton', 'BACKUP', false, 'SFTP', 23, '/home', CURRENT_TIMESTA
 INSERT INTO `BackupTier`
   (`id`, `key`, `label`, `enabled`, `frequency`, `everyN`, `hourUtc`, `weekday`, `dayOfMonth`, `contents`, `remotePath`, `keepLast`, `sortOrder`, `updatedAt`)
 VALUES
-  ('bktier_hourly', 'HOURLY', 'كل ساعة — قاعدة البيانات فقط', true, 'HOURLY', 1, 2, 0, 1, 'DB',   '/home/hourly', 12, 1, CURRENT_TIMESTAMP(3)),
+  ('bktier_hourly', 'HOURLY', 'كل ساعة — قاعدة البيانات فقط', true, 'HOURLY', 1, 2, 0, 1, 'DB',   '/home/hourly', 24, 1, CURRENT_TIMESTAMP(3)),
   ('bktier_daily',  'DAILY',  'يومي — كامل',                      true, 'DAILY',  1, 2, 0, 1, 'FULL', '/home/daily',   7, 2, CURRENT_TIMESTAMP(3)),
   ('bktier_weekly', 'WEEKLY', 'أسبوعي — كامل',                    true, 'WEEKLY', 1, 2, 0, 1, 'FULL', '/home/weekly',  8, 3, CURRENT_TIMESTAMP(3)),
   ('bktier_manual', 'MANUAL', 'يدوي — عند الطلب',                 true, 'OFF',    1, 2, 0, 1, 'FULL', '/home/manual', 10, 4, CURRENT_TIMESTAMP(3));

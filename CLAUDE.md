@@ -124,7 +124,7 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   re-enter it in the UI if AUTH_SECRET is ever rotated. **CSF `TCP_OUT`/`TCP6_OUT` must contain 23**
   (added 2026-07-20; backup of csf.conf at `/root/csf.conf.bak-*`). Full spec, incl. the gotchas
   that caused real outages: `C:ClaudeYeldnINBACKUP.md`. **Cadence: hourly (every 1h, DB-only,
-  keep 12) · daily + weekly full (keep 7/8) · MANUAL button-only (keep 10).** **VERIFIED
+  keep 24 = a full day) · daily + weekly full (keep 7/8) · MANUAL button-only (keep 10).** **VERIFIED
   2026-07-20:** a cron-fired SCHEDULED run succeeded (08:00:02, standalone tsx — the `server-only`
   trap that broke veeey does NOT apply here) and a full restore drill passed — 667MB archive
   byte-exact, manifest matched, restored into a scratch DB: 82 tables and all 12 business tables
