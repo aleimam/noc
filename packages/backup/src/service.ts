@@ -24,6 +24,9 @@ export const APP_PREFIX = 'noc';
 
 const APP_DIR = process.env.APP_DIR || '/root/noc';
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(APP_DIR, 'uploads');
+const ENV_FILE = process.env.ENV_FILE || path.join(APP_DIR, '.env');
+// NOTE: /root/backups (the LOCAL nightly archives) is deliberately NOT part of any
+// off-site archive — it lives outside APP_DIR, so backups are never backed up.
 
 export type RunTrigger = 'MANUAL' | 'SCHEDULED';
 export type RunResult = { ok: true; fileName: string; sizeBytes: number } | { ok: false; error: string };
@@ -132,6 +135,19 @@ async function buildArchive(contents: Contents, at: Date): Promise<{ archivePath
   await dumpDatabase(path.join(stage, 'database.sql'), tmpDir);
   const entries = ['database.sql'];
 
+  // .env — a restore is useless without it (DB creds, AUTH_SECRET, API keys). It is small,
+  // so EVERY tier carries it, including the hourly DB-only one. ⚠ This makes the archive
+  // fully sensitive: whoever holds it holds the app's secrets. The remote sub-account
+  // password is what protects it, so keep that password strong and unshared.
+  let hasEnv = false;
+  try {
+    await cp(ENV_FILE, path.join(stage, 'env.txt'), { mode: 0o600 } as never);
+    entries.push('env.txt');
+    hasEnv = true;
+  } catch {
+    hasEnv = false; // no .env on this box (dev) — the manifest will say so
+  }
+
   let hasUploads = false;
   if (contents === 'FULL') {
     try {
@@ -147,7 +163,7 @@ async function buildArchive(contents: Contents, at: Date): Promise<{ archivePath
   }
 
   // The manifest must describe what the archive ACTUALLY holds (spec §4).
-  const actual = hasUploads ? 'db,uploads' : 'db';
+  const actual = [hasUploads ? 'db,uploads' : 'db', hasEnv ? 'env' : null].filter(Boolean).join(',');
   await writeFile(
     path.join(stage, 'manifest.json'),
     JSON.stringify({ app: APP_PREFIX, kind: kindFor(contents), createdAt: at.toISOString(), contents: actual }, null, 2),
