@@ -25,7 +25,18 @@ type Tool = 'select' | 'arrow' | 'draw';
 const COLORS = ['#e11d48', '#2563eb', '#16a34a', '#f59e0b', '#000000', '#ffffff'];
 const MAX_DISPLAY = 820;
 const MAX_EXPORT = 2200;
-let seq = 0;
+
+// Collision-proof shape ids. A module-level counter used to back these, but it persisted across
+// annotator mounts (Strict Mode double-mounts in dev) and could reuse an id already carried by a
+// pre-loaded shape — duplicate React keys then render ghost shapes you can't select or move.
+const newId = () =>
+  typeof crypto !== 'undefined' && crypto.randomUUID ? `s_${crypto.randomUUID()}` : `s_${Date.now()}_${Math.round(Math.random() * 1e9)}`;
+
+// Konva only hit-tests a shape's PAINTED area. A stroke-only rect/circle (no fill) is therefore
+// clickable/draggable ONLY on its thin outline — the interior is dead, so you can't grab the
+// middle to move it and a click inside doesn't select it. A transparent fill paints nothing on
+// screen yet makes the whole interior hit-testable (the hit canvas fills with an opaque key).
+const HIT_FILL = 'transparent';
 
 export function MapAnnotator({
   src,
@@ -62,15 +73,6 @@ export function MapAnnotator({
     onClose();
   }
 
-  // Continue the id counter past any pre-loaded shapes so new ones don't collide.
-  useEffect(() => {
-    for (const s of initialShapes ?? []) {
-      const n = parseInt(s.id.replace(/\D/g, ''), 10);
-      if (!isNaN(n) && n > seq) seq = n;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   useEffect(() => {
     const image = new window.Image();
     image.onload = () => {
@@ -95,7 +97,7 @@ export function MapAnnotator({
   const strokeW = Math.max(2, Math.round(display.w * 0.006));
 
   function addBox(type: 'rect' | 'circle') {
-    const id = `s${++seq}`;
+    const id = newId();
     const w = Math.max(60, Math.round(display.w * 0.22));
     setShapes((s) => [...s, { id, type, x: display.w / 2 - w / 2, y: display.h / 2 - w / 2, width: w, height: w, points: [], stroke: color }]);
     setSelectedId(id);
@@ -126,7 +128,7 @@ export function MapAnnotator({
     }
     const pos = e.target.getStage()?.getPointerPosition();
     if (!pos) return;
-    const id = `s${++seq}`;
+    const id = newId();
     drawingId.current = id;
     setSelectedId(null);
     setShapes((s) => [
@@ -236,7 +238,7 @@ export function MapAnnotator({
                       <Rect
                         key={sh.id}
                         ref={(n) => { if (n) nodeRefs.current[sh.id] = n; }}
-                        x={sh.x} y={sh.y} width={sh.width} height={sh.height} stroke={sh.stroke} strokeWidth={sw} hitStrokeWidth={20}
+                        x={sh.x} y={sh.y} width={sh.width} height={sh.height} stroke={sh.stroke} strokeWidth={sw} fill={HIT_FILL} hitStrokeWidth={20}
                         draggable onClick={() => setSelectedId(sh.id)} onTap={() => setSelectedId(sh.id)}
                         onDragEnd={(e) => patch(sh.id, { x: e.target.x(), y: e.target.y() })}
                         onTransformEnd={(e) => {
@@ -251,7 +253,7 @@ export function MapAnnotator({
                       <Circle
                         key={sh.id}
                         ref={(n) => { if (n) nodeRefs.current[sh.id] = n; }}
-                        x={sh.x + sh.width / 2} y={sh.y + sh.height / 2} radius={sh.width / 2} stroke={sh.stroke} strokeWidth={sw} hitStrokeWidth={20}
+                        x={sh.x + sh.width / 2} y={sh.y + sh.height / 2} radius={sh.width / 2} stroke={sh.stroke} strokeWidth={sw} fill={HIT_FILL} hitStrokeWidth={20}
                         draggable onClick={() => setSelectedId(sh.id)} onTap={() => setSelectedId(sh.id)}
                         onDragEnd={(e) => patch(sh.id, { x: e.target.x() - sh.width / 2, y: e.target.y() - sh.height / 2 })}
                         onTransformEnd={(e) => {
