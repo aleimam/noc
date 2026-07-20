@@ -30,12 +30,14 @@
     "db:sanitize:backfill": "npm run sanitize:backfill -w @noc/db",
     "db:studio": "npm run studio -w @noc/db",
     "db:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-db.ps1",
-    "db:seed:conditions": "npm run seed:conditions -w @noc/db"
+    "db:seed:conditions": "npm run seed:conditions -w @noc/db",
+    "test": "vitest run"
   },
   "devDependencies": {
     "prettier": "^3.4.2",
     "turbo": "^2.10.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
   },
   "engines": {
     "node": ">=20"

@@ -57,7 +57,10 @@ const nextConfig = {
   transpilePackages: ['@noc/ui', '@noc/i18n', '@noc/auth', '@noc/db', '@noc/sms', '@noc/mail', '@noc/config', '@noc/analytics', '@noc/partner-portal'],
   // geoip-lite reads its .dat database via fs at runtime — keep it external so the bundler
   // doesn't break its __dirname-relative paths. nodemailer is a CJS Node lib — keep it external.
-  serverExternalPackages: ['geoip-lite', 'nodemailer'],
+  // ssh2 ships an optional NATIVE addon (sshcrypto.node) that webpack cannot bundle —
+  // without this the production build fails outright. It does NOT reproduce on a dev box
+  // where npm blocked ssh2's install script, so a green local build proves nothing here.
+  serverExternalPackages: ['geoip-lite', 'nodemailer', 'ssh2', 'ssh2-sftp-client'],
   // Lint is run separately (`npm run lint`); keep production builds focused on compile + types.
   eslint: { ignoreDuringBuilds: true },
   async headers() {

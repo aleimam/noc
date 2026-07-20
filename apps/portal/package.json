@@ -12,10 +12,11 @@
   "dependencies": {
     "@noc/analytics": "*",
     "@noc/auth": "*",
-    "@noc/partner-portal": "*",
+    "@noc/backup": "*",
     "@noc/config": "*",
     "@noc/db": "*",
     "@noc/i18n": "*",
+    "@noc/partner-portal": "*",
     "@noc/ui": "*",
     "@tiptap/extension-color": "3.27.1",
     "@tiptap/extension-image": "3.27.1",
