@@ -3,6 +3,7 @@ import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { currency } from '@noc/i18n';
 import { missingRequiredForListing } from '@noc/partner-portal/required';
+import { resolveListingAssets } from '@noc/partner-portal/assets';
 import { ModerationActions } from './ModerationActions';
 import { FeaturedToggle } from './FeaturedToggle';
 import { ListingAdminActions } from './ListingAdminActions';
@@ -45,6 +46,9 @@ export default async function ModerationPage() {
       pending.map(async (l) => [l.id, await missingRequiredForListing(l.id)] as const),
     ),
   );
+  // Grab-and-go generated assets for the recent (non-PENDING) rows — the branded big poster + the
+  // map, opened directly so staff needn't enter the editor to view/download them.
+  const assets = await resolveListingAssets(recent.map((l) => l.id), { branded: true });
 
   return (
     <div className="space-y-6">
@@ -105,7 +109,13 @@ export default async function ModerationPage() {
                   </td>
                   <td className="p-2">{l.showOnBrokerage && l.status === 'PUBLISHED' ? <FeaturedToggle id={l.id} initial={l.featured} /> : null}</td>
                   <td className="p-2 text-end">
-                    <div className="flex items-center justify-end gap-3">
+                    <div className="flex flex-wrap items-center justify-end gap-3">
+                      {assets.get(l.id)?.posterUrl && (
+                        <a href={assets.get(l.id)!.posterUrl!} target="_blank" rel="noopener noreferrer" className="text-accent" title={L('البوستر الكبير', 'Big poster')}>🖼️ {L('بوستر', 'Poster')}</a>
+                      )}
+                      {assets.get(l.id)?.mapUrl && (
+                        <a href={assets.get(l.id)!.mapUrl!} target="_blank" rel="noopener noreferrer" className="text-accent" title={L('خريطة الموقع', 'Location map')}>🗺️ {L('خريطة', 'Map')}</a>
+                      )}
                       <a href={`/admin/marketplace/listings/${l.id}/edit`} className="text-accent">{t('edit')}</a>
                       <ListingAdminActions id={l.id} status={l.status} />
                     </div>

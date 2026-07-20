@@ -10,7 +10,8 @@
     "./server": "./src/server.ts",
     "./visibility": "./src/visibility.ts",
     "./required": "./src/requiredDetails.ts",
-    "./values": "./src/valueValidation.ts"
+    "./values": "./src/valueValidation.ts",
+    "./assets": "./src/listingAssets.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

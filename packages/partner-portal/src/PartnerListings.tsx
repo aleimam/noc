@@ -14,6 +14,10 @@ export type PartnerRow = {
   views: number;
   rejectionReason: string | null;
   publicOk: boolean; // this site's public detail page will actually serve the listing
+  // Grab-and-go generated assets (partners get the UNBRANDED poster + the clean map — theirs to
+  // reuse). Null when not generated yet (e.g. a listing that has never been published).
+  posterUrl?: string | null;
+  mapUrl?: string | null;
 };
 
 const FAST = ['PUBLISHED', 'SOLD', 'ARCHIVED'];
@@ -103,9 +107,33 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
                 <span className="font-bold text-navy-800">{r.title}</span>
                 {r.adNumber && <span className="font-num text-xs text-ink-400" dir="ltr">#{r.adNumber}</span>}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-ink-400">👁 {r.views}</span>
                 {statusBadge(r.status)}
+                {/* The big poster (unbranded — for the partner's own use) + the location map, opened
+                    directly in a new tab. Only shown once generated. */}
+                {r.posterUrl && (
+                  <a
+                    href={r.posterUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={L('البوستر بدون علامة — لاستخدامك', 'Unbranded poster — for your own use')}
+                    className="rounded-md border border-graphite/25 px-3 py-1 text-xs font-semibold hover:bg-graphite/10"
+                  >
+                    🖼️ {L('البوستر', 'Poster')}
+                  </a>
+                )}
+                {r.mapUrl && (
+                  <a
+                    href={r.mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={L('خريطة الموقع', 'Location map')}
+                    className="rounded-md border border-graphite/25 px-3 py-1 text-xs font-semibold hover:bg-graphite/10"
+                  >
+                    🗺️ {L('الخريطة', 'Map')}
+                  </a>
+                )}
                 {/* Public page exists only once PUBLISHED; the site 308s the raw id to its slug. */}
                 {r.status === 'PUBLISHED' && r.publicOk && (
                   <a

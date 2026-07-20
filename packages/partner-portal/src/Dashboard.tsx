@@ -2,6 +2,7 @@ import { getLocale } from 'next-intl/server';
 import { requirePartner } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { PartnerListings, type PartnerRow } from './PartnerListings';
+import { resolveListingAssets } from './listingAssets';
 
 /** Partner dashboard: portfolio totals + the listings table with inline fast edit. Shared by
  *  both apps; each wraps it in its own brand shell (the (protected) layout). */
@@ -42,6 +43,8 @@ export async function PartnerDashboard() {
   // On alsawarey the public detail page only serves Types/Purposes flagged allowedOnAlsawarey —
   // pointing the «عرض في السوق» button at anything else would 404. The portal shows everything.
   const onAlsawarey = process.env.NOC_SITE === 'alsawarey';
+  // Partners get the UNBRANDED poster + clean map (owner-display rule) — theirs to reuse.
+  const assets = await resolveListingAssets(listings.map((l) => l.id), { branded: false });
   const rows: PartnerRow[] = listings.map((l) => ({
     id: l.id,
     title: l.title,
@@ -51,6 +54,8 @@ export async function PartnerDashboard() {
     views: l.views,
     rejectionReason: l.rejectionReason,
     publicOk: !onAlsawarey || (!!l.typeOption?.allowedOnAlsawarey && !!l.purposeOption?.allowedOnAlsawarey),
+    posterUrl: assets.get(l.id)?.posterUrl ?? null,
+    mapUrl: assets.get(l.id)?.mapUrl ?? null,
   }));
 
   return (
