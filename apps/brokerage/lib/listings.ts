@@ -179,7 +179,7 @@ function toCard(l: Prisma.ListingGetPayload<{ select: typeof cardSelect }>, cove
     typeAr: l.typeOption?.nameAr ?? null,
     typeEn: l.typeOption?.nameEn ?? null,
     price: l.price != null && Number(l.price) > 0 ? Number(l.price) : null, // 0/blank ⇒ «السعر عند الطلب»
-    soldPrice: l.soldPrice != null ? Number(l.soldPrice) : null,
+    soldPrice: l.soldPrice != null && Number(l.soldPrice) > 0 ? Number(l.soldPrice) : null, // 0 ⇒ «تم البيع» without a figure
     status: l.status,
     cover: cover.get(l.id) ?? null,
     area: r.area,
@@ -413,7 +413,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
     price: l.price != null && Number(l.price) > 0 ? Number(l.price) : null, // 0/blank ⇒ «السعر عند الطلب»
     priceUnit: l.priceUnit,
     priceNegotiable: l.priceNegotiable,
-    soldPrice: l.soldPrice != null ? Number(l.soldPrice) : null,
+    soldPrice: l.soldPrice != null && Number(l.soldPrice) > 0 ? Number(l.soldPrice) : null, // 0 ⇒ «تم البيع» without a figure
     priceNote: l.priceNote,
     status: l.status,
     typeAr: locale === 'ar' ? l.typeOption?.nameAr ?? null : l.typeOption?.nameEn ?? null,

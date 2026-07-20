@@ -5,6 +5,7 @@ import { pageMeta } from '../lib/seo';
 import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { ListingCard } from '@noc/ui';
 import { currency } from '@noc/i18n';
+import { isStoredPrice } from '@noc/config';
 import { getModuleVisibility } from '../lib/modules';
 import { SiteShell } from './_components/SiteShell';
 import { SeoIntro } from './_components/SeoText';
@@ -117,7 +118,7 @@ export default async function Home() {
                 cover={cover.get(l.id) ?? null}
                 title={l.title}
                 subtitle={L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
-                price={l.price != null ? Number(l.price).toLocaleString('en-US') : null}
+                price={isStoredPrice(l.price) ? Number(l.price).toLocaleString('en-US') : null}
                 currency={currency(locale)}
               />
             ))}

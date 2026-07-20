@@ -24,14 +24,16 @@ type Dist = { id: string; nameAr: string; nameEn: string };
 export async function computeDistrictPrices(): Promise<DistrictPrice[]> {
   const [listings, lands] = await Promise.all([
     prisma.listing.findMany({
-      where: { status: 'PUBLISHED', deletedAt: null, price: { not: null }, neighborhoodId: { not: null }, priceUnit: { in: ['TOTAL', 'SQM'] } },
+      // `gt: 0`, not merely non-null: a 0 («السعر عند الطلب») or a stray negative would drag the
+      // per-district median/average in the public /price-index trend.
+      where: { status: 'PUBLISHED', deletedAt: null, price: { gt: 0 }, neighborhoodId: { not: null }, priceUnit: { in: ['TOTAL', 'SQM'] } },
       select: {
         price: true, area: true, priceUnit: true,
         neighborhood: { select: { district: { select: { id: true, nameAr: true, nameEn: true } } } },
       },
     }),
     prisma.land.findMany({
-      where: { status: 'PUBLISHED', price: { not: null }, area: { not: null }, neighborhoodId: { not: null }, listingId: null },
+      where: { status: 'PUBLISHED', price: { gt: 0 }, area: { not: null }, neighborhoodId: { not: null }, listingId: null },
       select: {
         price: true, area: true,
         neighborhood: { select: { district: { select: { id: true, nameAr: true, nameEn: true } } } },

@@ -3,8 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
 import { auth, hasPermission } from '@noc/auth';
-import { isValidPhone } from '@noc/config';
+import { isValidPhone, parsePriceInput } from '@noc/config';
 import { missingRequiredForInput, missingRequiredForListing } from '@noc/partner-portal/required';
+import { normalizeListingValues, validateClassifierTrio } from '@noc/partner-portal/values';
 
 import { sanitizeRichHtml } from '../../../lib/sanitize';
 import { restampListingPhotos } from '../../../lib/stamp';
@@ -92,6 +93,11 @@ export async function saveListing(input: ListingInput): Promise<Result> {
     return { ok: false, error: 'failed' };
   }
   if (!isValidPhone(input.contactPhone)) return { ok: false, error: 'invalid_phone' };
+  // Money: 0/blank ⇒ «السعر عند الطلب» (null); negative or non-finite is a real error, not a
+  // silent null — this path used to store `input.price` unchecked.
+  const priceParsed = parsePriceInput(input.price);
+  const floorParsed = parsePriceInput(input.lowestPrice);
+  if (!priceParsed.ok || !floorParsed.ok) return { ok: false, error: 'invalid_price' };
   const isStaff = user.type === 'STAFF';
   const isPartner = user.type === 'PARTNER' && !!user.ownerId;
   if (user.type === 'PARTNER' && !user.ownerId) return { ok: false, error: 'forbidden' };
@@ -128,6 +134,19 @@ export async function saveListing(input: ListingInput): Promise<Result> {
     });
     if (opts.length < 2 || opts.some((o) => !o.allowedOnAlsawarey)) return { ok: false, error: 'alsawarey_not_allowed' };
   }
+
+  // The three classifier ids must belong to their OWN classifiers, be active, and respect
+  // Type → Purpose → Condition nesting — none of which was checked before.
+  {
+    const trio = await validateClassifierTrio(input.typeOptionId, input.purposeOptionId, input.conditionOptionId);
+    if (!trio.ok) return { ok: false, error: 'bad_classifier' };
+  }
+
+  // Type-correct the EAV payload BEFORE anything reads it: drop values whose column or option id
+  // doesn't fit their attribute (e.g. a bool sent for a SELECT, or a list item from another
+  // list). The required-details check below then runs on the NORMALIZED values, so a dropped
+  // value correctly reads as "not answered" instead of silently satisfying the requirement.
+  input = { ...input, values: await normalizeListingValues(input.values) };
 
   // Applicability guard (server-side mirror of the form's rule): keep only values whose
   // attribute is explicitly linked to the chosen classifier options — unlinked attributes
@@ -200,12 +219,12 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         title: input.title.trim(),
         description: sanitizeRichHtml(input.description?.trim() || null) || null,
         area: input.area != null && !Number.isNaN(input.area) ? input.area : null,
-        price: input.price ?? null,
+        price: priceParsed.value,
         priceUnit: input.priceUnit ?? 'TOTAL',
         priceNegotiable: input.priceNegotiable ?? false,
         priceNote: input.priceNote?.trim() || null,
         // Internal floor — every writer here is staff or the listing owner; never leaves the edit form.
-        lowestPrice: input.lowestPrice != null && !Number.isNaN(input.lowestPrice) ? input.lowestPrice : null,
+        lowestPrice: floorParsed.value,
         // Partnership opt-in: type/note only persist while the flag is on.
         isPartnership: !!input.isPartnership,
         partnershipType:
@@ -386,7 +405,14 @@ export async function setMyListingStatus(
     const missing = await missingRequiredForListing(id);
     if (missing.length) return { ok: false, error: 'missing_required' };
   }
-  await prisma.listing.update({ where: { id }, data: { status } });
+  // Leaving SOLD must drop the recorded sale price. It used to survive, so a listing that went
+  // SOLD → (re)PUBLISHED → SOLD again resurfaced its OLD figure as the new sale price — publicly
+  // on the Al Sawarey card and in the partner dashboard totals. (partnerSetAvailability already
+  // did this correctly; this path did not.)
+  await prisma.listing.update({
+    where: { id },
+    data: { status, ...(status !== 'SOLD' ? { soldPrice: null } : {}) },
+  });
   revalidatePath('/account/listings');
   return { ok: true, id };
 }

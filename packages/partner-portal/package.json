@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
     "./visibility": "./src/visibility.ts",
-    "./required": "./src/requiredDetails.ts"
+    "./required": "./src/requiredDetails.ts",
+    "./values": "./src/valueValidation.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

@@ -5,6 +5,7 @@ import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { ListingCard, Badge } from '@noc/ui';
 import { SiteShell } from '../../_components/SiteShell';
 import { currency } from '@noc/i18n';
+import { isStoredPrice } from '@noc/config';
 import { marketHref } from '../../../lib/listings';
 import { coversForListings } from '../../../lib/listingCovers';
 
@@ -56,7 +57,7 @@ export default async function OwnerProfile({ params }: { params: Promise<{ id: s
                 cover={cover.get(l.id) ?? null}
                 title={l.title}
                 subtitle={L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
-                price={l.price != null ? Number(l.price).toLocaleString('en-US') : null}
+                price={isStoredPrice(l.price) ? Number(l.price).toLocaleString('en-US') : null}
                 currency={currency(locale)}
               />
             ))}

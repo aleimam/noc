@@ -961,7 +961,8 @@ export function ListingForm({
             two money inputs together on the top row. (The area field lives in the Area attribute
             group — the legacy Listing.area column stays untouched on old listings.) */}
         <div className="grid gap-4 sm:grid-cols-3">
-          <label className="text-sm">{t('price')}<input type="number" dir="ltr" value={price} onChange={(e) => setPrice(e.target.value)} className={inp} /></label>
+          {/* min=0: a stray leading «-» used to persist and render as «-1 ج.م» on public pages. */}
+          <label className="text-sm">{t('price')}<input type="number" min="0" dir="ltr" value={price} onChange={(e) => setPrice(e.target.value)} className={inp} /></label>
           <label className="text-sm">{t('pricePer')}
             <select value={priceUnit} onChange={(e) => setPriceUnit(e.target.value as 'TOTAL' | 'UNIT' | 'SQM')} className={inp}>
               <option value="TOTAL">{t('priceTotal')}</option>
@@ -972,7 +973,7 @@ export function ListingForm({
           {/* Internal floor / walk-away price — admins & owner only. Never rendered on any public page. */}
           <label className="block text-sm">
             <span className="flex items-center gap-1">🔒 {t('lowestPrice')}</span>
-            <input type="number" dir="ltr" value={lowestPrice} onChange={(e) => setLowestPrice(e.target.value)} className={inp} />
+            <input type="number" min="0" dir="ltr" value={lowestPrice} onChange={(e) => setLowestPrice(e.target.value)} className={inp} />
             <span className="mt-1 block text-xs opacity-60">{t('lowestPriceHint')}</span>
           </label>
         </div>

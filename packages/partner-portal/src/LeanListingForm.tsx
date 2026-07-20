@@ -342,7 +342,7 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
 
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="text-sm font-semibold sm:col-span-2">{L('السعر', 'Price')}
-          <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className={`${inp} mt-1`} />
+          <input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className={`${inp} mt-1`} />
         </label>
         <label className="text-sm font-semibold">{L('الوحدة', 'Unit')}
           <select value={priceUnit} onChange={(e) => setPriceUnit(e.target.value)} className={`${inp} mt-1`}>

@@ -567,7 +567,9 @@ export async function approveListing(id: string): Promise<Result> {
     }
     await prisma.listing.update({
       where: { id },
-      data: { status: 'PUBLISHED', publishedAt: new Date(), rejectionReason: null },
+      // Publishing clears any recorded sale price — otherwise a re-published listing carries a
+      // stale figure that resurfaces the next time it is marked SOLD.
+      data: { status: 'PUBLISHED', publishedAt: new Date(), rejectionReason: null, soldPrice: null },
     });
     // Assign the public ad number on first publish (no-op if already set or owner lacks a number).
     await ensureAdNumber(id);

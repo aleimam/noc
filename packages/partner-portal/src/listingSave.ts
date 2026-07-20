@@ -3,8 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
 import { requirePartner } from '@noc/auth';
-import { isValidPhone } from '@noc/config';
+import { isValidPhone, parsePriceInput } from '@noc/config';
 import { missingRequiredForInput } from './requiredDetails';
+import { normalizeListingValues, validateClassifierTrio } from './valueValidation';
 
 export type LeanValueInput = {
   attributeId: string;
@@ -66,14 +67,25 @@ export async function savePartnerListing(input: LeanListingInput): Promise<Resul
     return { ok: false, error: 'failed' };
   }
   if (!isValidPhone(input.contactPhone)) return { ok: false, error: 'invalid_phone' };
+  // One shared money rule (@noc/config): 0/blank ⇒ null, negative/non-finite ⇒ error.
+  const priceParsed = parsePriceInput(input.price);
+  if (!priceParsed.ok) return { ok: false, error: 'invalid_price' };
 
   // Partners may only post in the Type categories the admin granted their Owner.
   const grant = await prisma.ownerAllowedCategory.findFirst({ where: { ownerId, optionId: input.typeOptionId }, select: { id: true } });
   if (!grant) return { ok: false, error: 'category_not_allowed' };
 
+  // The three classifier ids must belong to their OWN classifiers and respect the nesting.
+  {
+    const trio = await validateClassifierTrio(input.typeOptionId, input.purposeOptionId, input.conditionOptionId);
+    if (!trio.ok) return { ok: false, error: 'bad_classifier' };
+  }
+
   // Applicability guard (mirror of the staff save): keep only values whose attribute is curated
   // for one of the chosen classifier options; drops stale values when the category changes.
-  let values = input.values;
+  // Values are type-corrected FIRST so the required check below can't be satisfied by a value
+  // stored in the wrong column (see ./valueValidation).
+  let values = await normalizeListingValues(input.values);
   {
     const attrIds = [...new Set(values.map((v) => v.attributeId))];
     if (attrIds.length) {
@@ -134,8 +146,7 @@ export async function savePartnerListing(input: LeanListingInput): Promise<Resul
         conditionOptionId: input.conditionOptionId,
         title: input.title.trim(),
         description: input.description?.trim() ? toSafeHtml(input.description.trim().slice(0, 5000)) : null,
-        // Reject NaN/negative prices server-side (mirrors partnerUpdatePrice).
-        price: input.price != null && Number.isFinite(input.price) && input.price >= 0 ? input.price : null,
+        price: priceParsed.value, // 0/blank ⇒ «السعر عند الطلب»; negatives rejected above
         priceUnit: input.priceUnit ?? 'TOTAL',
         contactPhone: input.contactPhone.trim(),
         contactWhatsapp: input.contactWhatsapp,
