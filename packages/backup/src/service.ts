@@ -7,7 +7,7 @@
 // exactly the failure the portable spec calls out (§10.3).
 
 import { execFile } from 'node:child_process';
-import { mkdtemp, rm, writeFile, stat, mkdir, cp } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, readFile, stat, mkdir, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -141,11 +141,17 @@ async function buildArchive(contents: Contents, at: Date): Promise<{ archivePath
   // password is what protects it, so keep that password strong and unshared.
   let hasEnv = false;
   try {
-    await cp(ENV_FILE, path.join(stage, 'env.txt'), { mode: 0o600 } as never);
+    // read+write, NOT fs.cp: cp's `mode` is a copy-operation flag (COPYFILE_*), not a
+    // permission — passing 0o600 there throws, which silently dropped .env from every
+    // archive until a verification run caught it. writeFile's `mode` IS the permission.
+    await writeFile(path.join(stage, 'env.txt'), await readFile(ENV_FILE), { mode: 0o600 });
     entries.push('env.txt');
     hasEnv = true;
-  } catch {
-    hasEnv = false; // no .env on this box (dev) — the manifest will say so
+  } catch (e) {
+    // A missing .env is legitimate on a dev box, but never swallow the reason —
+    // a silent "best effort" here is how the gap went unnoticed the first time.
+    console.warn(`[backup] .env NOT included: ${e instanceof Error ? e.message : String(e)}`);
+    hasEnv = false;
   }
 
   let hasUploads = false;
