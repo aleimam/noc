@@ -226,6 +226,17 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 
 **Everything below is deployed + live-verified; the tree is clean; local `main` = prod (`e395a3d`).**
 
+**2026-07-20 (later): TIERED OFF-SITE BACKUP MODULE** (commits `283c112`→`5319587`) — full detail
+in the server map above. Built from the portable spec `C:\Claude\YeldnIN\BACKUP.md` as an ADDITION
+to the local nightly backup (which is untouched). Highlights: 3 tables + 4 seeded levels, pure logic
+with **24 vitest tests** (NOC had no test runner before this), SFTP transport, AES-256-GCM secret,
+manifest-bearing archives, every-10-min cron. **Verified, not assumed:** a cron-fired SCHEDULED run
+succeeded and a full restore drill passed into a scratch DB with all 12 business tables row-identical
+to live. Two bugs were caught by verification rather than by tests: `.env` was silently dropped from
+every archive (`fs.cp`'s `mode` is a COPYFILE_* flag, not a permission — the catch-all hid it), and
+the hourly label said «كل ساعتين» while `everyN` was 1. Both fixed. **Not yet exercised:** a
+retention prune deleting a real remote file.
+
 **2026-07-19→20: required-details / global-UX / hardening batch (commits `2356b26`→`e395a3d`,
 all deployed + live-verified).**
 - **⭐ Admin-configurable REQUIRED listing details** (migration `20260719120000_attribute_required`):
@@ -305,8 +316,11 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
 **Owner-blocked (waiting on the owner, everything else is prepped):**
 1. **Cloudflare proxy flip (Part C)** — pure dashboard task now; ordered checklist in
    `ops/CLOUDFLARE.md` (TLS-first, one zone at a time; www is proxy-safe since the SAN reissue).
-2. **Off-site backup target** — enter host/user/port/path in `/admin/settings/backups` and add
-   the shown VPS pubkey to the remote's authorized_keys, then Test. Cron already installed.
+2. ~~Off-site backup target~~ **✅ DONE 2026-07-20** — the tiered SFTP module is live on Hetzner
+   sub-account `u635384-sub6`; scheduled runs fire and a restore drill passed (see the server map).
+   **Open decision:** retire the OLD local module (`ops/backup.sh` + rsync `offsite-backup.sh` +
+   their admin sections)? The owner asked; deferred until the new one proved itself, which it now
+   has. Local retention already cut 14 → 5 days.
 3. **Rotate the Brevo SMTP key** (it appeared in a chat once) — then update `/etc/postfix/sasl_passwd`
    (see `ops/mail-relay-brevo.sh`) and `postmap` + reload.
 4. **Partner portal UI click-test** — backend pipeline fully verified by script; a human should

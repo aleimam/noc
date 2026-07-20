@@ -14,6 +14,14 @@ SMS gateway, and next-intl ar/en.
 
 ## 📌 Current status (2026-07-20)
 
+**Shipped 2026-07-20 (later, commits `283c112` → `5319587`):** the **tiered off-site backup
+module** — Hetzner Storage Box over SFTP, four independently-scheduled levels (hourly DB-only keep
+24 · daily/weekly full · MANUAL button-only), each in its own remote folder; `BackupConfig`/
+`BackupTier`/`BackupRun`; pure logic with 24 vitest tests (the repo's first test runner);
+AES-256-GCM password at rest; archives carry the DB dump + uploads + `.env` + an honest manifest.
+Added ALONGSIDE the existing local nightly backup (retention cut 14 → 5 days). Cron-fired scheduled
+run and a full restore drill both verified on production.
+
 **Shipped 2026-07-19→20 (commits `2356b26` → `e395a3d`, all deployed + live-verified):**
 **admin-configurable required/optional listing details** (per-attribute ★ + per-section bulk, four
 enforcement sites, PHOTOS/DOCUMENTS exempt, publish-only, migration `20260719120000_attribute_required`;

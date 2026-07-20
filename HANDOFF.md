@@ -1,6 +1,6 @@
 # Project Handoff — NOC platform (newobour.com + alsawarey.com)
 
-_Last updated: 2026-07-20 · Written so a new Claude session (on any account, same device) can continue this project._
+_Last updated: 2026-07-20 (end of day) · Written so a new Claude session (on any account, same device) can continue this project._
 
 > **Read `CLAUDE.md` first — it is the master onboarding doc** (architecture, the production
 > deploy runbook with every gotcha, the server map, feature map, architecture rules, and the
@@ -19,7 +19,7 @@ Users are low-literacy/low-tech on phones — the design rule is *biggest, simpl
 ## Current status — NOTHING is mid-flight
 
 **Live, healthy, fully deployed, clean tree.** Local `main` and production are in sync — last
-commit **`e395a3d`** (verified 2026-07-20 on both local and `ssh noc`; always re-verify with
+commit **`5319587`** (verified 2026-07-20 on both local and `ssh noc`; always re-verify with
 `git log --oneline -1` on the server). Both pm2 apps online. Every feature requested to date is
 shipped, deployed, and live-verified — there is **no half-finished work** (build passes 3/3;
 `git status` is clean).
@@ -51,6 +51,20 @@ All deployed + live-verified (commits `2356b26` → `e395a3d`). Full detail in `
    fixed: `favicon.ico` routes now `force-dynamic`, killing a recurring `LRUCache` log error on
    both sites. No 5xx, backups current, analytics rollup fresh.
 7. **`AGENTS.md` added** at the repo root so non-Claude agents (Codex) onboard from CLAUDE.md.
+8. **⭐ TIERED OFF-SITE BACKUP MODULE — built, deployed, and LIVE** (the biggest item of the day;
+   migration `20260720120000_backup_module`). Implements the portable spec at
+   `C:\Claude\YeldnIN\BACKUP.md` **alongside** the existing local nightly backup — that one is
+   untouched and still runs. Four levels push to a Hetzner Storage Box over SFTP:
+   hourly DB-only (keep 24) · daily + weekly full (7/8) · MANUAL button-only (10), each in its
+   OWN remote folder. **Verified end to end 2026-07-20**, not merely assumed:
+   - a **cron-fired SCHEDULED run succeeded** (08:00:02 → `noc-backup-db-20260720-080002.tar.gz`)
+     in the standalone tsx worker — the `server-only` trap that broke veeey's scheduled path does
+     NOT apply here (see the comment at the top of `packages/backup/src/service.ts`);
+   - a **full restore drill passed**: 667 MB archive downloaded byte-exact, manifest matched,
+     restored into a SCRATCH database (never live) → 82 tables, and all 12 business tables
+     row-identical to production (RationingSheet 4862). Scratch DB dropped afterwards.
+   - **Still unproven:** a retention prune has never deleted a real remote file (needs more than
+     `keepLast` archives to accumulate — first chance ~24h after 2026-07-20 08:00).
 
 ## In progress / not finished
 
@@ -72,8 +86,12 @@ Full detail in `CLAUDE.md` → owner-blocked list. Short version, roughly by eff
 1. **Partner portal click-test** (5 min) — a dedicated `testpartner` exists (both sites, all
    categories). Log in on each `/partner` site, submit the lean form, confirm PENDING in moderation,
    **then delete the test owner+user.**
-2. **Off-site backups** (10 min) — `/admin/settings/backups`: enter host/user/port/path, add the
-   shown VPS pubkey to the remote's `authorized_keys`, click Test. Cron already installed.
+2. ~~Off-site backups~~ **✅ DONE 2026-07-20** — tiered SFTP module live on sub-account
+   `u635384-sub6`, scheduled runs firing, restore drill passed. **One open decision:** whether to
+   retire the OLD local module (`ops/backup.sh` + `offsite-backup.sh` rsync + their admin
+   sections). The owner asked for this; it was deferred until the new module proved itself. It now
+   has, and the `.env` coverage gap is closed, so the remaining reason to wait is simply that no
+   retention prune has run yet. Local retention was cut 14 → **5 days** in the meantime.
 3. **Rotate the Brevo SMTP key**, then re-apply via `ops/mail-relay-brevo.sh`.
 4. **Price Index toggle** — Settings → Modules → مؤشر الأسعار, whenever wanted.
 5. **Cloudflare proxy flip (Part C)** — biggest remaining security win; ordered checklist in
@@ -135,13 +153,23 @@ Still inside the repo: `Identity/` (tracked brand assets — real logos: ALSWARY
 6. **Soft delete:** any new public listing read must respect `deletedAt: null` (use the central
    visibility helpers in `@noc/partner-portal`); the purge cleanup transaction is mirrored in the
    admin action + `ops/purge-deleted-listings.ts`.
-7. **Owner decisions — don't re-litigate:** Card Title retired; both areas required for the reconcile
+7. **Backup module gotchas** (each cost real debugging on one of the three apps): Hetzner SFTP is
+   **port 23**, not 22 (22 answers but is chrooted and silently writes `/home/home/…`); a
+   sub-account sees its base dir as **`/home`**, not `/noc`; every level needs its OWN remote
+   folder or their retentions prune each other; the `noc-backup-` prefix is the ONLY thing stopping
+   NOC deleting YeldnIN's or veeey's archives on the shared box; `packages/backup/src/service.ts`
+   must never `import 'server-only'` (it runs in the standalone cron — that exact import broke every
+   SCHEDULED run on veeey while manual ones passed); `ssh2` must stay in `serverExternalPackages` in
+   BOTH apps (its native addon breaks the webpack build, and it does NOT reproduce locally when npm
+   blocked the install script — a green local build proves nothing there); CSF `TCP_OUT`/`TCP6_OUT`
+   must keep port **23** (`csf.conf` backup at `/root/csf.conf.bak-*`).
+8. **Owner decisions — don't re-litigate:** Card Title retired; both areas required for the reconcile
    auto-fill; transfer fee 180/م²; restore stays CLI-only; neighborhood map inheritance is
    explore-only; the gallery WhatsApp button is deliberately deleted; Outlook→spam is shared-IP
    reputation, not DNS.
-8. **Never delete Settings `gsc_newobour`/`gsc_alsawarey`** — Google Search Console verification
+9. **Never delete Settings `gsc_newobour`/`gsc_alsawarey`** — Google Search Console verification
    renders from them.
-9. **elbarbary / «عقيد إسلام البربري»** is a real partner set to Al-Sawarey-login-only; his listings
+10. **elbarbary / «عقيد إسلام البربري»** is a real partner set to Al-Sawarey-login-only; his listings
    now show on both sites (via the decoupling), which is intended — the owner explicitly asked for it.
 
 ## Key files — where the latest-session work lives
@@ -152,6 +180,16 @@ Still inside the repo: `Identity/` (tracked brand assets — real logos: ALSWARY
 - `packages/partner-portal/src/{LeanListingForm.tsx,listingSave.ts,catalog.ts}` — partner side.
 - `apps/portal/app/admin/(protected)/marketplace/{actions.ts,attributes/}` — ★ toggle, bulk
   `setSectionRequired`, `SectionRequiredControls.tsx`, and the file-type guards.
+
+**Tiered off-site backup (2026-07-20):**
+- `packages/backup/src/logic.ts` + `logic.test.ts` — PURE scheduling/naming/retention, **24 vitest
+  tests** incl. the two retention safety invariants. Changing retention? Run `npm test` first.
+- `packages/backup/src/{service,transport,secret-box}.ts` — archive build (mysqldump
+  `--single-transaction`, uploads, `.env`, manifest), SFTP, AES-256-GCM password at rest.
+- `ops/backup-tick.{ts,sh}` — the every-10-min cron entry (`--install-cron`).
+- `apps/portal/app/admin/(protected)/settings/backups/{OffsiteTiers.tsx,offsite-actions.ts}` — the
+  admin panel, added BELOW the existing local-backup sections.
+- `packages/db/prisma/migrations/20260720120000_backup_module/` — tables + seeded levels.
 
 **Global UX (2026-07-20):**
 - `packages/ui/src/components/PasswordInput.tsx` — the eye-toggle password box (use it everywhere).
