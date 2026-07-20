@@ -26,6 +26,7 @@ The big picture (deploy runbook, server map, gotchas) lives in the repo root **C
 | `analytics-prune.sh` → `.ts` | Retention prune of raw analytics | `/etc/cron.d/noc-analytics-prune` 03:15 |
 | `price-snapshot.sh` → `.ts` | Monthly per-district price snapshot (avg EGP/m² from published listings + lands) feeding the `/price-index` trend. Idempotent; the admin "Snapshot now" button does the same | `/etc/cron.d/noc-price-snapshot` 03:20 on the 1st |
 | `purge-deleted-listings.ts` | Hard-deletes listings soft-deleted (trashed) more than `LISTING_TRASH_DAYS` (default 90) days ago — same cleanup transaction as the admin trash page's purge action (attachments + area maps + row). Log: `/var/log/noc-purge-deleted.log` | `/etc/cron.d/noc-purge-deleted` 03:40 |
+| `backup-tick.sh` → `backup-tick.ts` | **Tiered OFF-SITE backup** tick (SFTP → Hetzner Storage Box sub-account `u635384-sub6`). The APP decides which levels are due (`packages/backup` logic, DB-driven), so the cron just ticks. `--install-cron` schedules it every 10 min. Levels/retention/destination are edited at `/admin/settings/backups`. Log: `/root/backups/backup-tick.log` | `/etc/cron.d/noc-backup-tick` every 10 min |
 | `install-backups.sh` | One-time: backup tree + daily cron + first run | — |
 | `cloudflare-realip.sh` | Regenerate Nginx real-IP + CSF ignore from Cloudflare's published ranges (already applied; rerun a few times/year) | — |
 | `mail-relay-brevo.sh` | (Re)configure Postfix→Brevo relay creds (`/etc/postfix/sasl_passwd`). Use after rotating the Brevo key | — |

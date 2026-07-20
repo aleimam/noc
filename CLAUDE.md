@@ -105,11 +105,25 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   `noc-backup-alert` 04:00 (emails/SMSes owner if backups are stale) ·
   `noc-analytics-rollup` 03:05 · `noc-analytics-prune` 03:15 ·
   `noc-price-snapshot` 03:20 on the 1st (monthly per-district price capture → /price-index trend) ·
-  `noc-purge-deleted` 03:40 (hard-deletes listings trashed >90 days — see soft delete rule below).
+  `noc-purge-deleted` 03:40 (hard-deletes listings trashed >90 days — see soft delete rule below) ·
+  `noc-backup-tick` every 10 min (tiered OFF-SITE backup; the app decides what's due).
 - **Backups admin UI:** `/admin/settings/backups` — status, per-file downloads, instant backup,
   integrity check, schedule/retention editors, off-site config + connection test, failure alerts
   (currently: aleimam@live.com + ebmta17@gmail.com + SMS 01225227677). **Restore stays CLI-only**
   by design (`ops/RESTORE.md`).
+- **TIERED off-site backup (2026-07-20, added ALONGSIDE the local nightly one — it does not
+  replace it).** DB-driven: `BackupConfig` / `BackupTier` / `BackupRun`, logic + 24 vitest tests in
+  `packages/backup`, SFTP via `ssh2-sftp-client` → Hetzner Storage Box **sub-account
+  `u635384-sub6`, port 23** (NOT 22 — 22 answers but is chrooted and silently writes
+  `/home/home/…`). **A sub-account sees its base dir as `/home`**, so folders are `/home/hourly`,
+  `/home/daily`, `/home/weekly`, `/home/manual` — each level MUST keep its own folder or the two
+  retentions prune each other. Archives are `noc-backup-<db|full>-<UTC stamp>.tar.gz` + a
+  `manifest.json` stating what they ACTUALLY hold; the `noc-` prefix is what the pruner matches
+  (shared storage with YeldnIN + veeey). MANUAL sits at `frequency=OFF` so ad-hoc runs never
+  consume a scheduled retention slot. Password is AES-256-GCM at rest (HKDF from AUTH_SECRET) —
+  re-enter it in the UI if AUTH_SECRET is ever rotated. **CSF `TCP_OUT`/`TCP6_OUT` must contain 23**
+  (added 2026-07-20; backup of csf.conf at `/root/csf.conf.bak-*`). Full spec, incl. the gotchas
+  that caused real outages: `C:ClaudeYeldnINBACKUP.md`.
 - **SSH safety:** `/root/.ssh/authorized_keys` is immutable (`chattr +i`) + fallback key file
   `/etc/ssh/root_keys` (CWP once wiped .ssh). Password auth off. Recovery: CWP panel :2087.
 - **Attack surface (hardening round 3, 2026-07-11 — see `security.md` §5 + F9–F12):** public
