@@ -354,9 +354,13 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
    `ops/CLOUDFLARE.md` (TLS-first, one zone at a time; www is proxy-safe since the SAN reissue).
 2. ~~Off-site backup target~~ **✅ DONE 2026-07-20** — the tiered SFTP module is live on Hetzner
    sub-account `u635384-sub6`; scheduled runs fire and a restore drill passed (see the server map).
-   **Open decision:** retire the OLD local module (`ops/backup.sh` + rsync `offsite-backup.sh` +
-   their admin sections)? The owner asked; deferred until the new one proved itself, which it now
-   has. Local retention already cut 14 → 5 days.
+   **Open decision (one blocker left):** retire the OLD local module (`ops/backup.sh` + rsync
+   `offsite-backup.sh` + their admin sections)? The only thing not yet proven is a retention prune
+   deleting a real remote file — the **first prune is due ~2026-07-21 08:00 UTC (the 25th hourly
+   archive) and a scheduled check fires 2026-07-21 13:00 Cairo** to confirm it. Once that passes,
+   this is a clean yes/no (recommendation: keep local `ops/backup.sh`, drop only the rsync
+   `offsite-backup.sh` + its admin section, which the new module replaces). Local retention already
+   cut 14 → 5 days.
 3. **Rotate the Brevo SMTP key** (it appeared in a chat once) — then update `/etc/postfix/sasl_passwd`
    (see `ops/mail-relay-brevo.sh`) and `postmap` + reload.
 4. **Partner portal UI click-test** — backend pipeline fully verified by script; a human should
@@ -378,6 +382,21 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
    rendered as meta tags; **never delete them**, verification depends on them). Sitemaps
    submitted, homepage indexing requested. A week later: check coverage + that the alsawarey
    sitemap moved from "Couldn't fetch" to Success.
+
+**Verification pending (needs a staff/admin login — I can't from a shell; everything else this
+session is backed by real command output):** three of the Codex-audit UI fixes are reasoned +
+typechecked but not click-tested — (a) the admin archive toggle now shows ONLY on
+PUBLISHED/ARCHIVED rows (`/admin/marketplace/listings`); (b) Approve is disabled with the missing
+details named when a pending row is incomplete; (c) the listing form's auto-save shows a red
+«لم يتم الحفظ» panel + Retry button on failure. Confirm these once when convenient. (Same login also
+covers the partner UI click-test, item 4.)
+
+**Codex deep audit — ongoing, owner-driven in steps (see `CODEX_AUDIT_FINDINGS.md`):** pass 1 of 16
+(listings + EAV) is COMPLETE — Codex found 7 defects, all fixed + 7 extras + the 3 UI/UX
+enhancements (commits `06e58e5`→`baf90b1`, live-verified; resolution table at the top of that file
+so a later pass won't re-report them). **Passes 2–16 have not been run.** The owner runs them a pass
+at a time from `CODEX_AUDIT_BRIEF.md`; bring each pass's findings back here for verify-then-fix (two
+of pass 1's were only provable against live data, so re-verify every finding before acting).
 
 **2026-07-15→17: gallery/perf/admin-UX batch (commits `eaf3708`→`df78560`, all deployed+verified).**
 - **Hero gallery + lightbox** on both sites' listing pages (see Feature map) + **first-party photo

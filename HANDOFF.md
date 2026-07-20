@@ -115,23 +115,34 @@ Full detail in `CLAUDE.md` → owner-blocked list. Short version, roughly by eff
    owner → its partner card: login + both sites + category grants), log in on each `/partner` site,
    submit the lean form, confirm PENDING in moderation, **then delete that owner+user.**
 2. ~~Off-site backups~~ **✅ DONE 2026-07-20** — tiered SFTP module live on sub-account
-   `u635384-sub6`, scheduled runs firing, restore drill passed. **One open decision:** whether to
-   retire the OLD local module (`ops/backup.sh` + `offsite-backup.sh` rsync + their admin
-   sections). The owner asked for this; it was deferred until the new module proved itself. It now
-   has, and the `.env` coverage gap is closed, so the remaining reason to wait is simply that no
-   retention prune has run yet. Local retention was cut 14 → **5 days** in the meantime.
+   `u635384-sub6`, scheduled runs firing, restore drill passed. **One decision waiting on ONE
+   event:** whether to retire the OLD local module (`ops/backup.sh` + `offsite-backup.sh` rsync +
+   their admin sections). Everything is proven EXCEPT a retention prune deleting a real remote file
+   — the first prune is due ~**2026-07-21 08:00 UTC** and a scheduled check fires **13:00 Cairo**
+   the same day. Once it passes: keep local `ops/backup.sh`, drop only the rsync `offsite-backup.sh`
+   + its admin section. Local retention already cut 14 → **5 days**.
 3. **Rotate the Brevo SMTP key**, then re-apply via `ops/mail-relay-brevo.sh`.
 4. **Price Index toggle** — Settings → Modules → مؤشر الأسعار, whenever wanted.
 5. **Cloudflare proxy flip (Part C)** — biggest remaining security win; ordered checklist in
    `ops/CLOUDFLARE.md`; grey-cloud is the instant rollback.
 6. **English content entry** (owner paused "later") — `/sell` page + storefront hero title/subtitle
    + hero image, in the admin Storefront editor.
-7. **GSC check-up** — coverage on both domains + that the alsawarey sitemap moved to Success.
-8. `/code-review ultra` whenever the owner wants it (billed); fold findings into `security.md` §7.
-9. **Codex independent review** — `AGENTS.md` is in place so Codex onboards itself. Run it
-   read-only from chatgpt.com/codex, then bring the findings back for triage (real vs. deliberate
-   vs. false positive) and fold confirmed ones into `security.md` §7.
-10. **Rationing photo backlog** — 8 unscanned April pages need photographing; one-click filename-typo
+7. **GSC check-up ~2026-07-23** — coverage on both domains + that the alsawarey sitemap moved to
+   Success.
+8. **Partner portal click-test** — the old `testpartner` was **deleted from prod 2026-07-20**
+   (orphan login: `User.ownerId` NULL → no owner/grants → couldn't post, so the test was never
+   actually done through it). Create a FRESH partner properly first (admin → Owners → add owner →
+   its partner card: login + both sites + category grants), submit the lean form on each `/partner`
+   site, confirm PENDING in moderation, **then delete that owner+user.**
+9. **Click-test 3 Codex-audit UI fixes** (same admin login as #8): the archive toggle only on
+   PUBLISHED/ARCHIVED rows, Approve disabled + missing-details named on incomplete pending rows, and
+   the listing form's red auto-save-failed panel + Retry. Reasoned + typechecked, not yet clicked.
+10. **Continue the Codex deep audit** — pass 1 of 16 done (14 fixes live; resolution table in
+   `CODEX_AUDIT_FINDINGS.md`). Run passes 2–16 a pass at a time from `CODEX_AUDIT_BRIEF.md`
+   (read-only, chatgpt.com/codex), bring each back for verify-then-fix. `/code-review ultra`
+   (billed, owner-triggered) is the separate heavyweight option; fold either's findings into
+   `security.md` §7.
+11. **Rationing photo backlog** — 8 unscanned April pages need photographing; one-click filename-typo
    fixes wait in `/admin/rationing/scans`.
 
 ## What lives on this device but NOT in the repo
