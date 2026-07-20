@@ -106,7 +106,9 @@ requirements), `NewObour Design System/` and its 42MB zip — **still the source
 `newobour-advanced-features.md`, which ROADMAP.md cites for the unbuilt Phase 2/3 features** — and
 `input data/2026-06 Rationing - corrected.xlsx` (the source Excel behind the imported rationing
 records). All of it was gitignored, so **this PC is the only copy: it is NOT in git, NOT on the
-server, and NOT covered by the backup crons. Do not delete it.**
+server, and NOT covered by the backup crons. Do not delete it.** A copy was pushed to
+**Google Drive (`G:My DriveNOC-reference`) on 2026-07-20**, so it now survives a disk loss —
+re-sync that copy if the local folder ever changes.
 
 Still inside the repo: `Identity/` (tracked brand assets — real logos: ALSWARY =
 `Identity/1000X1000.png`, New Obour = `Identity/New Obour.png`) and `uploads/` (local dev only).
