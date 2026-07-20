@@ -109,9 +109,11 @@ All deployed + live-verified (commits `2356b26` → `e395a3d`). Full detail in `
 
 Full detail in `CLAUDE.md` → owner-blocked list. Short version, roughly by effort:
 
-1. **Partner portal click-test** (5 min) — a dedicated `testpartner` exists (both sites, all
-   categories). Log in on each `/partner` site, submit the lean form, confirm PENDING in moderation,
-   **then delete the test owner+user.**
+1. **Partner portal click-test** (5 min) — the old `testpartner` was **deleted from prod
+   2026-07-20** (orphan login: `User.ownerId` NULL → no owner/grants → couldn't post, so the test
+   was never actually done through it). Create a FRESH partner properly first (admin → Owners → add
+   owner → its partner card: login + both sites + category grants), log in on each `/partner` site,
+   submit the lean form, confirm PENDING in moderation, **then delete that owner+user.**
 2. ~~Off-site backups~~ **✅ DONE 2026-07-20** — tiered SFTP module live on sub-account
    `u635384-sub6`, scheduled runs firing, restore drill passed. **One open decision:** whether to
    retire the OLD local module (`ops/backup.sh` + `offsite-backup.sh` rsync + their admin

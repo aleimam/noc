@@ -140,7 +140,8 @@ to autocomplete, 16px inputs (iOS zoom), ≥40px admin touch targets, «(مطل�
   partner logins are gated per site (`NOC_SITE` env); a partner's listings appear ONLY on their
   enabled sites (Phase 4 visibility, truth-table verified); both apps use the shared **lean
   listing form**. Backend pipeline verified end-to-end on prod; a UI click-test by a human
-  remains (test account `testpartner` exists — delete after).
+  remains (the old `testpartner` account was deleted 2026-07-20 — it was an orphan login with no
+  owner; make a fresh partner for the test, then delete it).
 - **Partner email-OTP + admin OTP login** (password OR code via SMS/email).
 - **Web analytics Phases 1–3 + saved dashboard views** — feature-complete.
 - **Outbound mail** — Brevo relay live; BOTH domains SPF+DKIM authenticated (verified);
@@ -157,7 +158,8 @@ to autocomplete, 16px inputs (iOS zoom), ≥40px admin touch targets, «(مطل�
 1. Cloudflare proxy flip — Part C checklist in `ops/CLOUDFLARE.md`.
 2. Off-site backup server details → enter in `/admin/settings/backups`, add the VPS pubkey.
 3. Rotate the Brevo SMTP key, then re-apply via `ops/mail-relay-brevo.sh`.
-4. Partner portal UI click-test on both sites (then delete the `testpartner` account).
+4. Partner portal UI click-test on both sites (create a fresh test partner first — the old
+   `testpartner` was deleted 2026-07-20 — then delete it after).
 5. `/code-review ultra` when wanted.
 
 ---

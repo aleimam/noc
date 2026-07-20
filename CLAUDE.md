@@ -360,10 +360,12 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
 3. **Rotate the Brevo SMTP key** (it appeared in a chat once) — then update `/etc/postfix/sasl_passwd`
    (see `ops/mail-relay-brevo.sh`) and `postmap` + reload.
 4. **Partner portal UI click-test** — backend pipeline fully verified by script; a human should
-   log in once on each site, submit the lean form, confirm PENDING in moderation. A dedicated
-   **test partner exists**: username `testpartner`, email `egyptvitaminsshare@gmail.com`, both
-   sites enabled, all categories granted (password resettable from the owner's admin panel →
-   Owners → the unified owner editor's partner card). **Delete this owner+user after testing.**
+   log in once on each site, submit the lean form, confirm PENDING in moderation. The old
+   `testpartner` account was **deleted from prod 2026-07-20** (it was an orphan PARTNER login:
+   `User.ownerId` was NULL, so it had no owner/grants and could not actually post — the test was
+   never completeable through it). To do this test now, create a FRESH partner properly (admin →
+   Owners → add owner → its partner card: set a login + enable both sites + grant categories),
+   run the test, then delete that owner+user.
 5. `/code-review ultra` — owner-triggered, billed; fold findings into `security.md` §7.
 6. **Enable the Price Index module** (Settings → Modules → مؤشر الأسعار) when the owner wants
    `/price-index` public — the page + monthly snapshot cron are live but hidden by this toggle.
