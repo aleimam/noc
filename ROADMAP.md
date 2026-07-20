@@ -11,7 +11,16 @@ SMS gateway, and next-intl ar/en.
 
 ---
 
-## 📌 Current status (2026-07-17)
+## 📌 Current status (2026-07-20)
+
+**Shipped 2026-07-19→20 (commits `2356b26` → `e395a3d`, all deployed + live-verified):**
+**admin-configurable required/optional listing details** (per-attribute ★ + per-section bulk, four
+enforcement sites, PHOTOS/DOCUMENTS exempt, publish-only, migration `20260719120000_attribute_required`;
+owner set 7 required in prod) · **global RTL placeholders** via one CSS rule per app · shared
+**PasswordInput** with an eye toggle on all seven password fields · partner «🛒 عرض في السوق» button
++ tabs unified to **إعلاناتي** on both apps · **polish+harden pass** (self-review + independent agent,
+6 verified fixes) · **production sweep** (logs/crons/backups/crawl/consoles) → favicon force-dynamic
+fix · **AGENTS.md** for non-Claude agents. Backlog remains 100% owner-action.
 
 **Shipped 2026-07-14→17 (commits `7f9f49a` → `df78560`, all deployed+verified — details in
 `CLAUDE.md` → Current state):** rationing watchers admin + follow-up workflow (congrats SMS /

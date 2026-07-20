@@ -1,10 +1,10 @@
 # Project Handoff — NOC platform (newobour.com + alsawarey.com)
 
-_Last updated: 2026-07-19 00:25 EDT · Written so a new Claude session (on any account, same device) can continue this project._
+_Last updated: 2026-07-20 · Written so a new Claude session (on any account, same device) can continue this project._
 
 > **Read `CLAUDE.md` first — it is the master onboarding doc** (architecture, the production
 > deploy runbook with every gotcha, the server map, feature map, architecture rules, and the
-> owner-blocked list; last full update 2026-07-19 — same day as this file). This HANDOFF only
+> owner-blocked list; last full update 2026-07-20 — same day as this file). This HANDOFF only
 > covers **session-transition facts**: what state you're inheriting and what lives on this
 > device but outside the repo.
 
@@ -19,35 +19,38 @@ Users are low-literacy/low-tech on phones — the design rule is *biggest, simpl
 ## Current status — NOTHING is mid-flight
 
 **Live, healthy, fully deployed, clean tree.** Local `main` and production are in sync — last
-commit **`751c5cd`** (verified 2026-07-19 on both local and `ssh noc`; always re-verify with
+commit **`e395a3d`** (verified 2026-07-20 on both local and `ssh noc`; always re-verify with
 `git log --oneline -1` on the server). Both pm2 apps online. Every feature requested to date is
 shipped, deployed, and live-verified — there is **no half-finished work** (build passes 3/3;
 `git status` is clean).
 
-## Done in the latest session (2026-07-18 → 19)
+## Done in the latest session (2026-07-19 → 20)
 
-All deployed + live-verified (commits `a207826` → `751c5cd`). Full detail is in `CLAUDE.md` →
+All deployed + live-verified (commits `2356b26` → `e395a3d`). Full detail in `CLAUDE.md` →
 *Current state & pending*; the headlines:
 
-1. **Generated-poster big-card grid order finalised** to a FIXED order by STABLE section key
-   (`POSTER_CARD_ORDER` in `apps/portal/lib/poster/generate.ts`): `location-pros → auth_pay →
-   location`, placed row-major = **map · مميزات الموقع · مستحقات · الموقع** (cells 1 TL, 2 TR, 3 BL,
-   4 BR). The owner iterated on this several times — **this is the final; do not reshuffle.**
-2. **0/blank price ⇒ «السعر عند الطلب / تواصل لمعرفة السعر»** everywhere public (both sites).
-3. **Card covers gained a neighborhood-masterplan fallback** — a new listing with no drawn location
-   map and no photos now shows its area map instead of a blank placeholder card.
-4. **⭐ Partner listing-visibility DECOUPLED from site-access (owner decision):** a partner's
-   `siteNewObour`/`siteAlsawary` flags now gate **login only** — their listings show on **BOTH**
-   public sites regardless. **This supersedes the earlier "partner listings only on enabled sites"
-   rule — do not reinstate it.** (See `packages/partner-portal/src/visibility.ts`.)
-5. **Partner portal tabs** renamed/split: **عروضي** (own listings, editable = dashboard) · **عروض
-   الصواري** (view-only browse of all Al Sawarey offers). Account page got a reveal-password (👁)
-   toggle on the new-password field.
-6. **Admin label «البائع» → «أضيف بواسطة» / "Posted by"** (the account that posted the listing).
-7. **«شوهدت مؤخرًا» auto-prunes deleted listings** via a new mirrored route `POST
-   /api/listings/alive` (both apps) — fixes the blank "اختبار SEO" ghost cards the owner reported.
-8. **Data cleanup:** removed one orphaned neighborhood-masterplan record (row + 3 image files);
-   verified all 24 live neighborhood masterplans are otherwise distinct.
+1. **⭐ Admin-configurable REQUIRED listing details** — the session's big feature. New
+   `Attribute.required` column (migration `20260719120000_attribute_required`, default false so
+   nothing changed retroactively; `city` backfilled to preserve old behaviour). Admin sets it per
+   attribute (★ checkbox) or per section (bulk buttons) at `/admin/marketplace/attributes`; both
+   listing forms show ★ + «(مطلوب)» and block publishing with a red highlight + scroll-to-first.
+   **Enforcement lives at FOUR sites that must stay in step** — see the new Architecture rule in
+   CLAUDE.md. **PHOTOS/DOCUMENTS can never be required** (attachment-backed; would soft-lock
+   publishing) and a boolean `false` counts as answered.
+2. **Owner's live required settings (7):** المساحة · المدينة · 5 of the 6 مستحقات جهاز المدينة —
+   the generic «القسط السنوي» was deliberately made optional. أصل المساحة + all مميزات الموقع are
+   optional. Set directly in prod DB at the owner's request; existing listings unaffected.
+3. **Global RTL placeholders** — one CSS rule per app makes every Arabic placeholder render RTL,
+   including inside deliberately `dir="ltr"` fields. Future inputs need no per-field fix.
+4. **`PasswordInput` (@noc/ui) is now the house standard for every password box** — 👁/🙈 toggle,
+   applied to all seven fields across both sites. Use it for any new password field.
+5. **Partner portal**: «🛒 عرض في السوق» button per published listing (hidden where the storefront
+   would 404); nav tabs unified to **إعلاناتي** on both apps (brokerage had stale labels).
+6. **Polish+harden pass** (self-review + independent review agent, 6 verified fixes) followed by a
+   **production sweep** (logs, crons, backups, 18-URL crawl, consoles) — one real defect found and
+   fixed: `favicon.ico` routes now `force-dynamic`, killing a recurring `LRUCache` log error on
+   both sites. No 5xx, backups current, analytics rollup fresh.
+7. **`AGENTS.md` added** at the repo root so non-Claude agents (Codex) onboard from CLAUDE.md.
 
 ## In progress / not finished
 
@@ -79,7 +82,10 @@ Full detail in `CLAUDE.md` → owner-blocked list. Short version, roughly by eff
    + hero image, in the admin Storefront editor.
 7. **GSC check-up** — coverage on both domains + that the alsawarey sitemap moved to Success.
 8. `/code-review ultra` whenever the owner wants it (billed); fold findings into `security.md` §7.
-9. **Rationing photo backlog** — 8 unscanned April pages need photographing; one-click filename-typo
+9. **Codex independent review** — `AGENTS.md` is in place so Codex onboards itself. Run it
+   read-only from chatgpt.com/codex, then bring the findings back for triage (real vs. deliberate
+   vs. false positive) and fold confirmed ones into `security.md` §7.
+10. **Rationing photo backlog** — 8 unscanned April pages need photographing; one-click filename-typo
    fixes wait in `/admin/rationing/scans`.
 
 ## What lives on this device but NOT in the repo
@@ -109,31 +115,48 @@ Root reference material (in the folder, not code): `NOC00-02.docx`, `SMS-Partner
    `listingVisibleOnNewObour()` were changed accordingly. Don't reinstate the old per-site gating.
 3. **Poster card order is FINAL** (map · مميزات · مستحقات · الموقع, by section key) — the owner
    iterated on this repeatedly; leave it.
-4. **Mirrors kept identical by discipline only:** `apps/{portal,brokerage}/lib/search.ts`,
+4. **Required listing details have FOUR enforcement sites** — the two client forms
+   (`ListingForm.tsx`, `LeanListingForm.tsx`) and the two server saves (`account/listings/actions.ts`,
+   `partner-portal/listingSave.ts`), plus the admin guards in `upsertAttribute`/`setSectionRequired`.
+   Change one → change all. PHOTOS/DOCUMENTS must stay exempt (attachment-backed: requiring one
+   soft-locks publishing) and boolean `false` counts as answered. Full rule in CLAUDE.md.
+5. **Mirrors kept identical by discipline only:** `apps/{portal,brokerage}/lib/search.ts`,
    `apps/{portal,brokerage}/app/thumb/[...path]/route.ts`, and now
    `apps/{portal,brokerage}/app/api/listings/alive/route.ts`. Change one → change both.
-5. **Soft delete:** any new public listing read must respect `deletedAt: null` (use the central
+6. **Soft delete:** any new public listing read must respect `deletedAt: null` (use the central
    visibility helpers in `@noc/partner-portal`); the purge cleanup transaction is mirrored in the
    admin action + `ops/purge-deleted-listings.ts`.
-6. **Owner decisions — don't re-litigate:** Card Title retired; both areas required for the reconcile
+7. **Owner decisions — don't re-litigate:** Card Title retired; both areas required for the reconcile
    auto-fill; transfer fee 180/م²; restore stays CLI-only; neighborhood map inheritance is
    explore-only; the gallery WhatsApp button is deliberately deleted; Outlook→spam is shared-IP
    reputation, not DNS.
-7. **Never delete Settings `gsc_newobour`/`gsc_alsawarey`** — Google Search Console verification
+8. **Never delete Settings `gsc_newobour`/`gsc_alsawarey`** — Google Search Console verification
    renders from them.
-8. **elbarbary / «عقيد إسلام البربري»** is a real partner set to Al-Sawarey-login-only; his listings
+9. **elbarbary / «عقيد إسلام البربري»** is a real partner set to Al-Sawarey-login-only; his listings
    now show on both sites (via the decoupling), which is intended — the owner explicitly asked for it.
 
 ## Key files — where the latest-session work lives
 
+**Required listing details (2026-07-19→20):**
+- `packages/db/prisma/migrations/20260719120000_attribute_required/` — the additive migration.
+- `apps/portal/app/account/listings/{ListingForm.tsx,actions.ts,catalog.ts}` — full form + server save.
+- `packages/partner-portal/src/{LeanListingForm.tsx,listingSave.ts,catalog.ts}` — partner side.
+- `apps/portal/app/admin/(protected)/marketplace/{actions.ts,attributes/}` — ★ toggle, bulk
+  `setSectionRequired`, `SectionRequiredControls.tsx`, and the file-type guards.
+
+**Global UX (2026-07-20):**
+- `packages/ui/src/components/PasswordInput.tsx` — the eye-toggle password box (use it everywhere).
+- `apps/{portal,brokerage}/app/globals.css` — the RTL-placeholder rule (mirrored; url inputs excluded).
+- `packages/partner-portal/src/{PartnerListings.tsx,Dashboard.tsx}` — «عرض في السوق» + eligibility.
+- `apps/{portal,brokerage}/app/favicon.ico/route.ts` — force-dynamic 308 (LRUCache fix).
+
+**Earlier batch (2026-07-18→19), still current:**
 - `apps/portal/lib/poster/generate.ts` — `POSTER_CARD_ORDER` (poster card order by section key).
 - `apps/portal/lib/poster/render.ts` — poster SVG layout (row-major grid, map slot 1).
 - `packages/partner-portal/src/visibility.ts` — the decoupled visibility helpers.
-- `apps/portal/app/partner/(protected)/layout.tsx` — partner nav (عروضي / عروض الصواري).
-- `packages/partner-portal/src/{Browse.tsx,AccountForm.tsx}` — view-only browse + reveal-password.
+- `apps/{portal,brokerage}/app/partner/(protected)/layout.tsx` — partner nav (إعلاناتي / عروض الصواري).
 - `packages/ui/src/components/RecentlyViewed.tsx` + `apps/{portal,brokerage}/app/api/listings/alive/route.ts` — auto-prune dead cards.
 - `apps/brokerage/lib/listings.ts` + `apps/portal/lib/listingCovers.ts` — 0-price + masterplan cover fallback.
-- `packages/i18n/messages/{ar,en}.json` — the `seller` label.
 
 ## How to continue
 

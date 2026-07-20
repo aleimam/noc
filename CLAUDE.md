@@ -2,7 +2,7 @@
 
 Master onboarding for anyone (human or Claude session) picking up this repo. It captures the
 architecture, the production runbook, and every hard-won gotcha. Deeper docs are linked at the
-bottom. Last full update: **2026-07-19**. Mid-flight state (if any) lives in `HANDOFF.md`.
+bottom. Last full update: **2026-07-20**. Mid-flight state (if any) lives in `HANDOFF.md`.
 
 ## What this is
 
@@ -171,6 +171,18 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   whitelists. Build card image URLs with each app's `thumbUrl()` helper (portal `lib/thumb.ts` +
   `lib/listingCovers.ts` coversForListings; brokerage `lib/thumb.ts` + `coversFor` in
   `lib/listings.ts`). Full-size originals stay for detail pages/lightbox.
+- **Required listing details are ADMIN-CONFIGURABLE (2026-07-19):** `Attribute.required` is the
+  source of truth (`REQUIRED_LISTING_ATTR_KEYS` = `['city']` remains only as a defensive
+  fallback). Enforcement lives at FOUR sites that must stay in step — client full form
+  (`apps/portal/app/account/listings/ListingForm.tsx`), client lean form
+  (`packages/partner-portal/src/LeanListingForm.tsx`), and the two server saves
+  (`apps/portal/app/account/listings/actions.ts`, `packages/partner-portal/src/listingSave.ts`).
+  Invariants: only PENDING (publish) is blocked — DRAFTs may stay incomplete; only attributes
+  APPLICABLE to the chosen Type/Purpose/Condition are demanded; a boolean `false` («لا» on YESNO)
+  COUNTS as answered; **PHOTOS/DOCUMENTS can never be required** (their data rides Attachment rows
+  the value checks can't see — forced off in `upsertAttribute`, skipped by `setSectionRequired`,
+  hidden in the admin editor, filtered out in both server queries). Admin UI: ★ per-attribute
+  checkbox + per-section bulk buttons at `/admin/marketplace/attributes`.
 
 ## Feature map (all live in production)
 
@@ -179,7 +191,7 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 | Marketplace (listings) | portal `/market`, admin `/admin/marketplace` | EAV + classifiers + moderation queue (PENDING→PUBLISHED); auto-save-as-draft while writing (create-once-update-after, 15s interval, only for new/DRAFT); soft delete → 90-day trash (see Architecture rules). **Form layout (owner-set 2026-07-17, don't reshuffle):** types → category details (inside معلومات اساسية — the «تفاصيل إضافية» heading is retired; the 🗺️ location-map annotator renders INSIDE this run, directly below whichever group holds the neighborhood picker — detected by attr type NEIGHBORHOOD) → title → price row [السعر · السعر لـ · 🔒 أقل سعر] then [ملاحظة · قابل للتفاوض؟] → partnerships → 🗂️ papers → 📞 contact → «تفاصيل أخرى + صور أخرى» (collapsed by default; contents mount only when open; header shows «يوجد محتوى» + photo count) → save actions (full-width on mobile). Keep papers + contact as the closing blocks; nothing goes between them and the actions except the collapsed extras. **Poster layout (owner's numbered mock 2026-07-17, `lib/poster/render.ts`):** the big poster's card grid is ROW-major with **city/district map in SLOT 1 (top-left)**, then the detail groups in a FIXED order keyed to STABLE section keys (owner mock 2026-07-18, `POSTER_CARD_ORDER` in `lib/poster/generate.ts`): `location-pros` → `auth_pay` → `location`, i.e. map · مميزات الموقع · مستحقات · الموقع = cells 1 TL, 2 TR, 3 BL, 4 BR (sections outside the list keep their section order after; ordered by KEY not the Arabic heading, which admins rename); the footer WhatsApp icon is the real WhatsApp mark; the advantages image (مميزات المنطقة) is frameless with a 2-line capped title, measured divider, content-adaptive height, and rows that word-wrap to a 2nd line (ellipsis only past two lines); the header title is width-capped (shrink-to-fit floor 20px, then ellipsis) so it can never overprint the رقم الإعلان pill / area table. **Header layout is admin-switchable per brand** (Settings → هوية الصور المولّدة → «تخطيط رأس البوستر», Setting `posterTheme.<brand>.headerLayout`): `side` (code default — compact, table beside the title) or `row` (info table as one full-width 6-cell strip BELOW the band; title gets the whole line — best for long titles). **BOTH brands are set to `row` since 2026-07-17 (owner choice, both live-verified)** — don't "reset" the Setting to default. Saving flags published listings postersStale |
 | Listing hero gallery | listing detail pages, BOTH sites | ecommerce-style `HeroGallery`+`Lightbox` in @noc/ui: order = location map → big branded poster → photos → generated → area photos/maps (nb-masterplan skipped when the location map exists); autoplay 4s stop-on-touch (+reduced-motion/hidden-tab/off-screen guards); fullscreen zoom/copy/share/download/open-tab. First-party photo analytics (photo_open/nav/action → AnalyticsEvent, «أكثر الصور مشاهدة» card in the dashboard) — admin toggle Setting `gallery.photoAnalytics` (≠'0'=on). The «اسأل عن هذه الصورة» WhatsApp button was REMOVED entirely 2026-07-17 (owner request) — don't re-add |
 | Al Sawarey storefront | brokerage `/` `/listings` | display-only; `showOnBrokerage` + Type/Purpose gates; customer OTP login, wishlist |
-| **Partner portal (multi-site)** | `/partner` on BOTH domains | 100% shared via `@noc/partner-portal`; per-partner site access (`Owner.siteNewObour/siteAlsawary`) gates **login only** — **a partner's listings show on BOTH public sites regardless of site-access (owner decision 2026-07-18; editing from portal or admin is global, one shared Listing row)**; only Al Sawarey's `showOnBrokerage` (non-partner listings) + Type/Purpose `allowedOnAlsawarey` still gate the storefront. Nav tabs: **عروضي** (own listings, editable = dashboard) · **عروض الصواري** (view-only browse of every Al Sawarey offer); lean listing form both sides; login = password OR OTP (SMS/email); account page has a reveal-password toggle (can't show the stored hash) |
+| **Partner portal (multi-site)** | `/partner` on BOTH domains | 100% shared via `@noc/partner-portal`; per-partner site access (`Owner.siteNewObour/siteAlsawary`) gates **login only** — **a partner's listings show on BOTH public sites regardless of site-access (owner decision 2026-07-18; editing from portal or admin is global, one shared Listing row)**; only Al Sawarey's `showOnBrokerage` (non-partner listings) + Type/Purpose `allowedOnAlsawarey` still gate the storefront. Nav tabs — IDENTICAL on both apps (change both layouts together): **إعلاناتي** (own listings, editable = dashboard; every PUBLISHED row carries ✎ تعديل + a «🛒 عرض في السوق» button opening that listing's public page in a new tab — suppressed on alsawarey for rows whose Type/Purpose isn't `allowedOnAlsawarey`, since the storefront detail page would 404) · **عروض الصواري** (view-only browse of every Al Sawarey offer); lean listing form both sides; login = password OR OTP (SMS/email); account page has an eye-toggle password field (can't show the stored hash) |
 | Rationing (كشوف التقنين) | portal `/rationing`, admin sheets/scans/**watchers** | Excel import, soft Arabic search, quotas by security level; name-watch follow-ups (`/admin/rationing/watchers`) → auto-alert + curated congrats SMS + phone-contact «Done» queue; scans page = full photo↔rows reconciliation suite (clickable orphan/missing/serial-gap drill-downs, one-click filename fixes, per-import coverage) |
 | Lands/geo explorer | portal `/explore` | city→district→neighborhood→block, masterplans, advantages, amenities. Neighborhood inherits district LOCATION map if it has none (explore only, never listings) |
 | Calculator | portal `/calculator` | area + تصالح cost calc, admin-editable rates (transfer 180/م² since the Authority's 2026-07 cut); the listing form's «مستحقات جهاز المدينة» auto-fills from the same `reconcile()` (🧮 button, needs أصل المساحة + المساحة) |
@@ -190,9 +202,38 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 | Appearance/theming | admin settings | per-site colors/fonts via Setting `theme.<brand>` |
 | Security posture | admin settings | `security.level` LIGHT/MEDIUM/HIGH gates scans/maps/quotas |
 
-## Current state & pending (as of 2026-07-19)
+## Current state & pending (as of 2026-07-20)
 
-**Everything below is deployed + live-verified; the tree is clean; local `main` = prod (`751c5cd`).**
+**Everything below is deployed + live-verified; the tree is clean; local `main` = prod (`e395a3d`).**
+
+**2026-07-19→20: required-details / global-UX / hardening batch (commits `2356b26`→`e395a3d`,
+all deployed + live-verified).**
+- **⭐ Admin-configurable REQUIRED listing details** (migration `20260719120000_attribute_required`):
+  `Attribute.required` per attribute + per-section bulk buttons at `/admin/marketplace/attributes`;
+  ★ + «(مطلوب)» on both listing forms; publishing blocked with red highlight + scroll-to-first when
+  a required applicable detail is empty. Full invariant list in Architecture rules — **the four
+  enforcement sites must stay in step.** Owner's live settings (7 required): المساحة · المدينة ·
+  5 of 6 مستحقات جهاز المدينة (the generic «القسط السنوي» is deliberately optional); أصل المساحة and
+  all مميزات الموقع optional. Existing published listings are NOT retroactively affected.
+- **Global RTL placeholders**: one CSS rule per app (`[dir='rtl'] input:not([type='url'])::placeholder`)
+  fixes Arabic hints inside deliberately `dir="ltr"` fields (phone/email/password) system-wide —
+  no per-field patching needed for future inputs. URL inputs excluded (bidi reordered `https://`).
+- **`PasswordInput` in @noc/ui — the house standard for EVERY password box** (👁/🙈, ≥40px target,
+  locale-aware aria): partner login (both sites), admin login, admin change-password (×2), staff
+  manager, SMS-provider password, partner account. Add new password fields with this component.
+- **Partner portal**: «🛒 عرض في السوق» per published row (see Feature map); tabs unified to
+  **إعلاناتي** across both apps (the brokerage still had the old «لوحتي / تصفّح العروض» labels).
+- **07-20 polish+harden pass** (self-review + independent agent over the whole batch, 6 verified
+  fixes): PHOTOS/DOCUMENTS can never be required (would have soft-locked publishing — exempted at
+  all six layers); boolean `false` («لا» on YESNO) counts as answered; «عرض في السوق» hidden on
+  ineligible alsawarey rows; bulk toggle surfaces failures; URL-placeholder bidi fix; eye-label
+  locale. Then a **production sweep** (pm2 + nginx logs, cron/backup health, 18-URL crawl, browser
+  consoles): one real defect found and fixed — the `favicon.ico` routes were static, so Next kept
+  trying to prerender-cache a body-less 308 and logged `LRUCache: calculateSize returned 0` on both
+  sites; now `force-dynamic`. Everything else clean (no 5xx, backups current, rollup fresh).
+  Note: `/news` + `/guide` 404 by DESIGN — those modules are toggled off in Settings → Modules.
+- **`AGENTS.md` added** at the repo root — onboarding pointer for non-Claude agents (Codex reads
+  it by convention); it points at CLAUDE.md and lists the house invariants.
 
 **2026-07-18→19: listings/poster/partner batch (commits `a207826`→`751c5cd`, all deployed + live-verified).**
 - **Poster big-card grid order** finalised to a FIXED order keyed to STABLE section keys
