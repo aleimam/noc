@@ -7,7 +7,7 @@ import { marketHref, resolveMarketListingId } from '../../../lib/listings';
 import { cityHref, districtHref, neighborhoodHref } from '../../../lib/geoHref';
 import { PhotoGallery, HeroGallery, TrackView, ListingCard, AreaAdvantages } from '@noc/ui';
 import { localizeUnit, currency } from '@noc/i18n';
-import { formatDetailValue, waPhone, type DetailConfig } from '@noc/config';
+import { formatDetailValue, waPhone, isStoredPrice, type DetailConfig } from '@noc/config';
 import { newObourVisibility } from '@noc/partner-portal/visibility';
 import { auth } from '@noc/auth';
 import { getStandardAreas } from '../../../lib/marketplace';
@@ -43,7 +43,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const parts = [
     l.typeOption ? (locale === 'ar' ? l.typeOption.nameAr : l.typeOption.nameEn) : '',
     l.area != null ? `${Number(l.area).toLocaleString('en-US')} ${locale === 'ar' ? 'م²' : 'm²'}` : '',
-    l.price != null ? `${Number(l.price).toLocaleString('en-US')} ${locale === 'ar' ? 'ج.م' : 'EGP'}` : '',
+    // Same 0 ⇒ «السعر عند الطلب» rule as the page body. The meta/OG description is what Google
+    // and WhatsApp shares display, so a bare non-null check advertised «0 ج.م» to the outside
+    // world while the page itself correctly invited contact.
+    isStoredPrice(l.price)
+      ? `${Number(l.price).toLocaleString('en-US')} ${locale === 'ar' ? 'ج.م' : 'EGP'}`
+      : locale === 'ar' ? 'السعر عند الطلب' : 'Price on request',
   ].filter(Boolean);
   const desc = ((l.description ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || parts.join(' · ')).slice(0, 160);
   return pageMeta({
@@ -360,7 +365,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     <SiteShell active="market">
       <main className="mx-auto max-w-3xl space-y-6 p-6 pb-24">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([listingLd, crumbsLd]) }} />
-      <TrackView item={{ id: listing.id, title: listing.title, cover: galleryPaths[0] ? thumbUrl(galleryPaths[0], 320) : null, price: listing.price != null ? String(listing.price) : null, href: canonicalPath }} />
+      <TrackView item={{ id: listing.id, title: listing.title, cover: galleryPaths[0] ? thumbUrl(galleryPaths[0], 320) : null, price: isStoredPrice(listing.price) ? String(listing.price) : null, href: canonicalPath }} />
       <div className="flex justify-end"><MarketCardActions listingId={listing.id} initialSaved={saved} compareLabel={t('compare')} /></div>
       <a href="/market" className="text-sm text-accent">‹ {t('title')}</a>
       <HeroGallery items={heroItems} alt={photoAlt} locale={locale} trackKey={heroTrackKey} />
