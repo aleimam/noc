@@ -123,7 +123,13 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   consume a scheduled retention slot. Password is AES-256-GCM at rest (HKDF from AUTH_SECRET) —
   re-enter it in the UI if AUTH_SECRET is ever rotated. **CSF `TCP_OUT`/`TCP6_OUT` must contain 23**
   (added 2026-07-20; backup of csf.conf at `/root/csf.conf.bak-*`). Full spec, incl. the gotchas
-  that caused real outages: `C:ClaudeYeldnINBACKUP.md`.
+  that caused real outages: `C:ClaudeYeldnINBACKUP.md`. **Cadence: hourly (every 1h, DB-only,
+  keep 12) · daily + weekly full (keep 7/8) · MANUAL button-only (keep 10).** **VERIFIED
+  2026-07-20:** a cron-fired SCHEDULED run succeeded (08:00:02, standalone tsx — the `server-only`
+  trap that broke veeey does NOT apply here) and a full restore drill passed — 667MB archive
+  byte-exact, manifest matched, restored into a scratch DB: 82 tables and all 12 business tables
+  row-identical to live (RationingSheet 4862). NOT yet exercised: a retention prune deleting a
+  real remote file (needs >keepLast archives to accumulate).
 - **SSH safety:** `/root/.ssh/authorized_keys` is immutable (`chattr +i`) + fallback key file
   `/etc/ssh/root_keys` (CWP once wiped .ssh). Password auth off. Recovery: CWP panel :2087.
 - **Attack surface (hardening round 3, 2026-07-11 — see `security.md` §5 + F9–F12):** public
