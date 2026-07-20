@@ -172,6 +172,7 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
     return code === 'invalid_phone' ? L('رقم هاتف غير صالح', 'Invalid phone')
       : code === 'category_not_allowed' ? L('غير مسموح لك بالنشر في هذا التصنيف', 'You are not allowed to post in this category')
       : code === 'forbidden' ? L('غير مصرح', 'Not allowed')
+      : code === 'missing_required' ? L('أكمل البيانات المطلوبة (المعلَّمة بنجمة ★)', 'Fill the required details (marked with ★)')
       : L('تعذّر الحفظ، تحقق من الحقول', 'Could not save, check the fields');
   }
 

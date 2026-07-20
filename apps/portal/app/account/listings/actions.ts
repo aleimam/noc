@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
 import { auth, hasPermission } from '@noc/auth';
-import { isValidPhone, REQUIRED_LISTING_ATTR_KEYS } from '@noc/config';
+import { isValidPhone } from '@noc/config';
+import { missingRequiredForInput, missingRequiredForListing } from '@noc/partner-portal/required';
 
 import { sanitizeRichHtml } from '../../../lib/sanitize';
 import { restampListingPhotos } from '../../../lib/stamp';
@@ -161,38 +162,13 @@ export async function saveListing(input: ListingInput): Promise<Result> {
 
   // Mandatory basic details (e.g. the city): the client guard can be bypassed, so enforce
   // server-side too. Only publishing (PENDING) requires them — a rough DRAFT may stay incomplete.
+  // Shared with the partner save + every moderation transition (@noc/partner-portal/required).
   if (input.status === 'PENDING') {
-    const required = await prisma.attribute.findMany({
-      // DB flag is the source of truth; the city key is a defensive fallback. PHOTOS/DOCUMENTS
-      // are exempt — their data rides Attachment rows, which this values-based check can't see,
-      // so requiring them would block publishing forever (hardening pass 2026-07-20).
-      where: { isActive: true, type: { notIn: ['PHOTOS', 'DOCUMENTS'] }, OR: [{ required: true }, { key: { in: [...REQUIRED_LISTING_ATTR_KEYS] } }] },
-      select: { id: true, classifierLinks: { select: { optionId: true, option: { select: { classifierId: true } } } } },
-    });
-    const chosen = new Set([input.typeOptionId, input.purposeOptionId, input.conditionOptionId]);
-    for (const a of required) {
-      if (a.classifierLinks.length === 0) continue; // not curated → not applicable anywhere
-      const byCls = new Map<string, string[]>();
-      for (const l of a.classifierLinks) {
-        const arr = byCls.get(l.option.classifierId) ?? [];
-        arr.push(l.optionId);
-        byCls.set(l.option.classifierId, arr);
-      }
-      let applicable = byCls.size > 0;
-      for (const allowed of byCls.values()) {
-        if (!allowed.some((oid) => chosen.has(oid))) { applicable = false; break; }
-      }
-      if (!applicable) continue;
-      const v = input.values.find((x) => x.attributeId === a.id);
-      const has =
-        !!v &&
-        ((v.listItemIds?.length ?? 0) > 0 ||
-          (v.optionIds?.length ?? 0) > 0 ||
-          (typeof v.text === 'string' && v.text.trim() !== '') ||
-          v.number != null ||
-          typeof v.bool === 'boolean');
-      if (!has) return { ok: false, error: 'missing_required' };
-    }
+    const missing = await missingRequiredForInput(
+      [input.typeOptionId, input.purposeOptionId, input.conditionOptionId],
+      input.values,
+    );
+    if (missing.length) return { ok: false, error: 'missing_required' };
   }
 
   // Keep the structural geo link in sync with the NEIGHBORHOOD detail (powers the
@@ -273,9 +249,15 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         const partnerOwns = isPartner && existing?.ownerId === user.ownerId;
         if (!existing || (existing.sellerId !== user.id && !isStaff && !partnerOwns)) throw new Error('forbidden');
         if (existing.deletedAt) throw new Error('forbidden'); // trashed — restore it from the admin trash first
+        // Lifecycle compare-and-set: a DRAFT write (i.e. an auto-save) may only apply to a row
+        // that is STILL a draft. A second tab whose form loaded while the listing was a draft
+        // would otherwise pull an already-submitted listing back out of moderation — silently,
+        // since the seller sees nothing. Forward moves (DRAFT→PENDING) are unaffected.
+        const nextStatus = input.status === 'DRAFT' && existing.status !== 'DRAFT' ? existing.status : input.status;
         await tx.listing.update({
           where: { id: input.id },
-          data: { ...base, rejectionReason: null, postersStale: true }, // data changed → generated images out of date
+          // data changed → generated images out of date
+          data: { ...base, status: nextStatus, rejectionReason: null, postersStale: true },
         });
         listingId = input.id;
       } else {
@@ -397,6 +379,13 @@ export async function setMyListingStatus(
   const ownsIt = existing.sellerId === user.id;
   const staffMayEdit = user.type === 'STAFF' && hasPermission(user.perms ?? [], 'listings', 'UPDATE');
   if (!ownsIt && !staffMayEdit) return { ok: false, error: 'forbidden' };
+  // Moving into moderation must clear the same required-details gate as the form save — this
+  // action bypasses the form entirely, so an incomplete DRAFT could be pushed to PENDING and
+  // then approved.
+  if (status === 'PENDING') {
+    const missing = await missingRequiredForListing(id);
+    if (missing.length) return { ok: false, error: 'missing_required' };
+  }
   await prisma.listing.update({ where: { id }, data: { status } });
   revalidatePath('/account/listings');
   return { ok: true, id };

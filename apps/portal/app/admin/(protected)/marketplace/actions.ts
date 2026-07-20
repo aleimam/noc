@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { prisma, Prisma } from '@noc/db';
 import { requirePermission, hashPassword } from '@noc/auth';
+import { missingRequiredForListing } from '@noc/partner-portal/required';
 import { isValidPhone } from '@noc/config';
 import { ensureAdNumber } from '../../../../lib/adNumber';
 import { marketHref } from '../../../../lib/listings';
@@ -12,7 +13,7 @@ import { snapshotPrices } from '../../../../lib/priceIndex';
 import { isPosterIcon } from '../../../../lib/poster/icons';
 import { STANDARD_AREAS_KEY } from '../../../../lib/marketplace';
 
-type Result = { ok: true } | { ok: false; error: string };
+type Result = { ok: true } | { ok: false; error: string; missing?: string[] };
 
 export type AttrTypeKey =
   | 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS'
@@ -557,6 +558,13 @@ export async function regenerateAllListingImages(typeOptionId?: string): Promise
 export async function approveListing(id: string): Promise<Result> {
   await requirePermission('listings', 'UPDATE');
   try {
+    // Required details were previously checked ONLY in the two form saves, so a listing that
+    // entered the queue BEFORE an attribute was made required could be approved incomplete.
+    // Validate the stored row at the moment of publishing and name what is missing.
+    const missing = await missingRequiredForListing(id);
+    if (missing.length) {
+      return { ok: false, error: 'missing_required', missing: missing.map((m) => m.labelAr) };
+    }
     await prisma.listing.update({
       where: { id },
       data: { status: 'PUBLISHED', publishedAt: new Date(), rejectionReason: null },
@@ -629,6 +637,12 @@ export async function setListingArchived(id: string, archived: boolean): Promise
     if (!existing || existing.deletedAt) return { ok: false, error: 'not_found' };
     const expected = archived ? 'PUBLISHED' : 'ARCHIVED';
     if (existing.status !== expected) return { ok: false, error: 'bad_status' };
+    // Reactivating publishes — an ARCHIVED row that predates a required-rule change must not
+    // go public incomplete (the same gate approveListing applies).
+    if (!archived) {
+      const missing = await missingRequiredForListing(id);
+      if (missing.length) return { ok: false, error: 'missing_required', missing: missing.map((m) => m.labelAr) };
+    }
     await prisma.listing.update({
       where: { id },
       data: archived

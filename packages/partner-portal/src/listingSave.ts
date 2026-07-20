@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
 import { requirePartner } from '@noc/auth';
-import { isValidPhone, REQUIRED_LISTING_ATTR_KEYS } from '@noc/config';
+import { isValidPhone } from '@noc/config';
+import { missingRequiredForInput } from './requiredDetails';
 
 export type LeanValueInput = {
   attributeId: string;
@@ -100,38 +101,13 @@ export async function savePartnerListing(input: LeanListingInput): Promise<Resul
 
   // Mandatory basic details (e.g. the city): enforce server-side — partner submissions always
   // publish into moderation (PENDING), so the requirement always applies here.
+  // Shared with the staff save + every moderation transition (./requiredDetails).
   {
-    const required = await prisma.attribute.findMany({
-      // DB flag is the source of truth; the city key is a defensive fallback. PHOTOS/DOCUMENTS
-      // are exempt — their data rides Attachment rows, which this values-based check can't see,
-      // so requiring them would block publishing forever (hardening pass 2026-07-20).
-      where: { isActive: true, type: { notIn: ['PHOTOS', 'DOCUMENTS'] }, OR: [{ required: true }, { key: { in: [...REQUIRED_LISTING_ATTR_KEYS] } }] },
-      select: { id: true, classifierLinks: { select: { optionId: true, option: { select: { classifierId: true } } } } },
-    });
-    const chosen = new Set([input.typeOptionId, input.purposeOptionId, input.conditionOptionId]);
-    for (const a of required) {
-      if (a.classifierLinks.length === 0) continue; // not curated → not applicable anywhere
-      const byCls = new Map<string, string[]>();
-      for (const l of a.classifierLinks) {
-        const arr = byCls.get(l.option.classifierId) ?? [];
-        arr.push(l.optionId);
-        byCls.set(l.option.classifierId, arr);
-      }
-      let applicable = byCls.size > 0;
-      for (const allowed of byCls.values()) {
-        if (!allowed.some((oid) => chosen.has(oid))) { applicable = false; break; }
-      }
-      if (!applicable) continue;
-      const v = values.find((x) => x.attributeId === a.id);
-      const has =
-        !!v &&
-        ((v.listItemIds?.length ?? 0) > 0 ||
-          (v.optionIds?.length ?? 0) > 0 ||
-          (typeof v.text === 'string' && v.text.trim() !== '') ||
-          v.number != null ||
-          typeof v.bool === 'boolean');
-      if (!has) return { ok: false, error: 'failed' };
-    }
+    const missing = await missingRequiredForInput(
+      [input.typeOptionId, input.purposeOptionId, input.conditionOptionId],
+      values,
+    );
+    if (missing.length) return { ok: false, error: 'missing_required' };
   }
 
   // Keep the structural geo link in sync with the NEIGHBORHOOD attribute value.

@@ -18,7 +18,17 @@ export function ModerationActions({ id }: { id: string }) {
   function approve() {
     start(async () => {
       const r = await approveListing(id);
-      if (!r.ok) { toast('تعذّر الحفظ / Save failed', 'error'); return; }
+      if (!r.ok) {
+        // Name the missing details rather than a generic failure — the fix is a specific edit,
+        // and the admin has no other way to know which required field is empty.
+        toast(
+          r.error === 'missing_required' && r.missing?.length
+            ? `لا يمكن النشر — بيانات مطلوبة ناقصة: ${r.missing.join('، ')}`
+            : 'تعذّر الحفظ / Save failed',
+          'error',
+        );
+        return;
+      }
       router.refresh();
     });
   }

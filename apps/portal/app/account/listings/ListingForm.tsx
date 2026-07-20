@@ -507,11 +507,17 @@ export function ListingForm({
       }
       setMissingAttrIds(new Set());
     }
-    const input = buildInput(status);
     start(async () => {
+      // Stop NEW auto-saves, then wait for any in-flight one to land so its created id is
+      // adopted before the payload is built. Without this, a submit that lands mid-auto-save
+      // builds `id: undefined` while the auto-save is still creating the row — both requests
+      // then CREATE, leaving an orphan DRAFT beside the submitted listing.
+      // Bounded (~10s) so a hung request can never freeze the button.
+      submittedRef.current = true;
+      for (let i = 0; i < 100 && autosavingRef.current; i++) await new Promise((r) => setTimeout(r, 100));
+      const input = buildInput(status);
       const r = await saveListing(input);
       if (r.ok) {
-        submittedRef.current = true; // the form is done — no auto-save may fire after this
         draftIdRef.current = r.id;
         // Persist the location map drawn in-form now that the listing id exists.
         if (staffMode && pendingMap && pendingMap.nbId === nbId) {
@@ -522,7 +528,15 @@ export function ListingForm({
           }
         }
         router.push(returnTo ?? (staffMode ? '/admin/marketplace/listings' : partnerMode ? '/partner' : '/account/listings'));
-      } else setError(r.error === 'invalid_phone' ? tc('phoneInvalid') : tc('saveFailed'));
+      } else {
+        // Let auto-save resume — the seller stays on the form and keeps editing.
+        submittedRef.current = false;
+        setError(
+          r.error === 'invalid_phone' ? tc('phoneInvalid')
+          : r.error === 'missing_required' ? tc('fillRequired')
+          : tc('saveFailed'),
+        );
+      }
     });
   }
 
