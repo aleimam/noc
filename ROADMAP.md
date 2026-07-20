@@ -1,7 +1,8 @@
 # NOC — Phase 2 / 3 Roadmap (advanced features)
 
 Scoping notes for the six advanced features from the NewObour design-system spec
-(`newobour-advanced-features.md`). These are **not built yet** — this doc maps each
+(`newobour-advanced-features.md` — the design system was moved out of the repo on 2026-07-20 and
+now lives in `C:\Claude\NOC-reference\NewObour Design System\`). These are **not built yet** — this doc maps each
 onto the current architecture so they can be picked up in priority order.
 
 Conventions already in place we'll reuse: server actions returning `{ ok }`, the

@@ -100,9 +100,16 @@ Carries over automatically under the **same Windows user**; recreate if a differ
 | Claude auto-memory | `C:\Users\aleim\.claude\projects\C--Claude-NOC\memory\` | Convenience only — everything essential is in `CLAUDE.md`. |
 | Chat history | previous account's sessions | Does NOT carry — that's why these docs exist. |
 
-Root reference material (in the folder, not code): `NOC00-02.docx`, `SMS-Partners.docx`,
-`NewObour Design System/`, `input data/`, `Identity/` (real logos: ALSWARY =
-`Identity/1000X1000.png`, New Obour = `Identity/New Obour.png`).
+Reference material **moved OUT of the repo on 2026-07-20** to keep the working tree clean. It now
+lives in **`C:\Claude\NOC-reference\`**: `NOC00-02.docx` + `SMS-Partners.docx` (the original
+requirements), `NewObour Design System/` and its 42MB zip — **still the source of
+`newobour-advanced-features.md`, which ROADMAP.md cites for the unbuilt Phase 2/3 features** — and
+`input data/2026-06 Rationing - corrected.xlsx` (the source Excel behind the imported rationing
+records). All of it was gitignored, so **this PC is the only copy: it is NOT in git, NOT on the
+server, and NOT covered by the backup crons. Do not delete it.**
+
+Still inside the repo: `Identity/` (tracked brand assets — real logos: ALSWARY =
+`Identity/1000X1000.png`, New Obour = `Identity/New Obour.png`) and `uploads/` (local dev only).
 
 ## Important context, decisions & gotchas (don't relitigate / don't break)
 
