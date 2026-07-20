@@ -32,10 +32,12 @@ const MAX_EXPORT = 2200;
 const newId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID ? `s_${crypto.randomUUID()}` : `s_${Date.now()}_${Math.round(Math.random() * 1e9)}`;
 
-// Konva only hit-tests a shape's PAINTED area. A stroke-only rect/circle (no fill) is therefore
-// clickable/draggable ONLY on its thin outline — the interior is dead, so you can't grab the
-// middle to move it and a click inside doesn't select it. A transparent fill paints nothing on
-// screen yet makes the whole interior hit-testable (the hit canvas fills with an opaque key).
+// Explicit transparent fill on the box shapes. NOTE (verified in Chrome on the deployed Konva
+// 9.3.22): this does NOT change hit-testing — `fillEnabled` defaults true, so the hit canvas
+// already fills each shape's interior with its colorKey and the interior is draggable/selectable
+// even with no visible fill. Kept only to state that hit area explicitly and guard against a
+// future Konva that gates the hit fill on a fill being set. The "can't move/select" reports were
+// Brave's Shields breaking canvas pointer events, not this (hence the annotBrave banner).
 const HIT_FILL = 'transparent';
 
 export function MapAnnotator({
