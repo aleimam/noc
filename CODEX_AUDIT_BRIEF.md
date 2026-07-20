@@ -225,6 +225,12 @@ guide the user, not dead-end them.
 - Transfer fee **180/م²** and requiring **both** areas for the reconcile auto-fill.
 - The gallery "ask about this photo" WhatsApp button was **deliberately deleted**.
 - Settings `gsc_newobour` / `gsc_alsawarey` must never be removed (Search Console).
+- **Backup module, deliberate:** `.env` inside archives (a restore is useless without it — the
+  trade-off is documented); the OLD local backup (`ops/backup.sh` + rsync `offsite-backup.sh`)
+  coexisting with the new tiered module (kept on purpose until the new one is fully proven);
+  `enabled` gating scheduling only while "Run now" still works; MANUAL sitting at
+  `frequency=OFF`; SFTP-only with no FTPS (FTPS cannot work against this box — see the spec);
+  `packages/backup` deliberately NOT importing `server-only` (it runs in a standalone cron).
 - Style/formatting nits, "consider adding a test", or restating what the code does.
 - Anything you have not traced to a concrete failure.
 
@@ -296,6 +302,45 @@ Same brief every time; change only the `THIS PASS` line.
 | 13 | **UI/UX: public sites** (§B2–B6) — golden rule, responsive, a11y, states, visitor flows |
 | 14 | **UI/UX: admin + partner** (§B2–B6) — operator flows, responsive, a11y, states |
 | 15 | **UI/UX: enhancements synthesis** — turn passes 12–14 into Section 2 |
+| 16 | **off-site backup module** (newest + most dangerous code — see §9a) |
+
+### 9a. Pass 16 scope — the tiered off-site backup module
+
+Built 2026-07-20, AFTER this brief was first written (`packages/backup/`, `ops/backup-tick.{ts,sh}`,
+migration `20260720120000_backup_module`, admin panel under
+`apps/portal/app/admin/(protected)/settings/backups/`). It **deletes remote files, stores a
+credential, and dumps the entire database**, so treat it as the highest-risk surface in the repo.
+It is LIVE on production against a Hetzner Storage Box sub-account. Focus on:
+
+- **Retention deletion** (`planPrune` in `packages/backup/src/logic.ts`) — the single most
+  destructive path. Three apps (NOC, YeldnIN, veeey) share one storage box, and the
+  `noc-backup-` filename prefix is the ONLY thing stopping NOC deleting another app's archives.
+  Try to break it: crafted names, prefix collisions (`noc-backup-evil`), unicode/RTL tricks,
+  timestamps that parse but sort wrong, `keepLast` of 0/negative/NaN, a folder of only foreign
+  files. Read `logic.test.ts` (24 tests) first, then hunt what it does NOT cover.
+- **Secret handling** (`secret-box.ts`) — AES-256-GCM, key from `AUTH_SECRET` via HKDF. Prove the
+  plaintext password cannot reach a log, a server-action return, the admin UI, `BackupRun.error`,
+  or the client bundle. Confirm a null decrypt (rotated `AUTH_SECRET`) fails loudly and never
+  falls through to a password-less connect.
+- **⚠ Archives now contain `.env`** (deliberate, so a restore is possible) — meaning every archive
+  holds `AUTH_SECRET` + DB credentials in plaintext inside the tar. Audit the blast radius: is the
+  archive ever written somewhere world-readable, served over HTTP, left in a temp dir on failure,
+  or logged by name+path together with credentials?
+- **Command execution + paths** (`service.ts`) — `mysqldump` via a temp `--defaults-extra-file`
+  (creds must never reach argv). Check that no admin-supplied value (`remotePath`, filenames)
+  can traverse (`..`, absolute, separators) locally or remotely; see `assertSafeRemotePath` /
+  `assertSafeFileName` in `transport.ts`.
+- **Scheduling** (`lastScheduledFireTime`/`isBackupDue`) — `everyN` anchored to fixed epoch slots,
+  DST/timezone drift, `OFF` never due, bounded walk-back loops. Then reentrancy: two cron ticks
+  overlapping (the tick runs every 10 min and a FULL run takes ~30s+), a `RUNNING` row that never
+  finishes, and whether `lastRunAt` is stamped in a way that could skip or double a window.
+- **Failure paths** — temp dir removed on EVERY branch, disk pressure from a ~640MB archive, a
+  partial/truncated upload being trusted (there is a byte-size check — verify it cannot be
+  bypassed), and whether `BackupRun.contents` can ever over-claim what the archive holds.
+- **AuthZ** — every backup server action must be `requirePermission`-gated server-side. This module
+  can exfiltrate the entire database plus secrets; treat any missing gate as P0.
+- **Known-unverified:** as of 2026-07-20 a retention prune had never actually deleted a real remote
+  file. If you can show by reading the code that the delete path is wrong, that is a P0 finding.
 
 ---
 
