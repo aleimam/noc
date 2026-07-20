@@ -226,6 +226,42 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 
 **Everything below is deployed + live-verified; the tree is clean; local `main` = prod (`e395a3d`).**
 
+**2026-07-20 (last): CODEX AUDIT PASS 1 — all 7 defects + 7 extras fixed** (commits `06e58e5`→
+`baf90b1`, all deployed + live-verified). Codex ran pass 1 of `CODEX_AUDIT_BRIEF.md` (listings +
+EAV) and produced `CODEX_AUDIT_FINDINGS.md`; every finding was independently re-verified against
+the code AND against production data before being touched. Resolution table lives in that file —
+**a later Codex pass must not re-report these.** Headlines:
+- **⭐ Market SELECT filters returned ZERO results for the entire live inventory** — `/market`
+  matched only the legacy `optionId`, but prod has 45 `listItemId` values and **0** legacy rows, so
+  ticking any facet hid all 6 published listings while the chips still rendered. The `listItem ??
+  option` rule now applies to FILTERS too (both apps). This is the same trap CLAUDE.md already
+  warned about on read paths — **check it on any new query that touches a SELECT value.**
+- **The admin archive toggle was a lifecycle shortcut, not a visibility switch:** two clicks could
+  republish a REJECTED or SOLD listing, or take a DRAFT live past moderation + required-details +
+  poster generation. Now strictly PUBLISHED ↔ ARCHIVED (server-enforced, UI-hidden otherwise), and
+  archiving no longer clears `showOnBrokerage` (status already gates the storefront; nothing
+  restored it, so an archive round-trip silently dropped the listing from alsawarey.com).
+- **`user.type === 'STAFF'` was a blanket ownership bypass** in `saveListing`/`setMyListingStatus`,
+  and `/account/listings/<id>/edit` never loaded paper state — so a staff save there cleared both
+  paper flags and detached the paper photos. Staff writes to a listing they don't own now require
+  the `listings` grant; omitted paper fields mean "leave unchanged"; that route is seller-only.
+- **TWO new shared modules** — `@noc/partner-portal/required` (one required-details gate, now run on
+  EVERY transition to PENDING/PUBLISHED incl. approve + reactivate + forged status change) and
+  `@noc/partner-portal/values` (`normalizeListingValues` forces each value into the column its
+  attribute type allows and keeps only option ids that attribute owns; `validateClassifierTrio`
+  checks classifier identity + Type→Purpose→Condition nesting). **Any new listing write path should
+  go through both.**
+- **`parsePriceInput()`/`isStoredPrice()` in @noc/config are now the ONE money rule**: 0/blank ⇒
+  null («السعر عند الطلب»), negative/non-finite ⇒ a validation error. The full-form save had no
+  price validation at all. One live listing has `price=0` and was rendering **«0 ج.م» on the public
+  home page and in the meta/OG description** (i.e. in Google results and WhatsApp shares).
+- Also: `soldPrice` normalized + cleared when a listing leaves SOLD (a stale figure used to
+  resurface as the next sale price) · `/price-index` medians no longer fed by 0/negative prices ·
+  auto-save races closed (duplicate create + silent DRAFT demotion from a stale second tab) ·
+  Section 2 UX: visible auto-save FAILURE with a Retry button, moderation queue names each pending
+  row's missing details and disables Approve, price field explains the blank/zero rule, and
+  `ListingCard` says «السعر عند الطلب» instead of leaving a blank price slot.
+
 **2026-07-20 (later): TIERED OFF-SITE BACKUP MODULE** (commits `283c112`→`5319587`) — full detail
 in the server map above. Built from the portable spec `C:\Claude\YeldnIN\BACKUP.md` as an ADDITION
 to the local nightly backup (which is untouched). Highlights: 3 tables + 4 seeded levels, pure logic

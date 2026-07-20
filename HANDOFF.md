@@ -19,12 +19,38 @@ Users are low-literacy/low-tech on phones — the design rule is *biggest, simpl
 ## Current status — NOTHING is mid-flight
 
 **Live, healthy, fully deployed, clean tree.** Local `main` and production are in sync — last
-commit **`5319587`** (verified 2026-07-20 on both local and `ssh noc`; always re-verify with
+commit **`baf90b1`** (verified 2026-07-20 on both local and `ssh noc`; always re-verify with
 `git log --oneline -1` on the server). Both pm2 apps online. Every feature requested to date is
 shipped, deployed, and live-verified — there is **no half-finished work** (build passes 3/3;
 `git status` is clean).
 
-## Done in the latest session (2026-07-19 → 20)
+## Done LAST (2026-07-20, final block): Codex audit pass 1 — 7 defects + 7 extras, all fixed
+
+Commits `06e58e5` → `baf90b1`, all deployed + live-verified. Codex ran **pass 1 of 16** from
+`CODEX_AUDIT_BRIEF.md` (listings + EAV) into **`CODEX_AUDIT_FINDINGS.md`**, which now carries a
+**resolution table at the top — read it before running another pass so nothing is re-reported.**
+Everything was re-verified against the code and against production data before being changed; two
+findings were only provable by looking at live data. Full narrative in `CLAUDE.md`. If you pick up
+here, the three things most worth knowing:
+
+1. **The `listItem ?? option` rule applies to FILTERS and hard-coded facets, not just reads.**
+   `/market`'s SELECT filters were matching only the legacy `optionId` while production has **0**
+   legacy rows — every facet silently returned an empty list. Check this on ANY new query touching
+   a SELECT value.
+2. **Two new shared gates must be used by any new listing write path:**
+   `@noc/partner-portal/required` (required details — call it on every transition to
+   PENDING/PUBLISHED) and `@noc/partner-portal/values` (`normalizeListingValues` +
+   `validateClassifierTrio`). Values must be normalized BEFORE the required check, or a value in
+   the wrong column can satisfy a requirement.
+3. **Money has ONE rule now** — `parsePriceInput()`/`isStoredPrice()` in `@noc/config`. 0/blank ⇒
+   «السعر عند الطلب», negative/non-finite ⇒ error. Don't reintroduce a bare `price != null` check;
+   that is exactly what put «0 ج.م» on the public home page and in the Google/WhatsApp description.
+
+**Not click-tested** (needs a staff login, everything else is backed by real command output): the
+archive toggle only showing on PUBLISHED/ARCHIVED rows, the Approve-disabled-when-incomplete state
+in the moderation queue, and the auto-save retry panel.
+
+## Done earlier the same day (2026-07-19 → 20)
 
 All deployed + live-verified (commits `2356b26` → `e395a3d`). Full detail in `CLAUDE.md` →
 *Current state & pending*; the headlines:

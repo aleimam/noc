@@ -25,7 +25,12 @@ public per-district median · the portal form sent SELECT ids as `listItemIds` e
 list, which would hit the FK · price inputs had no `min` · **and the listing detail page's
 meta/OG/twitter descriptions advertised `0 ج.م`** — the text Google indexes and WhatsApp shows.
 
-Section 2 (UI/UX enhancements) is **not** implemented — those remain open proposals.
+**Section 2 (UI/UX enhancements) is also DONE** (`baf90b1`): auto-save failure now shows a red
+«لم يتم الحفظ» panel with a Retry button and the last-saved time instead of silently reverting to
+the idle hint; the moderation queue names each pending row's missing required details, links to its
+edit page, and disables Approve while incomplete; the price field explains the blank/zero rule at
+entry. Added beyond the report: `ListingCard` takes `priceOnRequest` and all six public grids pass
+«السعر عند الطلب», so a price-less card states its meaning instead of leaving a blank space.
 
 Baseline: both app typechecks pass. `npm install` could not be rerun because the machine's `npm.cmd` points to a missing roaming `npm-cli.js`; the existing `node_modules` was used to run TypeScript directly. No application source, environment file, database, upload, server, migration, or deployment was touched.
 
