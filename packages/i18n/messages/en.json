@@ -1073,6 +1073,7 @@
     "annotArrow": "Arrow",
     "annotDraw": "Freehand",
     "annotDrawHint": "Press and drag on the map to draw",
+    "annotBrave": "⚠️ Brave blocks this drawing tool. Click the Shields (lion) icon in the address bar and turn Shields OFF for this site, then reload — or open the admin in Google Chrome.",
     "listingsHere": "Listings in this area"
   },
   "account": {

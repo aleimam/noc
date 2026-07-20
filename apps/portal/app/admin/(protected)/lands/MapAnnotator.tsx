@@ -58,6 +58,14 @@ export function MapAnnotator({
   const [tool, setTool] = useState<Tool>('select');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // Brave's Shields (fingerprint protection) can break canvas pointer events, so the whole
+  // annotator goes dead with no error — the owner hit exactly this. Detect Brave and warn up
+  // front (staff-only tool, so a "use Chrome / turn Shields off" nudge is enough).
+  const [isBrave, setIsBrave] = useState(false);
+  useEffect(() => {
+    const nav = navigator as unknown as { brave?: { isBrave?: () => Promise<boolean> } };
+    nav.brave?.isBrave?.().then((r) => setIsBrave(!!r)).catch(() => {});
+  }, []);
 
   const stageRef = useRef<Konva.Stage>(null);
   const trRef = useRef<Konva.Transformer>(null);
@@ -210,6 +218,11 @@ export function MapAnnotator({
           </div>
         </div>
 
+        {isBrave && (
+          <p className="mb-2 rounded-lg border border-amber-400/60 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+            {t('annotBrave')}
+          </p>
+        )}
         <p className="mb-2 text-xs opacity-60">{tool === 'select' ? t('annotHint') : t('annotDrawHint')}</p>
         {error && <p className="mb-2 text-sm text-red-600">{error === 'load' ? t('annotLoadErr') : t('annotSaveErr')}</p>}
 
