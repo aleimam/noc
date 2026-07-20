@@ -388,8 +388,12 @@ session is backed by real command output):** three of the Codex-audit UI fixes a
 typechecked but not click-tested — (a) the admin archive toggle now shows ONLY on
 PUBLISHED/ARCHIVED rows (`/admin/marketplace/listings`); (b) Approve is disabled with the missing
 details named when a pending row is incomplete; (c) the listing form's auto-save shows a red
-«لم يتم الحفظ» panel + Retry button on failure. Confirm these once when convenient. (Same login also
-covers the partner UI click-test, item 4.)
+«لم يتم الحفظ» panel + Retry button on failure; and (d) the per-row 🖼️ poster / 🗺️ map quick-links
+(commit `17a68a3` — partner «إعلاناتي» → UNBRANDED poster + clean map, theirs to reuse; admin recent
+list → New Obour-branded; each hidden when the asset doesn't exist; shared resolver
+`@noc/partner-portal/assets`). Asset URLs already confirmed serving 200 image/png; only the rendered
+rows are unconfirmed. Confirm these once when convenient. (Same login also covers the partner UI
+click-test, item 4.)
 
 **Codex deep audit — ongoing, owner-driven in steps (see `CODEX_AUDIT_FINDINGS.md`):** pass 1 of 16
 (listings + EAV) is COMPLETE — Codex found 7 defects, all fixed + 7 extras + the 3 UI/UX
