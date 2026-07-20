@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
 import { approveListing, rejectListing } from '../actions';
 
-export function ModerationActions({ id }: { id: string }) {
+export function ModerationActions({ id, incomplete = false }: { id: string; incomplete?: boolean }) {
   const t = useTranslations('mp');
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -65,7 +65,16 @@ export function ModerationActions({ id }: { id: string }) {
     </div>
   ) : (
     <div className="flex justify-end gap-2">
-      <button disabled={pending} onClick={approve} className="rounded bg-primary px-3 py-1 text-sm text-soft">{t('approve')}</button>
+      {/* Disabled when required details are missing — the server refuses anyway, so offering a
+          button that can only fail wastes a click and teaches nothing. The row above names them. */}
+      <button
+        disabled={pending || incomplete}
+        onClick={approve}
+        title={incomplete ? 'أكمل البيانات المطلوبة أولاً / Complete the required details first' : undefined}
+        className="rounded bg-primary px-3 py-1 text-sm text-soft disabled:opacity-40"
+      >
+        {t('approve')}
+      </button>
       <button onClick={() => setRejecting(true)} className="rounded border border-red-600 px-3 py-1 text-sm text-red-600">{t('reject')}</button>
     </div>
   );

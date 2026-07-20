@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -143,9 +143,51 @@ export function ListingForm({
   const pendingRef = useRef(false);
   const lastSnapRef = useRef('');
   const buildInputRef = useRef<(() => ListingInput) | null>(null);
-  const [draftState, setDraftState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [draftState, setDraftState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
   const [draftSavedAt, setDraftSavedAt] = useState('');
   pendingRef.current = pending;
+
+  // One draft-save routine shared by the 15s tick AND the manual «إعادة المحاولة» button, so a
+  // retry behaves exactly like an auto-save. `force` skips the "nothing changed" short-circuit —
+  // after a failure the snapshot is unchanged but the work is still unsaved.
+  const runDraftSave = useCallback(async (force = false) => {
+    if (submittedRef.current || autosavingRef.current || pendingRef.current) return;
+    const build = buildInputRef.current;
+    if (!build) return;
+    const input = build();
+    // Below the server-side minimum → wait (the hint under the buttons explains this).
+    if (!input.typeOptionId || !input.purposeOptionId || !input.conditionOptionId) return;
+    if (!input.title.trim() || !input.contactPhone.trim() || !isValidPhone(input.contactPhone)) return;
+    const snap = JSON.stringify(input);
+    if (!force && snap === lastSnapRef.current) return;
+    autosavingRef.current = true;
+    setDraftState('saving');
+    try {
+      const r = await saveListing(input);
+      if (r.ok) {
+        lastSnapRef.current = snap;
+        if (!draftIdRef.current) {
+          draftIdRef.current = r.id;
+          // Reload-safe: silently swap the /new URL for the draft's edit page (no remount).
+          if (!partnerMode) {
+            const base = staffMode ? '/admin/marketplace/listings' : '/account/listings';
+            try { window.history.replaceState(null, '', `${base}/${r.id}/edit`); } catch { /* ignore */ }
+          }
+        }
+        setDraftSavedAt(new Date().toLocaleTimeString(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { hour: '2-digit', minute: '2-digit' }));
+        setDraftState('saved');
+      } else {
+        // Say it out loud. This used to fall back to the idle hint, which reads like "all fine".
+        setDraftState('failed');
+      }
+    } catch {
+      setDraftState('failed');
+    } finally {
+      autosavingRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale, partnerMode, staffMode]);
+  const retryDraftSave = useCallback(() => runDraftSave(true), [runDraftSave]);
 
   useEffect(() => {
     if (!autosaveOn) return;
@@ -153,45 +195,10 @@ export function ListingForm({
     if (draftIdRef.current && buildInputRef.current) {
       try { lastSnapRef.current = JSON.stringify(buildInputRef.current()); } catch { /* ignore */ }
     }
-    const tick = async () => {
-      if (submittedRef.current || autosavingRef.current || pendingRef.current) return;
-      const build = buildInputRef.current;
-      if (!build) return;
-      const input = build();
-      // Below the server-side minimum → wait (the hint under the buttons explains this).
-      if (!input.typeOptionId || !input.purposeOptionId || !input.conditionOptionId) return;
-      if (!input.title.trim() || !input.contactPhone.trim() || !isValidPhone(input.contactPhone)) return;
-      const snap = JSON.stringify(input);
-      if (snap === lastSnapRef.current) return;
-      autosavingRef.current = true;
-      setDraftState('saving');
-      try {
-        const r = await saveListing(input);
-        if (r.ok) {
-          lastSnapRef.current = snap;
-          if (!draftIdRef.current) {
-            draftIdRef.current = r.id;
-            // Reload-safe: silently swap the /new URL for the draft's edit page (no remount).
-            if (!partnerMode) {
-              const base = staffMode ? '/admin/marketplace/listings' : '/account/listings';
-              try { window.history.replaceState(null, '', `${base}/${r.id}/edit`); } catch { /* ignore */ }
-            }
-          }
-          setDraftSavedAt(new Date().toLocaleTimeString(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { hour: '2-digit', minute: '2-digit' }));
-          setDraftState('saved');
-        } else {
-          setDraftState('idle'); // silent — the manual buttons surface real errors
-        }
-      } catch {
-        setDraftState('idle');
-      } finally {
-        autosavingRef.current = false;
-      }
-    };
-    const timer = setInterval(tick, 15000);
+    const timer = setInterval(() => void runDraftSave(), 15000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autosaveOn]);
+  }, [autosaveOn, runDraftSave]);
   // The submit buttons live at the bottom of a long form — scroll the error into view so
   // a failed validation never goes unnoticed.
   const errorRef = useRef<HTMLParagraphElement>(null);
@@ -961,8 +968,17 @@ export function ListingForm({
             two money inputs together on the top row. (The area field lives in the Area attribute
             group — the legacy Listing.area column stays untouched on old listings.) */}
         <div className="grid gap-4 sm:grid-cols-3">
-          {/* min=0: a stray leading «-» used to persist and render as «-1 ج.م» on public pages. */}
-          <label className="text-sm">{t('price')}<input type="number" min="0" dir="ltr" value={price} onChange={(e) => setPrice(e.target.value)} className={inp} /></label>
+          {/* min=0: a stray leading «-» used to persist and render as «-1 ج.م» on public pages.
+              The hint spells out the blank/0 convention — a seller had no way to know whether an
+              empty box meant "free", "unknown" or "ask me". */}
+          <label className="text-sm">{t('price')}
+            <input type="number" min="0" dir="ltr" value={price} onChange={(e) => setPrice(e.target.value)} className={inp} />
+            {!price.trim() || Number(price) === 0 ? (
+              <span className="mt-1 block text-xs font-semibold text-gold-700">
+                {L('اتركه فارغاً وسيظهر للمشتري: «السعر عند الطلب»', 'Leave blank and buyers will see: “Price on request”')}
+              </span>
+            ) : null}
+          </label>
           <label className="text-sm">{t('pricePer')}
             <select value={priceUnit} onChange={(e) => setPriceUnit(e.target.value as 'TOTAL' | 'UNIT' | 'SQM')} className={inp}>
               <option value="TOTAL">{t('priceTotal')}</option>
@@ -1141,15 +1157,39 @@ export function ListingForm({
         <a href={returnTo ?? (staffMode ? '/admin/marketplace/listings' : partnerMode ? '/partner' : '/account/listings')} className="w-full px-4 py-3 text-center text-base opacity-70 sm:w-auto sm:py-2 sm:text-sm">{t('cancel')}</a>
       </div>
 
-      {/* Auto-save status — explicit so no one wonders whether their work is safe. */}
+      {/* Auto-save status — explicit so no one wonders whether their work is safe.
+          A FAILED auto-save used to reset silently to the idle hint, so a seller on a shaky
+          mobile connection could leave the page believing the work was saved. Failure now says
+          so in plain words, in red, with one big retry button. */}
       {autosaveOn && (
-        <p className="text-xs opacity-60" aria-live="polite">
-          {draftState === 'saving'
-            ? `💾 ${L('جارٍ الحفظ التلقائي…', 'Auto-saving…')}`
-            : draftState === 'saved'
-              ? `✓ ${L('حُفِظ تلقائياً كمسودة', 'Auto-saved as a draft')} — ${draftSavedAt}`
-              : `✨ ${L('يُحفَظ تلقائياً كمسودة كل ١٥ ثانية بعد اختيار التصنيفات وكتابة العنوان ورقم التواصل', 'Auto-saves as a draft every 15s once the categories, title and contact phone are filled')}`}
-        </p>
+        draftState === 'failed' ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-red-600/40 bg-red-50 p-3" aria-live="assertive">
+            <p className="text-sm font-bold text-red-700">
+              ⚠️ {L('لم يتم الحفظ — تحقق من الإنترنت', 'Not saved — check your connection')}
+            </p>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => void retryDraftSave()}
+              className="rounded-md bg-red-600 px-4 py-2 text-base font-bold text-white disabled:opacity-50"
+            >
+              {L('إعادة المحاولة', 'Retry save')}
+            </button>
+            {draftSavedAt && (
+              <span className="text-xs opacity-70">
+                {L('آخر حفظ ناجح', 'Last saved')}: {draftSavedAt}
+              </span>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs opacity-60" aria-live="polite">
+            {draftState === 'saving'
+              ? `💾 ${L('جارٍ الحفظ التلقائي…', 'Auto-saving…')}`
+              : draftState === 'saved'
+                ? `✓ ${L('حُفِظ تلقائياً كمسودة', 'Auto-saved as a draft')} — ${draftSavedAt}`
+                : `✨ ${L('يُحفَظ تلقائياً كمسودة كل ١٥ ثانية بعد اختيار التصنيفات وكتابة العنوان ورقم التواصل', 'Auto-saves as a draft every 15s once the categories, title and contact phone are filled')}`}
+          </p>
+        )
       )}
 
       {zoom && <Lightbox src={zoom} onClose={() => setZoom(null)} />}

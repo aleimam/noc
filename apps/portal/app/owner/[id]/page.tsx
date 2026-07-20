@@ -58,6 +58,7 @@ export default async function OwnerProfile({ params }: { params: Promise<{ id: s
                 title={l.title}
                 subtitle={L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
                 price={isStoredPrice(l.price) ? Number(l.price).toLocaleString('en-US') : null}
+                priceOnRequest={L('السعر عند الطلب', 'Price on request')}
                 currency={currency(locale)}
               />
             ))}

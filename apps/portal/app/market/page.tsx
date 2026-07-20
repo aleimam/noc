@@ -198,6 +198,7 @@ export default async function MarketPage({
             title={l.title}
             subtitle={L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}
             price={l.price != null && Number(l.price) > 0 ? Number(l.price).toLocaleString('en-US') : null}
+            priceOnRequest={L('السعر عند الطلب', 'Price on request')}
             currency={currency(locale)}
             badge={<MarketCardActions listingId={l.id} initialSaved={wished.has(l.id)} compareLabel={t('compare')} />}
             meta={l.isPartnership && partnershipsOn ? (

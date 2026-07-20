@@ -210,7 +210,7 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
           <h2 className="font-semibold text-primary">{t('listingsHere')}</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {listingCards.map((c) => (
-              <ListingCard key={c.id} href={c.href} cover={c.cover} title={c.title} subtitle={L(c.typeAr, c.typeEn)} price={c.price} currency={currency(locale)} />
+              <ListingCard key={c.id} href={c.href} cover={c.cover} title={c.title} subtitle={L(c.typeAr, c.typeEn)} price={c.price} priceOnRequest={L('السعر عند الطلب', 'Price on request')} currency={currency(locale)} />
             ))}
           </div>
         </section>

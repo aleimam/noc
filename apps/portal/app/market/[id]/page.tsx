@@ -565,7 +565,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
           <h2 className="text-lg font-bold text-navy-800 dark:text-soft">{t('similarListings')}</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {similar.map((s) => (
-              <ListingCard key={s.id} href={marketHref({ id: s.id, adNumber: s.adNumber, typeEn: s.typeOption?.nameEn ?? null, area: s.area != null ? Number(s.area) : null })} cover={simCovers.get(s.id) ?? null} title={s.title} subtitle={L(s.typeOption?.nameAr ?? '', s.typeOption?.nameEn ?? '')} price={s.price != null && Number(s.price) > 0 ? Number(s.price).toLocaleString('en-US') : null} currency={currency(locale)} alt={listingAlt({ type: L(s.typeOption?.nameAr ?? '', s.typeOption?.nameEn ?? ''), area: s.area != null ? Number(s.area) : null }, locale) || s.title} />
+              <ListingCard key={s.id} href={marketHref({ id: s.id, adNumber: s.adNumber, typeEn: s.typeOption?.nameEn ?? null, area: s.area != null ? Number(s.area) : null })} cover={simCovers.get(s.id) ?? null} title={s.title} subtitle={L(s.typeOption?.nameAr ?? '', s.typeOption?.nameEn ?? '')} price={s.price != null && Number(s.price) > 0 ? Number(s.price).toLocaleString('en-US') : null} priceOnRequest={L('السعر عند الطلب', 'Price on request')} currency={currency(locale)} alt={listingAlt({ type: L(s.typeOption?.nameAr ?? '', s.typeOption?.nameEn ?? ''), area: s.area != null ? Number(s.area) : null }, locale) || s.title} />
             ))}
           </div>
         </section>

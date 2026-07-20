@@ -8,6 +8,7 @@ export function ListingCard({
   title,
   subtitle,
   price,
+  priceOnRequest,
   currency = 'ج.م',
   badge,
   meta,
@@ -19,6 +20,10 @@ export function ListingCard({
   title: string;
   subtitle?: string;
   price?: string | null;
+  /** Shown in the price slot when there is no price. A card with the price row simply MISSING is
+   *  ambiguous to a low-literacy buyer (free? unknown? forgot?) — say it in words, matching the
+   *  detail page's «السعر عند الطلب». Public grids should always pass this. */
+  priceOnRequest?: string | null;
   currency?: string;
   badge?: ReactNode; // e.g. a <Badge> overlaid on the media
   meta?: ReactNode; // a small line under the title (location, etc.)
@@ -54,6 +59,8 @@ export function ListingCard({
             <span className="font-num text-2xl font-bold text-navy-800">{price}</span>
             <span className="text-sm font-semibold text-ink-500">{currency}</span>
           </div>
+        ) : priceOnRequest ? (
+          <div className="mt-auto pt-1 text-base font-bold text-gold-700">{priceOnRequest}</div>
         ) : null}
       </div>
     </a>

@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { currency } from '@noc/i18n';
+import { missingRequiredForListing } from '@noc/partner-portal/required';
 import { ModerationActions } from './ModerationActions';
 import { FeaturedToggle } from './FeaturedToggle';
 import { ListingAdminActions } from './ListingAdminActions';
@@ -36,6 +37,14 @@ export default async function ModerationPage() {
     take: 30,
     include: { typeOption: { select: { nameAr: true, nameEn: true } } },
   });
+  // Completeness per queued row. Required details are admin-configurable and can change AFTER a
+  // listing enters the queue, so the queue itself must show what's missing — otherwise Approve
+  // just fails and the admin has to guess which field it meant.
+  const missingByListing = new Map(
+    await Promise.all(
+      pending.map(async (l) => [l.id, await missingRequiredForListing(l.id)] as const),
+    ),
+  );
 
   return (
     <div className="space-y-6">
@@ -60,10 +69,23 @@ export default async function ModerationPage() {
                 {l.price != null ? ` · ${String(l.price)} ${currency(locale)}` : ''} · {t('owner')}: {l.owner?.name ?? l.ownerName ?? '—'}
                 {l.owner?.phone1 ? <span dir="ltr"> ({l.owner.phone1})</span> : ''} · {t('seller')}: <span dir="ltr">{l.seller.phone ?? l.seller.name}</span> · {l.contactPhone}
               </div>
+              {(missingByListing.get(l.id) ?? []).length > 0 && (
+                <div className="mt-2 rounded-md border border-red-600/40 bg-red-50 p-2 text-xs">
+                  <span className="font-bold text-red-700">
+                    ⚠️ {L('لا يمكن النشر — بيانات مطلوبة ناقصة:', 'Cannot publish — required details missing:')}
+                  </span>{' '}
+                  <span className="text-red-700">
+                    {(missingByListing.get(l.id) ?? []).map((m) => (locale === 'ar' ? m.labelAr : m.labelEn)).join('، ')}
+                  </span>{' '}
+                  <a href={`/admin/marketplace/listings/${l.id}/edit`} className="font-bold text-accent underline">
+                    {L('أكمِل البيانات', 'Complete it')}
+                  </a>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <a href={`/admin/marketplace/listings/${l.id}/edit`} className="text-sm text-accent">{t('edit')}</a>
-              <ModerationActions id={l.id} />
+              <ModerationActions id={l.id} incomplete={(missingByListing.get(l.id) ?? []).length > 0} />
             </div>
           </div>
         ))}
