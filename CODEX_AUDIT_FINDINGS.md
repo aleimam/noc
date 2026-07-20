@@ -2,6 +2,31 @@
 
 Audit status: **Pass 1 of 16 complete** — listings + EAV. Passes 2–16 have not yet been performed. This report is intentionally cumulative; later focused passes should append, de-duplicate, and re-sort it.
 
+## RESOLUTION — all 7 pass-1 defects FIXED, deployed and live-verified 2026-07-20
+
+Every finding below was independently re-verified against the code and against production data
+before being fixed. **A later pass must not re-report these.** Commits `06e58e5` → `79c61dc`.
+
+| # | Defect | Fix | Verified by |
+|---|---|---|---|
+| P0 | Staff RBAC bypass + paper detach | staff writes to a listing they don't own require `listings:UPDATE`/`CREATE`; omitted paper fields mean "leave unchanged"; `ListingForm` sends papers only in `staffMode`; the account edit route is seller-only | all 6 live listings still hold both paper flags — no historical damage |
+| P1 | Market SELECT filters ignore list items | filters OR over `listItemId` + `optionId`; chips read from the shared option list; same fix on the brokerage's 2 hard-coded facets | **was live breakage** — prod had 45 listItem values and 0 legacy, so every facet returned 0. Now each returns its exact DB count |
+| P1 | Draft auto-save duplicate / silent demotion | submit stops new auto-saves, waits (bounded) for the in-flight one, then builds the payload; server does DRAFT lifecycle compare-and-set | reasoned + typechecked; not click-tested |
+| P1 | EAV writes trust payload shape | `@noc/partner-portal/values` — `normalizeListingValues()` + `validateClassifierTrio()`, run BEFORE the required check | read-only prod replay: 6/6 listings round-trip with **zero** values dropped; `{SELECT, bool:false}`, foreign list item, and swapped type/purpose all rejected |
+| P1 | Approve/reactivate skip required details | one shared gate (`@noc/partner-portal/required`) on **every** transition to PENDING/PUBLISHED; approve names the missing labels | prod replay: 0/6 blocked, empty-payload control returns exactly the 7 configured attributes |
+| P1 | Archive toggle republishes REJECTED/SOLD/DRAFT | strictly PUBLISHED ↔ ARCHIVED, enforced server-side and hidden in the UI otherwise; `showOnBrokerage` no longer cleared | all 6 listings are PUBLISHED — nothing was wrongly republished |
+| P1 | Price allows negative / zero inconsistent | `parsePriceInput()` + `isStoredPrice()` in `@noc/config` as the single rule, applied at every write and on the unguarded public surfaces | **was live** — newobour.com's home page rendered `0 ج.م`; now «السعر عند الطلب» |
+
+**Additional defects found while verifying (not in the original report, all fixed):** the brokerage's
+two hard-coded SELECT facets had the same `optionId`-only bug · `soldPrice` was normalized nowhere
+(a partner entering 0 rendered `0 ج.م` on Al Sawarey) · a stale `soldPrice` survived leaving SOLD and
+resurfaced as the next sale price · `/price-index` aggregated on `price != null`, so a 0 dragged the
+public per-district median · the portal form sent SELECT ids as `listItemIds` even without a shared
+list, which would hit the FK · price inputs had no `min` · **and the listing detail page's
+meta/OG/twitter descriptions advertised `0 ج.م`** — the text Google indexes and WhatsApp shows.
+
+Section 2 (UI/UX enhancements) is **not** implemented — those remain open proposals.
+
 Baseline: both app typechecks pass. `npm install` could not be rerun because the machine's `npm.cmd` points to a missing roaming `npm-cli.js`; the existing `node_modules` was used to run TypeScript directly. No application source, environment file, database, upload, server, migration, or deployment was touched.
 
 ## Section 1 — Defects
