@@ -615,14 +615,28 @@ export async function rejectListing(id: string, reason: string): Promise<Result>
 
 /** Deactivate (archive) or reactivate a listing. Archiving hides it from the public
  *  market + storefront without deleting anything; reactivating republishes it (and
- *  assigns the public ad number if it never had one). */
+ *  assigns the public ad number if it never had one).
+ *
+ *  STRICTLY PUBLISHED ↔ ARCHIVED. This used to flip ANY non-archived row to ARCHIVED and ANY
+ *  archived row straight to PUBLISHED, so two clicks («تعطيل» then «تفعيل») could republish a
+ *  REJECTED or SOLD listing as available — or take a DRAFT live, skipping the moderation queue,
+ *  the required-details check AND poster generation. Every other transition must go through the
+ *  normal moderation flow (approve / reject / mark sold). */
 export async function setListingArchived(id: string, archived: boolean): Promise<Result> {
   await requirePermission('listings', 'UPDATE');
   try {
+    const existing = await prisma.listing.findUnique({ where: { id }, select: { status: true, deletedAt: true } });
+    if (!existing || existing.deletedAt) return { ok: false, error: 'not_found' };
+    const expected = archived ? 'PUBLISHED' : 'ARCHIVED';
+    if (existing.status !== expected) return { ok: false, error: 'bad_status' };
     await prisma.listing.update({
       where: { id },
       data: archived
-        ? { status: 'ARCHIVED', showOnBrokerage: false }
+        // `showOnBrokerage` is deliberately NOT cleared here: the storefront already gates on
+        // status (`{ in: ['PUBLISHED','SOLD'] }` in apps/brokerage/lib/listings.ts), so clearing
+        // it was redundant — and nothing ever restored it, so an archive round-trip silently
+        // dropped the listing from alsawarey.com with no prompt to re-tick the channel.
+        ? { status: 'ARCHIVED' }
         : { status: 'PUBLISHED', publishedAt: new Date(), rejectionReason: null },
     });
     if (!archived) await ensureAdNumber(id);

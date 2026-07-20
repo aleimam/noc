@@ -13,7 +13,10 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
 
   const listing = await prisma.listing.findUnique({ where: { id }, include: { values: true, buildingConditions: { select: { conditionId: true } } } });
   if (!listing || listing.deletedAt) notFound(); // trashed listings are restore-only (admin trash page)
-  if (listing.sellerId !== session.user.id && session.user.type !== 'STAFF') notFound();
+  // Seller-only. Staff edit through the permission-gated admin route
+  // (/admin/marketplace/listings/<id>/edit) — this page neither checks the `listings` RBAC
+  // grant nor loads the official-paper state, and it exposes the internal «أقل سعر» floor.
+  if (listing.sellerId !== session.user.id) notFound();
 
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';

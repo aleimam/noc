@@ -56,7 +56,13 @@ export default async function MarketPage({
     ? await prisma.attribute.findMany({
         where: { isActive: true, filterable: true, classifierLinks: { some: { optionId: selectedType.id } } },
         orderBy: { order: 'asc' },
-        include: { options: { where: { isActive: true }, orderBy: { order: 'asc' } } },
+        include: {
+          options: { where: { isActive: true }, orderBy: { order: 'asc' } },
+          // SELECT/MULTI_SELECT values are stored as `listItemId` (shared OptionList) since the
+          // 2026-07 option-lists migration; the legacy inline `options` survive only for
+          // pre-migration rows. BOTH must be loaded — see the choice + filter build below.
+          optionList: { select: { items: { where: { isActive: true }, orderBy: { order: 'asc' } } } },
+        },
       })
     : [];
 
@@ -77,8 +83,16 @@ export default async function MarketPage({
     } else {
       const keys = get(a.key) ? get(a.key).split(',') : [];
       if (keys.length) {
+        // The `listItem ?? option` rule (CLAUDE.md) applies to FILTERS too: match the shared
+        // OptionListItem ids (every value written since the 2026-07 migration) OR the legacy
+        // inline AttributeOption ids (pre-migration rows). Matching `optionId` alone silently
+        // returned ZERO results for the whole current inventory — prod had 0 legacy rows left.
+        const listItemIds = (a.optionList?.items ?? []).filter((i) => keys.includes(i.key)).map((i) => i.id);
         const optIds = a.options.filter((o) => keys.includes(o.key)).map((o) => o.id);
-        if (optIds.length) and.push({ values: { some: { attributeId: a.id, optionId: { in: optIds } } } });
+        const or: Prisma.ListingValueWhereInput[] = [];
+        if (listItemIds.length) or.push({ listItemId: { in: listItemIds } });
+        if (optIds.length) or.push({ optionId: { in: optIds } });
+        if (or.length) and.push({ values: { some: { attributeId: a.id, OR: or } } });
       }
     }
   }
@@ -154,7 +168,11 @@ export default async function MarketPage({
         types={types.map((x) => ({ key: x.key, nameAr: x.nameAr, nameEn: x.nameEn }))}
         filterAttrs={filterAttrs.map((a) => ({
           id: a.id, key: a.key, labelAr: a.labelAr, labelEn: a.labelEn, type: a.type, unit: a.unit,
-          options: a.options.map((o) => ({ key: o.key, labelAr: o.labelAr, labelEn: o.labelEn })),
+          // Prefer the shared option list (source of truth since the 2026-07 migration) so an
+          // attribute created AFTER it — which has no legacy inline options — still renders
+          // its choices; fall back to the legacy rows for anything never migrated.
+          options: (a.optionList?.items.length ? a.optionList.items : a.options)
+            .map((o) => ({ key: o.key, labelAr: o.labelAr, labelEn: o.labelEn })),
         }))}
         typeKey={typeKey}
         locale={locale}

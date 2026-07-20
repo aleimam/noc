@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
-import { auth } from '@noc/auth';
+import { auth, hasPermission } from '@noc/auth';
 import { isValidPhone, REQUIRED_LISTING_ATTR_KEYS } from '@noc/config';
 
 import { sanitizeRichHtml } from '../../../lib/sanitize';
@@ -94,6 +94,19 @@ export async function saveListing(input: ListingInput): Promise<Result> {
   const isStaff = user.type === 'STAFF';
   const isPartner = user.type === 'PARTNER' && !!user.ownerId;
   if (user.type === 'PARTNER' && !user.ownerId) return { ok: false, error: 'forbidden' };
+
+  // Staff writing anything other than their OWN listing is an admin action → require the RBAC
+  // grant. `user.type === 'STAFF'` used to be a blanket ownership bypass (see the edit branch
+  // below), so a staff account with no `listings` grant at all could edit every listing on the
+  // platform by opening /account/listings/<id>/edit.
+  if (isStaff) {
+    const ownListing = input.id
+      ? await prisma.listing.findFirst({ where: { id: input.id, sellerId: user.id }, select: { id: true } })
+      : null;
+    if (!ownListing && !hasPermission(user.perms ?? [], 'listings', input.id ? 'UPDATE' : 'CREATE')) {
+      return { ok: false, error: 'forbidden' };
+    }
+  }
 
   // Partners may only post in the Type categories the admin granted their Owner.
   if (isPartner) {
@@ -226,10 +239,18 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         partnershipNote: input.isPartnership ? input.partnershipNote?.trim().slice(0, 190) || null : null,
         // (cardTitle retired 2026-07-12 — generated cards use the listing title; the column stays dormant.)
         // Official papers (internal) are staff-managed; partner/seller edits never touch them.
-        ...(isStaff
+        // An OMITTED flag means "leave unchanged", not false: only the staff form loads paper
+        // state, so a staff save from a form that never rendered these fields (e.g.
+        // /account/listings/<id>/edit) used to silently clear both flags and detach the
+        // paper photos below.
+        ...(isStaff && input.hasAllocationLetter !== undefined
           ? {
               hasAllocationLetter: !!input.hasAllocationLetter,
               allocationLetterDate: input.hasAllocationLetter ? input.allocationLetterDate?.trim() || null : null,
+            }
+          : {}),
+        ...(isStaff && input.hasSaleMandate !== undefined
+          ? {
               hasSaleMandate: !!input.hasSaleMandate,
               saleMandateDate: input.hasSaleMandate ? input.saleMandateDate?.trim() || null : null,
             }
@@ -308,10 +329,15 @@ export async function saveListing(input: ListingInput): Promise<Result> {
       // ── Official-paper photos (internal): ownerType='ListingPaper', one per category.
       //    Staff-only — partner/seller saves leave existing paper photos untouched. ──
       if (isStaff) {
-        const papers: Array<[string, string | null]> = [
-          ['allocation_letter', input.hasAllocationLetter ? input.allocationPhotoId ?? null : null],
-          ['sale_mandate', input.hasSaleMandate ? input.saleMandatePhotoId ?? null : null],
-        ];
+        // Only categories the payload actually carried are reconciled — an omitted flag leaves
+        // that category's photo alone (see the base-object comment above).
+        const papers: Array<[string, string | null]> = [];
+        if (input.hasAllocationLetter !== undefined) {
+          papers.push(['allocation_letter', input.hasAllocationLetter ? input.allocationPhotoId ?? null : null]);
+        }
+        if (input.hasSaleMandate !== undefined) {
+          papers.push(['sale_mandate', input.hasSaleMandate ? input.saleMandatePhotoId ?? null : null]);
+        }
         for (const [cat, keepId] of papers) {
           if (keepId) {
             await tx.attachment.updateMany({
@@ -365,9 +391,12 @@ export async function setMyListingStatus(
   const user = session?.user;
   if (!user) return { ok: false, error: 'unauthorized' };
   const existing = await prisma.listing.findUnique({ where: { id } });
-  if (!existing || (existing.sellerId !== user.id && user.type !== 'STAFF')) {
-    return { ok: false, error: 'forbidden' };
-  }
+  if (!existing || existing.deletedAt) return { ok: false, error: 'forbidden' }; // trashed → restore first
+  // Staff acting on someone else's listing is an admin action → require the RBAC grant.
+  // A bare `user.type === 'STAFF'` check was a blanket ownership bypass here too.
+  const ownsIt = existing.sellerId === user.id;
+  const staffMayEdit = user.type === 'STAFF' && hasPermission(user.perms ?? [], 'listings', 'UPDATE');
+  if (!ownsIt && !staffMayEdit) return { ok: false, error: 'forbidden' };
   await prisma.listing.update({ where: { id }, data: { status } });
   revalidatePath('/account/listings');
   return { ok: true, id };

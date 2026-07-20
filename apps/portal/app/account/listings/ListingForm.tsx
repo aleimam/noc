@@ -452,13 +452,20 @@ export function ListingForm({
       isPartnership,
       partnershipType: isPartnership ? partnershipType || null : null,
       partnershipNote: isPartnership ? partnershipNote : '',
-      // Official papers (internal) — only staff writes persist server-side.
-      hasAllocationLetter: hasAllocation,
-      allocationLetterDate: hasAllocation ? allocationDate || null : null,
-      allocationPhotoId: hasAllocation ? allocationPhoto?.id ?? null : null,
-      hasSaleMandate: hasMandate,
-      saleMandateDate: hasMandate ? mandateDate || null : null,
-      saleMandatePhotoId: hasMandate ? mandatePhoto?.id ?? null : null,
+      // Official papers (internal) — sent ONLY in staffMode, which is the only mode whose page
+      // loads the existing paper state. Outside it these keys are omitted entirely so the
+      // server leaves the stored papers untouched; sending `false` from a form that never
+      // loaded them cleared both flags and detached the paper photos.
+      ...(staffMode
+        ? {
+            hasAllocationLetter: hasAllocation,
+            allocationLetterDate: hasAllocation ? allocationDate || null : null,
+            allocationPhotoId: hasAllocation ? allocationPhoto?.id ?? null : null,
+            hasSaleMandate: hasMandate,
+            saleMandateDate: hasMandate ? mandateDate || null : null,
+            saleMandatePhotoId: hasMandate ? mandatePhoto?.id ?? null : null,
+          }
+        : {}),
       contactPhone,
       contactWhatsapp,
       ownerId: ownerId || null,

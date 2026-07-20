@@ -39,6 +39,14 @@ function attr(key: string, cond: Prisma.ListingValueWhereInput): Prisma.ListingW
   return { values: { some: { attribute: { key }, ...cond } } };
 }
 
+/** Match a SELECT/MULTI_SELECT choice by its option KEY.
+ *  `listItem ?? option` (CLAUDE.md): values written since the 2026-07 option-lists migration
+ *  carry `listItemId`, and only pre-migration rows still carry `optionId` — matching just one
+ *  side silently drops the entire current inventory. */
+function attrChoice(key: string, choiceKey: string): Prisma.ListingWhereInput {
+  return { values: { some: { attribute: { key }, OR: [{ listItem: { key: choiceKey } }, { option: { key: choiceKey } }] } } };
+}
+
 export default async function Catalogue({
   searchParams,
 }: {
@@ -90,9 +98,9 @@ export default async function Catalogue({
   }
   if (corner) and.push(attr(ATTR.corner, { bool: true }));
   if (main) and.push(attr(ATTR.mainStreet, { bool: true }));
-  if (services) and.push(attr('electricity', { option: { key: 'connected' } }));
+  if (services) and.push(attrChoice('electricity', 'connected'));
   // "على حديقة" banner/pill (?view=garden): lands near a park via the near_landmark multi-select.
-  if (garden) and.push(attr('near_landmark', { option: { key: 'park' } }));
+  if (garden) and.push(attrChoice('near_landmark', 'park'));
   if (featured) and.push({ featured: true });
   if (statusSold) and.push({ status: 'SOLD' });
 

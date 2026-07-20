@@ -85,7 +85,7 @@ export default async function ModerationPage() {
                   <td className="p-2 text-end">
                     <div className="flex items-center justify-end gap-3">
                       <a href={`/admin/marketplace/listings/${l.id}/edit`} className="text-accent">{t('edit')}</a>
-                      <ListingAdminActions id={l.id} archived={l.status === 'ARCHIVED'} />
+                      <ListingAdminActions id={l.id} status={l.status} />
                     </div>
                   </td>
                 </tr>
