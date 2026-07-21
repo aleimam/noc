@@ -32,13 +32,6 @@ const MAX_EXPORT = 2200;
 const newId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID ? `s_${crypto.randomUUID()}` : `s_${Date.now()}_${Math.round(Math.random() * 1e9)}`;
 
-// Explicit transparent fill on the box shapes. NOTE (verified in Chrome on the deployed Konva
-// 9.3.22): this does NOT change hit-testing — `fillEnabled` defaults true, so the hit canvas
-// already fills each shape's interior with its colorKey and the interior is draggable/selectable
-// even with no visible fill. Kept only to state that hit area explicitly and guard against a
-// future Konva that gates the hit fill on a fill being set. The "can't move/select" reports were
-// Brave's Shields breaking canvas pointer events, not this (hence the annotBrave banner).
-const HIT_FILL = 'transparent';
 
 export function MapAnnotator({
   src,
@@ -253,7 +246,7 @@ export function MapAnnotator({
                       <Rect
                         key={sh.id}
                         ref={(n) => { if (n) nodeRefs.current[sh.id] = n; }}
-                        x={sh.x} y={sh.y} width={sh.width} height={sh.height} stroke={sh.stroke} strokeWidth={sw} fill={HIT_FILL} hitStrokeWidth={20}
+                        x={sh.x} y={sh.y} width={sh.width} height={sh.height} stroke={sh.stroke} strokeWidth={sw} hitStrokeWidth={20}
                         draggable onClick={() => setSelectedId(sh.id)} onTap={() => setSelectedId(sh.id)}
                         onDragEnd={(e) => patch(sh.id, { x: e.target.x(), y: e.target.y() })}
                         onTransformEnd={(e) => {
@@ -268,7 +261,7 @@ export function MapAnnotator({
                       <Circle
                         key={sh.id}
                         ref={(n) => { if (n) nodeRefs.current[sh.id] = n; }}
-                        x={sh.x + sh.width / 2} y={sh.y + sh.height / 2} radius={sh.width / 2} stroke={sh.stroke} strokeWidth={sw} fill={HIT_FILL} hitStrokeWidth={20}
+                        x={sh.x + sh.width / 2} y={sh.y + sh.height / 2} radius={sh.width / 2} stroke={sh.stroke} strokeWidth={sw} hitStrokeWidth={20}
                         draggable onClick={() => setSelectedId(sh.id)} onTap={() => setSelectedId(sh.id)}
                         onDragEnd={(e) => patch(sh.id, { x: e.target.x() - sh.width / 2, y: e.target.y() - sh.height / 2 })}
                         onTransformEnd={(e) => {
