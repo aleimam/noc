@@ -12,7 +12,8 @@ export default async function PersonalOwnersPage() {
   const owners = await prisma.owner.findMany({
     where: { type: 'PERSONAL' },
     orderBy: { name: 'asc' },
-    include: { _count: { select: { listings: true } } },
+    // Count only live listings — a trashed row used to inflate the owner's listing count.
+    include: { _count: { select: { listings: { where: { deletedAt: null } } } } },
   });
 
   return (

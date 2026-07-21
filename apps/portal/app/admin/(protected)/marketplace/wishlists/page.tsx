@@ -12,11 +12,18 @@ export default async function WishlistsAdmin() {
       take: 200,
       include: { user: { select: { phone: true, name: true } }, _count: { select: { items: true } } },
     }),
-    prisma.wishlistItem.groupBy({ by: ['listingId'], _count: { _all: true }, orderBy: { _count: { listingId: 'desc' } }, take: 10 }),
+    // Exclude trashed listings so they can't consume a top-wishlist rank.
+    prisma.wishlistItem.groupBy({
+      by: ['listingId'],
+      where: { listing: { deletedAt: null } },
+      _count: { _all: true },
+      orderBy: { _count: { listingId: 'desc' } },
+      take: 10,
+    }),
   ]);
 
   const titles = new Map(
-    (await prisma.listing.findMany({ where: { id: { in: top.map((t) => t.listingId) } }, select: { id: true, title: true, adNumber: true } })).map((l) => [l.id, l]),
+    (await prisma.listing.findMany({ where: { id: { in: top.map((t) => t.listingId) }, deletedAt: null }, select: { id: true, title: true, adNumber: true } })).map((l) => [l.id, l]),
   );
 
   return (

@@ -31,11 +31,13 @@ export async function makeOffer(listingId: string, amount: number, note?: string
   if (!user || user.type !== 'CUSTOMER') return { ok: false, error: 'unauthorized' };
   if (!rateLimit(`nego:${user.id}`, NEGO_LIMIT, NEGO_WINDOW)) return { ok: false, error: 'rate_limited' };
   if (!(amount > 0) || amount > 1e11) return { ok: false, error: 'invalid_amount' };
-  const listing = await prisma.listing.findUnique({
-    where: { id: listingId },
+  // Soft delete deliberately leaves `status` untouched, so a status-only gate let buyers open
+  // offers (and SMS the seller) on a trashed listing during its 90-day trash window.
+  const listing = await prisma.listing.findFirst({
+    where: { id: listingId, deletedAt: null, status: 'PUBLISHED' },
     select: { id: true, sellerId: true, status: true, title: true, contactPhone: true, seller: { select: { phone: true } } },
   });
-  if (!listing || listing.status !== 'PUBLISHED') return { ok: false, error: 'not_found' };
+  if (!listing) return { ok: false, error: 'not_found' };
   if (listing.sellerId === user.id) return { ok: false, error: 'own_listing' };
 
   const neg = await prisma.negotiation.upsert({
@@ -65,7 +67,7 @@ export async function respondNegotiation(
   const neg = await prisma.negotiation.findUnique({
     where: { id: negotiationId },
     include: {
-      listing: { select: { id: true, sellerId: true, title: true, contactPhone: true, seller: { select: { phone: true } } } },
+      listing: { select: { id: true, sellerId: true, title: true, contactPhone: true, deletedAt: true, status: true, seller: { select: { phone: true } } } },
       buyer: { select: { id: true, phone: true } },
     },
   });
@@ -73,6 +75,11 @@ export async function respondNegotiation(
   const isSeller = neg.listing.sellerId === user.id;
   const isBuyer = neg.buyerId === user.id;
   if (!isSeller && !isBuyer) return { ok: false, error: 'forbidden' };
+  // A trashed/unpublished listing is inert: no accepting, rejecting or countering (any of which
+  // would reopen the thread and notify). A buyer may still withdraw to clean up their own thread.
+  if (action !== 'withdraw' && (neg.listing.deletedAt || neg.listing.status !== 'PUBLISHED')) {
+    return { ok: false, error: 'listing_unavailable' };
+  }
   if (neg.status !== 'OPEN' && action !== 'counter') return { ok: false, error: 'closed' };
 
   const sellerPhone = neg.listing.seller?.phone || neg.listing.contactPhone;

@@ -41,7 +41,9 @@ export async function savePosterTheme(brand: 'newobour' | 'alsawarey', input: Po
     const key = `posterTheme.${brand}`;
     await prisma.setting.upsert({ where: { key }, update: { value }, create: { key, value } });
     // Identity changed → existing image sets are out of date.
-    await prisma.listing.updateMany({ where: { status: 'PUBLISHED' }, data: { postersStale: true } });
+    // Trash is inert: a soft-deleted row keeps status PUBLISHED, so without `deletedAt: null`
+    // it was marked stale and then consumed a bulk poster-regeneration slot.
+    await prisma.listing.updateMany({ where: { status: 'PUBLISHED', deletedAt: null }, data: { postersStale: true } });
     revalidatePath('/admin/settings/poster-identity');
     return { ok: true };
   } catch {

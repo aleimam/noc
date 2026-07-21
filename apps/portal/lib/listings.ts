@@ -19,6 +19,13 @@ export async function resolveMarketListingId(param: string): Promise<string | nu
   const dec = decodeURIComponent(param).trim();
   const tail = dec.split('-').pop() ?? '';
   const where = /^\d+$/.test(tail) ? { adNumber: tail } : { id: dec };
-  const found = await prisma.listing.findFirst({ where, select: { id: true } });
+  // PUBLIC resolver — both callers (generateMetadata + the page body) are public New Obour
+  // surfaces. Without the visibility gate, a trashed listing still resolved and its former
+  // title/description/OG image were emitted as metadata even though the body 404s.
+  // (`newObourVisibility()` is `{ deletedAt: null }`.)
+  const found = await prisma.listing.findFirst({
+    where: { ...where, deletedAt: null, status: 'PUBLISHED' },
+    select: { id: true },
+  });
   return found?.id ?? null;
 }

@@ -18,6 +18,9 @@ export default async function OwnerDetailPage({ params }: { params: Promise<{ id
     include: {
       codes: { orderBy: { code: 'asc' }, select: { code: true } },
       listings: {
+        // Trash is visible only on the dedicated trash page — an owner's listing list must not
+        // show rows whose edit route correctly 404s.
+        where: { deletedAt: null },
         orderBy: { updatedAt: 'desc' },
         select: { id: true, title: true, status: true, price: true, adNumber: true, showOnBrokerage: true },
       },

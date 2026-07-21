@@ -43,7 +43,8 @@ export default async function AdminDashboard() {
     count(canListings, () => prisma.listing.count({ where: { status: 'PENDING', deletedAt: null } })),
     count(canListings, () => prisma.listing.count({ where: { status: 'PUBLISHED', deletedAt: null } })),
     count(canListings, () => prisma.listing.count({ where: { status: 'SOLD', deletedAt: null } })),
-    count(canListings, () => prisma.listing.count({ where: { showOnBrokerage: true } })),
+    // "On Al Sawarey" KPI: the toggle alone counted trashed/archived rows too.
+    count(canListings, () => prisma.listing.count({ where: { showOnBrokerage: true, status: 'PUBLISHED', deletedAt: null } })),
     count(canListings, () => prisma.landOffer.count({ where: { status: { in: ['NEW', 'REVIEWING'] } } })),
     count(canOwners, () => prisma.owner.count()),
     count(canListings, () => prisma.wishlistList.count()),
@@ -52,7 +53,9 @@ export default async function AdminDashboard() {
     count(canCustomers, () => prisma.user.count({ where: { type: 'CUSTOMER', phoneVerifiedAt: { not: null } } })),
     count(canStaff, () => prisma.user.count({ where: { type: 'STAFF' } })),
     canListings
-      ? prisma.listing.findMany({ where: { status: 'PENDING' }, orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, title: true } })
+      // `deletedAt: null` to match the KPI counts above — a trashed pending row used to stay in
+      // this queue and its link then 404s on the edit route (which correctly refuses trash).
+      ? prisma.listing.findMany({ where: { status: 'PENDING', deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, title: true } })
       : Promise.resolve([]),
     canListings
       ? prisma.landOffer.findMany({ where: { status: { in: ['NEW', 'REVIEWING'] } }, orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, ownerName: true, createdAt: true } })

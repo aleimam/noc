@@ -45,6 +45,13 @@ export async function toggleWishlist(listingId: string): Promise<{ ok: true; sav
       revalidatePath('/account/wishlist');
       return { ok: true, saved: false };
     }
+    // Removal above is always allowed; ADDING requires the listing to be publicly visible, or a
+    // caller with a known id could save a trashed/unpublished listing during the trash window.
+    const visible = await prisma.listing.findFirst({
+      where: { id: listingId, deletedAt: null, status: 'PUBLISHED' },
+      select: { id: true },
+    });
+    if (!visible) return { ok: false };
     await prisma.wishlistItem.create({ data: { listId, listingId } });
     revalidatePath('/account/wishlist');
     return { ok: true, saved: true };

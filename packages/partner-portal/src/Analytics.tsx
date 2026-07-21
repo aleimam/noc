@@ -24,7 +24,10 @@ export async function PartnerAnalytics() {
         _count: { select: { contactRequests: true, wishlistItems: true, negotiations: true } },
       },
     }),
-    prisma.listingViewDay.groupBy({ by: ['date'], where: { listing: { ownerId }, date: { gte: since } }, _sum: { count: true } }),
+    // `deletedAt: null` mirrors the listings query above. ListingViewDay rows only cascade on a
+    // HARD delete, so without this a trashed listing's views stayed in the 30-day chart/total
+    // while every other KPI on the page excluded it — mutually inconsistent analytics.
+    prisma.listingViewDay.groupBy({ by: ['date'], where: { listing: { ownerId, deletedAt: null }, date: { gte: since } }, _sum: { count: true } }),
   ]);
 
   const byDate = new Map(days.map((d) => [d.date.toISOString().slice(0, 10), d._sum.count ?? 0]));

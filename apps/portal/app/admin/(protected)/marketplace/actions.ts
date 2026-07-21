@@ -538,7 +538,9 @@ export async function regenerateAllListingImages(typeOptionId?: string): Promise
   try {
     const ids = (
       await prisma.listing.findMany({
-        where: { status: 'PUBLISHED', ...(typeOptionId ? { typeOptionId } : {}) },
+        // Trashed rows keep status PUBLISHED — exclude them so a bulk regeneration doesn't spend
+        // render time and storage recreating assets for inventory that is meant to be inert.
+        where: { status: 'PUBLISHED', deletedAt: null, ...(typeOptionId ? { typeOptionId } : {}) },
         select: { id: true },
       })
     ).map((l) => l.id);
@@ -565,12 +567,16 @@ export async function approveListing(id: string): Promise<Result> {
     if (missing.length) {
       return { ok: false, error: 'missing_required', missing: missing.map((m) => m.labelAr) };
     }
-    await prisma.listing.update({
-      where: { id },
+    // `deletedAt: null` in the predicate: a stale queue or a replayed id from the trash page
+    // could otherwise republish a trashed listing — assigning an ad number, regenerating posters
+    // and announcing its public URLs. Restore/purge stay the only transitions out of trash.
+    const published = await prisma.listing.updateMany({
+      where: { id, deletedAt: null },
       // Publishing clears any recorded sale price — otherwise a re-published listing carries a
       // stale figure that resurfaces the next time it is marked SOLD.
       data: { status: 'PUBLISHED', publishedAt: new Date(), rejectionReason: null, soldPrice: null },
     });
+    if (published.count === 0) return { ok: false, error: 'not_found' };
     // Assign the public ad number on first publish (no-op if already set or owner lacks a number).
     await ensureAdNumber(id);
     // Auto-generate the listing's image set (poster/cards/advantages) — fire-and-forget so
@@ -599,7 +605,8 @@ export async function approveListing(id: string): Promise<Result> {
 export async function toggleFeatured(id: string, featured: boolean): Promise<Result> {
   await requirePermission('listings', 'UPDATE');
   try {
-    await prisma.listing.update({ where: { id }, data: { featured } });
+    const upd = await prisma.listing.updateMany({ where: { id, deletedAt: null }, data: { featured } });
+    if (upd.count === 0) return { ok: false, error: 'not_found' };
     revalidatePath('/admin/marketplace/listings', 'page');
     return { ok: true };
   } catch (e) {
@@ -612,10 +619,11 @@ export async function rejectListing(id: string, reason: string): Promise<Result>
   // A rejection must carry a reason (the UI enforces this too — this is the server backstop).
   if (!reason.trim()) return { ok: false, error: 'reason_required' };
   try {
-    await prisma.listing.update({
-      where: { id },
+    const upd = await prisma.listing.updateMany({
+      where: { id, deletedAt: null },
       data: { status: 'REJECTED', rejectionReason: reason.trim() },
     });
+    if (upd.count === 0) return { ok: false, error: 'not_found' };
     revalidatePath('/admin/marketplace/listings', 'page');
     return { ok: true };
   } catch (e) {
@@ -670,7 +678,9 @@ export async function setListingArchived(id: string, archived: boolean): Promise
 export async function deleteListing(id: string): Promise<Result> {
   await requirePermission('listings', 'DELETE');
   try {
-    await prisma.listing.update({ where: { id }, data: { deletedAt: new Date() } });
+    // Idempotent compare-and-set: only stamp a row that is not already trashed. Re-issuing the
+    // delete used to refresh `deletedAt` and push the 90-day purge clock out indefinitely.
+    await prisma.listing.updateMany({ where: { id, deletedAt: null }, data: { deletedAt: new Date() } });
     revalidatePath('/admin/marketplace/listings', 'page');
     return { ok: true };
   } catch (e) {
@@ -703,7 +713,10 @@ export async function purgeListing(id: string): Promise<Result> {
     const row = await prisma.listing.findUnique({ where: { id }, select: { deletedAt: true } });
     if (!row?.deletedAt) return { ok: false, error: 'not_deleted' };
     await prisma.$transaction([
-      prisma.attachment.deleteMany({ where: { ownerId: id, ownerType: { in: ['Listing', 'ListingPoster'] } } }),
+      // 'ListingPaper' too — allocation-letter / sale-mandate photos are polymorphic Attachment
+      // rows with no FK to Listing, so they never cascaded and were orphaned forever.
+      // MIRRORED in ops/purge-deleted-listings.ts — change both together.
+      prisma.attachment.deleteMany({ where: { ownerId: id, ownerType: { in: ['Listing', 'ListingPoster', 'ListingPaper'] } } }),
       prisma.areaMap.deleteMany({ where: { level: 'listing', areaId: id } }),
       prisma.listing.delete({ where: { id } }),
     ]);

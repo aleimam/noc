@@ -17,7 +17,9 @@ export default async function WishlistPage() {
 
   const items = ownerKey
     ? await prisma.wishlistItem.findMany({
-        where: { list: { ownerKey }, listing: { status: 'PUBLISHED' } },
+        // `deletedAt` too: soft delete leaves `status` PUBLISHED, so a status-only filter kept
+        // rendering trashed listings (with a link that 404s) throughout the 90-day trash window.
+        where: { list: { ownerKey }, listing: { status: 'PUBLISHED', deletedAt: null } },
         orderBy: { createdAt: 'desc' },
         include: { listing: { select: { id: true, title: true, price: true, adNumber: true, area: true, typeOption: { select: { nameAr: true, nameEn: true } } } } },
       })

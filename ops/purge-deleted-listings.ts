@@ -25,7 +25,11 @@ async function main() {
   });
   for (const l of rows) {
     await prisma.$transaction([
-      prisma.attachment.deleteMany({ where: { ownerId: l.id, ownerType: { in: ['Listing', 'ListingPoster'] } } }),
+      // 'ListingPaper' too: official allocation-letter / sale-mandate photos ride the polymorphic
+      // Attachment with no FK to Listing, so deleting the listing cannot cascade to them. Omitting
+      // it left those rows (and their files) orphaned forever with an unresolvable owner id.
+      // MIRRORED in purgeListing() in admin marketplace actions — change both together.
+      prisma.attachment.deleteMany({ where: { ownerId: l.id, ownerType: { in: ['Listing', 'ListingPoster', 'ListingPaper'] } } }),
       prisma.areaMap.deleteMany({ where: { level: 'listing', areaId: l.id } }),
       prisma.listing.delete({ where: { id: l.id } }),
     ]);
