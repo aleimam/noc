@@ -126,6 +126,14 @@ export function parseArchiveName(prefix: string, name: string): { kind: ArchiveK
   if (mo < 1 || mo > 12 || d < 1 || d > 31 || hh > 23 || mi > 59 || ss > 59) return null;
   const at = new Date(Date.UTC(y, mo - 1, d, hh, mi, ss));
   if (Number.isNaN(at.getTime())) return null;
+  // Round-trip the constructed date. `Date.UTC` NORMALIZES impossible calendar days, so a
+  // crafted same-prefix name like `…-20240231-…` became 2 March and entered the retention
+  // sort with a misleading timestamp — able to displace a legitimate archive from the
+  // keep-window. A real archive always round-trips exactly.
+  if (
+    at.getUTCFullYear() !== y || at.getUTCMonth() !== mo - 1 || at.getUTCDate() !== d ||
+    at.getUTCHours() !== hh || at.getUTCMinutes() !== mi || at.getUTCSeconds() !== ss
+  ) return null;
   return { kind: kind as ArchiveKind, at };
 }
 

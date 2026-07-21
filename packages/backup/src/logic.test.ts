@@ -139,6 +139,23 @@ describe('archive naming', () => {
     }
   });
 
+  it('rejects impossible calendar dates instead of normalizing them', () => {
+    // Date.UTC silently rolls these over (31 Feb → 2/3 Mar), which used to hand a crafted
+    // same-prefix file a plausible timestamp and let it compete for a retention slot —
+    // potentially displacing a real archive from the keep-window.
+    for (const bad of [
+      'noc-backup-db-20240231-090807.tar.gz', // 31 February
+      'noc-backup-db-20260931-090807.tar.gz', // 31 September
+      'noc-backup-db-20260230-090807.tar.gz', // 30 February
+      'noc-backup-db-20260700-090807.tar.gz', // day 0
+    ]) {
+      expect(parseArchiveName('noc', bad)).toBeNull();
+    }
+    // A real leap day still parses.
+    expect(parseArchiveName('noc', 'noc-backup-db-20240229-090807.tar.gz')?.at.toISOString())
+      .toBe('2024-02-29T09:08:07.000Z');
+  });
+
   it('kind + contents label describe what the archive ACTUALLY holds', () => {
     expect(kindFor('DB')).toBe('db');
     expect(kindFor('FULL')).toBe('full');

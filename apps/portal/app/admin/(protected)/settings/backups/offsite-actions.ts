@@ -71,27 +71,56 @@ export type TierInput = {
 
 /** Save the levels. Each keeps its OWN folder — two levels sharing one would make
  *  each prune the other's archives, so identical paths are rejected. */
+/** Canonical form for collision checks: collapse `//`, drop a trailing `/`. `/home//daily`
+ *  and `/home/daily` are the SAME remote directory once the transport joins the path, so they
+ *  must not be able to slip past the duplicate check as different strings. */
+function canonPath(p: string): string {
+  return (p || '').trim().replace(/\/{2,}/g, '/').replace(/\/+$/, '');
+}
+
+const FREQUENCIES = ['OFF', 'HOURLY', 'DAILY', 'WEEKLY', 'MONTHLY'] as const;
+
 export async function saveTiers(inputs: TierInput[]): Promise<R> {
   await requirePermission('settings', 'UPDATE');
   try {
-    const paths = inputs.map((t) => (t.remotePath || '').trim().replace(/\/+$/, ''));
-    const dupe = paths.find((p, i) => p && paths.indexOf(p) !== i);
-    if (dupe) return { ok: false, error: `duplicate_path:${dupe}` };
+    // Validate the RESULTING set, not just the submitted slice. The old check compared only the
+    // paths present in this payload, so a stale/forged single-tier save could point HOURLY at
+    // DAILY's folder — and each run prunes every parseable `noc-` archive in its directory, so
+    // the hourly retention would then delete the daily FULL copies (or vice versa).
+    const all = await prisma.backupTier.findMany({ select: { key: true, remotePath: true } });
+    const resulting = new Map(all.map((t) => [t.key, canonPath(t.remotePath)]));
+    for (const t of inputs) {
+      if (!resulting.has(t.key)) continue;
+      const next = canonPath(t.remotePath) || resulting.get(t.key)!;
+      if (!next) return { ok: false, error: 'empty_path' };
+      resulting.set(t.key, next);
+    }
+    const seen = new Map<string, string>();
+    for (const [key, p] of resulting) {
+      const owner = seen.get(p);
+      if (owner) return { ok: false, error: `duplicate_path:${p}` };
+      seen.set(p, key);
+    }
 
     for (const t of inputs) {
       const cur = await prisma.backupTier.findUnique({ where: { key: t.key } });
       if (!cur) continue;
+      // Frequency must be one of the five enum values. An arbitrary string was stored verbatim
+      // and `lastScheduledFireTime` falls through to its MONTHLY branch for anything unknown,
+      // so a malformed payload silently rescheduled a tier instead of being rejected.
+      const freq = (FREQUENCIES as readonly string[]).includes(t.frequency) ? t.frequency : null;
+      if (t.frequency && !freq) return { ok: false, error: `bad_frequency:${t.frequency}` };
       await prisma.backupTier.update({
         where: { key: t.key },
         data: {
           enabled: t.enabled ?? cur.enabled,
-          frequency: t.frequency || cur.frequency,
+          frequency: freq || cur.frequency,
           everyN: Number.isFinite(t.everyN) && t.everyN >= 1 ? Math.floor(t.everyN) : cur.everyN,
           hourUtc: Number.isFinite(t.hourUtc) ? Math.min(23, Math.max(0, Math.floor(t.hourUtc))) : cur.hourUtc,
           weekday: Number.isFinite(t.weekday) ? Math.min(6, Math.max(0, Math.floor(t.weekday))) : cur.weekday,
           dayOfMonth: Number.isFinite(t.dayOfMonth) ? Math.min(28, Math.max(1, Math.floor(t.dayOfMonth))) : cur.dayOfMonth,
           contents: t.contents === 'DB' || t.contents === 'FULL' ? t.contents : cur.contents,
-          remotePath: t.remotePath?.trim() || cur.remotePath,
+          remotePath: canonPath(t.remotePath) || cur.remotePath,
           // keepLast 0 legitimately means "keep all"; only a non-number falls back.
           keepLast: Number.isFinite(t.keepLast) && t.keepLast >= 0 ? Math.floor(t.keepLast) : cur.keepLast,
         },

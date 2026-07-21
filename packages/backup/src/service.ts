@@ -129,6 +129,19 @@ async function dumpDatabase(dest: string, stageDir: string): Promise<void> {
 /** Stage the parts and produce a .tar.gz. Returns what the archive ACTUALLY holds. */
 async function buildArchive(contents: Contents, at: Date): Promise<{ archivePath: string; tmpDir: string; fileName: string; actual: string }> {
   const tmpDir = await mkdtemp(path.join(tmpdir(), 'noc-backup-'));
+  try {
+    return await stageArchive(tmpDir, contents, at);
+  } catch (e) {
+    // Own the cleanup. `runTier` only learns `tmpDir` from a SUCCESSFUL return, so its
+    // `finally` never fired for a failure in here — any dump / uploads-copy / disk-full / tar
+    // error left a staging tree containing `database.sql` and `env.txt` (plaintext secrets)
+    // on the host, and repeated retries piled them up.
+    await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+    throw e;
+  }
+}
+
+async function stageArchive(tmpDir: string, contents: Contents, at: Date): Promise<{ archivePath: string; tmpDir: string; fileName: string; actual: string }> {
   const stage = path.join(tmpDir, 'stage');
   await mkdir(stage, { recursive: true });
 
@@ -156,15 +169,23 @@ async function buildArchive(contents: Contents, at: Date): Promise<{ archivePath
 
   let hasUploads = false;
   if (contents === 'FULL') {
+    // A MISSING uploads directory (fresh box) is the only acceptable DB-only FULL. If the
+    // directory exists, a copy failure is a REAL failure and must fail the run: the old
+    // catch-all swallowed unreadable files and I/O errors, shipped a db-only tarball, and
+    // still recorded SUCCESS — so a disaster restore would silently lack photos/posters/maps
+    // while the run history said the daily full was fine. Letting this throw keeps the
+    // previous good full as the newest copy and surfaces the problem.
+    let uploadsExist = true;
     try {
       await stat(UPLOADS_DIR);
+    } catch {
+      uploadsExist = false;
+      console.warn(`[backup] uploads directory ${UPLOADS_DIR} not found — archiving DB only`);
+    }
+    if (uploadsExist) {
       await cp(UPLOADS_DIR, path.join(stage, 'uploads'), { recursive: true });
       entries.push('uploads');
       hasUploads = true;
-    } catch {
-      // No uploads directory (e.g. a fresh box) — record the truth in the manifest
-      // rather than claiming a FULL archive contains files it does not.
-      hasUploads = false;
     }
   }
 
@@ -208,6 +229,27 @@ export async function runTier(tierKey: string, trigger: RunTrigger): Promise<Run
   if (!tier) return { ok: false, error: `Unknown backup level "${tierKey}".` };
 
   const startedAt = new Date();
+
+  // Single-flight lease. Nothing stopped two overlapping cron ticks — or an admin clicking
+  // "Run now" while a scheduled tick was mid-flight — from building and uploading the SAME
+  // tier twice, each pruning against its own listing of the remote directory and each
+  // stamping lastRunAt. Retention and the run history then no longer describe one
+  // authoritative run. A RUNNING row older than STALE_RUN_MS is treated as a crashed process
+  // and reclaimed, so an interrupted run can't wedge the tier forever.
+  const STALE_RUN_MS = 6 * 60 * 60 * 1000;
+  const active = await prisma.backupRun.findFirst({
+    where: { tierKey: tier.key, status: 'RUNNING', startedAt: { gt: new Date(startedAt.getTime() - STALE_RUN_MS) } },
+    select: { id: true, startedAt: true },
+  });
+  if (active) {
+    return { ok: false, error: `A ${tier.key} backup is already running (started ${active.startedAt.toISOString()}).` };
+  }
+  // Reclaim anything older than the stale window so it stops blocking / lingering as RUNNING.
+  await prisma.backupRun.updateMany({
+    where: { tierKey: tier.key, status: 'RUNNING' },
+    data: { status: 'FAILED', finishedAt: new Date(), error: 'abandoned: process ended without finishing' },
+  });
+
   const run = await prisma.backupRun.create({
     data: { tierKey: tier.key, startedAt, status: 'RUNNING', trigger, contents: '' },
   });
