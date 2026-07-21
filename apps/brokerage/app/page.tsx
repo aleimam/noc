@@ -7,7 +7,7 @@ import { SearchAutocomplete } from '@noc/ui';
 import type { Loc, StoreSectionKey } from '@noc/config';
 import { StoreShell } from './_components/StoreShell';
 import { StoreLandCard } from './_components/StoreLandCard';
-import { latestLands, featuredLands, recentlySold } from '../lib/listings';
+import { latestLands, featuredLands, recentlySold, STOREFRONT_STATUS } from '../lib/listings';
 import { wishlistListingIds } from '../lib/wishlist';
 import { getStorefront } from '../lib/storefront';
 import { thumbUrl } from '../lib/thumb';
@@ -43,8 +43,12 @@ export default async function Home() {
     recentlySold(6),
     wishlistListingIds(),
     prisma.setting.findUnique({ where: { key: 'brand_alsawarey_hero' } }),
-    prisma.listing.count({ where: { showOnBrokerage: true, status: 'PUBLISHED', deletedAt: null } }),
-    prisma.listing.count({ where: { showOnBrokerage: true, status: 'SOLD', deletedAt: null } }),
+    // The SAME predicate the catalogue uses. Hard-coding `showOnBrokerage` under-counted
+    // partner-owned listings that ARE on the storefront, and counted toggled rows whose
+    // Type/Purpose is no longer allowed — so these public trust stats disagreed with the
+    // inventory a visitor can actually browse.
+    prisma.listing.count({ where: { ...STOREFRONT_STATUS, status: 'PUBLISHED', deletedAt: null } }),
+    prisma.listing.count({ where: { ...STOREFRONT_STATUS, status: 'SOLD', deletedAt: null } }),
   ]);
   // Full-bleed hero → 960px thumb (the admin may upload a multi-MB original).
   const heroUrl = heroSetting?.value ? thumbUrl(heroSetting.value, 960) : null;

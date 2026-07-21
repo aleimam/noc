@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const fromBody = body?.locale === 'en' || body?.locale === 'ar' ? body.locale : null;
   const cookieLocale = req.cookies.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'ar';
   const locale = (fromBody ?? cookieLocale) as 'ar' | 'en';
-  const result = await requestOtp(phone, locale);
+  const result = await requestOtp(phone, locale, 'alsawarey');
   if (!result.ok) return NextResponse.json(result, { status: result.error === 'invalid_phone' ? 400 : 429 });
   return NextResponse.json({ ok: true });
 }

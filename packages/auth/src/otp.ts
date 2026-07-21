@@ -60,27 +60,39 @@ export type OtpRequestResult =
   | { ok: true }
   | { ok: false; error: 'invalid_phone' | 'invalid_email' | 'cooldown' | 'rate_limited' };
 
+/** Which brand an OTP is being sent ON BEHALF OF. Defaults to New Obour so existing callers keep
+ *  their current text; the Al Sawarey app passes 'alsawarey'. */
+export type OtpBrand = 'newobour' | 'alsawarey';
+
+/** Brand name as it should appear inside the code message, per language. Every OTP body used to
+ *  hard-code New Obour, so an Al Sawarey partner received a code branded as the OTHER site —
+ *  on a relative's phone that reads as unrelated or suspicious, and the code gets ignored. */
+function brandName(brand: OtpBrand, ar: boolean): string {
+  if (brand === 'alsawarey') return ar ? 'الصواري' : 'Al Sawarey';
+  return ar ? 'العبور الجديدة' : 'New Obour';
+}
+
 /** Single-SMS OTP text in the customer's website language (kept well under 65 chars). */
-function otpMessage(code: string, locale: 'ar' | 'en'): string {
-  return locale === 'en'
-    ? `New Obour verification code: ${code}`
-    : `العبور الجديدة - رمز التحقق: ${code}`;
+function otpMessage(code: string, locale: 'ar' | 'en', brand: OtpBrand = 'newobour'): string {
+  const name = brandName(brand, locale === 'ar');
+  return locale === 'en' ? `${name} verification code: ${code}` : `${name} - رمز التحقق: ${code}`;
 }
 
 /** OTP email content (bilingual, big code — our users are low-tech, often on a relative's phone). */
-function otpEmail(code: string, locale: 'ar' | 'en'): { subject: string; text: string; html: string } {
+function otpEmail(code: string, locale: 'ar' | 'en', brand: OtpBrand = 'newobour'): { subject: string; text: string; html: string } {
   const ar = locale === 'ar';
-  const subject = ar ? `رمز الدخول: ${code} — العبور الجديدة` : `Your login code: ${code} — New Obour`;
+  const name = brandName(brand, ar);
+  const subject = ar ? `رمز الدخول: ${code} — ${name}` : `Your login code: ${code} — ${name}`;
   const text = ar
-    ? `رمز الدخول الخاص بك هو: ${code}\nصالح لمدة 5 دقائق. إذا لم تطلبه، تجاهل هذه الرسالة.\n\nالعبور الجديدة`
-    : `Your login code is: ${code}\nValid for 5 minutes. If you didn't request it, ignore this message.\n\nNew Obour`;
+    ? `رمز الدخول الخاص بك هو: ${code}\nصالح لمدة 5 دقائق. إذا لم تطلبه، تجاهل هذه الرسالة.\n\n${name}`
+    : `Your login code is: ${code}\nValid for 5 minutes. If you didn't request it, ignore this message.\n\n${name}`;
   const dir = ar ? 'rtl' : 'ltr';
   const html =
     `<div dir="${dir}" style="font-family:Tahoma,Arial,sans-serif;max-width:420px;margin:0 auto;padding:24px;text-align:center">` +
     `<p style="font-size:16px;color:#334">${ar ? 'رمز الدخول الخاص بك' : 'Your login code'}</p>` +
     `<p style="font-size:40px;font-weight:bold;letter-spacing:8px;color:#c39a3f;margin:12px 0">${code}</p>` +
     `<p style="font-size:13px;color:#889">${ar ? 'صالح لمدة 5 دقائق. إذا لم تطلبه، تجاهل هذه الرسالة.' : "Valid for 5 minutes. If you didn't request it, ignore this message."}</p>` +
-    `<p style="font-size:13px;color:#c39a3f;font-weight:bold;margin-top:20px">${ar ? 'العبور الجديدة' : 'New Obour'}</p></div>`;
+    `<p style="font-size:13px;color:#c39a3f;font-weight:bold;margin-top:20px">${name}</p></div>`;
   return { subject, text, html };
 }
 
@@ -101,23 +113,23 @@ async function createOtp(dest: string): Promise<{ ok: true; code: string } | { o
   return { ok: true, code };
 }
 
-export async function requestOtp(rawPhone: string, locale: 'ar' | 'en' = 'ar'): Promise<OtpRequestResult> {
+export async function requestOtp(rawPhone: string, locale: 'ar' | 'en' = 'ar', brand: OtpBrand = 'newobour'): Promise<OtpRequestResult> {
   // Enforce the shared phone rule (11-digit 01… or international +…) on the raw input.
   if (!isValidPhone(rawPhone)) return { ok: false, error: 'invalid_phone' };
   const phone = normalizePhone(rawPhone);
   const r = await createOtp(phone);
   if (!r.ok) return r;
-  await sendSms(phone, otpMessage(r.code, locale), await loadSmsConfig());
+  await sendSms(phone, otpMessage(r.code, locale, brand), await loadSmsConfig());
   return { ok: true };
 }
 
 /** Email OTP — same code machinery, keyed on the (lower-cased) address, delivered by email. */
-export async function requestEmailOtp(rawEmail: string, locale: 'ar' | 'en' = 'ar'): Promise<OtpRequestResult> {
+export async function requestEmailOtp(rawEmail: string, locale: 'ar' | 'en' = 'ar', brand: OtpBrand = 'newobour'): Promise<OtpRequestResult> {
   const email = (rawEmail ?? '').trim().toLowerCase();
   if (!isValidEmail(email)) return { ok: false, error: 'invalid_email' };
   const r = await createOtp(email);
   if (!r.ok) return r;
-  const { subject, text, html } = otpEmail(r.code, locale);
+  const { subject, text, html } = otpEmail(r.code, locale, brand);
   await sendMail({ to: email, subject, text, html }, await loadMailConfig());
   return { ok: true };
 }

@@ -213,7 +213,16 @@ export function OwnerEditor({
 
           <div className="space-y-2 border-t border-graphite/15 pt-3">
             <div className="text-sm font-bold text-primary">{L('المواقع المتاحة للشريك', 'Sites this partner can access')}</div>
-            <p className="text-xs opacity-70">{L('يحدّد أين يسجّل الشريك دخوله وأين تظهر إعلاناته.', 'Controls where the partner can sign in and where their listings appear.')}</p>
+            {/* Sign-in ONLY. Partner listings are globally visible by owner decision (2026-07-18,
+                `visibility.ts`), so the old wording — "and where their listings appear" — promised
+                something these toggles do not do: staff disabling a site believed they had hidden
+                that partner's offers there, while every published listing stayed public. */}
+            <p className="text-xs opacity-70">
+              {L(
+                'يحدّد أين يسجّل الشريك دخوله فقط. إعلاناته المنشورة تظل ظاهرة على الموقعين.',
+                'Controls sign-in only. Published partner listings remain visible on both sites.',
+              )}
+            </p>
             <div className="flex flex-wrap gap-4">
               {siteToggle(pf.siteNewObour, (v) => setPf({ ...pf, siteNewObour: v }), favicons.newObour, L('العبور الجديدة', 'New Obour'))}
               {siteToggle(pf.siteAlsawary, (v) => setPf({ ...pf, siteAlsawary: v }), favicons.alsawarey, L('الصواري', 'Al Sawarey'))}

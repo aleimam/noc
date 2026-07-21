@@ -47,13 +47,13 @@ export async function POST(req: NextRequest) {
 
   if (channel === 'email') {
     if (!user.email) return deny('no_email');
-    const result = await requestEmailOtp(user.email, locale);
+    const result = await requestEmailOtp(user.email, locale, 'alsawarey');
     if (!result.ok) return NextResponse.json(result, { status: 429 });
     return NextResponse.json({ ok: true, sentTo: maskEmail(user.email), channel: 'email' });
   }
 
   if (!user.phone) return deny('no_phone');
-  const result = await requestOtp(user.phone, locale);
+  const result = await requestOtp(user.phone, locale, 'alsawarey');
   if (!result.ok) return NextResponse.json(result, { status: 429 });
   const masked = user.phone.replace(/^(.*)(\d{3})$/, (_, a: string, tail: string) => '•'.repeat(Math.max(a.length - 1, 3)) + tail);
   return NextResponse.json({ ok: true, sentTo: masked, channel: 'sms' });
