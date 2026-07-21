@@ -609,6 +609,114 @@ Baseline: both app typechecks pass after Pass 8 as well. `npm install` still can
 - Suggested fix: Use a pending-upload record/transactional outbox, delete files on every post-write failure, and run a bounded orphan scanner keyed to attachment ownership.
 - Blast radius: Permanent orphaned uploads and storage growth from failed or abandoned submissions.
 
+### [P1] The analytics collector lets either public site write under the other brand and mutate an arbitrary page view
+- Confidence: CONFIRMED (traced)
+- Type: security / engineering
+- Location: apps/portal/app/api/collect/route.ts:20-38; apps/brokerage/app/api/collect/route.ts:19-36; packages/analytics/src/collect.ts:42-95
+- What's wrong: Both public routes pass the client JSON through unchanged, and `handleCollect` chooses `site` from the caller-controlled `input.site`. A caller can therefore POST to either origin with the other brand. A `pageleave` then updates `PageView` by client-supplied `pvId` alone; it is not constrained to the current session or site. The existing public write quota finding covers volume, but not this integrity boundary.
+- Failure scenario: A script posts forged `site: 'alsawarey'` events to the portal and pollutes the brokerage rollups, or replays a known page-view id with fabricated duration/scroll data. Cross-site attribution and per-page engagement reports become attacker-controlled while every request still returns the expected 204.
+- Suggested fix: Derive the brand from the route (or a server-only constant), reject a mismatched payload, and update a page view with `{ id: pvId, sessionId: session.id, site }` (or an equivalent ownership check). Bind event/page-view writes to the server-resolved session as well.
+- Blast radius: Both brands' analytics, search/conversion attribution, and any operational decisions based on those reports.
+
+### [P1] Analytics rollup and price snapshots materialize entire raw inventories in Node memory
+- Confidence: CONFIRMED (traced)
+- Type: engineering
+- Location: ops/analytics-rollup.ts:18-58; apps/portal/lib/priceIndex.ts:23-84
+- What's wrong: The nightly rollup uses an uncapped `visitSession.findMany` and computes unique visitors, averages, and bounces in JavaScript. The price snapshot job likewise loads every qualifying listing and land row, then performs one sequential upsert per district. Neither path streams, pages, aggregates in SQL, or bounds the requested rollup day count (`process.argv[2]` is accepted without an upper limit).
+- Failure scenario: As traffic/inventory grows, one busy day or a manual backfill (the script documents `400` days) exhausts the cron process heap or runs past its window. A monthly price snapshot can similarly hold the full inventory and take a long time while serial upserts block the next scheduled run.
+- Suggested fix: Aggregate counts/sums in SQL, page by indexed time/id windows, cap backfill arguments, and use a bounded transaction or batched `createMany`/upsert strategy with progress checkpoints.
+- Blast radius: Missed daily analytics rollups, unreliable long-term dashboards, and delayed price-index snapshots on both sites.
+
+### [P1] Scheduled and manual backup runs have no lease or idempotency guard
+- Confidence: CONFIRMED (traced)
+- Type: engineering
+- Location: packages/backup/src/service.ts:206-263; packages/backup/src/service.ts:270-283
+- What's wrong: `runDueBackups` checks `lastRunAt` and then calls `runTier`, while `runTier` unconditionally creates a RUNNING row. There is no database lease/unique running marker, compare-and-set, or process lock, and the manual path uses the same function.
+- Failure scenario: Two cron ticks overlap, or an administrator clicks Run now while a scheduled tick is active. Both build and upload the same tier, both prune based on their own listing, and both stamp `lastRunAt`; an interrupted process can also leave a RUNNING row that does not prevent a later duplicate. Retention and the audit history then no longer describe one authoritative run.
+- Suggested fix: Claim a tier with an atomic lease/heartbeat (and recover stale RUNNING rows), or use a host-level lock around each tier. Make the remote name/run idempotency key part of the claim so a second caller cannot upload/prune concurrently.
+- Blast radius: Off-site backup retention, disk/bandwidth usage, restore confidence, and the scheduler's ability to prove a tier actually ran.
+
+### [P1] Off-site backups do not verify the SFTP server's host key
+- Confidence: CONFIRMED (traced)
+- Type: security
+- Location: packages/backup/src/transport.ts:71-84; ops/offsite-backup.sh:60-66
+- What's wrong: The SFTP transport supplies host, port, username, and password but no `hostVerifier`/known-hosts policy. The legacy rsync script explicitly uses `StrictHostKeyChecking=accept-new`, which trusts the first key it sees. There is no configured fingerprint or pinned known-hosts file.
+- Failure scenario: DNS, routing, or a first-connection MITM redirects a backup upload to an impostor. The attacker can receive database dumps and the archive's `.env` secrets, or a restore operator can later trust tampered backup contents, while the client reports a successful transfer.
+- Suggested fix: Require a pinned host key/fingerprint (or a managed known-hosts file) for both transports; fail closed on a changed or unknown key and rotate the pin deliberately with an audited admin action.
+- Blast radius: Every off-site archive, including database credentials, password hashes, AUTH_SECRET, API keys, and uploaded media.
+
+### [P1] A production backup can be marked SUCCESS while omitting the restore-critical environment file
+- Confidence: CONFIRMED (traced)
+- Type: engineering / security
+- Location: packages/backup/src/service.ts:138-175; packages/backup/src/service.ts:243-256
+- What's wrong: `buildArchive` catches every `.env` read error, records a manifest without `env`, and still returns a normal archive. `runTier` then records `SUCCESS` based only on upload/size verification. The warning is visible in logs, but the status used by the scheduler/admin UI does not distinguish a DB-only result from a complete restore bundle.
+- Failure scenario: A production `ENV_FILE` path is missing, unreadable, or points at the wrong deployment. The cron uploads a DB-only tarball and stamps the tier/config as successful; after a VPS loss, the archive cannot recreate DB/auth/provider configuration even though operations believed the backup passed.
+- Suggested fix: In production require `.env` (or an explicitly versioned secret/config artifact) and fail the run when it is absent; otherwise store an explicit incomplete status/alert and make the UI and retention report the missing component.
+- Blast radius: Disaster recovery for both applications and every secret/configuration needed to restore them.
+
+### [P1] The brokerage sitemap has an unbounded listing and attachment fan-out
+- Confidence: CONFIRMED (traced)
+- Type: engineering
+- Location: apps/brokerage/app/sitemap.ts:7-24
+- What's wrong: The route loads every qualifying listing and then every attachment for the entire id set with no `take`, pagination, sitemap partitioning, or per-listing query budget. It constructs the complete XML object in memory on every request.
+- Failure scenario: Inventory growth or a crawler repeatedly hitting `/sitemap.xml` makes the brokerage process allocate the full catalogue plus all gallery paths and can exceed response/heap limits. The route already has a separate storefront-visibility defect; this is the independent scale failure.
+- Suggested fix: Generate partitioned sitemap indexes, page listings by stable cursor, fetch only the first N public images per page, and cache/revalidate generated partitions.
+- Blast radius: Search indexing and public availability of the brokerage app during sitemap generation.
+
+### [P1] Analytics dashboard caps are silent and return an arbitrary sample
+- Confidence: CONFIRMED (traced)
+- Type: engineering
+- Location: apps/portal/lib/analytics.ts:32-44; apps/portal/lib/analytics.ts:148-161
+- What's wrong: Overview and event queries hard-cap `findMany` at 50,000/100,000 rows but have no `orderBy`, total-count comparison, or truncation flag. Once a window exceeds a cap, the KPI, series, funnel, and top lists are computed from whatever rows MariaDB returns first rather than a declared sample or complete aggregate.
+- Failure scenario: A high-traffic reporting window silently undercounts pageviews/events and can change device, page, search, and conversion rankings. Staff see plausible percentages with no indication that the dashboard stopped at the cap.
+- Suggested fix: Use SQL aggregates/cursors for complete totals, or explicitly sample with deterministic ordering and expose a `truncated`/sample-size warning beside every affected KPI.
+- Blast radius: Analytics decisions, reports, and alerts for either site's traffic once the raw-table caps are reached.
+
+### [P2] Backup retention accepts impossible calendar dates as valid archive timestamps
+- Confidence: CONFIRMED (traced)
+- Type: engineering / security
+- Location: packages/backup/src/logic.ts:119-129
+- What's wrong: `parseArchiveName` bounds month/day/time fields but does not round-trip-check the constructed UTC date. JavaScript normalizes names such as `20240231` into a March date, so a crafted same-prefix remote filename becomes a valid prune candidate with a misleading timestamp.
+- Failure scenario: A foreign or tampered `noc-backup-*` file with an impossible day participates in sorting and can displace a legitimate archive from the retention window. The prefix guard prevents unrelated names but does not protect against malformed same-prefix files.
+- Suggested fix: After constructing `Date`, verify every UTC component equals the parsed year/month/day/hour/minute/second (or use a strict calendar validator) before returning a candidate; add malformed-date tests.
+- Blast radius: Retention decisions and the newest-backup safety invariant in a shared or tampered remote folder.
+
+### [P2] Deleted-listing purge is unbounded, non-resumable, and race-prone
+- Confidence: CONFIRMED (traced)
+- Type: engineering
+- Location: ops/purge-deleted-listings.ts:18-34
+- What's wrong: The cron first loads every expired listing into memory and then executes one transaction per row without a batch limit, cursor, claim, or retry isolation. A second invocation can race the first and abort on a missing row, leaving the rest of the purge unprocessed.
+- Failure scenario: A backlog of trashed listings makes the nightly process run for an unbounded time or exceed memory. If cron overlaps or an operator retries after a partial failure, one already-deleted id can terminate the whole run and postpone cleanup for every later id.
+- Suggested fix: Claim/delete bounded batches by `(deletedAt,id)`, make each row idempotent (`deleteMany`/not-found tolerant), checkpoint progress, and expose metrics for remaining backlog.
+- Blast radius: Permanent retention cleanup, orphan metadata/file pressure, and cron reliability during large backlogs.
+
+### [P2] Search intelligence and land-follow notifications lack the composite indexes their scopes use
+- Confidence: CONFIRMED (traced)
+- Type: engineering
+- Location: apps/portal/lib/searchAnalytics.ts:53-109; apps/portal/app/admin/(protected)/lands/actions.ts:574-614; packages/db/prisma/schema.prisma:1135-1154; packages/db/prisma/schema.prisma:1505-1527
+- What's wrong: Search analytics repeatedly filters/group-bys `SearchLog` by `(site, surface, createdAt, normalized)` and fetches an unbounded distinct-term sample, but the schema has only separate `site+createdAt` and `normalized` indexes. Geo-update notification fan-out ORs `districtId`, `blockId`, `neighborhoodId`, and `landId`, while `LandFollow` has no district/block indexes. These become scans as logs/follows grow.
+- Failure scenario: An admin opens analytics or publishes a geo update after the tables grow; several grouped scans and the distinct sample compete with public traffic, causing high CPU/latency and timeouts.
+- Suggested fix: Add composite indexes matching the actual predicates (for example SearchLog site/surface/createdAt and site/normalized/createdAt, plus LandFollow districtId/blockId), and page/limit sample/fan-out reads.
+- Blast radius: Analytics admin availability and update-notification latency under accumulated history.
+
+### [P2] The city-mandatory backfill materializes all listing ids and values in one shot
+- Confidence: CONFIRMED (traced)
+- Type: engineering
+- Location: ops/city-mandatory.ts:75-87
+- What's wrong: The one-shot maintenance script loads every existing `ListingValue` city id into a `Set`, loads every `Listing` id, builds a potentially huge in-memory `rows` array, and sends one unbounded `createMany` without batching, duplicate handling, or a concurrent-run guard.
+- Failure scenario: Running the backfill on a large production catalogue exceeds memory/packet limits or collides with a second run between the read and insert, causing a failed bulk write and leaving a partially prepared mandatory field.
+- Suggested fix: Page listings by id, use an anti-join/`INSERT … SELECT` (or bounded `createMany` batches with `skipDuplicates`), and claim the migration so only one process runs.
+- Blast radius: Listing edit/public detail consistency and the operational deploy window for the mandatory city migration.
+
+### [P2] Public brand fallback redirects can expose the internal reverse-proxy origin
+- Confidence: CONFIRMED (traced)
+- Type: security
+- Location: apps/portal/app/brand/[asset]/route.ts:56-57; apps/brokerage/app/brand/[asset]/route.ts:56-57; apps/brokerage/app/admin-leave/route.ts:5-8
+- What's wrong: When the public origin environment variable is absent, these routes construct an absolute redirect from `req.url`. Behind the documented reverse proxy that value is the internal localhost origin, despite the route comments warning about it.
+- Failure scenario: A misconfigured deployment or health check requests an unset/missing brand asset or exits admin view and receives `Location: http://localhost:3001/…` or `http://localhost:3002/…`, leaking topology and producing a broken public redirect.
+- Suggested fix: Use a fixed per-app public default or return a relative redirect; never use `req.url` as the origin fallback.
+- Blast radius: Public branding/favicons and the brokerage admin-view exit path during configuration drift.
+
 ## Section 2 — UI/UX enhancements
 
 ### Make draft-save state persistent and actionable
@@ -652,13 +760,16 @@ Baseline: both app typechecks pass after Pass 8 as well. `npm install` still can
 - Customer retention surfaces: reviewed New Obour saved-wishlist reads/writes, listing ownership pages/edit guards, negotiation creation/history/respond actions, and Al Sawarey wishlist/contact-request history. My-listing pages and both edit routes reject trash; New Obour wishlist and live negotiation defects are reported. Historical closed negotiation/contact-request rows were treated as records, not public listing visibility leaks.
 - Partner surfaces: reviewed shared dashboard, analytics, browse/detail, catalog loader, fast-edit ownership lookup, lean save lookup, listing assets, and both public visibility helpers. Dashboard/catalog/browse direct reads exclude trash; the 30-day view aggregate defect is reported. Mutation authorization is present but several writes are not atomic with their ownership/deletion/status checks, as detailed above.
 - Admin/direct counts: reviewed marketplace hub, moderation lists, trash, dashboard KPIs/recents, New Obour admin market, owner detail/count relations, wishlist rankings, listing editors, and all listing reads in marketplace actions. Main moderation/new-market/editor paths correctly exclude or post-check trash; ordinary-dashboard/owner/wishlist leakage and the Al Sawarey KPI drift are reported.
-- Maintenance helpers: reviewed price-index and neighborhood-area aggregates (clean explicit filters), cover fallbacks and brokerage admin helpers (safe ids supplied by visibility-gated callers), ad-number allocation (intentionally retains trashed ad numbers during recovery), required-details/stamping one-row helpers (non-public caller-scoped), seed/backfill scripts, and the city-mandatory maintenance script. Bulk poster regeneration is the only reported maintenance read defect.
+- Maintenance helpers: reviewed price-index and neighborhood-area aggregates, cover fallbacks and brokerage admin helpers (safe ids supplied by visibility-gated callers), ad-number allocation (intentionally retains trashed ad numbers during recovery), required-details/stamping one-row helpers (non-public caller-scoped), seed/backfill scripts, and the city-mandatory maintenance script. The price-index materialization and city-mandatory backfill scale defects are reported above; bulk poster regeneration remains the only reported maintenance read-visibility defect.
 - Purge: compared `purgeListing()` and `ops/purge-deleted-listings.ts` transaction-by-transaction; they are behaviorally identical and both refuse/select only trashed rows as appropriate. Both omit the polymorphic `ListingPaper` owner type, reported above; listing values, conditions, contacts, wishlist items, negotiations/view days and source-land relations follow the schema's documented cascade/SetNull behavior.
 - Repository state: no source changes were made. The only pre-existing untracked item remains `.claude/`; this report is the sole audit artifact added by this pass.
-- Pass-3 coverage note: the full partner auth/IDOR, lean-form, listing-save, and fast-edit surfaces are covered above; the remaining “not covered yet” list below begins with Pass 9.
+- Pass-3 coverage note: the full partner auth/IDOR, lean-form, listing-save, and fast-edit surfaces are covered above; the remaining “not covered yet” list below now begins with Pass 12.
 - Pass-4 coverage note: every portal `/admin` page/route and every `apps/portal/app/admin/**/actions.ts` export was enumerated. Protected pages/actions were checked for server-side permission gates, and cross-app admin-view, backup-download, user-management, poster, rationing, analytics, watermark, and lands-map boundaries were traced. The dashboard root uses per-section `hasPermission`; settings/account is a deliberate self-only STAFF-auth flow.
 - Pass-5 coverage note: reviewed the rationing parser/normalizer, import commit and batch accounting, sheet/name/search/detail reads, plots/summary/dashboard aggregates, scan registration/reporting, watcher matching/SMS, public inquiry/follow actions, OTP helper, quota calls, and purge-adjacent scan media. Import atomicity, watcher delivery, public-write quotas, plot enumeration, and scan attachment provenance are reported; the OTP verification path and scan report permission finding were already covered above.
 - Pass-6 coverage note: reviewed city/district/neighborhood public loaders and metadata, active-tree filtering, geo inheritance, amenities, area listings, derived plot areas, map/custom-photo readers, lands CRUD and map stamping, geo updates/notifications, and area follows. Inactive-ancestor URLs, polymorphic map cleanup, and follow target/phone binding are reported; inheritance defaults and listing visibility predicates were consistent with their documented policy.
 - Pass-7 coverage note: compared the portal/brokerage search mirrors and traced search pages, suggestion/lead/event/collect/alive/preferences/upload endpoints and their rate-limit/visibility boundaries. Search normalization and suggestion/lead/upload/alive guards are aligned; analytics collector throttling and search-event attribution are reported.
 - Pass-8 coverage note: reviewed both upload pipelines, `/uploads` serving, mirrored thumbnail routes, photo/map watermarking, poster generation, attachment ownership, and replacement/purge paths. Generated-file cleanup, upload failure cleanup, and uncapped thumbnail caching are reported; the byte-level thumbnail route behavior remains mirrored.
-- Not covered yet: broader analytics/ops/backups, performance/indexing beyond the public rationing/media hot spots above, full security sweep, and UI/UX passes 12–15.
+- Pass-9 coverage note: reviewed the analytics collector/route pair, raw analytics rollup/prune, price-snapshot and purge crons, city-mandatory/backfill scripts, backup-tick/service/transport/retention logic, local/off-site backup scripts, and admin backup status/download boundaries. Cross-brand collector identity, unbounded aggregators/purge, backup reentrancy, missing env success, host-key verification, and malformed retention timestamps are reported; the earlier backup-download RBAC finding remains separate.
+- Pass-10 coverage note: reviewed public/admin sitemap and count reads, analytics/search/price aggregations, cron-scale imports/backfills, and the Prisma indexes for listings, analytics, SearchLog, LandFollow, geo updates, and backup history. Unbounded sitemap/materialization, silent analytics caps, and predicate/index mismatches are reported; the existing rationing/media scale findings remain separate.
+- Pass-11 coverage note: swept both Next security-header/CSP configs, all public upload/brand/thumbnail paths, rich-HTML and JSON-LD sinks, raw SQL/process execution, environment/secret references, session/OTP boundaries, and redirect construction. The new collector identity, SFTP host-key, and localhost fallback findings are reported; existing auth/OTP/RBAC and upload findings were not duplicated. A repository secret-pattern scan found no committed private-key or cloud-key material. Dependency installation/audit remains unverified because the machine npm launcher is broken.
+- Not covered yet: UI/UX passes 12–15 and the deeper backup/restore validation in Pass 16.
