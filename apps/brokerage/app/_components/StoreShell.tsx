@@ -139,15 +139,34 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
 
       <CompareBar labels={{ compare: L('قارن', 'Compare'), clear: L('مسح', 'Clear'), items: L('عناصر للمقارنة', 'to compare') }} />
 
+      {/* Footer — two-tier layout (owner choice 2026-07-21): brand + contact on top, all links
+          in a labelled row below, then the copyright bar. */}
       <footer className="mt-10 bg-navy-900 text-white/80">
-        <div className="mx-auto max-w-6xl px-4 py-4 text-center">
-          <div className="font-bold text-white">{Lc(content.footer.name)}</div>
-          {Lc(content.footer.slogan) && <div className="mt-0.5 text-sm text-white/70">{Lc(content.footer.slogan)}</div>}
-        </div>
-        {/* Useful official links (owner request, 2026-07-16). */}
-        <div className="mx-auto max-w-6xl px-4 pb-4">
-          <div className="mb-2 text-center text-xs font-bold uppercase tracking-wide text-gold">{L('روابط مفيدة', 'Useful links')}</div>
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-center text-sm">
+        <div className="mx-auto max-w-6xl px-4 py-5">
+          {/* Tier 1: brand (start) ↔ contact (end). */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="font-bold text-white">{Lc(content.footer.name)}</div>
+              {Lc(content.footer.slogan) && <div className="mt-0.5 text-sm text-white/70">{Lc(content.footer.slogan)}</div>}
+            </div>
+            <div className="flex items-center gap-3">
+              {whatsapp && (
+                <a href={`https://wa.me/${waPhone(whatsapp)}`} aria-label="WhatsApp" className="inline-flex min-h-10 items-center gap-1.5 text-gold" dir="ltr">
+                  <WhatsAppIcon className="h-4 w-4" />
+                  {whatsapp}
+                </a>
+              )}
+              {socials.map((s) => (
+                <a key={s.platform + s.url} href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.platform}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-gold hover:text-navy-900">
+                  <SocialIcon platform={s.platform} />
+                </a>
+              ))}
+            </div>
+          </div>
+          {/* Tier 2: useful official links (owner request 2026-07-16) + any CMS footer pages, one row. */}
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/10 pt-4 text-sm">
+            <span className="text-xs font-bold uppercase tracking-wide text-gold">{L('روابط مفيدة', 'Useful links')}</span>
             {[
               { href: 'https://newobour.com/', ar: 'بوابة العبور الجديدة', en: 'New Obour portal' },
               { href: 'https://nuca-services.gov.eg/#/home', ar: 'خدمات هيئة المجتمعات العمرانية', en: 'NUCA e-services' },
@@ -159,22 +178,10 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
                 {L(l.ar, l.en)}&nbsp;<span aria-hidden className="text-xs">↗</span>
               </a>
             ))}
+            {footerPages.map((p) => (
+              <Link key={p.slug} href={`/p/${p.slug}`} className="inline-flex min-h-10 items-center text-white/70 hover:text-gold">{locale === 'en' ? p.titleEn || p.titleAr : p.titleAr}</Link>
+            ))}
           </div>
-        </div>
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 pb-4 text-center text-sm">
-          {footerPages.map((p) => (
-            <Link key={p.slug} href={`/p/${p.slug}`} className="text-white/70 hover:text-gold">{locale === 'en' ? p.titleEn || p.titleAr : p.titleAr}</Link>
-          ))}
-          <a href={`https://wa.me/${waPhone(whatsapp)}`} aria-label="WhatsApp" className="inline-flex min-h-10 items-center gap-1.5 py-2 text-gold" dir="ltr">
-            <WhatsAppIcon className="h-4 w-4" />
-            {whatsapp}
-          </a>
-          {socials.map((s) => (
-            <a key={s.platform + s.url} href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.platform}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-gold hover:text-navy-900">
-              <SocialIcon platform={s.platform} />
-            </a>
-          ))}
         </div>
         <div className="border-t border-white/10 py-2 text-center text-xs text-white/50">{copyright}</div>
       </footer>

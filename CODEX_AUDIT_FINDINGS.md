@@ -1,10 +1,12 @@
 # Codex Deep Audit Findings
 
+**Passes 9–11 addendum:** Analytics/ops crons and backups, performance/schema, and the full security sweep are complete. Findings below are new to these passes and de-duplicated against Passes 1–8.
+
 **Passes 5–8 addendum:** Rationing, geo/lands, search/public endpoints, and the media pipeline are complete. Findings below are new to these passes and de-duplicated against Passes 1–4.
 
 **Pass 4 addendum:** Admin RBAC coverage is complete for every `/admin` route and every `apps/portal/app/admin/**/actions.ts`. Those findings remain in Section 1 and are de-duplicated against the earlier passes.
 
-Audit status: **Passes 1–8 of 16 complete** — listings + EAV; soft delete + public visibility; partner portal auth, ownership/IDOR, lean form, listing save, and fast edit; admin RBAC; rationing; geo/lands; search/public endpoints; media pipeline. Passes 9–16 have not yet been performed. This report is intentionally cumulative; later focused passes should append, de-duplicate, and re-sort it.
+Audit status: **Passes 1–11 of 16 complete** — listings + EAV; soft delete + public visibility; partner portal auth, ownership/IDOR, lean form, listing save, and fast edit; admin RBAC; rationing; geo/lands; search/public endpoints; media pipeline; analytics/ops; performance/schema; security sweep. Passes 12–16 have not yet been performed. This report is intentionally cumulative; later focused passes should append, de-duplicate, and re-sort it.
 
 ## RESOLUTION — all 7 pass-1 defects FIXED, deployed and live-verified 2026-07-20
 
