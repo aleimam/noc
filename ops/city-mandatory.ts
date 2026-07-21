@@ -72,19 +72,30 @@ async function main() {
     else deactivated++;
   }
 
-  // 4) Backfill the city value on listings that don't have one yet.
+  // 4) Backfill the city value on listings that don't have one yet — in bounded pages instead of
+  //    materializing every listing id AND every existing city value at once. `values: { none }`
+  //    asks the DB for the "missing it" set directly; each inserted page drops out of the
+  //    predicate, so `take` alone walks the backlog without an offset (and a second concurrent
+  //    run can't double-insert — the just-filled rows no longer match).
   let backfilled = 0;
   if (primaryId) {
-    const withCity = new Set(
-      (await prisma.listingValue.findMany({ where: { attributeId: city.id }, select: { listingId: true } })).map((v) => v.listingId),
-    );
-    const listings = await prisma.listing.findMany({ select: { id: true } });
-    const rows = listings
-      .filter((l) => !withCity.has(l.id))
-      .map((l) => (usesList ? { listingId: l.id, attributeId: city.id, listItemId: primaryId! } : { listingId: l.id, attributeId: city.id, optionId: primaryId! }));
-    if (rows.length) {
-      await prisma.listingValue.createMany({ data: rows });
-      backfilled = rows.length;
+    const BATCH = 500;
+    for (;;) {
+      const missing = await prisma.listing.findMany({
+        where: { values: { none: { attributeId: city.id } } },
+        select: { id: true },
+        take: BATCH,
+      });
+      if (missing.length === 0) break;
+      await prisma.listingValue.createMany({
+        data: missing.map((l) =>
+          usesList
+            ? { listingId: l.id, attributeId: city.id, listItemId: primaryId! }
+            : { listingId: l.id, attributeId: city.id, optionId: primaryId! },
+        ),
+      });
+      backfilled += missing.length;
+      if (missing.length < BATCH) break;
     }
   }
 

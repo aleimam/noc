@@ -69,8 +69,22 @@ export async function testConnection(): Promise<{ ok: boolean; message: string }
       const base = assertSafeRemotePath(cfg?.remotePath || '/home');
       await t.ensureDir(base);
       const items = await t.list(base);
+
+      // Also prove EVERY enabled tier's OWN folder is reachable + creatable. Testing only the base
+      // dir hid the real failure mode: a scheduled run writes to /home/<tier>, and if that folder
+      // can't be created (a share collision, a stale chroot) the admin's green "connected" is a
+      // false promise — the failure only surfaces hours later when the cron fires.
+      const tiers = await prisma.backupTier.findMany({ where: { enabled: true, frequency: { not: 'OFF' } } });
+      const tierParts: string[] = [];
+      for (const tier of tiers) {
+        const dir = assertSafeRemotePath(tier.remotePath);
+        await t.ensureDir(dir);
+        const n = (await t.list(dir)).length;
+        tierParts.push(`${tier.key}→"${dir}" (${n})`);
+      }
       ok = true;
-      return `تم الاتصال بنجاح. مجلد الدخول: ${t.homeDir ?? 'غير معروف'} · "${base}" يحتوي ${items.length} ملف.`;
+      const tierMsg = tierParts.length ? ` · المجلدات: ${tierParts.join('، ')}` : '';
+      return `تم الاتصال بنجاح. مجلد الدخول: ${t.homeDir ?? 'غير معروف'} · "${base}" يحتوي ${items.length} ملف.${tierMsg}`;
     });
   } catch (e) {
     message = e instanceof Error ? e.message : String(e);

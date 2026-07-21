@@ -17,25 +17,38 @@ import { prisma } from '@noc/db';
 
 const DAYS = Math.max(7, Number(process.env.LISTING_TRASH_DAYS) || 90);
 
+const BATCH = 200; // bound memory: a mass-delete could leave thousands of rows past the cutoff
+
 async function main() {
   const cutoff = new Date(Date.now() - DAYS * 86_400_000);
-  const rows = await prisma.listing.findMany({
-    where: { deletedAt: { not: null, lt: cutoff } },
-    select: { id: true, title: true, deletedAt: true },
-  });
-  for (const l of rows) {
-    await prisma.$transaction([
-      // 'ListingPaper' too: official allocation-letter / sale-mandate photos ride the polymorphic
-      // Attachment with no FK to Listing, so deleting the listing cannot cascade to them. Omitting
-      // it left those rows (and their files) orphaned forever with an unresolvable owner id.
-      // MIRRORED in purgeListing() in admin marketplace actions — change both together.
-      prisma.attachment.deleteMany({ where: { ownerId: l.id, ownerType: { in: ['Listing', 'ListingPoster', 'ListingPaper'] } } }),
-      prisma.areaMap.deleteMany({ where: { level: 'listing', areaId: l.id } }),
-      prisma.listing.delete({ where: { id: l.id } }),
-    ]);
-    console.log(`purged ${l.id} «${l.title}» (deleted ${l.deletedAt?.toISOString().slice(0, 10)})`);
+  let total = 0;
+  // Fetch in bounded pages instead of one unbounded findMany. Each row is deleted in its own
+  // transaction, so a page is never held open; we re-query after each page (deleted rows drop
+  // out of the predicate, so `take` alone walks the whole backlog without an offset).
+  for (;;) {
+    const rows = await prisma.listing.findMany({
+      where: { deletedAt: { not: null, lt: cutoff } },
+      select: { id: true, title: true, deletedAt: true },
+      orderBy: { deletedAt: 'asc' },
+      take: BATCH,
+    });
+    if (rows.length === 0) break;
+    for (const l of rows) {
+      await prisma.$transaction([
+        // 'ListingPaper' too: official allocation-letter / sale-mandate photos ride the polymorphic
+        // Attachment with no FK to Listing, so deleting the listing cannot cascade to them. Omitting
+        // it left those rows (and their files) orphaned forever with an unresolvable owner id.
+        // MIRRORED in purgeListing() in admin marketplace actions — change both together.
+        prisma.attachment.deleteMany({ where: { ownerId: l.id, ownerType: { in: ['Listing', 'ListingPoster', 'ListingPaper'] } } }),
+        prisma.areaMap.deleteMany({ where: { level: 'listing', areaId: l.id } }),
+        prisma.listing.delete({ where: { id: l.id } }),
+      ]);
+      console.log(`purged ${l.id} «${l.title}» (deleted ${l.deletedAt?.toISOString().slice(0, 10)})`);
+      total++;
+    }
+    if (rows.length < BATCH) break;
   }
-  console.log(`purge-deleted-listings: ${rows.length} listing(s) purged (retention ${DAYS}d)`);
+  console.log(`purge-deleted-listings: ${total} listing(s) purged (retention ${DAYS}d)`);
 }
 
 main()

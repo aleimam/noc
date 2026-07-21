@@ -130,8 +130,12 @@ export async function revertCategory(cat: StampCategory): Promise<CountResult> {
     if (cat === 'map' || cat === 'map-newobour') {
       const maps = await prisma.areaMap.findMany();
       for (const m of maps) {
-        // Revert only this site's copy back to the clean map.
+        // Revert only this site's copy back to the clean map, then reclaim the now-orphaned
+        // stamped rendition (the clean map is the guard, so it's never touched — reversibility
+        // stays intact because re-stamping regenerates from cleanPath).
+        const prev = cat === 'map' ? m.alswareyPath : m.newobourPath;
         await prisma.areaMap.update({ where: { id: m.id }, data: cat === 'map' ? { alswareyPath: m.cleanPath } : { newobourPath: m.cleanPath } });
+        await unlinkSupersededStamp(prev, m.cleanPath, m.cleanPath);
       }
       return { ok: true, count: maps.length };
     }
@@ -168,6 +172,9 @@ export async function restampMaps(): Promise<CountResult> {
         stampMapCopy(m.cleanPath, 'map-newobour'),
       ]);
       await prisma.areaMap.update({ where: { id: m.id }, data: { alswareyPath, newobourPath } });
+      // Reclaim the previous renditions this re-stamp just replaced (clean map is the guard).
+      await unlinkSupersededStamp(m.alswareyPath, m.cleanPath, alswareyPath);
+      await unlinkSupersededStamp(m.newobourPath, m.cleanPath, newobourPath);
       count++;
     }
     return { ok: true, count };

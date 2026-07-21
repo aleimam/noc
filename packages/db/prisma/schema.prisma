@@ -1148,6 +1148,7 @@ model SearchLog {
   createdAt         DateTime @default(now())
 
   @@index([site, createdAt])
+  @@index([site, surface, createdAt]) // dashboard filters site + surface + window together
   @@index([normalized])
   @@index([zeroResult, createdAt])
   @@index([selectedListingId])

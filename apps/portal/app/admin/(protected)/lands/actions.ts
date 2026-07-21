@@ -6,6 +6,7 @@ import { auth, requirePermission, loadSmsConfig } from '@noc/auth';
 import { prisma, Prisma } from '@noc/db';
 import { sendSms } from '@noc/sms';
 import { stampMapCopy } from '../../../../lib/mapStamp';
+import { unlinkSupersededStamp } from '../../../../lib/stamp';
 import { cityHref, districtHref, neighborhoodHref } from '../../../../lib/geoHref';
 import { pingIndexNow, portalOrigin } from '../../../../lib/indexnow';
 import { sanitizeRichHtml } from '../../../../lib/sanitize';
@@ -566,6 +567,12 @@ async function stampAndUpsertAreaMap(input: {
   if (!att) return { ok: false, error: 'attachment_not_available' };
   await prisma.attachment.update({ where: { id: att.id }, data: { ownerType: 'AreaMap', ownerId: input.targetId } });
 
+  // The branded renditions this row already has (if any) — superseded once we write the new ones.
+  const prevMap = await prisma.areaMap.findUnique({
+    where: { level_areaId_kind: { level: input.level, areaId: input.targetId, kind: input.kind } },
+    select: { cleanPath: true, alswareyPath: true, newobourPath: true },
+  });
+
   // Two independent per-site copies (each resolves its own logo: watermark-page override, else
   // that site's brand logo). 'map' = Al Sawarey copy, 'map-newobour' = New Obour copy.
   const [alswareyPath, newobourPath] = await Promise.all([
@@ -592,6 +599,12 @@ async function stampAndUpsertAreaMap(input: {
       sourcePath: input.sourcePath ?? null,
     },
   });
+  // Reclaim the SUPERSEDED branded renditions (never the clean map — reversibility rule). The
+  // clean original is protected because it's passed as the guard; a no-op stamp (branded ===
+  // clean) is left alone. Same randomUUID-per-stamp leak the photo pipeline already fixed.
+  await unlinkSupersededStamp(prevMap?.alswareyPath, prevMap?.cleanPath, alswareyPath);
+  await unlinkSupersededStamp(prevMap?.newobourPath, prevMap?.cleanPath, newobourPath);
+
   if (input.level === 'listing') await prisma.listing.update({ where: { id: input.targetId }, data: { postersStale: true } }).catch(() => {});
   revMap(input.level, input.targetId);
   return { ok: true };
