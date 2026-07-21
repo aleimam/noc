@@ -1,10 +1,19 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { getLocale } from 'next-intl/server';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { normalizeArabic } from '../../../lib/rationing/text';
 import { beginPhoneFollow, completePhoneFollow } from '../../../lib/followAuth';
+import { clientIp, rateLimit } from '../../../lib/rateLimit';
+
+/** Public unauthenticated write → per-IP quota + a global ceiling. Without this a bot could
+ *  rotate phone numbers to fill RationingFollow (and create an unverified CUSTOMER per number). */
+async function followQuota(): Promise<boolean> {
+  const ip = clientIp(await headers());
+  return rateLimit(`ratfollow:${ip}`, 5, 10 * 60 * 1000) && rateLimit('ratfollow:global', 300, 60 * 60 * 1000);
+}
 
 type FollowFields = {
   kind: 'FOUND' | 'WATCH';
@@ -42,6 +51,7 @@ type StartResult =
 // immediately; a phone that already has an account gets an OTP to confirm ownership.
 export async function startFollow(input: FollowFields & { phone?: string }): Promise<StartResult> {
   if (!input.applicantName?.trim()) return { ok: false, error: 'name_required' };
+  if (!(await followQuota())) return { ok: false, error: 'rate_limited' };
 
   const session = await auth();
   // Only a CUSTOMER session auto-attaches the follow to that account (it has a verified phone).
@@ -70,6 +80,7 @@ export async function confirmFollow(
   input: FollowFields & { phone: string; code: string },
 ): Promise<StartResult> {
   if (!input.applicantName?.trim()) return { ok: false, error: 'name_required' };
+  if (!(await followQuota())) return { ok: false, error: 'rate_limited' };
   const res = await completePhoneFollow(input.phone, input.code);
   if (!res.ok) return { ok: false, error: 'invalid_code' };
   try {

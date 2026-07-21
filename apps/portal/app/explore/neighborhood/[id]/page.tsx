@@ -27,10 +27,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const n = resolved
     ? await prisma.neighborhood.findUnique({
         where: { id: resolved.id },
-        select: { id: true, nameAr: true, nameEn: true, isActive: true, district: { select: { nameAr: true, nameEn: true } } },
+        select: {
+          id: true, nameAr: true, nameEn: true, isActive: true,
+          district: { select: { nameAr: true, nameEn: true, isActive: true, city: { select: { isActive: true } } } },
+        },
       })
     : null;
-  if (!n || !n.isActive) return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديدة' };
+  // Inactive ancestor (district OR city) must hide the neighborhood too.
+  if (!n || !n.isActive || !n.district.isActive || n.district.city?.isActive === false) {
+    return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديدة' };
+  }
   const name = locale === 'ar' ? n.nameAr : n.nameEn;
   const dist = locale === 'ar' ? n.district.nameAr : n.district.nameEn;
   return pageMeta({
@@ -55,8 +61,12 @@ export default async function NeighborhoodPublic({ params }: { params: Promise<{
   const resolved = await resolveNeighborhoodId(param);
   if (!resolved) notFound();
   const id = resolved.id;
-  const n = await prisma.neighborhood.findUnique({ where: { id }, include: { district: true } });
-  if (!n || !n.isActive) notFound();
+  const n = await prisma.neighborhood.findUnique({
+    where: { id },
+    include: { district: { include: { city: { select: { isActive: true } } } } },
+  });
+  // Inactive ancestor hides the child — see generateMetadata.
+  if (!n || !n.isActive || !n.district.isActive || n.district.city?.isActive === false) notFound();
   // Canonicalize: permanently redirect legacy cuids / mismatched slugs to the SEO URL (308).
   if (decodeURIComponent(param) !== neighborhoodParam(n)) permanentRedirect(neighborhoodHref(n));
 

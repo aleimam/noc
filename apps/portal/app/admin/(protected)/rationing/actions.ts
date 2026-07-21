@@ -335,10 +335,14 @@ async function runWatcherMatch(batchId?: string): Promise<number> {
     const hit = await prisma.rationingName.findFirst({ where, select: { sheetId: true } });
     if (!hit) continue;
 
-    await prisma.rationingFollow.update({
-      where: { id: f.id },
+    // Claim the follow ATOMICALLY. The old unconditional update meant a scheduled import and a
+    // manual "check existing sheets" running together could both pass the initial `active` read
+    // and both send the same person an alert SMS.
+    const claimed = await prisma.rationingFollow.updateMany({
+      where: { id: f.id, status: 'active' },
       data: { status: 'matched', sheetId: hit.sheetId },
     });
+    if (claimed.count === 0) continue; // another run already claimed it
     matched++;
 
     // Stamp lastNotifiedAt ONLY when the alert SMS actually goes out — otherwise the admin UI

@@ -11,7 +11,8 @@ import { isValidPhone } from '@noc/config';
 // verifying also promotes that account to "verified".
 
 export type BeginFollow =
-  | { kind: 'ready'; userId: string } // logged in, or a fresh account was just created
+  // `phone` is the AUTHORITATIVE SMS destination — always use it, never the typed field.
+  | { kind: 'ready'; userId: string; phone: string } // logged in, or a fresh account was created
   | { kind: 'otp_sent' } // an account already exists for this phone — verify next
   | { kind: 'error'; error: string };
 
@@ -20,7 +21,14 @@ export async function beginPhoneFollow(
   sessionUserId: string | null,
   locale: 'ar' | 'en',
 ): Promise<BeginFollow> {
-  if (sessionUserId) return { kind: 'ready', userId: sessionUserId };
+  if (sessionUserId) {
+    // Derive the destination from the signed-in ACCOUNT, not the typed field. Returning the
+    // session user while the caller stored `input.phone` let a logged-in customer route a
+    // third party's number into our geo-update SMS.
+    const me = await prisma.user.findUnique({ where: { id: sessionUserId }, select: { id: true, phone: true } });
+    if (me?.phone) return { kind: 'ready', userId: me.id, phone: me.phone };
+    // A session with no usable phone (e.g. staff) falls through to the typed-phone path below.
+  }
 
   if (!isValidPhone(rawPhone)) return { kind: 'error', error: 'invalid_phone' };
   const phone = normalizePhone(rawPhone);
@@ -29,7 +37,7 @@ export async function beginPhoneFollow(
   if (!existing) {
     // Unverified account (phoneVerifiedAt stays null); admin can verify or prune it later.
     const u = await prisma.user.create({ data: { type: 'CUSTOMER', phone } });
-    return { kind: 'ready', userId: u.id };
+    return { kind: 'ready', userId: u.id, phone };
   }
 
   const r = await requestOtp(phone, locale);
@@ -40,7 +48,7 @@ export async function beginPhoneFollow(
 export async function completePhoneFollow(
   rawPhone: string,
   code: string,
-): Promise<{ ok: true; userId: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; userId: string; phone: string } | { ok: false; error: string }> {
   const res = await verifyOtp(rawPhone, code);
   if (!res.ok) return { ok: false, error: res.error };
   const u = await prisma.user.upsert({
@@ -48,5 +56,6 @@ export async function completePhoneFollow(
     update: { phoneVerifiedAt: new Date(), isActive: true },
     create: { type: 'CUSTOMER', phone: res.phone, phoneVerifiedAt: new Date() },
   });
-  return { ok: true, userId: u.id };
+  // `res.phone` is the number the OTP actually verified — the caller must store THIS.
+  return { ok: true, userId: u.id, phone: res.phone };
 }

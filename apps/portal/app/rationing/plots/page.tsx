@@ -1,7 +1,10 @@
 import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { SiteShell } from '../../_components/SiteShell';
+import { LimitCard } from '../LimitCard';
+import { consumeRationingQuota } from '../../../lib/rationing/quota';
+import { getSiteConfig } from '../../../lib/site';
 import { RationingTabs } from '../RationingTabs';
 import { ListControls } from '../ListControls';
 import { FbNotice } from '../Bits';
@@ -26,6 +29,25 @@ export default async function PlotsTab({ searchParams }: { searchParams: Promise
   const page = Math.max(1, parseInt(str(sp.page) || '1', 10) || 1);
 
   const active = q.length > 0 || cityId.length > 0;
+
+  // A filtered plots query walks the applicant/plot index, so meter it against the same
+  // anti-scrape budget as the other rationing searches. Without this a scraper could page
+  // through `?q=…&page=N` indefinitely while every other rationing surface was metered.
+  if (active) {
+    const quota = await consumeRationingQuota(true);
+    if (!quota.ok) {
+      const [locale, site] = await Promise.all([getLocale() as Promise<'ar' | 'en'>, getSiteConfig()]);
+      return (
+        <SiteShell active="rationing">
+          <div className="mx-auto max-w-3xl space-y-5 p-4 sm:p-6">
+            <Link href="/rationing/plots" className="inline-block text-sm text-navy-600">‹ {t('tabPlots')}</Link>
+            <LimitCard locale={locale} loggedIn={quota.loggedIn} whatsapp={site.whatsappHelp} />
+          </div>
+        </SiteShell>
+      );
+    }
+  }
+
   const cities = await prisma.rationingCity.findMany({ where: { isActive: true }, orderBy: [{ order: 'asc' }, { name: 'asc' }], select: { id: true, name: true } });
   const cityName = cityId ? cities.find((c) => c.id === cityId)?.name ?? null : null;
 

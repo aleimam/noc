@@ -24,9 +24,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const locale = (await getLocale()) as 'ar' | 'en';
   const resolved = await resolveDistrictId(param);
   const d = resolved
-    ? await prisma.district.findUnique({ where: { id: resolved.id }, select: { id: true, key: true, nameAr: true, nameEn: true, isActive: true } })
+    ? await prisma.district.findUnique({
+        where: { id: resolved.id },
+        select: { id: true, key: true, nameAr: true, nameEn: true, isActive: true, city: { select: { isActive: true } } },
+      })
     : null;
-  if (!d || !d.isActive) return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديدة' };
+  // An INACTIVE ANCESTOR must hide the child too: deactivating a city used to leave every one of
+  // its districts reachable (with names, maps, updates and listings) on its canonical URL.
+  if (!d || !d.isActive || d.city?.isActive === false) {
+    return { title: locale === 'en' ? 'Explore — New Obour' : 'استكشف — العبور الجديدة' };
+  }
   const name = locale === 'ar' ? d.nameAr : d.nameEn;
   return pageMeta({
     title: `${name} — ${locale === 'en' ? 'New Obour districts' : 'مناطق العبور الجديدة'}`,
@@ -45,9 +52,13 @@ export default async function DistrictPublic({ params }: { params: Promise<{ id:
   const id = resolved.id;
   const d = await prisma.district.findUnique({
     where: { id },
-    include: { neighborhoods: { where: { isActive: true }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }] } },
+    include: {
+      neighborhoods: { where: { isActive: true }, orderBy: [{ order: 'asc' }, { nameAr: 'asc' }] },
+      city: { select: { isActive: true } },
+    },
   });
-  if (!d || !d.isActive) notFound();
+  // Inactive ancestor hides the child — see generateMetadata.
+  if (!d || !d.isActive || d.city?.isActive === false) notFound();
   // Canonicalize: permanently redirect legacy cuids to the key-based SEO URL (308).
   if (decodeURIComponent(param) !== resolved.canonicalParam) permanentRedirect(districtHref(d));
 
