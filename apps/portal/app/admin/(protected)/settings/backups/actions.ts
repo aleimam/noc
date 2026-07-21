@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { isValidEmail, isValidPhone } from '@noc/config';
-import { APP_DIR, BACKUP_ROOT, BACKUP_ENV, OFFSITE_ENV, listBackupFiles } from './backups';
+import { APP_DIR, BACKUP_ROOT, BACKUP_ENV, listBackupFiles } from './backups';
 
 const pexec = promisify(execFile);
 type R = { ok: true; log?: string } | { ok: false; error: string };
@@ -34,80 +34,24 @@ export async function runBackupNow(): Promise<R> {
   return r;
 }
 
-export async function runOffsitePush(): Promise<R> {
-  await requirePermission('settings', 'UPDATE');
-  const r = await runScript([`${APP_DIR}/ops/offsite-backup.sh`], 600_000);
-  revalidatePath('/admin/settings/backups');
-  return r;
-}
-
-export async function testOffsite(): Promise<R> {
-  await requirePermission('settings', 'UPDATE');
-  return runScript([`${APP_DIR}/ops/offsite-backup.sh`, '--test'], 45_000);
-}
-
-export type OffsiteInput = { enabled: boolean; host: string; user: string; port: string; path: string; mirror: boolean };
-
-export async function saveOffsiteConfig(input: OffsiteInput): Promise<R> {
-  await requirePermission('settings', 'UPDATE');
-  const host = input.host.trim();
-  const user = input.user.trim();
-  const dest = input.path.trim();
-  const port = String(Math.min(65535, Math.max(1, parseInt(input.port, 10) || 22)));
-
-  // Validate to keep the env file well-formed and injection-free (no newlines/quotes/spaces).
-  const okHost = /^[A-Za-z0-9.-]{1,253}$/.test(host);
-  const okUser = /^[A-Za-z0-9._-]{1,64}$/.test(user);
-  const okPath = /^\/[A-Za-z0-9._/-]{1,255}$/.test(dest);
-  if (input.enabled) {
-    if (!okHost) return { ok: false, error: 'invalid_host' };
-    if (!okUser) return { ok: false, error: 'invalid_user' };
-    if (!okPath) return { ok: false, error: 'invalid_path' };
-  } else {
-    if (host && !okHost) return { ok: false, error: 'invalid_host' };
-    if (user && !okUser) return { ok: false, error: 'invalid_user' };
-    if (dest && !okPath) return { ok: false, error: 'invalid_path' };
-  }
-
-  const content =
-    [
-      '# NOC off-site backup target — managed by Settings → Backups (also editable by hand).',
-      `OFFSITE_ENABLED=${input.enabled ? 1 : 0}`,
-      `OFFSITE_HOST=${host}`,
-      `OFFSITE_USER=${user}`,
-      `OFFSITE_PORT=${port}`,
-      `OFFSITE_PATH=${dest}`,
-      'OFFSITE_SSH_KEY=/root/.ssh/noc_backup',
-      `OFFSITE_DELETE=${input.mirror ? 1 : 0}`,
-    ].join('\n') + '\n';
-
-  try {
-    await writeFile(OFFSITE_ENV, content, { mode: 0o600 });
-    revalidatePath('/admin/settings/backups');
-    return { ok: true };
-  } catch {
-    return { ok: false, error: 'write_failed' };
-  }
-}
-
 const clampHM = (h: number, m: number) => ({
   h: Math.min(23, Math.max(0, Math.floor(h) || 0)),
   m: Math.min(59, Math.max(0, Math.floor(m) || 0)),
 });
 
-/** Schedule (rewrites the two cron files) + retention days (merged into ops/backup.env). */
+/** LOCAL nightly-backup schedule (rewrites the noc-backup cron) + retention days (ops/backup.env).
+ *  (Off-site scheduling now lives in the tiered module's own admin, not here.) */
 export async function saveScheduleRetention(input: {
-  localH: number; localM: number; offsiteH: number; offsiteM: number; retentionDays: number;
+  localH: number; localM: number; retentionDays: number;
 }): Promise<R> {
   await requirePermission('settings', 'UPDATE');
   const l = clampHM(input.localH, input.localM);
-  const o = clampHM(input.offsiteH, input.offsiteM);
   const days = Math.min(365, Math.max(1, Math.floor(input.retentionDays) || 14));
 
-  const cronFile = (title: string, m: number, h: number, script: string, log: string) =>
-    `# NOC ${title} (managed by Settings → Backups)\n` +
+  const cronFile =
+    `# NOC nightly backup (managed by Settings → Backups)\n` +
     `SHELL=/bin/bash\nPATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n` +
-    `${m} ${h} * * * root /usr/bin/env bash ${APP_DIR}/ops/${script} >> ${BACKUP_ROOT}/${log} 2>&1\n`;
+    `${l.m} ${l.h} * * * root /usr/bin/env bash ${APP_DIR}/ops/backup.sh >> ${BACKUP_ROOT}/backup.log 2>&1\n`;
 
   // Retention: merge RETAIN_DAYS into backup.env, preserving any other overrides.
   let envTxt = '';
@@ -116,8 +60,7 @@ export async function saveScheduleRetention(input: {
   const envOut = ['# NOC backup overrides — managed by Settings → Backups (also editable by hand).', ...kept, `RETAIN_DAYS=${days}`].join('\n') + '\n';
 
   try {
-    await writeFile('/etc/cron.d/noc-backup', cronFile('nightly backup', l.m, l.h, 'backup.sh', 'backup.log'), { mode: 0o644 });
-    await writeFile('/etc/cron.d/noc-offsite', cronFile('off-site backup push', o.m, o.h, 'offsite-backup.sh', 'offsite.log'), { mode: 0o644 });
+    await writeFile('/etc/cron.d/noc-backup', cronFile, { mode: 0o644 });
     await writeFile(BACKUP_ENV, envOut, { mode: 0o600 });
     await pexec('bash', ['-c', 'systemctl reload crond 2>/dev/null || systemctl restart crond 2>/dev/null || true'], { timeout: 10_000 }).catch(() => {});
     revalidatePath('/admin/settings/backups');

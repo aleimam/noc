@@ -9,7 +9,6 @@ The big picture (deploy runbook, server map, gotchas) lives in the repo root **C
 | Doc | What |
 |---|---|
 | `CLOUDFLARE.md` | Proxy cutover: owner dashboard checklist (Part C is the current step) + server prep (done) |
-| `OFFSITE.md` | One-time off-site backup setup (owner enters details in `/admin/settings/backups` or here) |
 | `RESTORE.md` | How to restore DB / uploads / .env from a backup (deliberately CLI-only) |
 | `MAIL-DELIVERABILITY.md` | Outbound mail: Postfix→Brevo relay, SPF/DKIM/DMARC state, testing |
 | `SEO-REGISTRATION.md` | One-time search-engine registration: GSC/Bing/Yandex verify via admin Settings, sitemaps, GA4, Business Profile, Egyptian portals (IndexNow pings are automatic) |
@@ -20,8 +19,7 @@ The big picture (deploy runbook, server map, gotchas) lives in the repo root **C
 | Script | What | Cron |
 |---|---|---|
 | `backup.sh` | DB dump + uploads archive + .env snapshot → `/root/backups`, rotation via `RETAIN_DAYS` | `/etc/cron.d/noc-backup` 02:30 |
-| `offsite-backup.sh` | rsync-over-SSH mirror of `/root/backups/{db,uploads,config}` to the owner's server (key `/root/.ssh/noc_backup`). `--test` / `--install-cron`; skips quietly until `ops/offsite.env` is configured | `/etc/cron.d/noc-offsite` 03:30 |
-| `backup-alert.sh` → `backup-alert.ts` | Health check: newest DB backup <26h + last off-site push OK, else email/SMS the owner (recipients in DB Setting `backup.alert`, editable at `/admin/settings/backups`) | `/etc/cron.d/noc-backup-alert` 04:00 |
+| `backup-alert.sh` → `backup-alert.ts` | Health check: newest DB backup <26h, else email/SMS the owner (recipients in DB Setting `backup.alert`, editable at `/admin/settings/backups`) | `/etc/cron.d/noc-backup-alert` 04:00 |
 | `analytics-rollup.sh` → `.ts` | Aggregate raw visits into `AnalyticsDaily` | `/etc/cron.d/noc-analytics-rollup` 03:05 |
 | `analytics-prune.sh` → `.ts` | Retention prune of raw analytics | `/etc/cron.d/noc-analytics-prune` 03:15 |
 | `price-snapshot.sh` → `.ts` | Monthly per-district price snapshot (avg EGP/m² from published listings + lands) feeding the `/price-index` trend. Idempotent; the admin "Snapshot now" button does the same | `/etc/cron.d/noc-price-snapshot` 03:20 on the 1st |
@@ -39,7 +37,6 @@ The big picture (deploy runbook, server map, gotchas) lives in the repo root **C
 |---|---|
 | `nginx-noc.conf` | **Mirror of the live `/etc/nginx/conf.d/noc.conf`** (vhosts, ACME webroot locations, www→apex). Edit on the server, keep this copy in sync |
 | `backup.env.example` → `ops/backup.env` | Backup overrides (`RETAIN_DAYS` is managed by the admin Backups page) |
-| `offsite.env.example` → `ops/offsite.env` | Off-site target (host/user/port/path, enable, mirror) — managed by the admin Backups page |
 
 ## Notes
 
@@ -49,4 +46,7 @@ The big picture (deploy runbook, server map, gotchas) lives in the repo root **C
   mail can't bounce through Brevo and damage sender reputation.
 - `*.sh` are LF-forced via `.gitattributes`. Don't `chmod` tracked scripts on the server
   (file-mode diffs used to abort `git pull`; `core.fileMode false` is set as a guard).
-- `ops/backup.env` + `ops/offsite.env` are gitignored (may hold credentials/targets).
+- `ops/backup.env` is gitignored (may hold credentials/overrides).
+- The old rsync off-site backup (`offsite-backup.sh`, `OFFSITE.md`, `ops/offsite.env`, the
+  `noc-offsite` cron) was retired 2026-07-21 — off-site backup is now the tiered SFTP module
+  (`backup-tick.ts` + `packages/backup`). The LOCAL nightly `backup.sh` is deliberately kept.

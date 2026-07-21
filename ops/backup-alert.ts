@@ -1,6 +1,8 @@
-// Daily backup health check. If the newest database backup is stale (or the last off-site
-// push failed), notify the owner by email and/or SMS. Recipients + on/off come from the
-// Settings → Backups page (DB setting `backup.alert`). Wrapper: ops/backup-alert.sh; cron 04:00.
+// Daily backup health check. If the newest database backup is stale, notify the owner by email
+// and/or SMS. Recipients + on/off come from the Settings → Backups page (DB setting
+// `backup.alert`). Wrapper: ops/backup-alert.sh; cron 04:00.
+// (The old rsync off-site push + its offsite.log check were retired 2026-07-21; off-site health
+// is now the tiered SFTP module's own concern.)
 //
 // Imports the mail/SMS config helpers from the specific otp module (NOT the @noc/auth barrel,
 // which would boot NextAuth in this standalone tsx run).
@@ -8,7 +10,7 @@ import { prisma } from '@noc/db';
 import { sendMail } from '@noc/mail';
 import { sendSms } from '@noc/sms';
 import { loadMailConfig, loadSmsConfig, normalizePhone } from '../packages/auth/src/otp';
-import { readdir, stat, readFile } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 const BACKUP_ROOT = process.env.BACKUP_ROOT || '/root/backups';
@@ -45,12 +47,6 @@ async function main() {
   } else {
     const ageH = (Date.now() - dbNewest) / 3.6e6;
     if (ageH > MAX_AGE_H) problems.push(`The latest database backup is ${Math.round(ageH)} hours old (should be under 24h).`);
-  }
-  try {
-    const last = (await readFile(path.join(BACKUP_ROOT, 'offsite.log'), 'utf8')).trim().split('\n').pop() || '';
-    if (/ERROR|rsync failed|cannot reach/i.test(last)) problems.push('The last off-site backup push failed: ' + last);
-  } catch {
-    /* no off-site log yet */
   }
 
   if (problems.length === 0) {

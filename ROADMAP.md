@@ -147,9 +147,11 @@ to autocomplete, 16px inputs (iOS zoom), ≥40px admin touch targets, «(مطل�
 - **Outbound mail** — Brevo relay live; BOTH domains SPF+DKIM authenticated (verified);
   Gmail inboxes, Outlook still spam (shared-IP reputation, nothing left to fix technically);
   hourly cron-bounce reputation leak fixed (Postfix transport discard).
-- **Backups** — full admin page `/admin/settings/backups` (downloads, instant backup, integrity
-  check, schedule + retention editors, off-site config + test, failure alerts → email×2 + SMS).
-  Off-site push script + cron installed, waiting only on the owner's server details.
+- **Backups** — full admin page `/admin/settings/backups`: LOCAL nightly backup (downloads, instant
+  backup, integrity check, daily-time + retention editors, failure alerts → email×2 + SMS) + the
+  TIERED off-site SFTP module (`OffsiteTiers`: connection config/test, per-tier schedule/retention,
+  run history). The old rsync off-site piece was retired 2026-07-21 — off-site is now the tiered
+  module (live + proven on Hetzner); the local nightly copy is kept as the on-box safety layer.
 - **TLS** — cert reissued as a 4-name SAN (both apexes + www) and the silently-broken renewal
   fixed (webroot method; dry-run verified).
 - Explore: a neighborhood with no location map inherits its district's (never shown on listings).

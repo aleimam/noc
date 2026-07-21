@@ -1,6 +1,6 @@
 import { getLocale } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
-import { listBackupFiles, readOffsiteConfig, readPubkey, backupsSummary, readRetentionDays, readSchedule, readAlertConfig } from './backups';
+import { listBackupFiles, backupsSummary, readRetentionDays, readSchedule, readAlertConfig } from './backups';
 import { BackupsClient } from './BackupsClient';
 import { OffsiteTiers } from './OffsiteTiers';
 import { prisma } from '@noc/db';
@@ -10,9 +10,7 @@ export const dynamic = 'force-dynamic';
 export default async function BackupsPage() {
   await requirePermission('settings', 'VIEW');
   const files = await listBackupFiles();
-  const [offsite, pubkey, summary, retentionDays, schedule, alert] = await Promise.all([
-    readOffsiteConfig(),
-    readPubkey(),
+  const [summary, retentionDays, schedule, alert] = await Promise.all([
     backupsSummary(files),
     readRetentionDays(),
     readSchedule(),
@@ -57,8 +55,6 @@ export default async function BackupsPage() {
     <BackupsClient
       locale={locale}
       files={files}
-      offsite={offsite}
-      pubkey={pubkey}
       summary={summary}
       retentionDays={retentionDays}
       schedule={schedule}

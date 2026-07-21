@@ -117,9 +117,11 @@ Full detail in `CLAUDE.md` → owner-blocked list. Short version, roughly by eff
 2. ~~Off-site backups~~ **✅ DONE + fully proven 2026-07-21** — tiered SFTP module live; scheduled
    runs firing, restore drill passed, and the **first retention prune ran + was verified** (07:00 UTC:
    deleted exactly the oldest hourly, `/home/hourly` now holds exactly 24, all `noc-backup-`, no
-   other app's files touched). SFTP host key now pinned + verified too. **Decision now UNBLOCKED
-   (owner's call):** retire the OLD local module? Recommendation — keep local `ops/backup.sh`, drop
-   only the rsync `offsite-backup.sh` + its admin section (the new module replaces it). Say the word.
+   other app's files touched). SFTP host key now pinned + verified too. **✅ OLD off-site rsync
+   RETIRED 2026-07-21** (owner chose "off-site rsync only"): deleted `offsite-backup.sh`,
+   `offsite.env.example`, `OFFSITE.md`, the `noc-offsite` cron, and the off-site config/test panel +
+   server actions from the Backups admin. The LOCAL nightly `ops/backup.sh` (+ its cron, alerts,
+   download/restore) is deliberately KEPT as the on-box safety layer.
 3. **Rotate the Brevo SMTP key**, then re-apply via `ops/mail-relay-brevo.sh`.
 4. **Price Index toggle** — Settings → Modules → مؤشر الأسعار, whenever wanted.
 5. **Cloudflare proxy flip (Part C)** — biggest remaining security win; ordered checklist in

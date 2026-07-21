@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { runBackupNow, runOffsitePush, testOffsite, saveOffsiteConfig, verifyLatest, saveScheduleRetention, saveAlertConfig, type OffsiteInput } from './actions';
-import type { BackupFile, OffsiteConfig, BackupsSummary, Schedule, AlertConfig } from './backups';
+import { runBackupNow, verifyLatest, saveScheduleRetention, saveAlertConfig } from './actions';
+import type { BackupFile, BackupsSummary, Schedule, AlertConfig } from './backups';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 function fmtWhen(ms: number): string {
@@ -23,8 +23,6 @@ type Msg = { ok: boolean; text: string } | null;
 export function BackupsClient({
   locale,
   files,
-  offsite,
-  pubkey,
   summary,
   retentionDays,
   schedule,
@@ -32,8 +30,6 @@ export function BackupsClient({
 }: {
   locale: 'ar' | 'en';
   files: BackupFile[];
-  offsite: OffsiteConfig;
-  pubkey: string;
   summary: BackupsSummary;
   retentionDays: number;
   schedule: Schedule;
@@ -42,16 +38,8 @@ export function BackupsClient({
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const router = useRouter();
 
-  const [enabled, setEnabled] = useState(offsite.enabled);
-  const [host, setHost] = useState(offsite.host);
-  const [user, setUser] = useState(offsite.user);
-  const [port, setPort] = useState(offsite.port);
-  const [destPath, setDestPath] = useState(offsite.path);
-  const [mirror, setMirror] = useState(offsite.mirror);
-
   const [retention, setRetention] = useState(String(retentionDays));
   const [localTime, setLocalTime] = useState(hmStr(schedule.local));
-  const [offsiteTime, setOffsiteTime] = useState(hmStr(schedule.offsite));
   const [alertEnabled, setAlertEnabled] = useState(alert.enabled);
   const [alertEmail, setAlertEmail] = useState(alert.email);
   const [alertPhone, setAlertPhone] = useState(alert.phone);
@@ -82,14 +70,9 @@ export function BackupsClient({
     });
   }
 
-  const save = () => {
-    const input: OffsiteInput = { enabled, host, user, port, path: destPath, mirror };
-    act('save', () => saveOffsiteConfig(input), L('تم حفظ إعدادات النسخ الخارجي', 'Off-site settings saved'));
-  };
   const saveSched = () => {
     const [lh, lm] = localTime.split(':').map((x) => parseInt(x, 10) || 0);
-    const [oh, om] = offsiteTime.split(':').map((x) => parseInt(x, 10) || 0);
-    act('sched', () => saveScheduleRetention({ localH: lh ?? 2, localM: lm ?? 30, offsiteH: oh ?? 3, offsiteM: om ?? 30, retentionDays: parseInt(retention, 10) || 14 }), L('تم حفظ المواعيد ومدة الاحتفاظ', 'Schedule & retention saved'));
+    act('sched', () => saveScheduleRetention({ localH: lh ?? 2, localM: lm ?? 30, retentionDays: parseInt(retention, 10) || 14 }), L('تم حفظ المواعيد ومدة الاحتفاظ', 'Schedule & retention saved'));
   };
   const saveAlerts = () =>
     act('alerts', () => saveAlertConfig({ enabled: alertEnabled, email: alertEmail, phone: alertPhone }), L('تم حفظ التنبيهات', 'Alerts saved'));
@@ -106,23 +89,17 @@ export function BackupsClient({
         <h1 className="text-2xl font-bold text-primary">{L('النسخ الاحتياطي', 'Backups')}</h1>
         <p className="mt-1 text-sm opacity-70">
           {L(
-            'نسخة يومية تلقائية للبيانات والصور على الخادم (٢:٣٠ صباحًا)، مع إمكانية نسخة إضافية على خادم خارجي.',
-            'Automatic daily backup of the database + uploads on the server (02:30), with an optional copy to an off-site server.',
+            'نسخة يومية تلقائية للبيانات والصور على الخادم (٢:٣٠ صباحًا). النسخ خارج الخادم يتم عبر وحدة النسخ المجدولة بالأسفل.',
+            'Automatic daily on-server backup of the database + uploads (02:30). Off-site copies are handled by the scheduled module below.',
           )}
         </p>
       </div>
 
       {/* Status cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Stat label={L('آخر نسخة', 'Last backup')} value={summary.lastBackupAt ? fmtWhen(summary.lastBackupAt) : '—'} sub="UTC" />
         <Stat label={L('عدد النسخ', 'Backup files')} value={String(summary.fileCount)} sub={fmtBytes(summary.totalSize)} />
         <Stat label={L('المساحة المتاحة', 'Free disk')} value={summary.diskFree != null ? fmtBytes(summary.diskFree) : '—'} />
-        <Stat
-          label={L('النسخ الخارجي', 'Off-site')}
-          value={offsite.enabled ? L('مُفعّل', 'On') : L('غير مُفعّل', 'Off')}
-          sub={offsite.enabled ? offsite.host : ''}
-          tone={offsite.enabled ? 'good' : 'muted'}
-        />
       </div>
 
       {/* Instant backup */}
@@ -135,11 +112,6 @@ export function BackupsClient({
           <button className={btn} disabled={pending} onClick={() => act('backup', runBackupNow, L('تم إنشاء نسخة جديدة', 'New backup created'))}>
             {busy === 'backup' ? L('جارٍ النسخ…', 'Backing up…') : L('نسخة فورية الآن', 'Back up now')}
           </button>
-          {offsite.enabled && (
-            <button className={btnSec} disabled={pending} onClick={() => act('push', runOffsitePush, L('تم الدفع للخادم الخارجي', 'Pushed off-site'))}>
-              {busy === 'push' ? L('جارٍ الدفع…', 'Pushing…') : L('دفع للخادم الخارجي الآن', 'Push off-site now')}
-            </button>
-          )}
           <button className={btnSec} disabled={pending} onClick={() => act('verify', verifyLatest, L('النسخ سليمة ✓', 'Backups verified — OK ✓'))}>
             {busy === 'verify' ? L('جارٍ الفحص…', 'Checking…') : L('فحص سلامة النسخ', 'Verify backups')}
           </button>
@@ -195,88 +167,17 @@ export function BackupsClient({
         )}
       </section>
 
-      {/* Off-site config */}
+      {/* Schedule + retention (LOCAL nightly backup) */}
       <section className="space-y-4 rounded-lg border border-graphite/15 p-5">
-        <div>
-          <h2 className="font-semibold text-primary">{L('نسخة على خادم خارجي', 'Off-site backup server')}</h2>
-          <p className="mt-1 text-sm opacity-70">
-            {L(
-              'يرسل نسخة يومية إلى خادمك الخاص (٣:٣٠ صباحًا) لتبقى نسخة حتى لو تعطّل الخادم الرئيسي.',
-              'Sends a daily copy to your own server (03:30) so a backup survives even if this server is lost.',
-            )}
-          </p>
-        </div>
-
-        <label className="flex items-center gap-2 text-sm font-semibold">
-          <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="h-4 w-4" />
-          {L('تفعيل النسخ الخارجي التلقائي', 'Enable automatic off-site backup')}
-        </label>
-
+        <h2 className="font-semibold text-primary">{L('موعد النسخة اليومية ومدة الاحتفاظ', 'Daily backup time & retention')}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={L('عنوان الخادم (Host/IP)', 'Server host / IP')}>
-            <input dir="ltr" value={host} onChange={(e) => setHost(e.target.value)} placeholder="backup.example.com" className={inp} />
-          </Field>
-          <Field label={L('اسم المستخدم (SSH user)', 'SSH user')}>
-            <input dir="ltr" value={user} onChange={(e) => setUser(e.target.value)} placeholder="nocbackup" className={inp} />
-          </Field>
-          <Field label={L('المنفذ (Port)', 'Port')}>
-            <input dir="ltr" value={port} onChange={(e) => setPort(e.target.value)} placeholder="22" className={inp} />
-          </Field>
-          <Field label={L('المجلد على الخادم', 'Destination folder')}>
-            <input dir="ltr" value={destPath} onChange={(e) => setDestPath(e.target.value)} placeholder="/home/nocbackup/noc" className={inp} />
-          </Field>
-        </div>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} className="h-4 w-4" />
-          {L('مطابقة النسخ (يحتفظ بآخر ١٤ يومًا فقط على الخادم الخارجي)', 'Mirror mode (keep only the last 14 days on the off-site server)')}
-        </label>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <button className={btn} disabled={pending} onClick={save}>
-            {busy === 'save' ? L('جارٍ الحفظ…', 'Saving…') : L('حفظ', 'Save')}
-          </button>
-          <button className={btnSec} disabled={pending || !enabled} onClick={() => act('test', testOffsite, L('نجح الاتصال بالخادم الخارجي', 'Connected to the off-site server'))}>
-            {busy === 'test' ? L('جارٍ الاختبار…', 'Testing…') : L('اختبار الاتصال', 'Test connection')}
-          </button>
-        </div>
-
-        {/* Public key to authorize on the remote */}
-        {pubkey && (
-          <div className="space-y-2 rounded-md bg-graphite/5 p-3">
-            <p className="text-sm font-semibold">{L('خطوة لمرة واحدة على خادمك الخارجي:', 'One-time step on your backup server:')}</p>
-            <p className="text-xs opacity-70">
-              {L(
-                'أضف هذا السطر إلى ملف authorized_keys الخاص بالمستخدم على خادمك حتى يُسمح لهذا الخادم بالدخول:',
-                "Add this line to the SSH user's authorized_keys on your server so this server is allowed to log in:",
-              )}
-            </p>
-            <code className="block overflow-x-auto whitespace-pre rounded bg-navy-900/90 p-2 text-xs text-soft" dir="ltr">{pubkey}</code>
-            <button
-              className="text-xs font-bold text-accent hover:underline"
-              onClick={() => navigator.clipboard?.writeText(pubkey).then(() => setMsg({ ok: true, text: L('تم نسخ المفتاح', 'Key copied') }))}
-            >
-              {L('نسخ المفتاح', 'Copy key')}
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* Schedule + retention */}
-      <section className="space-y-4 rounded-lg border border-graphite/15 p-5">
-        <h2 className="font-semibold text-primary">{L('المواعيد ومدة الاحتفاظ', 'Schedule & retention')}</h2>
-        <div className="grid gap-4 sm:grid-cols-3">
           <Field label={L('موعد النسخة اليومية', 'Daily backup time')}>
             <input type="time" dir="ltr" value={localTime} onChange={(e) => setLocalTime(e.target.value)} className={inp} />
-          </Field>
-          <Field label={L('موعد النسخ الخارجي', 'Off-site push time')}>
-            <input type="time" dir="ltr" value={offsiteTime} onChange={(e) => setOffsiteTime(e.target.value)} className={inp} />
           </Field>
           <Field label={L('مدة الاحتفاظ (بالأيام)', 'Keep backups for (days)')}>
             <input type="number" dir="ltr" min={1} max={365} value={retention} onChange={(e) => setRetention(e.target.value)} className={inp} />
           </Field>
         </div>
-        <p className="text-xs opacity-60">{L('يُفضّل أن يكون موعد النسخ الخارجي بعد النسخة اليومية.', 'Tip: set the off-site time a little after the daily backup.')}</p>
         <button className={btn} disabled={pending} onClick={saveSched}>
           {busy === 'sched' ? L('جارٍ الحفظ…', 'Saving…') : L('حفظ المواعيد', 'Save schedule')}
         </button>

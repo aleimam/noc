@@ -100,17 +100,18 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 - **DNS:** Cloudflare is authoritative for both domains but records are **DNS-only (grey)** —
   the proxy flip (Part C) is prepped and waiting on the owner: see `ops/CLOUDFLARE.md`.
   Server side (real-IP restore + CSF trusting CF ranges) is already live.
-- **Crons** (`/etc/cron.d/`): `noc-backup` 02:30 (DB+uploads+.env, 14-day rotation) ·
-  `noc-offsite` 03:30 (rsync push to owner's server — activates when configured) ·
+- **Crons** (`/etc/cron.d/`): `noc-backup` 02:30 (DB+uploads+.env, 5-day rotation) ·
   `noc-backup-alert` 04:00 (emails/SMSes owner if backups are stale) ·
   `noc-analytics-rollup` 03:05 · `noc-analytics-prune` 03:15 ·
   `noc-price-snapshot` 03:20 on the 1st (monthly per-district price capture → /price-index trend) ·
   `noc-purge-deleted` 03:40 (hard-deletes listings trashed >90 days — see soft delete rule below) ·
   `noc-backup-tick` every 10 min (tiered OFF-SITE backup; the app decides what's due).
-- **Backups admin UI:** `/admin/settings/backups` — status, per-file downloads, instant backup,
-  integrity check, schedule/retention editors, off-site config + connection test, failure alerts
-  (currently: aleimam@live.com + ebmta17@gmail.com + SMS 01225227677). **Restore stays CLI-only**
-  by design (`ops/RESTORE.md`).
+- **Backups admin UI:** `/admin/settings/backups` — the LOCAL nightly backup section (status,
+  per-file downloads, instant backup, integrity check, daily-time/retention editors, failure alerts
+  — currently: aleimam@live.com + ebmta17@gmail.com + SMS 01225227677) followed by the TIERED
+  OFF-SITE module's own section (`OffsiteTiers`: SFTP connection config + test, per-tier schedule/
+  retention, run history). The old rsync off-site config panel was retired 2026-07-21 (off-site is
+  now exclusively the tiered module). **Restore stays CLI-only** by design (`ops/RESTORE.md`).
 - **TIERED off-site backup (2026-07-20, added ALONGSIDE the local nightly one — it does not
   replace it).** DB-driven: `BackupConfig` / `BackupTier` / `BackupRun`, logic + 24 vitest tests in
   `packages/backup`, SFTP via `ssh2-sftp-client` → Hetzner Storage Box **sub-account
@@ -357,11 +358,12 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
    **first retention prune ran + was verified 2026-07-21 07:00 UTC**: it deleted exactly the oldest
    hourly (`noc-backup-db-20260720-080002.tar.gz`) and `/home/hourly` now holds exactly 24, all
    `noc-backup-` (remote listing confirmed; NOC's sub-account is isolated so no other app's files
-   are even visible, and the `noc-` prefix guard is belt-and-suspenders on top). **Decision now
-   UNBLOCKED — owner's call:** retire the OLD local module? Recommendation: keep local `ops/backup.sh`
-   (cheap, 5-day local copy) and drop only the rsync `offsite-backup.sh` + its admin section, which
-   the new module fully replaces. Say the word and I'll do it. (Also: the SFTP host key is now pinned
-   + verified — see the Codex-audit note below.)
+   are even visible, and the `noc-` prefix guard is belt-and-suspenders on top). **✅ OLD off-site
+   rsync RETIRED 2026-07-21** (owner chose "off-site rsync only"): deleted `ops/offsite-backup.sh`,
+   `ops/offsite.env.example`, `ops/OFFSITE.md`, the `noc-offsite` cron, and the off-site config/test
+   panel + its server actions from the Backups admin. The LOCAL nightly backup (`ops/backup.sh`,
+   `noc-backup` cron, staleness alerts, download/restore) is deliberately KEPT as the on-box safety
+   layer. (The SFTP host key is pinned + verified — see the Codex-audit note below.)
 3. **Rotate the Brevo SMTP key** (it appeared in a chat once) — then update `/etc/postfix/sasl_passwd`
    (see `ops/mail-relay-brevo.sh`) and `postmap` + reload.
 4. **Partner portal UI click-test** — backend pipeline fully verified by script; a human should
@@ -569,5 +571,6 @@ visibility verified with a live truth-table; backups restore-tested.
 - `ROADMAP.md` — feature scoping + status log
 - `security.md` — security posture + hardening decisions
 - `ops/README.md` — every server script + cron, indexed
-- `ops/CLOUDFLARE.md` · `ops/OFFSITE.md` · `ops/RESTORE.md` · `ops/MAIL-DELIVERABILITY.md` ·
-  `ops/HARDENING.md` — task runbooks
+- `ops/CLOUDFLARE.md` · `ops/RESTORE.md` · `ops/MAIL-DELIVERABILITY.md` ·
+  `ops/HARDENING.md` — task runbooks (the retired `ops/OFFSITE.md` off-site-rsync runbook was
+  deleted 2026-07-21; off-site backup is now the tiered module — see `C:\Claude\YeldnIN\BACKUP.md`)
