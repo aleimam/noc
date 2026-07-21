@@ -1,13 +1,28 @@
 import { cookies } from 'next/headers';
-import { verifyAdminToken } from '@noc/auth';
+import { verifyAdminToken, getEffectivePermissions, hasPermission } from '@noc/auth';
 import { prisma, type OwnerType } from '@noc/db';
 
 export const ADMIN_COOKIE = 'sw_admin';
 
-/** Is the current viewer a staff member in "admin view"? Returns the staff id or null. */
+/**
+ * Is the current viewer a staff member in "admin view"? Returns the staff id or null.
+ *
+ * The token is only signed + time-limited (8h). Verifying it alone meant that deactivating a
+ * staff account, or revoking their owner grant, left an already-issued cookie authorizing owner
+ * phone numbers and details for the rest of its life. Re-check the live row on every read.
+ */
 export async function getAdminViewer(): Promise<string | null> {
   const token = (await cookies()).get(ADMIN_COOKIE)?.value;
-  return verifyAdminToken(token);
+  const staffId = verifyAdminToken(token);
+  if (!staffId) return null;
+
+  const live = await prisma.user.findUnique({
+    where: { id: staffId },
+    select: { id: true, type: true, isActive: true },
+  });
+  if (!live || live.type !== 'STAFF' || !live.isActive) return null;
+  const perms = await getEffectivePermissions(live.id);
+  return hasPermission(perms, 'owners', 'VIEW') ? live.id : null;
 }
 
 export type OwnerInfo = {

@@ -36,16 +36,23 @@ export async function POST(req: NextRequest) {
     },
     select: { phone: true, email: true, owner: { select: { siteNewObour: true, siteAlsawary: true } } },
   });
-  if (!user || !ownerAllowsSite(user.owner, currentSite())) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
+  // MIRRORED with the portal route: one indistinguishable answer for unknown / site-disabled /
+  // missing-channel, so an unauthenticated caller can't enumerate partner accounts and the
+  // channels they're reachable on. Real reason logged server-side only.
+  const deny = (reason: string) => {
+    console.info('partner otp denied:', reason);
+    return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
+  };
+  if (!user || !ownerAllowsSite(user.owner, currentSite())) return deny('unknown_or_site_disabled');
 
   if (channel === 'email') {
-    if (!user.email) return NextResponse.json({ ok: false, error: 'no_email' }, { status: 400 });
+    if (!user.email) return deny('no_email');
     const result = await requestEmailOtp(user.email, locale);
     if (!result.ok) return NextResponse.json(result, { status: 429 });
     return NextResponse.json({ ok: true, sentTo: maskEmail(user.email), channel: 'email' });
   }
 
-  if (!user.phone) return NextResponse.json({ ok: false, error: 'no_phone' }, { status: 400 });
+  if (!user.phone) return deny('no_phone');
   const result = await requestOtp(user.phone, locale);
   if (!result.ok) return NextResponse.json(result, { status: 429 });
   const masked = user.phone.replace(/^(.*)(\d{3})$/, (_, a: string, tail: string) => '•'.repeat(Math.max(a.length - 1, 3)) + tail);

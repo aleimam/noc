@@ -102,6 +102,14 @@ export async function saveListing(input: ListingInput): Promise<Result> {
   const isPartner = user.type === 'PARTNER' && !!user.ownerId;
   if (user.type === 'PARTNER' && !user.ownerId) return { ok: false, error: 'forbidden' };
 
+  // Runtime status clamp. The `'DRAFT' | 'PENDING'` union is a COMPILE-TIME type only — a
+  // hand-crafted server-action payload could send `PUBLISHED`, which the old code wrote straight
+  // to Prisma. That skipped both moderation and the required-details gate (which only fires on
+  // PENDING), and because partner-owned rows are globally visible it went live on both brands
+  // immediately. Non-staff writers may only ever produce DRAFT or PENDING; staff are already
+  // permission-gated below and keep the full lifecycle.
+  const status = isStaff ? input.status : input.status === 'PENDING' ? 'PENDING' : 'DRAFT';
+
   // Staff writing anything other than their OWN listing is an admin action → require the RBAC
   // grant. `user.type === 'STAFF'` used to be a blanket ownership bypass (see the edit branch
   // below), so a staff account with no `listings` grant at all could edit every listing on the
@@ -182,7 +190,7 @@ export async function saveListing(input: ListingInput): Promise<Result> {
   // Mandatory basic details (e.g. the city): the client guard can be bypassed, so enforce
   // server-side too. Only publishing (PENDING) requires them — a rough DRAFT may stay incomplete.
   // Shared with the partner save + every moderation transition (@noc/partner-portal/required).
-  if (input.status === 'PENDING') {
+  if (status === 'PENDING') {
     const missing = await missingRequiredForInput(
       [input.typeOptionId, input.purposeOptionId, input.conditionOptionId],
       input.values,
@@ -252,7 +260,7 @@ export async function saveListing(input: ListingInput): Promise<Result> {
           : {}),
         contactPhone: input.contactPhone.trim(),
         contactWhatsapp: input.contactWhatsapp,
-        status: input.status,
+        status, // server-clamped above — never the raw payload value
         // Channel + owner: staff manage our inventory (link to Owner, brokerage toggle);
         // partners are always their own Owner; customer sellers define the owner inline.
         showOnBrokerage: publishAlsawarey,
@@ -264,15 +272,20 @@ export async function saveListing(input: ListingInput): Promise<Result> {
       let listingId: string;
       if (input.id) {
         const existing = await tx.listing.findUnique({ where: { id: input.id } });
-        // Edit rights: the original seller, staff, or the partner whose Owner holds the listing.
+        // Edit rights. For a PARTNER this is CURRENT ownership only — never the stale `sellerId`.
+        // A partner-created listing keeps sellerId forever, so after staff transferred it to
+        // another Owner the original partner could still open and rewrite it, and the save below
+        // reset ownerId back to them: a transfer-back primitive. sellerId authorship now only
+        // authorizes non-partner (customer) sellers.
         const partnerOwns = isPartner && existing?.ownerId === user.ownerId;
-        if (!existing || (existing.sellerId !== user.id && !isStaff && !partnerOwns)) throw new Error('forbidden');
+        const sellerOwns = !isPartner && existing?.sellerId === user.id;
+        if (!existing || (!sellerOwns && !isStaff && !partnerOwns)) throw new Error('forbidden');
         if (existing.deletedAt) throw new Error('forbidden'); // trashed — restore it from the admin trash first
         // Lifecycle compare-and-set: a DRAFT write (i.e. an auto-save) may only apply to a row
         // that is STILL a draft. A second tab whose form loaded while the listing was a draft
         // would otherwise pull an already-submitted listing back out of moderation — silently,
         // since the seller sees nothing. Forward moves (DRAFT→PENDING) are unaffected.
-        const nextStatus = input.status === 'DRAFT' && existing.status !== 'DRAFT' ? existing.status : input.status;
+        const nextStatus = status === 'DRAFT' && existing.status !== 'DRAFT' ? existing.status : status;
         await tx.listing.update({
           where: { id: input.id },
           // data changed → generated images out of date
@@ -407,7 +420,11 @@ export async function setMyListingStatus(
   if (!existing || existing.deletedAt) return { ok: false, error: 'forbidden' }; // trashed → restore first
   // Staff acting on someone else's listing is an admin action → require the RBAC grant.
   // A bare `user.type === 'STAFF'` check was a blanket ownership bypass here too.
-  const ownsIt = existing.sellerId === user.id;
+  // For a PARTNER, authorize on CURRENT ownership — a partner-created listing keeps its
+  // sellerId after staff transfer it, which otherwise let the original partner keep driving
+  // the new owner's listing lifecycle. sellerId only authorizes customer sellers.
+  const isPartnerUser = user.type === 'PARTNER' && !!user.ownerId;
+  const ownsIt = isPartnerUser ? existing.ownerId === user.ownerId : existing.sellerId === user.id;
   const staffMayEdit = user.type === 'STAFF' && hasPermission(user.perms ?? [], 'listings', 'UPDATE');
   if (!ownsIt && !staffMayEdit) return { ok: false, error: 'forbidden' };
   // Moving into moderation must clear the same required-details gate as the form save — this

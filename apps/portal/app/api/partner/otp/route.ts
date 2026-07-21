@@ -32,17 +32,24 @@ export async function POST(req: NextRequest) {
     },
     select: { phone: true, email: true, owner: { select: { siteNewObour: true, siteAlsawary: true } } },
   });
-  // Reveal nothing if the account isn't enabled for this site (matches the login gate).
-  if (!user || !ownerAllowsSite(user.owner, currentSite())) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
+  // ONE indistinguishable answer for "unknown account", "not enabled for this site" and "has no
+  // such channel". Returning not_found vs no_email/no_phone let an unauthenticated caller
+  // enumerate which partner accounts exist and which channels they can be reached on.
+  // The real reason is logged server-side only.
+  const deny = (reason: string) => {
+    console.info('partner otp denied:', reason);
+    return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
+  };
+  if (!user || !ownerAllowsSite(user.owner, currentSite())) return deny('unknown_or_site_disabled');
 
   if (channel === 'email') {
-    if (!user.email) return NextResponse.json({ ok: false, error: 'no_email' }, { status: 400 });
+    if (!user.email) return deny('no_email');
     const result = await requestEmailOtp(user.email, 'ar');
     if (!result.ok) return NextResponse.json(result, { status: 429 });
     return NextResponse.json({ ok: true, sentTo: maskEmail(user.email), channel: 'email' });
   }
 
-  if (!user.phone) return NextResponse.json({ ok: false, error: 'no_phone' }, { status: 400 });
+  if (!user.phone) return deny('no_phone');
   const result = await requestOtp(user.phone, 'ar');
   if (!result.ok) return NextResponse.json(result, { status: 429 });
   const masked = user.phone.replace(/^(.*)(\d{3})$/, (_, a: string, tail: string) => '•'.repeat(Math.max(a.length - 1, 3)) + tail);

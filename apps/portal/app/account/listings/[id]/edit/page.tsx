@@ -16,7 +16,10 @@ export default async function EditListing({ params }: { params: Promise<{ id: st
   // Seller-only. Staff edit through the permission-gated admin route
   // (/admin/marketplace/listings/<id>/edit) — this page neither checks the `listings` RBAC
   // grant nor loads the official-paper state, and it exposes the internal «أقل سعر» floor.
-  if (listing.sellerId !== session.user.id) notFound();
+  // Seller-only, and specifically NOT partners: a partner-created listing keeps its sellerId
+  // after staff transfer it to another Owner, so this legacy route was a way back in. Partners
+  // edit through /partner (which authorizes on current ownership).
+  if (session.user.type === 'PARTNER' || listing.sellerId !== session.user.id) notFound();
 
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';

@@ -9,6 +9,19 @@ import { currentSite, ownerAllowsSite } from './site';
 import { getEffectivePermissions, hasPermission } from './rbac';
 import { loginKey, loginRetryAfter, recordLoginFail, resetLogin } from './loginGuard';
 
+/**
+ * Collapse every spelling of one phone into a SINGLE lockout key.
+ *
+ * `loginKey` only trimmed + lowercased, so `010…`, `+2010…`, `002010…` and spaced/parenthesised
+ * variants each got their own failure counter — an attacker could keep guessing the same
+ * account's password after every nominal lockout. Usernames and emails are left as typed
+ * (loginKey lowercases them).
+ */
+function canonicalIdent(ident: string): string {
+  const t = ident.trim();
+  return /^[+0-9][0-9\s()+-]*$/.test(t) ? normalizePhone(t) : t;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
@@ -21,7 +34,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // `identifier` is the field the login page sends; `email` is kept for backward-compat.
         const ident = String(creds?.identifier ?? creds?.email ?? '').trim();
         if (!ident) return null;
-        const key = loginKey('staff', ident);
+        const key = loginKey('staff', canonicalIdent(ident));
         if (loginRetryAfter(key) > 0) return null; // locked out — too many attempts
         const lower = ident.toLowerCase();
         const user = await prisma.user.findFirst({
@@ -82,7 +95,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(creds) {
         const ident = String(creds?.identifier ?? '').trim();
         if (!ident) return null;
-        const key = loginKey('partner', ident);
+        const key = loginKey('partner', canonicalIdent(ident));
         if (loginRetryAfter(key) > 0) return null; // locked out
         const lower = ident.toLowerCase();
         const user = await prisma.user.findFirst({
@@ -90,6 +103,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             type: 'PARTNER',
             isActive: true,
             ownerId: { not: null },
+            // Converting an owner to US hides the partner block in admin but did not disable the
+            // User row, so the account could still sign in. Exclude US owners at the query.
+            owner: { is: { type: { not: 'US' } } },
             OR: [{ username: lower }, { email: lower }, { phone: ident }, { phone: normalizePhone(ident) }],
           },
           include: { owner: { select: { siteNewObour: true, siteAlsawary: true } } },
@@ -119,24 +135,57 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 });
 
-/** Server guard for the partner portal: PARTNER session with a linked Owner. */
+/**
+ * Server guard for the partner portal: PARTNER session with a linked, still-eligible Owner.
+ *
+ * The JWT is a CACHE, not the source of truth. `isActive`, the current `ownerId` and the
+ * site-access flags were only ever checked at sign-in, so turning "login enabled" off, revoking
+ * a site, or converting the owner to US left an existing session fully working until the token
+ * expired — exactly the case (compromise, staff offboarding) where revocation has to be instant.
+ */
 export async function requirePartner() {
   const session = await auth();
   const user = session?.user;
   if (!user || user.type !== 'PARTNER' || !user.ownerId) redirect('/partner/login');
-  return { userId: user.id, ownerId: user.ownerId, name: user.name ?? null };
+
+  const live = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      id: true, type: true, isActive: true, ownerId: true, name: true,
+      owner: { select: { type: true, siteNewObour: true, siteAlsawary: true } },
+    },
+  });
+  if (!live || live.type !== 'PARTNER' || !live.isActive || !live.ownerId || !live.owner) redirect('/partner/login');
+  // "US owners never get partner access" — enforced here as well as at login.
+  if (live.owner.type === 'US') redirect('/partner/login');
+  if (!ownerAllowsSite(live.owner, currentSite())) redirect('/partner/login');
+
+  return { userId: live.id, ownerId: live.ownerId, name: live.name ?? null };
 }
 
 /**
  * Server guard for admin sections. Redirects to the staff login when the caller
  * isn't staff, or to the admin home when staff lacks the required permission.
+ *
+ * Permissions are re-read from the DB on every call for the same reason as above: middleware
+ * only sees the token, so disabling a staff account or removing a grant previously had no
+ * effect on an open session. Admin traffic is low; one extra query per guarded call is cheap
+ * next to letting a revoked account keep writing.
  */
 export async function requirePermission(section: string, action: string) {
   const session = await auth();
   const user = session?.user;
   if (!user || user.type !== 'STAFF') redirect('/admin/login');
-  if (!hasPermission(user.perms ?? [], section, action)) redirect('/admin');
-  return user;
+
+  const live = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true, type: true, isActive: true },
+  });
+  if (!live || live.type !== 'STAFF' || !live.isActive) redirect('/admin/login');
+
+  const perms = await getEffectivePermissions(live.id);
+  if (!hasPermission(perms, section, action)) redirect('/admin');
+  return { ...user, perms };
 }
 
 export * from './password';
