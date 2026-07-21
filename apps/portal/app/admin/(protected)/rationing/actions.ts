@@ -205,23 +205,36 @@ export async function commitImport(formData: FormData): Promise<CommitResult> {
         duplicates++;
         continue;
       }
+      // Each ROW is atomic: a sheet and its expanded names commit together, so a failure can
+      // never leave a sheet with no searchable names (or a stale name set after an update) —
+      // which is invisible in the UI but makes the applicant unfindable.
+      //
+      // Deliberately NOT one transaction around the whole loop: production sheets number ~4.8k,
+      // and a single interactive transaction spanning thousands of round-trips would blow
+      // Prisma's transaction timeout and hold locks for the duration — turning a recoverable
+      // partial import into a guaranteed failure. A partial batch is already recoverable by
+      // re-running the file: the skip/update/keepBoth policies exist for exactly that.
       if (conflict === 'update' && existingId) {
-        await prisma.rationingSheet.update({
-          where: { id: existingId },
-          data: rowData(r, cityId, batch.id, uploadedById),
-        });
-        await prisma.rationingName.deleteMany({ where: { sheetId: existingId } });
-        await prisma.rationingName.createMany({
-          data: nameRows(r).map((n) => ({ ...n, sheetId: existingId })),
-        });
+        await prisma.$transaction([
+          prisma.rationingSheet.update({
+            where: { id: existingId },
+            data: rowData(r, cityId, batch.id, uploadedById),
+          }),
+          prisma.rationingName.deleteMany({ where: { sheetId: existingId } }),
+          prisma.rationingName.createMany({
+            data: nameRows(r).map((n) => ({ ...n, sheetId: existingId })),
+          }),
+        ]);
         updated++;
         if (r.remarks) flagged++;
         continue;
       }
       // new row, OR keepBoth (server/file), OR 'update' of a within-file dup (no existing) → insert
-      const sheet = await prisma.rationingSheet.create({ data: rowData(r, cityId, batch.id, uploadedById) });
-      await prisma.rationingName.createMany({
-        data: nameRows(r).map((n) => ({ ...n, sheetId: sheet.id })),
+      await prisma.$transaction(async (tx) => {
+        const sheet = await tx.rationingSheet.create({ data: rowData(r, cityId, batch.id, uploadedById) });
+        await tx.rationingName.createMany({
+          data: nameRows(r).map((n) => ({ ...n, sheetId: sheet.id })),
+        });
       });
       if (conflict) duplicates++; // keepBoth still counts the collision
       created++;

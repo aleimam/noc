@@ -2,13 +2,18 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { headers } from 'next/headers';
 import { prisma } from '@noc/db';
 import { rateLimit, clientIp } from '@/lib/rateLimit';
+import { STOREFRONT_STATUS } from '@/lib/listings';
 
 export const dynamic = 'force-dynamic';
 
-/** Returns the subset of the given listing ids that still exist and are publicly visible
- *  (not soft-deleted, status PUBLISHED/SOLD). Powers the client «شوهدت مؤخرًا» row so it can
- *  prune stale/deleted entries from its localStorage instead of rendering blank dead cards.
- *  Mirror of the portal route (keep both in sync). */
+/** Returns the subset of the given listing ids that are visible ON THIS SITE. Powers the client
+ *  «شوهدت مؤخرًا» row so it can prune dead entries from localStorage instead of rendering cards
+ *  that 404.
+ *
+ *  MIRRORED in shape with the portal route, but deliberately NOT the same predicate — "alive" is
+ *  per-brand. The old shared `PUBLISHED|SOLD + deletedAt` rule ignored Al Sawarey's Type/Purpose
+ *  allow-list and partner/toggle gates, so a listing hidden from the storefront still validated
+ *  and its stale card kept linking to a 404. */
 export async function POST(req: NextRequest) {
   if (!rateLimit(`alive:${clientIp(await headers())}`, 60, 60 * 1000)) {
     return NextResponse.json({ alive: [] }, { status: 429 });
@@ -22,7 +27,9 @@ export async function POST(req: NextRequest) {
   }
   if (!ids.length) return NextResponse.json({ alive: [] });
   const rows = await prisma.listing.findMany({
-    where: { id: { in: ids }, deletedAt: null, status: { in: ['PUBLISHED', 'SOLD'] } },
+    // The SAME predicate the catalogue and detail pages use (status + Type/Purpose allow-list +
+    // partner/showOnBrokerage gates), so "alive" can never disagree with what the site serves.
+    where: { id: { in: ids }, deletedAt: null, ...STOREFRONT_STATUS },
     select: { id: true },
   });
   return NextResponse.json({ alive: rows.map((r) => r.id) });
