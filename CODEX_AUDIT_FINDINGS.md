@@ -44,6 +44,62 @@ entry. Added beyond the report: `ListingCard` takes `priceOnRequest` and all six
 
 Baseline: both app typechecks pass after Pass 8 as well. `npm install` still cannot run because the machine's `npm.cmd` points to a missing roaming `npm-cli.js`; the existing `node_modules` was used to run TypeScript directly. No application source, environment file, database, upload, server, migration, or deployment was touched.
 
+## RESOLUTION — passes 2–16 triaged, fixed, deployed and live-verified 2026-07-22
+
+**A later pass must not re-report anything below.** Every finding in Section 1 was re-verified
+against the CURRENT code before being touched (the pass-1 lesson: some are already fixed,
+deliberate, or provable only against live data). That filtering was as valuable as the fixes —
+**8 findings were already fixed, 2 are deliberate design, and 1 was simply WRONG** (acting on it
+would have broken a working feature, see below).
+
+Shipped in nine commits, each typechecked + built + deployed + verified on production:
+`5baefe3` · `f7b0557` · `db1355e` · `8f1885b` · `0cbcdea` · `c6c7e81` · `0ee4ff8` · `39fe5d6` · `6ecf79c`
+
+| Wave | Theme | Commit | Headline |
+|---|---|---|---|
+| 1+3 | P0s + ungated actions | `5baefe3` | Backup DB dumps were downloadable with read-only `settings:VIEW` → `settings:MANAGE`; `upsertStaff` self-assign SUPER_ADMIN + re-type any user → blocked; customer-mgmt IDORs scoped to `type:'CUSTOMER'`; 5 ungated/mis-gated server actions gated; `setMasterplan` no longer wipes the map when the replacement is invalid |
+| 4 | Soft-delete leaks | `f7b0557` | Offers/SMS on trashed listings; wishlist; **trashed listings emitted their old title/OG image as page metadata** (what Google indexes + WhatsApp previews); admin queues/counts; moderation-by-id republish; delete no longer resets the 90-day purge clock; purge now removes `ListingPaper` attachments |
+| 5 | Partner writes | `db1355e` | Trash mutation; TOCTOU → conditional writes; attachment-claim restricted (uploader id was treated as perpetual ownership); `MAX_PRICE` added to `parsePriceInput`; district/neighborhood consistency; stale fast-edit inputs |
+| 6 | Rationing / geo | `8f1885b` | Watcher double-SMS (atomic claim); **5 public write endpoints had no quota at all**; follow phone now derived from the verified account (a logged-in user could route a third party's number into our SMS); plots tab metered; inactive-ancestor geo pages hidden |
+| 2 | Auth / session | `0cbcdea` | **Revocation did not work**: disabling staff, revoking a partner site, or converting an owner to US had NO effect until token expiry. `requirePermission`/`requirePartner`/`getAdminViewer` now re-read the DB. `store-admin` needed no permission at all → `owners:VIEW`. Lockout keys canonicalized; OTP enumeration closed; forged `PUBLISHED` clamped; partner edit keys on current `ownerId`, not stale `sellerId` |
+| 8 | Backup integrity | `c6c7e81` | **A FULL tier whose uploads copy failed was recorded SUCCESS** with a db-only tarball; failed builds left `database.sql`+`env.txt` in `/tmp`; impossible calendar dates accepted by retention; tier-path collisions; frequency allow-list; run lease; **`RESTORE.md` documented only the local layout, not the off-site archive an operator needs after losing the VPS** |
+| 7 | Analytics / media | `0ee4ff8` | **The collector took `site` from the payload** — a script could pollute the other brand (verified fixed on prod with a forged beacon); `pageleave` scoped to its own session; both `/api/collect` unmetered → 60/min/IP; silent analytics caps now honest + surfaced; sitemap bounded + uses the real storefront predicate; thumbnail misses metered; upload failures clean up |
+| 9 | UX / i18n | `39fe5d6` | **OTP requests that dropped left the button spinning forever** on all three login surfaces (this audience's normal condition); root `loading.tsx`/`error.tsx` added to both apps (there were none); ≥40px targets; mobile table overflow; hover-only menus keyboard-reachable |
+| — | Leftovers | `6ecf79c` | Per-brand `alive` predicate; atomic rationing import rows |
+
+### Verdicts that were NOT "fix it"
+
+- **ALREADY FIXED (8)** — the 7 pass-1 duplicates re-reported in Section 1 (staff-RBAC edit, draft
+  auto-save, SELECT filters, EAV writes, moderation recheck, archive toggle, price), plus the SFTP
+  host-key pinning done in the same session as the report.
+- **DELIBERATE (2)** — search-event attribution uses a documented no-server-session heuristic;
+  `.env`-missing-but-SUCCESS is a documented choice (dev boxes legitimately lack `.env`, and the
+  manifest records the truth).
+- **MOOT** — the rsync half of the host-key finding (`ops/offsite-backup.sh` was deleted 2026-07-21).
+- **⚠️ WRONG (1) — do not apply:** "enforce uniqueness on `RationingSheet.dedupeKey`". Production
+  has **4862 sheets / 4501 distinct keys (361 duplicates)**, so the constraint cannot apply — and
+  `/admin/rationing/duplicates` is a BUILT FEATURE that groups by `dedupeKey` with a review
+  workflow. Duplicates are an expected, reviewed state: `dedupeKey` is a **grouping** key, not an
+  identity key. Adding the index would break a working feature. Only the atomicity half was taken,
+  and per-ROW rather than one batch-wide transaction (≈4.8k rows would exceed Prisma's transaction
+  timeout and hold locks throughout, turning a recoverable partial import into a guaranteed failure).
+
+### Still open (4)
+
+1. **Admin English coverage** — `/admin` defaults to `en` and the shell is translated, but ~200
+   child files hard-code Arabic. Catalog keys are at parity; this is component coverage. Wants a
+   shared `L(ar,en)` helper + a lint rule banning bare user-facing literals under
+   `apps/portal/app/admin`, not per-screen patches. **Owner decision pending** — may be a non-issue
+   if nobody runs the admin in English.
+2. **Media cleanup, second half** — re-stamp / poster-regen / attachment-replace still never unlink
+   the superseded rendition. **Blocked on a product question:** the watermark system is reversible
+   by design (`originalPath`), so deleting old *stamped* renditions may break revert. Pure originals
+   must stay regardless.
+3. **Analytics rollup / price-index memory** — still materialize their working set in Node. Bounded
+   the backfill argument (120 days); SQL-side aggregation not done. Low risk at current volume.
+4. **Click-testing** — everything above is reasoned, typechecked, built, deployed and HTTP-probed,
+   but nothing was exercised through a real admin/partner session (no login available to the agent).
+
 ## Section 1 — Defects
 
 ### [P0] Any staff account can edit every listing outside RBAC, and that path can detach internal paper records

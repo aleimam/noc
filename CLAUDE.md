@@ -411,21 +411,35 @@ NOT click-tested — confirm them in one admin session when convenient:**
 (Same admin login also covers the partner UI click-test, owner-blocked item 4 — create a fresh test
 partner first, since `testpartner` was deleted.)
 
-**Codex deep audit — ongoing, owner-driven in steps (see `CODEX_AUDIT_FINDINGS.md`):**
-- **Pass 1** (listings + EAV) — COMPLETE, all fixed + verified (commits `06e58e5`→`baf90b1`;
-  resolution table at the top of the findings file).
-- **Passes 2–11** have been RUN — their findings are appended to `CODEX_AUDIT_FINDINGS.md` but are
-  **UNVERIFIED / untriaged** (committed as-is at `24035d4`). **Passes 12–16 not yet run.**
-- **One pass-9 finding already actioned ahead of the batch:** the SFTP host key is now PINNED +
-  verified (commit `65a1f7e`) — `connectSftp` refuses any key not in the pinned set (protects the
-  archive's DB + `.env` + `AUTH_SECRET` and the login password); the ED25519 fp
-  `SHA256:XqON…sdgM` was confirmed genuine across two independent networks (Hetzner no longer
-  publishes a static list); rotate via `BACKUP_SFTP_HOST_FP`. Mark it resolved in the findings file
-  during triage.
-- **Next:** run passes 12–16, then a single verify-then-fix triage of the whole accumulated set.
-  Re-verify EVERY finding before acting — pass 1 proved some are already-fixed, deliberate, or only
-  provable against live data (e.g. the ".env omitted but SUCCESS" pass-9 item is a design choice, not
-  a bug).
+**Codex deep audit — ✅ ALL 16 PASSES RUN AND TRIAGED (see `CODEX_AUDIT_FINDINGS.md`).**
+Pass 1 was fixed earlier (`06e58e5`→`baf90b1`). **Passes 2–16 were triaged, fixed, deployed and
+live-verified 2026-07-22** in nine commits: `5baefe3` · `f7b0557` · `db1355e` · `8f1885b` ·
+`0cbcdea` · `c6c7e81` · `0ee4ff8` · `39fe5d6` · `6ecf79c`. Full resolution table (wave → commit →
+headline) at the top of the findings file — **a later pass must not re-report any of it.**
+- **Method that must be repeated:** re-verify EVERY finding against CURRENT code before acting.
+  That filtering caught **8 already-fixed**, **2 deliberate**, **1 moot**, and **1 outright WRONG**
+  finding — acting on the last would have broken a working feature.
+- **⚠️ Do NOT add a UNIQUE index on `RationingSheet.dedupeKey`** (the audit asks for it). Prod has
+  4862 sheets / 4501 distinct keys = 361 duplicates, so it cannot apply — and
+  `/admin/rationing/duplicates` is a BUILT FEATURE that groups by that key with a review workflow.
+  `dedupeKey` is a GROUPING key, not an identity key. Only the atomicity half was taken, and
+  per-ROW (a batch-wide transaction over ~4.8k rows would exceed Prisma's timeout and hold locks,
+  turning a recoverable partial import into a guaranteed failure).
+- **Biggest things this closed:** backup DB dumps were downloadable with read-only `settings:VIEW`;
+  **revocation did not work at all** (disabling staff / revoking a partner site had no effect until
+  token expiry — `requirePermission`/`requirePartner`/`getAdminViewer` now re-read the DB);
+  `upsertStaff` allowed self-assigning SUPER_ADMIN; the analytics collector took its BRAND from the
+  payload (cross-brand pollution — fix verified on prod with a forged beacon); a FULL backup whose
+  uploads copy failed was recorded SUCCESS; `RESTORE.md` didn't describe the off-site archive;
+  trashed listings still emitted their old title/OG image as page metadata; five public write
+  endpoints had no quota; dropped OTP requests left the login button spinning forever.
+- **Still open (4):** ① admin English coverage (~200 files hard-code Arabic; wants a shared
+  `L(ar,en)` + lint rule — **owner decision pending**, may be a non-issue if nobody uses the English
+  admin) · ② media cleanup second half (superseded stamped renditions never unlinked — **blocked on
+  a product question**: the watermark system is reversible by design, so deleting old renditions may
+  break revert) · ③ analytics rollup / price-index still materialize in Node (backfill arg now capped
+  at 120 days; low risk at current volume) · ④ **nothing is click-tested** — all of it is reasoned,
+  typechecked, built, deployed and HTTP-probed, but no admin/partner session was ever exercised.
 
 **2026-07-15→17: gallery/perf/admin-UX batch (commits `eaf3708`→`df78560`, all deployed+verified).**
 - **Hero gallery + lightbox** on both sites' listing pages (see Feature map) + **first-party photo
