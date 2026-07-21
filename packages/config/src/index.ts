@@ -178,12 +178,18 @@ export const REQUIRED_LISTING_ATTR_KEYS = ['city'] as const;
 
 // ── Listing money: ONE normalization rule for every price written or displayed ──
 
+/** Largest value the `Decimal(14,2)` price columns can hold. Anything above this is rejected at
+ *  validation time — otherwise Prisma throws deep inside the write and the caller only sees a
+ *  generic failure (and, in the partner fast-edit, a permanently stuck row). */
+export const MAX_PRICE = 999_999_999_999.99;
+
 /**
  * Normalize a price on the way IN (listing price, sold price, the internal floor).
  *
  * The rule, matching what the public surfaces render:
  *  - blank / null / **zero** → `null`, i.e. «السعر عند الطلب — تواصل لمعرفة السعر»;
- *  - negative or non-finite → a validation ERROR the caller must surface, never silently stored.
+ *  - negative, non-finite, or above `MAX_PRICE` → a validation ERROR the caller must surface,
+ *    never silently stored.
  *
  * Before this existed the full-form save accepted `input.price` unchecked, so a typed `-1` was
  * persisted and rendered literally as «-1 ج.م» on the public home page and owner profile, and
@@ -191,7 +197,7 @@ export const REQUIRED_LISTING_ATTR_KEYS = ['city'] as const;
  */
 export function parsePriceInput(v: number | null | undefined): { ok: true; value: number | null } | { ok: false } {
   if (v == null) return { ok: true, value: null };
-  if (!Number.isFinite(v) || v < 0) return { ok: false };
+  if (!Number.isFinite(v) || v < 0 || v > MAX_PRICE) return { ok: false };
   return { ok: true, value: v > 0 ? v : null }; // 0 means "on request", not "free"
 }
 

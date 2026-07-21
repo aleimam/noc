@@ -290,8 +290,15 @@ export async function saveListing(input: ListingInput): Promise<Result> {
 
       // ── Main gallery photos (attributeId = null) ──
       if (input.photoIds.length) {
+        // Uploader provenance is NOT perpetual ownership — claim only files that are still
+        // unattached or already on THIS listing, so a photo that now belongs to a listing
+        // transferred to another owner cannot be pulled back out from under them.
         await tx.attachment.updateMany({
-          where: { id: { in: input.photoIds }, uploaderId: user.id },
+          where: {
+            id: { in: input.photoIds },
+            uploaderId: user.id,
+            OR: [{ ownerType: null }, { ownerType: 'Listing', ownerId: listingId }],
+          },
           data: { ownerType: 'Listing', ownerId: listingId, attributeId: null },
         });
       }
@@ -311,8 +318,13 @@ export async function saveListing(input: ListingInput): Promise<Result> {
         if (!v.attachmentIds) continue;
         keepIds.push(...v.attachmentIds);
         if (v.attachmentIds.length) {
+          // Same claim rule as the main gallery above.
           await tx.attachment.updateMany({
-            where: { id: { in: v.attachmentIds }, uploaderId: user.id },
+            where: {
+              id: { in: v.attachmentIds },
+              uploaderId: user.id,
+              OR: [{ ownerType: null }, { ownerType: 'Listing', ownerId: listingId }],
+            },
             data: { ownerType: 'Listing', ownerId: listingId, attributeId: v.attributeId },
           });
         }

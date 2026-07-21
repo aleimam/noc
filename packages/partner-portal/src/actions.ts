@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
-import { requirePartner, hashPassword, rateLimit } from '@noc/auth';
-import { isValidPhone } from '@noc/config';
+import { requirePartner, hashPassword, rateLimit, MIN_PASSWORD_LENGTH } from '@noc/auth';
+import { isValidEmail, isValidPhone, parsePriceInput } from '@noc/config';
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -16,8 +16,14 @@ export async function partnerUpdateAccount(input: { username: string; email: str
   const phone = input.phone.trim() || null;
   if (!username && !email && !phone) return { ok: false, error: 'identifier_required' };
   if (phone && !isValidPhone(phone)) return { ok: false, error: 'invalid_phone' };
+  // The email field is submitted by a button handler, not a <form>, so the browser's own
+  // type="email" validation never runs — without this an OTP-only partner could save `x` as
+  // their sole login route and lock themselves out after sign-out.
+  if (email && !isValidEmail(email)) return { ok: false, error: 'invalid_email' };
+  const newPassword = input.password.trim();
+  if (newPassword && newPassword.length < MIN_PASSWORD_LENGTH) return { ok: false, error: 'password_short' };
   try {
-    const passPatch = input.password.trim() ? { passwordHash: await hashPassword(input.password.trim()) } : {};
+    const passPatch = newPassword ? { passwordHash: await hashPassword(newPassword) } : {};
     await prisma.user.update({ where: { id: userId }, data: { username, email, phone, ...passPatch } });
     revalidatePath('/partner/account');
     return { ok: true };
@@ -33,25 +39,37 @@ export async function partnerUpdateAccount(input: { username: string; email: str
 const FAST_STATUSES = ['PUBLISHED', 'SOLD', 'ARCHIVED'] as const;
 type FastStatus = (typeof FAST_STATUSES)[number];
 
-/** Load a listing only if it belongs to the signed-in partner's Owner. */
+/** Load a listing only if it belongs to the signed-in partner's Owner AND is not in the trash.
+ *  Trash is meant to be inert and restore-only: without the `deletedAt` filter a stale dashboard
+ *  could still reprice/restatus a row staff had deleted, so a later Restore returned different
+ *  content than what was deleted. */
 async function ownListing(listingId: string, ownerId: string) {
-  const l = await prisma.listing.findUnique({ where: { id: listingId }, select: { id: true, ownerId: true, status: true } });
-  return l && l.ownerId === ownerId ? l : null;
+  return prisma.listing.findFirst({
+    where: { id: listingId, ownerId, deletedAt: null },
+    select: { id: true, ownerId: true, status: true },
+  });
 }
 
 /** Instant price update on the partner's own listing. */
 export async function partnerUpdatePrice(listingId: string, price: number | null): Promise<Result> {
   const { ownerId, userId } = await requirePartner();
   if (!rateLimit(`pfast:${userId}`, 30, 60 * 1000)) return { ok: false, error: 'rate_limited' };
-  if (price != null && (!Number.isFinite(price) || price < 0)) return { ok: false, error: 'invalid' };
+  // One money rule (also bounds Decimal(14,2) — an out-of-range paste used to reach Prisma,
+  // throw, and leave the dashboard row stuck in its busy state with no message).
+  const parsed = parsePriceInput(price);
+  if (!parsed.ok) return { ok: false, error: 'invalid' };
   const l = await ownListing(listingId, ownerId);
   if (!l) return { ok: false, error: 'forbidden' };
   // Same lifecycle rule as availability: moderation statuses stay staff-controlled.
   if (!FAST_STATUSES.includes(l.status as FastStatus)) return { ok: false, error: 'not_editable' };
-  await prisma.listing.update({
-    where: { id: listingId },
-    data: { price, postersStale: true }, // price shows on the generated images
+  // Conditional write: the ownership/trash/status predicate is part of the UPDATE, so a staff
+  // transfer, trash or moderation change landing between the read and the write can't be
+  // overwritten (the previous bare-id update was TOCTOU-prone).
+  const upd = await prisma.listing.updateMany({
+    where: { id: listingId, ownerId, deletedAt: null, status: { in: [...FAST_STATUSES] } },
+    data: { price: parsed.value, postersStale: true }, // price shows on the generated images
   });
+  if (upd.count === 0) return { ok: false, error: 'conflict' };
   revalidatePath('/partner');
   return { ok: true };
 }
@@ -65,13 +83,18 @@ export async function partnerSetAvailability(listingId: string, status: FastStat
   if (!l) return { ok: false, error: 'forbidden' };
   // Only listings already in the public lifecycle may be fast-switched.
   if (!FAST_STATUSES.includes(l.status as FastStatus)) return { ok: false, error: 'not_editable' };
-  await prisma.listing.update({
-    where: { id: listingId },
+  // Same one money rule for the recorded sale price (0 ⇒ null, never a literal «0 ج.م»).
+  const parsedSold = parsePriceInput(soldPrice);
+  if (!parsedSold.ok) return { ok: false, error: 'invalid' };
+  // Conditional write — see partnerUpdatePrice.
+  const upd = await prisma.listing.updateMany({
+    where: { id: listingId, ownerId, deletedAt: null, status: { in: [...FAST_STATUSES] } },
     data: {
       status,
-      soldPrice: status === 'SOLD' ? (soldPrice != null && Number.isFinite(soldPrice) && soldPrice >= 0 ? soldPrice : null) : null,
+      soldPrice: status === 'SOLD' ? parsedSold.value : null,
     },
   });
+  if (upd.count === 0) return { ok: false, error: 'conflict' };
   revalidatePath('/partner');
   return { ok: true };
 }

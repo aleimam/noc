@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@noc/ui';
 import { partnerUpdatePrice, partnerSetAvailability } from './actions';
@@ -41,6 +41,18 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
   const [soldRow, setSoldRow] = useState('');
   const [soldInput, setSoldInput] = useState('');
 
+  // Re-sync from the server after router.refresh(): `prices` was seeded once, so a refreshed row
+  // kept showing the OLD value and the next Save (or the SOLD confirmation) wrote it back.
+  // Skip the row being acted on right now so we never clobber in-flight typing.
+  useEffect(() => {
+    setPrices((prev) => {
+      const next = { ...prev };
+      for (const r of rows) if (r.id !== busy && r.id !== soldRow) next[r.id] = r.price;
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
+
   const statusBadge = (s: string) => {
     const map: Record<string, { ar: string; en: string; cls: string }> = {
       PUBLISHED: { ar: 'متاح', en: 'Available', cls: 'bg-green/15 text-green' },
@@ -63,10 +75,19 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
     }
     setBusy(id);
     start(async () => {
-      const r = await partnerUpdatePrice(id, price);
-      setBusy('');
-      if (r.ok) { toast(L('تم تحديث السعر', 'Price updated')); router.refresh(); }
-      else toast(L('تعذّر الحفظ', 'Save failed'), 'error');
+      // try/finally: a rejected server action used to skip setBusy(''), leaving the row dimmed
+      // and disabled until a full page refresh, with no message.
+      try {
+        const r = await partnerUpdatePrice(id, price);
+        if (r.ok) { toast(L('تم تحديث السعر', 'Price updated')); router.refresh(); }
+        else toast(r.error === 'conflict'
+          ? L('تغيّر الإعلان — حدّث الصفحة', 'This listing changed — please refresh')
+          : L('تعذّر الحفظ', 'Save failed'), 'error');
+      } catch {
+        toast(L('تعذّر الحفظ', 'Save failed'), 'error');
+      } finally {
+        setBusy('');
+      }
     });
   }
 
@@ -74,10 +95,18 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
     setSoldRow('');
     setBusy(id);
     start(async () => {
-      const r = await partnerSetAvailability(id, status, soldPrice);
-      setBusy('');
-      if (r.ok) { toast(L('تم التحديث', 'Updated')); router.refresh(); }
-      else toast(r.error === 'not_editable' ? L('هذا الإعلان قيد المراجعة', 'This listing is in review') : L('تعذّر الحفظ', 'Save failed'), 'error');
+      try {
+        const r = await partnerSetAvailability(id, status, soldPrice);
+        if (r.ok) { toast(L('تم التحديث', 'Updated')); router.refresh(); }
+        else toast(
+          r.error === 'not_editable' ? L('هذا الإعلان قيد المراجعة', 'This listing is in review')
+          : r.error === 'conflict' ? L('تغيّر الإعلان — حدّث الصفحة', 'This listing changed — please refresh')
+          : L('تعذّر الحفظ', 'Save failed'), 'error');
+      } catch {
+        toast(L('تعذّر الحفظ', 'Save failed'), 'error');
+      } finally {
+        setBusy('');
+      }
     });
   }
 

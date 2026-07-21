@@ -70,6 +70,9 @@ export async function savePartnerListing(input: LeanListingInput): Promise<Resul
   // One shared money rule (@noc/config): 0/blank ⇒ null, negative/non-finite ⇒ error.
   const priceParsed = parsePriceInput(input.price);
   if (!priceParsed.ok) return { ok: false, error: 'invalid_price' };
+  // Bound the title to the DB column instead of letting an oversized paste reach Prisma and
+  // come back as the generic «تعذّر الحفظ» after a long form was already filled in.
+  if (input.title.trim().length > 191) return { ok: false, error: 'title_too_long' };
 
   // Partners may only post in the Type categories the admin granted their Owner.
   const grant = await prisma.ownerAllowedCategory.findFirst({ where: { ownerId, optionId: input.typeOptionId }, select: { id: true } });
@@ -127,11 +130,24 @@ export async function savePartnerListing(input: LeanListingInput): Promise<Resul
   {
     const attrIds = values.map((v) => v.attributeId);
     if (attrIds.length) {
-      const nbAttrs = await prisma.attribute.findMany({ where: { id: { in: attrIds }, type: 'NEIGHBORHOOD' }, select: { id: true } });
-      const nbAttrIds = new Set(nbAttrs.map((a) => a.id));
+      const geoAttrs = await prisma.attribute.findMany({
+        where: { id: { in: attrIds }, type: { in: ['NEIGHBORHOOD', 'DISTRICT'] } },
+        select: { id: true, type: true },
+      });
+      const nbAttrIds = new Set(geoAttrs.filter((a) => a.type === 'NEIGHBORHOOD').map((a) => a.id));
+      const dsAttrIds = new Set(geoAttrs.filter((a) => a.type === 'DISTRICT').map((a) => a.id));
       const candidate = values.find((v) => nbAttrIds.has(v.attributeId) && typeof v.text === 'string' && v.text.trim());
       if (candidate?.text) {
-        const nb = await prisma.neighborhood.findUnique({ where: { id: candidate.text.trim() }, select: { id: true } });
+        const nb = await prisma.neighborhood.findUnique({
+          where: { id: candidate.text.trim() },
+          select: { id: true, districtId: true },
+        });
+        // The client filters neighborhoods by the chosen district, but the SERVER accepted any
+        // pair — a forged/stale combination drove cards, maps and area pages off one district
+        // while the EAV district value and search facet said another.
+        const submittedDistrict = values.find((v) => dsAttrIds.has(v.attributeId) && typeof v.text === 'string' && v.text.trim());
+        const districtId = submittedDistrict?.text?.trim();
+        if (nb && districtId && nb.districtId !== districtId) return { ok: false, error: 'geo_mismatch' };
         neighborhoodId = nb?.id ?? null;
       }
     }
@@ -156,9 +172,14 @@ export async function savePartnerListing(input: LeanListingInput): Promise<Resul
 
       let listingId: string;
       if (input.id) {
-        const existing = await tx.listing.findFirst({ where: { id: input.id, ownerId }, select: { id: true } });
-        if (!existing) throw new Error('forbidden');
-        await tx.listing.update({ where: { id: input.id }, data: { ...base, rejectionReason: null, postersStale: true } });
+        // Conditional write: ownership AND not-trashed are part of the UPDATE predicate, so a
+        // concurrent staff transfer or trash can't be overwritten by a stale form submission
+        // (the old read-then-update-by-bare-id was TOCTOU-prone), and trash stays inert.
+        const upd = await tx.listing.updateMany({
+          where: { id: input.id, ownerId, deletedAt: null },
+          data: { ...base, rejectionReason: null, postersStale: true },
+        });
+        if (upd.count === 0) throw new Error('forbidden');
         listingId = input.id;
       } else {
         const created = await tx.listing.create({ data: { ...base, sellerId: userId } });
@@ -169,8 +190,15 @@ export async function savePartnerListing(input: LeanListingInput): Promise<Resul
 
       // Main gallery photos (attributeId = null) — claim the chosen, release the rest.
       if (input.photoIds.length) {
+        // Uploader provenance is NOT perpetual ownership: claim only files that are still
+        // unattached or already belong to THIS listing. Otherwise a partner could submit the id
+        // of a photo now living on a listing staff transferred away, silently stealing it back.
         await tx.attachment.updateMany({
-          where: { id: { in: input.photoIds }, uploaderId: userId },
+          where: {
+            id: { in: input.photoIds },
+            uploaderId: userId,
+            OR: [{ ownerType: null }, { ownerType: 'Listing', ownerId: listingId }],
+          },
           data: { ownerType: 'Listing', ownerId: listingId, attributeId: null },
         });
       }
