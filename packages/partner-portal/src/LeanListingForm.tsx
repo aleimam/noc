@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ImageAttachment, type UploadedAttachment } from '@noc/ui';
-import { REQUIRED_LISTING_ATTR_KEYS } from '@noc/config';
+import { REQUIRED_LISTING_ATTR_KEYS, isValidPhone } from '@noc/config';
 import { savePartnerListing, type LeanListingInput, type LeanValueInput } from './listingSave';
 
 type COption = { id: string; nameAr: string; nameEn: string; granted: boolean; parentIds: string[] };
@@ -102,6 +102,12 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
 
   // Ids of required details left empty at the last submit — highlighted red on the form.
   const [missingAttrIds, setMissingAttrIds] = useState<Set<string>>(new Set());
+  // Missing BASIC fields at the last submit ('type'/'purpose'/'condition'/'title'/'phone') — same
+  // red highlight + inline note the details already get, so nothing is a mystery.
+  const [missingBasics, setMissingBasics] = useState<Set<string>>(new Set());
+  const [phoneFmtBad, setPhoneFmtBad] = useState(false);
+  const clearBasic = (key: string) =>
+    setMissingBasics((m) => { if (!m.has(key)) return m; const n = new Set(m); n.delete(key); return n; });
   const setVal = (id: string, v: string | boolean | string[]) => {
     setVals((p) => ({ ...p, [id]: v }));
     setMissingAttrIds((m) => { if (!m.has(id)) return m; const n = new Set(m); n.delete(id); return n; });
@@ -178,24 +184,50 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    if (!typeId || !purposeId || !condId || !title.trim() || !contactPhone.trim()) { setError(L('أكمل الحقول المطلوبة', 'Fill the required fields')); return; }
-    // Mandatory basic details (e.g. the city) must be filled.
+    setError('');
+    // BASIC fields — flag every missing one (the form is noValidate so this JS runs).
+    const missBasics = new Set<string>();
+    if (!typeId) missBasics.add('type');
+    if (!purposeId) missBasics.add('purpose');
+    if (!condId) missBasics.add('condition');
+    if (!title.trim()) missBasics.add('title');
+    const phoneEmpty = !contactPhone.trim();
+    const phoneBad = !phoneEmpty && !isValidPhone(contactPhone);
+    if (phoneEmpty || phoneBad) missBasics.add('phone');
+    setPhoneFmtBad(phoneBad);
+    // Mandatory details (e.g. the city).
     const missingList = applicable.filter((a) => {
       if (!isRequiredAttr(a)) return false;
       const v = vals[a.id];
       // A boolean is an ANSWER either way — «لا» (false) on a required YESNO must pass.
       return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : typeof v === 'boolean' ? false : !v;
     });
-    if (missingList.length) {
-      setMissingAttrIds(new Set(missingList.map((a) => a.id)));
-      setError(`${L('أكمل الحقول المطلوبة', 'Fill the required fields')} — ${missingList.map((a) => label(a)).join('، ')}`);
+
+    setMissingBasics(missBasics);
+    setMissingAttrIds(new Set(missingList.map((a) => a.id)));
+
+    if (missBasics.size || missingList.length) {
+      const basicName = (k: string) =>
+        k === 'type' ? L('النوع', 'Type')
+          : k === 'purpose' ? L('الغرض', 'Purpose')
+            : k === 'condition' ? L('الحالة', 'Condition')
+              : k === 'title' ? L('عنوان الإعلان', 'Title')
+                : phoneBad ? L('رقم هاتف غير صالح', 'Invalid phone') : L('هاتف التواصل', 'Contact phone');
+      const names = [...[...missBasics].map(basicName), ...missingList.map((a) => label(a))];
+      setError(`${L('أكمل الحقول المطلوبة', 'Fill the required fields')} — ${names.join('، ')}`);
       if (typeof document !== 'undefined') {
-        setTimeout(() => document.getElementById(`attr-${missingList[0]!.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+        const ids = [
+          ...[...missBasics].map((k) => (k === 'title' ? 'basic-title' : k === 'phone' ? 'basic-phone' : `basic-${k}`)),
+          ...missingList.map((a) => `attr-${a.id}`),
+        ];
+        setTimeout(() => {
+          const els = ids.map((id) => document.getElementById(id)).filter((el): el is HTMLElement => !!el);
+          els.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+          els[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
       }
       return;
     }
-    setMissingAttrIds(new Set());
-    setError('');
     start(async () => {
       const input: LeanListingInput = {
         id: initial.id,
@@ -299,36 +331,37 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
   const condOptions = nested(condC?.options, purposeId);
 
   return (
-    <form onSubmit={submit} className="mx-auto max-w-2xl space-y-5">
+    <form onSubmit={submit} noValidate className="mx-auto max-w-2xl space-y-5">
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="text-sm font-semibold">{L('النوع', 'Type')}
+        <label id="basic-type" className="text-sm font-semibold">{L('النوع', 'Type')}
           <select
             value={typeId}
-            onChange={(e) => { setTypeId(e.target.value); setPurposeId(''); setCondId(''); }}
-            required
-            className={`${inp} mt-1`}
+            onChange={(e) => { setTypeId(e.target.value); setPurposeId(''); setCondId(''); if (e.target.value) clearBasic('type'); }}
+            className={`${inp} mt-1 ${missingBasics.has('type') ? 'ring-2 ring-red-400' : ''}`}
           >
             <option value="">{L('— اختر —', '— select —')}</option>
             {grantedTypes.map((o) => <option key={o.id} value={o.id}>{label(o)}</option>)}
             {revokedType && <option value={revokedType.id} disabled>{label(revokedType)} {L('(صلاحية ملغاة)', '(permission revoked)')}</option>}
           </select>
+          {missingBasics.has('type') && <span className="mt-1 block text-xs font-semibold text-red-600">{L('هذا الحقل مطلوب', 'This field is required')}</span>}
         </label>
-        <label className="text-sm font-semibold">{L('الغرض', 'Purpose')}
+        <label id="basic-purpose" className="text-sm font-semibold">{L('الغرض', 'Purpose')}
           <select
             value={purposeId}
-            onChange={(e) => { setPurposeId(e.target.value); setCondId(''); }}
-            required
-            className={`${inp} mt-1`}
+            onChange={(e) => { setPurposeId(e.target.value); setCondId(''); if (e.target.value) clearBasic('purpose'); }}
+            className={`${inp} mt-1 ${missingBasics.has('purpose') ? 'ring-2 ring-red-400' : ''}`}
           >
             <option value="">{L('— اختر —', '— select —')}</option>
             {purposeOptions.map((o) => <option key={o.id} value={o.id}>{label(o)}</option>)}
           </select>
+          {missingBasics.has('purpose') && <span className="mt-1 block text-xs font-semibold text-red-600">{L('هذا الحقل مطلوب', 'This field is required')}</span>}
         </label>
-        <label className="text-sm font-semibold">{L('الحالة', 'Condition')}
-          <select value={condId} onChange={(e) => setCondId(e.target.value)} required className={`${inp} mt-1`}>
+        <label id="basic-condition" className="text-sm font-semibold">{L('الحالة', 'Condition')}
+          <select value={condId} onChange={(e) => { setCondId(e.target.value); if (e.target.value) clearBasic('condition'); }} className={`${inp} mt-1 ${missingBasics.has('condition') ? 'ring-2 ring-red-400' : ''}`}>
             <option value="">{L('— اختر —', '— select —')}</option>
             {condOptions.map((o) => <option key={o.id} value={o.id}>{label(o)}</option>)}
           </select>
+          {missingBasics.has('condition') && <span className="mt-1 block text-xs font-semibold text-red-600">{L('هذا الحقل مطلوب', 'This field is required')}</span>}
         </label>
       </div>
 
@@ -336,8 +369,9 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
         <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">{L('لا توجد تصنيفات مسموح لك بالنشر فيها — تواصل معنا.', 'You have no categories you may post in — contact us.')}</p>
       )}
 
-      <label className="block text-sm font-semibold">{L('عنوان الإعلان', 'Title')}
-        <input value={title} onChange={(e) => setTitle(e.target.value)} required className={`${inp} mt-1`} />
+      <label id="basic-title" className="block text-sm font-semibold">{L('عنوان الإعلان', 'Title')}
+        <input value={title} onChange={(e) => { setTitle(e.target.value); clearBasic('title'); }} className={`${inp} mt-1 ${missingBasics.has('title') ? 'ring-2 ring-red-400' : ''}`} />
+        {missingBasics.has('title') && <span className="mt-1 block text-xs font-semibold text-red-600">{L('هذا الحقل مطلوب', 'This field is required')}</span>}
       </label>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -394,8 +428,9 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-sm font-semibold">{L('هاتف التواصل', 'Contact phone')}
-          <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} required className={`${inp} mt-1`} />
+        <label id="basic-phone" className="text-sm font-semibold">{L('هاتف التواصل', 'Contact phone')}
+          <input type="tel" value={contactPhone} onChange={(e) => { setContactPhone(e.target.value); clearBasic('phone'); }} className={`${inp} mt-1 ${missingBasics.has('phone') ? 'ring-2 ring-red-400' : ''}`} />
+          {missingBasics.has('phone') && <span className="mt-1 block text-xs font-semibold text-red-600">{phoneFmtBad ? L('رقم هاتف غير صالح', 'Invalid phone') : L('هذا الحقل مطلوب', 'This field is required')}</span>}
         </label>
         <label className="flex items-end gap-2 text-sm font-semibold"><input type="checkbox" checked={contactWhatsapp} onChange={(e) => setContactWhatsapp(e.target.checked)} /> {L('واتساب متاح', 'WhatsApp available')}</label>
       </div>

@@ -276,12 +276,19 @@ export function ListingForm({
     // Clear the red highlight for a field the moment it gets a value.
     setMissingAttrIds((m) => { if (!m.has(id)) return m; const n = new Set(m); n.delete(id); return n; });
   };
+  // Missing BASIC fields at the last save attempt: classifier ids + the sentinels 'title'/'phone'.
+  // (Required details use missingAttrIds above; basics get the same red highlight + inline note.)
+  const [missingBasics, setMissingBasics] = useState<Set<string>>(new Set());
+  const [phoneFmtBad, setPhoneFmtBad] = useState(false); // phone present but wrong format (vs empty)
+  const clearBasic = (key: string) =>
+    setMissingBasics((m) => { if (!m.has(key)) return m; const n = new Set(m); n.delete(key); return n; });
 
   // Al-Sawarey channel is only chosen in staff mode; gating applies while it's on.
   const alsawarey = staffMode && showOnBrokerage;
 
   // Choosing a parent classifier clears its descendants (hard nesting Type→Purpose→Status).
   function setSel(cid: string, oid: string) {
+    if (oid) clearBasic(cid); // a real pick clears this classifier's red highlight
     setSelected((prev) => {
       const next = { ...prev, [cid]: oid };
       const key = clsById.get(cid)?.key;
@@ -489,30 +496,52 @@ export function ListingForm({
 
   function submit(status: 'DRAFT' | 'PENDING') {
     setError('');
-    if (!allChosen || !title.trim() || !contactPhone.trim()) {
-      setError(tc('fillRequired'));
-      return;
-    }
-    if (!isValidPhone(contactPhone)) { setError(tc('phoneInvalid')); return; }
-    // Mandatory basic details (e.g. the city) must be filled before PUBLISHING —
-    // a rough DRAFT may stay incomplete (matches the server-side guard).
-    if (status === 'PENDING') {
-      const missingList = attributes.filter((a) => {
-        if (!isRequiredAttr(a) || !applies(a)) return false;
-        const v = vals[a.id];
-        // A boolean is an ANSWER either way — «لا» (false) on a required YESNO must pass.
-        return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : typeof v === 'boolean' ? false : !v;
-      });
-      if (missingList.length) {
-        setMissingAttrIds(new Set(missingList.map((a) => a.id)));
-        setError(`${tc('fillRequired')} — ${missingList.map((a) => L(a.labelAr, a.labelEn)).join('، ')}`);
-        // Bring the first highlighted field into view.
-        if (typeof document !== 'undefined') {
-          setTimeout(() => document.getElementById(`attr-${missingList[0]!.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
-        }
-        return;
+    // BASIC fields (the 3 classifiers + title + phone) are required to save at all — even a draft.
+    // Flag every missing one so the user isn't left guessing which field the error meant.
+    const missBasics = new Set<string>();
+    for (const c of classifiers) if (!selected[c.id]) missBasics.add(c.id);
+    if (!title.trim()) missBasics.add('title');
+    const phoneEmpty = !contactPhone.trim();
+    const phoneBad = !phoneEmpty && !isValidPhone(contactPhone);
+    if (phoneEmpty || phoneBad) missBasics.add('phone');
+    setPhoneFmtBad(phoneBad);
+
+    // Required DETAILS only block PUBLISHING (PENDING) — a rough draft may stay incomplete
+    // (matches the server-side guard).
+    const missAttrs =
+      status === 'PENDING'
+        ? attributes.filter((a) => {
+            if (!isRequiredAttr(a) || !applies(a)) return false;
+            const v = vals[a.id];
+            // A boolean is an ANSWER either way — «لا» (false) on a required YESNO must pass.
+            return Array.isArray(v) ? v.length === 0 : typeof v === 'string' ? !v.trim() : typeof v === 'boolean' ? false : !v;
+          })
+        : [];
+
+    setMissingBasics(missBasics);
+    setMissingAttrIds(new Set(missAttrs.map((a) => a.id)));
+
+    if (missBasics.size || missAttrs.length) {
+      // One summary naming EVERY missing field (basics + details), so nothing is a mystery.
+      const basicName = (k: string) =>
+        k === 'title' ? t('listingTitle')
+          : k === 'phone' ? (phoneBad ? tc('phoneInvalid') : t('contactPhone'))
+            : L(clsById.get(k)?.nameAr ?? '', clsById.get(k)?.nameEn ?? '');
+      const names = [...[...missBasics].map(basicName), ...missAttrs.map((a) => L(a.labelAr, a.labelEn))];
+      setError(`${tc('fillRequired')} — ${names.join('، ')}`);
+      // Scroll to whichever missing field sits highest on the page (basics or details).
+      if (typeof document !== 'undefined') {
+        const ids = [
+          ...[...missBasics].map((k) => (k === 'title' ? 'basic-title' : k === 'phone' ? 'basic-phone' : `basic-cls-${k}`)),
+          ...missAttrs.map((a) => `attr-${a.id}`),
+        ];
+        setTimeout(() => {
+          const els = ids.map((id) => document.getElementById(id)).filter((e): e is HTMLElement => !!e);
+          els.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+          els[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
       }
-      setMissingAttrIds(new Set());
+      return;
     }
     start(async () => {
       // Stop NEW auto-saves, then wait for any in-flight one to land so its created id is
@@ -840,12 +869,13 @@ export function ListingForm({
             const opts = visibleOptions(c);
             const parentPicked = c.key === 'purpose' ? !!selOf('type') : c.key === 'condition' ? !!selOf('purpose') : true;
             return (
-              <label key={c.id} className="block text-sm">
+              <label key={c.id} id={`basic-cls-${c.id}`} className="block text-sm">
                 {L(c.nameAr, c.nameEn)}
-                <select value={selected[c.id] ?? ''} onChange={(e) => setSel(c.id, e.target.value)} disabled={!parentPicked} className={inp}>
+                <select value={selected[c.id] ?? ''} onChange={(e) => setSel(c.id, e.target.value)} disabled={!parentPicked} className={`${inp} ${missingBasics.has(c.id) ? 'ring-2 ring-red-400' : ''}`}>
                   <option value="">{parentPicked ? '—' : t('pickParentFirst')}</option>
                   {opts.map((o) => (<option key={o.id} value={o.id}>{L(o.nameAr, o.nameEn)}</option>))}
                 </select>
+                {missingBasics.has(c.id) && <span className="mt-1 block text-xs font-semibold text-red-600">{L('هذا الحقل مطلوب', 'This field is required')}</span>}
               </label>
             );
           })}
@@ -955,12 +985,13 @@ export function ListingForm({
         )}
 
         {/* Title (+ auto-generate) */}
-        <div>
+        <div id="basic-title">
           <div className="mb-1 flex items-center justify-between gap-2">
             <span className="text-sm">{t('listingTitle')}</span>
             <button type="button" onClick={autoTitle} className="rounded border border-graphite/25 px-2 py-0.5 text-xs hover:bg-graphite/10">✨ {t('autoTitle')}</button>
           </div>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} className={inp} />
+          <input value={title} onChange={(e) => { setTitle(e.target.value); clearBasic('title'); }} className={`${inp} ${missingBasics.has('title') ? 'ring-2 ring-red-400' : ''}`} />
+          {missingBasics.has('title') && <span className="mt-1 block text-xs font-semibold text-red-600">{L('هذا الحقل مطلوب', 'This field is required')}</span>}
         </div>
 
         {/* Price row: السعر · السعر لـ · أقل سعر (internal). Then: ملاحظة على السعر · قابل للتفاوض؟
@@ -1094,7 +1125,10 @@ export function ListingForm({
 
       {/* ── رقم التواصل ── */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm">{t('contactPhone')}<input type="tel" dir="ltr" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inp} /></label>
+        <label id="basic-phone" className="text-sm">{t('contactPhone')}
+          <input type="tel" dir="ltr" value={contactPhone} onChange={(e) => { setContactPhone(e.target.value); clearBasic('phone'); }} className={`${inp} ${missingBasics.has('phone') ? 'ring-2 ring-red-400' : ''}`} />
+          {missingBasics.has('phone') && <span className="mt-1 block text-xs font-semibold text-red-600">{phoneFmtBad ? tc('phoneInvalid') : L('هذا الحقل مطلوب', 'This field is required')}</span>}
+        </label>
         <label className="flex items-end gap-2 text-sm"><input type="checkbox" checked={contactWhatsapp} onChange={(e) => setContactWhatsapp(e.target.checked)} /> {t('whatsapp')}</label>
       </div>
 
