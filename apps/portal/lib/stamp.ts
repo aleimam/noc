@@ -2,7 +2,7 @@
 // on/off + format; a global master switch overrides all. Stamps are always derived from
 // the pure original, so turning off / changing format / re-stamping never loses data.
 import path from 'node:path';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { prisma } from '@noc/db';
 import { uploadRoot } from './uploads';
@@ -261,6 +261,35 @@ async function saveStampBuffer(buf: Buffer, ext: string): Promise<string> {
   return `/uploads/${rel}/${name}`;
 }
 
+/**
+ * Delete a STAMPED rendition that has just been superseded.
+ *
+ * ⚠️ HARD RULE — the watermark system must stay reversible AT ALL TIMES (owner requirement):
+ * `originalPath` (the pure original) and a map's `cleanPath` are NEVER deleted. Revert works by
+ * pointing `path` back at `originalPath`, so removing a stale stamp cannot affect it — the stamp
+ * is regenerated from the original on the next re-stamp.
+ *
+ * This exists because `saveStampBuffer()` names every rendition with a fresh `randomUUID()`, so
+ * each re-stamp wrote a NEW file and abandoned the previous one with nothing referencing it.
+ * Listing saves re-stamp, so this leaked on every save and inflated every backup archive.
+ *
+ * Best-effort: a failure here must never break a save.
+ */
+export async function unlinkSupersededStamp(
+  prev: string | null | undefined,
+  originalPath: string | null | undefined,
+  next: string,
+): Promise<void> {
+  if (!prev || prev === next) return;
+  if (!originalPath || prev === originalPath) return; // NEVER the pure original
+  if (!prev.startsWith('/uploads/')) return; // only ever inside our own upload tree
+  try {
+    await rm(abs(prev), { force: true });
+  } catch {
+    /* best effort — a stale file is far better than a failed save */
+  }
+}
+
 /** Re-stamp ONE listing's gallery photos from their pure originals using the config for the
  *  listing's Type (the per-listing-category rule). Idempotent; reverts to originals when off.
  *  Best-effort — the caller should not fail if this throws. Returns the photo count touched. */
@@ -281,7 +310,10 @@ export async function restampListingPhotos(listingId: string): Promise<number> {
     try {
       if (!active) {
         // Stamping off for this listing → show the pure original (no image I/O).
-        if (r.path !== r.originalPath) await prisma.attachment.update({ where: { id: r.id }, data: { path: r.originalPath } });
+        if (r.path !== r.originalPath) {
+          await prisma.attachment.update({ where: { id: r.id }, data: { path: r.originalPath } });
+          await unlinkSupersededStamp(r.path, r.originalPath, r.originalPath);
+        }
         count++;
         continue;
       }
@@ -291,8 +323,11 @@ export async function restampListingPhotos(listingId: string): Promise<number> {
         const ext = (r.originalPath.split('.').pop() || 'jpg').toLowerCase();
         const newPath = await saveStampBuffer(out, ext);
         await prisma.attachment.update({ where: { id: r.id }, data: { path: newPath, size: out.length } });
+        // Drop the rendition we just replaced (never the original — see the guard).
+        await unlinkSupersededStamp(r.path, r.originalPath, newPath);
       } else if (r.path !== r.originalPath) {
         await prisma.attachment.update({ where: { id: r.id }, data: { path: r.originalPath, size: orig.length } });
+        await unlinkSupersededStamp(r.path, r.originalPath, r.originalPath);
       }
       count++;
     } catch {

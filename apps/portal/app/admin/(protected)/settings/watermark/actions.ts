@@ -14,6 +14,7 @@ import {
   logoForCategory,
   categoryActive,
   restampListingPhotos,
+  unlinkSupersededStamp,
   BAKED_CATEGORIES,
   type StampSettings,
   type StampCategory,
@@ -86,7 +87,8 @@ export async function restampCategory(cat: StampCategory): Promise<CountResult> 
     const contacts = active && cfg.footerEnabled ? await getBrandContacts(brandForCategory(cat)) : [];
     const rows = await prisma.attachment.findMany({
       where: { stampCategory: cat, originalPath: { not: null } },
-      select: { id: true, originalPath: true },
+      // `path` too: we need the PREVIOUS rendition so it can be unlinked once superseded.
+      select: { id: true, originalPath: true, path: true },
     });
     let count = 0;
     for (const r of rows) {
@@ -99,12 +101,15 @@ export async function restampCategory(cat: StampCategory): Promise<CountResult> 
             const ext = r.originalPath.split('.').pop() || 'jpg';
             const newPath = await saveBuffer(out, ext);
             await prisma.attachment.update({ where: { id: r.id }, data: { path: newPath, size: out.length } });
+            await unlinkSupersededStamp(r.path, r.originalPath, newPath);
           } else {
             await prisma.attachment.update({ where: { id: r.id }, data: { path: r.originalPath, size: origBuf.length } });
+            await unlinkSupersededStamp(r.path, r.originalPath, r.originalPath);
           }
         } else {
           // Stamping off for this category → show the pure original.
           await prisma.attachment.update({ where: { id: r.id }, data: { path: r.originalPath, size: origBuf.length } });
+          await unlinkSupersededStamp(r.path, r.originalPath, r.originalPath);
         }
         count++;
       } catch {
@@ -132,12 +137,15 @@ export async function revertCategory(cat: StampCategory): Promise<CountResult> {
     }
     const rows = await prisma.attachment.findMany({
       where: { stampCategory: cat, originalPath: { not: null } },
-      select: { id: true, originalPath: true },
+      select: { id: true, originalPath: true, path: true },
     });
     let count = 0;
     for (const r of rows) {
       if (!r.originalPath) continue;
       await prisma.attachment.update({ where: { id: r.id }, data: { path: r.originalPath } });
+      // The stamped rendition is now unreferenced. Reverting stays lossless: the ORIGINAL is
+      // untouched, and re-stamping regenerates the stamp from it.
+      await unlinkSupersededStamp(r.path, r.originalPath, r.originalPath);
       count++;
     }
     return { ok: true, count };
