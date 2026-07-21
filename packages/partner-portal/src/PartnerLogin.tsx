@@ -76,19 +76,29 @@ export function PartnerLogin() {
     }
     setError('');
     setLoading(true);
-    const res = await fetch('/api/partner/otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier, channel, locale }),
-    });
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; sentTo?: string };
-    setLoading(false);
-    if (json.ok) { setSentTo(json.sentTo ?? ''); setStep('sent'); }
-    else if (json.error === 'no_phone') setError(L('لا يوجد هاتف على هذا الحساب — جرّب البريد أو كلمة المرور', 'No phone on this account — try email or your password'));
-    else if (json.error === 'no_email') setError(L('لا يوجد بريد على هذا الحساب — جرّب الهاتف أو كلمة المرور', 'No email on this account — try phone or your password'));
-    else if (json.error === 'not_found') setError(L('لم نجد هذا الحساب — تحقق من البيانات', 'Account not found — check the details'));
-    else if (json.error === 'rate_limited' || json.error === 'cooldown') setError(L('انتظر قليلاً قبل طلب رمز جديد', 'Wait a moment before requesting a new code'));
-    else setError(L('تعذّر إرسال الرمز، حاول بعد قليل', 'Could not send the code, try again shortly'));
+    // try/catch/finally: an offline phone or a dropped request rejects the fetch, which used to
+    // escape before setLoading(false) — leaving "Send code" spinning forever with no message, so
+    // the only way out was a reload that lost everything typed. This is the core audience's
+    // normal condition (a relative's phone on a weak connection), so it must always recover.
+    try {
+      const res = await fetch('/api/partner/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, channel, locale }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; sentTo?: string };
+      if (json.ok) { setSentTo(json.sentTo ?? ''); setStep('sent'); }
+      // `not_found` now also covers site-disabled and missing-channel (the OTP endpoints return
+      // one indistinguishable answer so they can't be used to enumerate accounts), so the
+      // message names the alternatives instead of asserting the account doesn't exist.
+      else if (json.error === 'not_found') setError(L('تعذّر إرسال الرمز لهذه البيانات — جرّب طريقة أخرى أو كلمة المرور', 'Could not send a code for those details — try another method or your password'));
+      else if (json.error === 'rate_limited' || json.error === 'cooldown') setError(L('انتظر قليلاً قبل طلب رمز جديد', 'Wait a moment before requesting a new code'));
+      else setError(L('تعذّر إرسال الرمز، حاول بعد قليل', 'Could not send the code, try again shortly'));
+    } catch {
+      setError(L('تعذّر الاتصال — تحقق من الإنترنت وحاول مرة أخرى', 'Connection failed — check your internet and try again'));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function verifyCode(e: FormEvent) {

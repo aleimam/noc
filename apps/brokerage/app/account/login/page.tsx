@@ -36,22 +36,30 @@ export default function CustomerLogin() {
   async function requestCode(): Promise<void> {
     setLoading(true);
     setError('');
-    const res = await fetch('/api/auth/otp/request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, locale }),
-    });
-    const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-    setLoading(false);
-    if (res.ok) {
-      setStep('code');
-      setCooldown(RESEND_SECONDS);
-      return;
-    }
-    if (j?.error === 'rate_limited' || j?.error === 'cooldown') {
-      setError(L('حاولت كثيرًا — انتظر دقائق ثم أعد المحاولة', 'Too many attempts — wait a few minutes then try again'));
-    } else {
-      setError(L('تعذّر إرسال الرمز، تأكد من الرقم', 'Could not send the code — check the number'));
+    // try/catch/finally — a dropped request on a weak connection used to escape before
+    // setLoading(false), leaving the button spinning forever with no message and no way back
+    // except a reload that loses the typed number.
+    try {
+      const res = await fetch('/api/auth/otp/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, locale }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (res.ok) {
+        setStep('code');
+        setCooldown(RESEND_SECONDS);
+        return;
+      }
+      if (j?.error === 'rate_limited' || j?.error === 'cooldown') {
+        setError(L('حاولت كثيرًا — انتظر دقائق ثم أعد المحاولة', 'Too many attempts — wait a few minutes then try again'));
+      } else {
+        setError(L('تعذّر إرسال الرمز، تأكد من الرقم', 'Could not send the code — check the number'));
+      }
+    } catch {
+      setError(L('تعذّر الاتصال — تحقق من الإنترنت وحاول مرة أخرى', 'Connection failed — check your internet and try again'));
+    } finally {
+      setLoading(false);
     }
   }
 

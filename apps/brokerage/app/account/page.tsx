@@ -55,8 +55,10 @@ export default async function AccountPage() {
           {requests.length === 0 ? (
             <p className="rounded-2xl bg-white p-8 text-center text-ink-500 shadow-sm">{L('لا توجد طلبات بعد.', 'No requests yet.')}</p>
           ) : (
-            <div className="overflow-hidden rounded-2xl bg-white text-navy-800 shadow-sm">
-              <table className="w-full text-sm">
+            // overflow-x-auto, not overflow-hidden: at 320–375px the columns were clipped with
+            // no way to reach the status/date, and the page itself must stay overflow-safe.
+            <div className="overflow-x-auto rounded-2xl bg-white text-navy-800 shadow-sm">
+              <table className="w-full min-w-[32rem] text-sm">
                 <thead className="bg-navy-50 text-navy-700">
                   <tr>
                     <th className="p-3 text-start">{L('الأرض', 'Land')}</th>

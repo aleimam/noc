@@ -147,7 +147,7 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
                     target="_blank"
                     rel="noopener noreferrer"
                     title={L('البوستر بدون علامة — لاستخدامك', 'Unbranded poster — for your own use')}
-                    className="rounded-md border border-graphite/25 px-3 py-1 text-xs font-semibold hover:bg-graphite/10"
+                    className="inline-flex min-h-10 items-center rounded-md border border-graphite/25 px-3 py-2 text-xs font-semibold hover:bg-graphite/10"
                   >
                     🖼️ {L('البوستر', 'Poster')}
                   </a>
@@ -158,7 +158,7 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
                     target="_blank"
                     rel="noopener noreferrer"
                     title={L('خريطة الموقع', 'Location map')}
-                    className="rounded-md border border-graphite/25 px-3 py-1 text-xs font-semibold hover:bg-graphite/10"
+                    className="inline-flex min-h-10 items-center rounded-md border border-graphite/25 px-3 py-2 text-xs font-semibold hover:bg-graphite/10"
                   >
                     🗺️ {L('الخريطة', 'Map')}
                   </a>
@@ -169,12 +169,12 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
                     href={`${publicBase}/${r.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-md border border-gold-400/60 bg-gold/10 px-3 py-1 text-xs font-semibold text-gold-700 hover:bg-gold/20"
+                    className="inline-flex min-h-10 items-center rounded-md border border-gold-400/60 bg-gold/10 px-3 py-2 text-xs font-semibold text-gold-700 hover:bg-gold/20"
                   >
                     🛒 {L('عرض في السوق', 'View in market')}
                   </a>
                 )}
-                <a href={`/partner/listings/${r.id}/edit`} className="rounded-md border border-graphite/25 px-3 py-1 text-xs font-semibold hover:bg-graphite/10">
+                <a href={`/partner/listings/${r.id}/edit`} className="inline-flex min-h-10 items-center rounded-md border border-graphite/25 px-3 py-2 text-xs font-semibold hover:bg-graphite/10">
                   ✎ {L('تعديل', 'Edit')}
                 </a>
               </div>

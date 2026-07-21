@@ -419,7 +419,17 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
               <div key={p.id} className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.path} alt="" className="h-20 w-20 rounded-md object-cover" />
-                <button type="button" onClick={() => setPhotos(photos.filter((x) => x.id !== p.id))} aria-label={L('حذف الصورة', 'Remove photo')} className="absolute -end-1 -top-1 h-5 w-5 rounded-full bg-red-600 text-xs leading-none text-white">×</button>
+                {/* 28px visual dot, but a ≥40px hit area via the padded wrapper — a 20px
+                    icon-only target was the hardest control to hit on a 320px phone, and
+                    missing it taps the thumbnail instead. */}
+                <button
+                  type="button"
+                  onClick={() => setPhotos(photos.filter((x) => x.id !== p.id))}
+                  aria-label={L('حذف الصورة', 'Remove photo')}
+                  className="absolute -end-3 -top-3 flex h-11 w-11 items-center justify-center"
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600 text-base leading-none text-white shadow">×</span>
+                </button>
               </div>
             ))}
           </div>

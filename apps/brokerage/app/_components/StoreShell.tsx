@@ -107,11 +107,17 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
             <Link href={content.nav.allLands.href} className="whitespace-nowrap rounded-lg px-2.5 py-2 text-sm hover:bg-white/10">{Lc(content.nav.allLands.label)}</Link>
             <Link href={content.nav.featured.href} className="whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-bold text-gold hover:bg-white/10">★ {Lc(content.nav.featured.label)}</Link>
             {content.nav.groups.map((group, gi) => (
+              // group-focus-within as well as group-hover: the submenu was revealed ONLY by
+              // hover, so a keyboard or switch-access user could tab to the trigger and never
+              // reach these destinations, and neither could anyone without precise pointer
+              // hover. Focusing the trigger (or any link inside) now opens it, and Tab/Shift-Tab
+              // moves through the links normally. (The mobile hamburger already lists them
+              // explicitly, which stays the accessible baseline.)
               <div key={gi} className="group relative">
-                <button className="whitespace-nowrap rounded-lg px-2.5 py-2 text-sm hover:bg-white/10">{Lc(group.title)} ▾</button>
-                <div className="invisible absolute start-0 top-full z-50 min-w-44 rounded-xl bg-white p-2 text-navy-800 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 dark:bg-navy-800 dark:text-soft">
+                <button className="whitespace-nowrap rounded-lg px-2.5 py-2 text-sm hover:bg-white/10 focus-visible:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold">{Lc(group.title)} ▾</button>
+                <div className="invisible absolute start-0 top-full z-50 min-w-44 rounded-xl bg-white p-2 text-navy-800 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:bg-navy-800 dark:text-soft">
                   {group.links.map((link, li) => (
-                    <Link key={li} href={link.href} className="block rounded-lg px-3 py-1.5 text-sm hover:bg-navy-50">{Lc(link.label)}</Link>
+                    <Link key={li} href={link.href} className="block min-h-10 rounded-lg px-3 py-2 text-sm hover:bg-navy-50 focus-visible:bg-navy-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold">{Lc(link.label)}</Link>
                   ))}
                 </div>
               </div>

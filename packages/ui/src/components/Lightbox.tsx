@@ -198,30 +198,30 @@ export function Lightbox({ src, photos, index = 0, alt, locale = 'ar', onIndexCh
         type="button"
         onClick={onClose}
         aria-label={L('إغلاق', 'Close')}
-        className="fixed end-4 top-4 rounded-full bg-soft/20 px-3 py-1 text-lg text-soft hover:bg-soft/30"
+        className="fixed end-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-soft/20 text-lg text-soft hover:bg-soft/30"
       >
         ✕
       </button>
 
       {/* zoom controls */}
       <div className="fixed start-4 top-4 flex gap-2" onClick={(e) => e.stopPropagation()}>
-        <button type="button" onClick={() => zoomBy(0.4)} aria-label={L('تكبير', 'Zoom in')} className="h-9 w-9 rounded-full bg-soft/20 text-xl leading-none text-soft hover:bg-soft/30">＋</button>
-        <button type="button" onClick={() => zoomBy(-0.4)} aria-label={L('تصغير', 'Zoom out')} className="h-9 w-9 rounded-full bg-soft/20 text-xl leading-none text-soft hover:bg-soft/30">－</button>
+        <button type="button" onClick={() => zoomBy(0.4)} aria-label={L('تكبير', 'Zoom in')} className="flex h-11 w-11 items-center justify-center rounded-full bg-soft/20 text-xl leading-none text-soft hover:bg-soft/30">＋</button>
+        <button type="button" onClick={() => zoomBy(-0.4)} aria-label={L('تصغير', 'Zoom out')} className="flex h-11 w-11 items-center justify-center rounded-full bg-soft/20 text-xl leading-none text-soft hover:bg-soft/30">－</button>
       </div>
 
       {/* actions + prev / next + counter */}
       <div className="fixed inset-x-0 bottom-4 flex flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <button type="button" onClick={copyImage} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">📋 {L('نسخ', 'Copy')}</button>
-          <button type="button" onClick={share} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">📤 {L('مشاركة', 'Share')}</button>
-          <button type="button" onClick={download} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">⬇️ {L('تنزيل', 'Download')}</button>
-          <button type="button" onClick={openTab} className="rounded-full bg-soft/20 px-3 py-1.5 text-sm text-soft hover:bg-soft/30">🔗 {L('فتح في صفحة', 'Open in tab')}</button>
+          <button type="button" onClick={copyImage} className="inline-flex min-h-10 items-center rounded-full bg-soft/20 px-4 py-2 text-sm text-soft hover:bg-soft/30">📋 {L('نسخ', 'Copy')}</button>
+          <button type="button" onClick={share} className="inline-flex min-h-10 items-center rounded-full bg-soft/20 px-4 py-2 text-sm text-soft hover:bg-soft/30">📤 {L('مشاركة', 'Share')}</button>
+          <button type="button" onClick={download} className="inline-flex min-h-10 items-center rounded-full bg-soft/20 px-4 py-2 text-sm text-soft hover:bg-soft/30">⬇️ {L('تنزيل', 'Download')}</button>
+          <button type="button" onClick={openTab} className="inline-flex min-h-10 items-center rounded-full bg-soft/20 px-4 py-2 text-sm text-soft hover:bg-soft/30">🔗 {L('فتح في صفحة', 'Open in tab')}</button>
         </div>
         {many && (
           <div className="flex items-center justify-center gap-3">
-            <button type="button" onClick={() => go(1)} className="rounded-full bg-soft/20 px-4 py-1.5 text-sm text-soft hover:bg-soft/30">{L('التالي', 'Next')}</button>
+            <button type="button" onClick={() => go(1)} className="inline-flex min-h-10 items-center rounded-full bg-soft/20 px-5 py-2 text-sm text-soft hover:bg-soft/30">{L('التالي', 'Next')}</button>
             <span className="rounded-full bg-soft/15 px-3 py-1 text-sm text-soft" dir="ltr" style={{ fontVariantNumeric: 'tabular-nums' }}>{i + 1} / {list.length}</span>
-            <button type="button" onClick={() => go(-1)} className="rounded-full bg-soft/20 px-4 py-1.5 text-sm text-soft hover:bg-soft/30">{L('السابق', 'Previous')}</button>
+            <button type="button" onClick={() => go(-1)} className="inline-flex min-h-10 items-center rounded-full bg-soft/20 px-5 py-2 text-sm text-soft hover:bg-soft/30">{L('السابق', 'Previous')}</button>
           </div>
         )}
       </div>

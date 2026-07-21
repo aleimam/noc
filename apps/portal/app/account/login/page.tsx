@@ -33,13 +33,25 @@ export default function CustomerLoginPage() {
     return () => clearInterval(id);
   }, [resendIn]);
 
-  async function requestCode(): Promise<boolean> {
-    const res = await fetch('/api/auth/otp/request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, locale }),
-    });
-    return res.ok;
+  // Plain-words offline message. A dropped request used to THROW out of requestCode, so both
+  // callers skipped their setLoading(false) and the button span forever with nothing on screen —
+  // on a weak mobile connection, which is this audience's normal condition.
+  const offlineMsg = locale === 'ar'
+    ? 'تعذّر الاتصال — تحقق من الإنترنت وحاول مرة أخرى'
+    : 'Connection failed — check your internet and try again';
+
+  /** Never throws: a network/timeout failure is reported as 'offline', not an exception. */
+  async function requestCode(): Promise<'ok' | 'failed' | 'offline'> {
+    try {
+      const res = await fetch('/api/auth/otp/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, locale }),
+      });
+      return res.ok ? 'ok' : 'failed';
+    } catch {
+      return 'offline';
+    }
   }
 
   async function sendCode(e: FormEvent) {
@@ -48,14 +60,17 @@ export default function CustomerLoginPage() {
     setLoading(true);
     setError('');
     setMsg('');
-    const ok = await requestCode();
-    setLoading(false);
-    if (ok) {
-      setStep('code');
-      setMsg(t('codeSent'));
-      setResendIn(60);
-    } else {
-      setError(t('sendFailed'));
+    try {
+      const r = await requestCode();
+      if (r === 'ok') {
+        setStep('code');
+        setMsg(t('codeSent'));
+        setResendIn(60);
+      } else {
+        setError(r === 'offline' ? offlineMsg : t('sendFailed'));
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -65,13 +80,16 @@ export default function CustomerLoginPage() {
     setLoading(true);
     setError('');
     setMsg('');
-    const ok = await requestCode();
-    setLoading(false);
-    if (ok) {
-      setMsg(t('codeSent'));
-      setResendIn(60);
-    } else {
-      setError(t('sendFailed'));
+    try {
+      const r = await requestCode();
+      if (r === 'ok') {
+        setMsg(t('codeSent'));
+        setResendIn(60);
+      } else {
+        setError(r === 'offline' ? offlineMsg : t('sendFailed'));
+      }
+    } finally {
+      setLoading(false);
     }
   }
 

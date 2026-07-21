@@ -80,8 +80,9 @@ export default async function SellPage() {
             <div className="mt-5 space-y-6">
               <div>
                 <h3 className="mb-3 text-lg font-bold text-navy-800">التسعير الجيد = بيع أسرع</h3>
-                <div className="overflow-hidden rounded-2xl border border-ink-200">
-                  <table className="w-full text-sm">
+                {/* overflow-x-auto so the pricing rows stay reachable on a small phone. */}
+                <div className="overflow-x-auto rounded-2xl border border-ink-200">
+                  <table className="w-full min-w-[24rem] text-sm">
                     <thead className="bg-navy-50 text-navy-700">
                       <tr><th className="p-3 text-start">سعر العرض</th><th className="p-3 text-start">سرعة البيع المتوقعة</th></tr>
                     </thead>
