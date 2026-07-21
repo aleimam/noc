@@ -7,20 +7,27 @@ import type { ScanRow, ScanReport } from '../types';
 
 type Result = { ok: true } | { ok: false; error: string };
 
-/** Register uploaded scans (already stored via /api/upload) and recompute the match report. */
-export async function registerScans(
-  files: { fileName: string; path: string; mime: string; attachmentId?: string }[],
-): Promise<Result> {
-  await requirePermission('sheets', 'CREATE');
+/** Register uploaded scans (already stored via /api/upload) and recompute the match report.
+ *  The stored path/mime are read from the Attachment row the CALLER just uploaded — never taken
+ *  from the caller. A forged `path` could aim the (publicly reachable) scan viewer at any other
+ *  file under /uploads, e.g. a private listing document, and a forged `attachmentId` could claim
+ *  somebody else's upload. */
+export async function registerScans(files: { fileName: string; attachmentId: string }[]): Promise<Result> {
+  const viewer = await requirePermission('sheets', 'CREATE');
   if (!files.length) return { ok: false, error: 'no_file' };
   try {
     for (const f of files) {
       const fileName = f.fileName.trim();
-      if (!fileName) continue;
+      if (!fileName || !f.attachmentId) continue;
+      const att = await prisma.attachment.findFirst({
+        where: { id: f.attachmentId, uploaderId: viewer.id },
+        select: { id: true, path: true, mime: true },
+      });
+      if (!att || !att.path.startsWith('/uploads/')) return { ok: false, error: 'bad_file' };
       await prisma.rationingScan.upsert({
         where: { fileName },
-        update: { path: f.path, mime: f.mime, attachmentId: f.attachmentId ?? null },
-        create: { fileName, path: f.path, mime: f.mime, attachmentId: f.attachmentId ?? null },
+        update: { path: att.path, mime: att.mime, attachmentId: att.id },
+        create: { fileName, path: att.path, mime: att.mime, attachmentId: att.id },
       });
     }
     revalidatePath('/admin/rationing/scans');

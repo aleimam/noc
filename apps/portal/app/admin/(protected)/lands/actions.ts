@@ -106,11 +106,53 @@ export async function upsertCity(input: {
   }
 }
 
+/** Geo deletes strand loose assets: `AreaMap` keys off a plain `areaId` STRING (no FK) and every
+ *  photo lives in the FK-less polymorphic `Attachment` table, so removing a city / district /
+ *  neighborhood used to leave its maps, masterplans and update photos behind forever — and an
+ *  orphaned AreaMap still reads back, so a stale map can resurface through the inheritance matrix
+ *  (exactly the orphan found and hand-deleted on prod, 2026-07-18). Returns the cleanup ops to run
+ *  in the SAME transaction as the delete. Files under /uploads are left in place, matching
+ *  purgeListing(). */
+async function geoCleanupOps(scope: {
+  cityIds?: string[];
+  districtIds?: string[];
+  neighborhoodIds?: string[];
+  blockIds?: string[];
+}): Promise<Prisma.PrismaPromise<unknown>[]> {
+  const { cityIds = [], districtIds = [], neighborhoodIds = [], blockIds = [] } = scope;
+  const ops: Prisma.PrismaPromise<unknown>[] = [];
+
+  const areaIds = [...cityIds, ...districtIds, ...neighborhoodIds];
+  if (areaIds.length) {
+    ops.push(prisma.attachment.deleteMany({ where: { ownerType: { in: ['AreaMap', 'Masterplan'] }, ownerId: { in: areaIds } } }));
+    if (cityIds.length) ops.push(prisma.areaMap.deleteMany({ where: { level: 'city', areaId: { in: cityIds } } }));
+    if (districtIds.length) ops.push(prisma.areaMap.deleteMany({ where: { level: 'district', areaId: { in: districtIds } } }));
+    if (neighborhoodIds.length) ops.push(prisma.areaMap.deleteMany({ where: { level: 'neighborhood', areaId: { in: neighborhoodIds } } }));
+  }
+
+  // GeoUpdate rows themselves cascade at the DB, but the photos hanging off them don't — so the
+  // ids have to be collected BEFORE the delete runs.
+  const or = [
+    ...(cityIds.length ? [{ cityId: { in: cityIds } }] : []),
+    ...(districtIds.length ? [{ districtId: { in: districtIds } }] : []),
+    ...(neighborhoodIds.length ? [{ neighborhoodId: { in: neighborhoodIds } }] : []),
+    ...(blockIds.length ? [{ blockId: { in: blockIds } }] : []),
+  ];
+  if (or.length) {
+    const updates = await prisma.geoUpdate.findMany({ where: { OR: or }, select: { id: true } });
+    if (updates.length) {
+      ops.push(prisma.attachment.deleteMany({ where: { ownerType: 'GeoUpdate', ownerId: { in: updates.map((u) => u.id) } } }));
+    }
+  }
+  return ops;
+}
+
 export async function deleteCity(id: string): Promise<Result> {
   await requirePermission('lands', 'DELETE');
   try {
-    // Districts are detached (cityId → NULL via FK); city advantages cascade away.
-    await prisma.city.delete({ where: { id } });
+    // Districts are detached (cityId → NULL via FK); city advantages cascade away. The city's own
+    // maps/photos have no FK, so they're cleared explicitly alongside the row.
+    await prisma.$transaction([...(await geoCleanupOps({ cityIds: [id] })), prisma.city.delete({ where: { id } })]);
     rev();
     revalidatePath('/admin/lands/cities');
     return { ok: true };
@@ -153,7 +195,15 @@ export async function upsertDistrict(input: {
 export async function deleteDistrict(id: string): Promise<Result> {
   await requirePermission('lands', 'DELETE');
   try {
-    await prisma.district.delete({ where: { id } });
+    // Neighborhoods (and their blocks) cascade at the DB — their FK-less assets don't, so the
+    // descendant ids have to be gathered before the delete.
+    const nbs = await prisma.neighborhood.findMany({ where: { districtId: id }, select: { id: true, blocks: { select: { id: true } } } });
+    const neighborhoodIds = nbs.map((n) => n.id);
+    const blockIds = nbs.flatMap((n) => n.blocks.map((b) => b.id));
+    await prisma.$transaction([
+      ...(await geoCleanupOps({ districtIds: [id], neighborhoodIds, blockIds })),
+      prisma.district.delete({ where: { id } }),
+    ]);
     rev();
     return { ok: true };
   } catch (e) {
@@ -288,7 +338,11 @@ export async function saveGeoBasics(input: {
 export async function deleteNeighborhood(id: string): Promise<Result> {
   await requirePermission('lands', 'DELETE');
   try {
-    await prisma.neighborhood.delete({ where: { id } });
+    const blockIds = (await prisma.block.findMany({ where: { neighborhoodId: id }, select: { id: true } })).map((b) => b.id);
+    await prisma.$transaction([
+      ...(await geoCleanupOps({ neighborhoodIds: [id], blockIds })),
+      prisma.neighborhood.delete({ where: { id } }),
+    ]);
     rev();
     return { ok: true };
   } catch (e) {
@@ -315,7 +369,10 @@ export async function upsertBlock(input: { id?: string; neighborhoodId: string; 
 export async function deleteBlock(id: string): Promise<Result> {
   await requirePermission('lands', 'DELETE');
   try {
-    const b = await prisma.block.delete({ where: { id } });
+    const b = await prisma.block.findUnique({ where: { id }, select: { neighborhoodId: true } });
+    if (!b) return { ok: false, error: 'failed' };
+    // The block's own updates cascade, but their photos have no FK — clear them with the row.
+    await prisma.$transaction([...(await geoCleanupOps({ blockIds: [id] })), prisma.block.delete({ where: { id } })]);
     revalidatePath(`/admin/lands/neighborhoods/${b.neighborhoodId}`);
     rev();
     return { ok: true };
@@ -488,8 +545,25 @@ async function stampAndUpsertAreaMap(input: {
   annotation?: unknown; // editable annotator shapes (location maps)
   sourcePath?: string | null; // parent masterplan the location was annotated on
 }): Promise<Result> {
-  const att = await prisma.attachment.findUnique({ where: { id: input.attachmentId } });
-  if (!att) return { ok: false, error: 'failed' };
+  // A trashed listing must not gain new maps — it would resurrect assets a purge is about to
+  // remove, and the row is invisible everywhere the map would be shown.
+  if (input.level === 'listing') {
+    const live = await prisma.listing.findFirst({ where: { id: input.targetId, deletedAt: null }, select: { id: true } });
+    if (!live) return { ok: false, error: 'listing_unavailable' };
+  }
+  // Same rule as setMasterplan: only an unattached upload of the CALLER's, or an attachment this
+  // very target already owns. Without it any attachment id could be re-parented to AreaMap —
+  // silently stealing another entity's photo (it vanishes from wherever it was showing).
+  const session = await auth();
+  const uid = session?.user?.id ?? null;
+  const att = await prisma.attachment.findFirst({
+    where: {
+      id: input.attachmentId,
+      ...(uid ? { uploaderId: uid } : {}),
+      OR: [{ ownerType: null }, { ownerType: 'AreaMap', ownerId: input.targetId }],
+    },
+  });
+  if (!att) return { ok: false, error: 'attachment_not_available' };
   await prisma.attachment.update({ where: { id: att.id }, data: { ownerType: 'AreaMap', ownerId: input.targetId } });
 
   // Two independent per-site copies (each resolves its own logo: watermark-page override, else

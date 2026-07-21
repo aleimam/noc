@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
@@ -98,17 +98,27 @@ export async function POST(req: NextRequest) {
   const category = !isDoc ? req.nextUrl.searchParams.get('stamp') : null;
 
   // ownerType left null (draft) until the offer / partner listing action links it.
-  const attachment = await prisma.attachment.create({
-    data: {
-      filename,
-      originalName: file.name || filename,
-      path: purePath,
-      originalPath: purePath,
-      stampCategory: category,
-      mime,
-      size: file.size,
-      ...(userId ? { uploaderId: userId } : {}),
-    },
-  });
+  // MIRRORS the portal route: the bytes hit disk before the row exists, so a DB failure would
+  // leave a file under /uploads that nothing references and no purge job could ever identify.
+  // Compensate by removing what we just wrote, then surface the error.
+  let attachment;
+  try {
+    attachment = await prisma.attachment.create({
+      data: {
+        filename,
+        originalName: file.name || filename,
+        path: purePath,
+        originalPath: purePath,
+        stampCategory: category,
+        mime,
+        size: file.size,
+        ...(userId ? { uploaderId: userId } : {}),
+      },
+    });
+  } catch (e) {
+    await rm(path.join(dir, filename), { force: true }).catch(() => {});
+    console.error('upload: attachment row failed, wrote-then-removed file', e);
+    return NextResponse.json({ ok: false, error: 'failed' }, { status: 500 });
+  }
   return NextResponse.json({ ok: true, attachment: { id: attachment.id, path: attachment.path, originalName: attachment.originalName, mime } });
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from 'react';
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ImageAttachment, type UploadedAttachment } from '@noc/ui';
@@ -61,6 +61,23 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
   const [contactWhatsapp, setContactWhatsapp] = useState(initial.contactWhatsapp ?? true);
   const [vals, setVals] = useState<Record<string, string | boolean | string[]>>(initial.vals ?? {});
   const [photos, setPhotos] = useState<UploadedAttachment[]>(initial.photos ?? []);
+
+  // Has anything actually been touched? Cancel used to be a bare link, so one stray tap on a
+  // phone threw away everything typed AND every photo already uploaded, with no way back.
+  const snapshot = useMemo(
+    () =>
+      JSON.stringify([
+        typeId, purposeId, condId, title, description, price, priceUnit, contactPhone, contactWhatsapp,
+        Object.entries(vals).sort(([a], [b]) => a.localeCompare(b)),
+        photos.map((p) => p.id),
+      ]),
+    [typeId, purposeId, condId, title, description, price, priceUnit, contactPhone, contactWhatsapp, vals, photos],
+  );
+  const pristine = useRef(snapshot);
+  function confirmLeave(e: MouseEvent<HTMLAnchorElement>) {
+    if (snapshot === pristine.current) return;
+    if (!confirm(L('لديك تعديلات لم تُحفظ. هل تريد الخروج وفقدانها؟', 'You have unsaved changes. Leave and lose them?'))) e.preventDefault();
+  }
 
   const optClassifier = useMemo(() => {
     const m = new Map<string, string>();
@@ -448,7 +465,7 @@ export function LeanListingForm({ catalog, initial = {}, locale, returnTo = '/pa
       {error && <p ref={errRef} className="text-sm text-red-600">{error}</p>}
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={pending} className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-soft disabled:opacity-50">{initial.id ? L('حفظ التعديلات', 'Save changes') : L('نشر الإعلان', 'Submit listing')}</button>
-        <a href={returnTo} className="text-sm text-ink-500">{L('إلغاء', 'Cancel')}</a>
+        <a href={returnTo} onClick={confirmLeave} className="inline-flex min-h-10 items-center text-sm text-ink-500">{L('إلغاء', 'Cancel')}</a>
         <span className="text-xs opacity-60">{L('تخضع الإعلانات للمراجعة قبل النشر.', 'Listings are reviewed before publishing.')}</span>
       </div>
     </form>

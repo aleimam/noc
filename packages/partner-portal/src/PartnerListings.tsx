@@ -206,6 +206,9 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
                       key={s}
                       onClick={() => {
                         if (s === 'SOLD') { setSoldRow(r.id); setSoldInput(prices[r.id] ?? ''); }
+                        // Hiding pulls the listing off BOTH public sites instantly. SOLD already
+                        // has its own confirm panel; re-publishing is harmless. This one tap isn't.
+                        else if (s === 'ARCHIVED' && !confirm(L('سيتم إخفاء الإعلان من الموقع. هل أنت متأكد؟', 'This will hide the listing from the website. Are you sure?'))) return;
                         else setAvail(r.id, s);
                       }}
                       disabled={pending || r.status === s}

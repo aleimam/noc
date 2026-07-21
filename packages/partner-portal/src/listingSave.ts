@@ -182,8 +182,31 @@ export async function savePartnerListing(input: LeanListingInput): Promise<Resul
         if (upd.count === 0) throw new Error('forbidden');
         listingId = input.id;
       } else {
-        const created = await tx.listing.create({ data: { ...base, sellerId: userId } });
-        listingId = created.id;
+        // Idempotency window: on a flaky phone connection the response to the first submit can be
+        // lost, and the seller taps «نشر الإعلان» again — producing two identical PENDING rows for
+        // staff to moderate. Treat an identical trio+title from the same owner in the last minute
+        // as the SAME submission and overwrite it instead of creating a twin.
+        const recent = await tx.listing.findFirst({
+          where: {
+            ownerId,
+            deletedAt: null,
+            status: 'PENDING',
+            title: base.title,
+            typeOptionId: base.typeOptionId,
+            purposeOptionId: base.purposeOptionId,
+            conditionOptionId: base.conditionOptionId,
+            createdAt: { gte: new Date(Date.now() - 60_000) },
+          },
+          select: { id: true },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (recent) {
+          await tx.listing.update({ where: { id: recent.id }, data: { ...base, postersStale: true } });
+          listingId = recent.id;
+        } else {
+          const created = await tx.listing.create({ data: { ...base, sellerId: userId } });
+          listingId = created.id;
+        }
       }
 
       await writeValues(tx, listingId, values);

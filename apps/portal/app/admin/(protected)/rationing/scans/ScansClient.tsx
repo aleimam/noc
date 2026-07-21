@@ -98,7 +98,7 @@ export function ScansManager({ report }: { report: ScanReport }) {
     setBusy(true);
     setMsg(null);
     setProgress({ done: 0, total: files.length });
-    const registered: { fileName: string; path: string; mime: string; attachmentId?: string }[] = [];
+    const registered: { fileName: string; attachmentId: string }[] = [];
     try {
       for (let i = 0; i < files.length; i++) {
         const f = files[i]!;
@@ -108,7 +108,8 @@ export function ScansManager({ report }: { report: ScanReport }) {
         const res = await fetch('/api/upload', { method: 'POST', body: fd });
         const json = await res.json().catch(() => ({}));
         if (res.ok && json?.attachment) {
-          registered.push({ fileName: f.name, path: json.attachment.path, mime: f.type || 'image/jpeg', attachmentId: json.attachment.id });
+          // Only the identity is sent — the server reads path/mime off the attachment row itself.
+          registered.push({ fileName: f.name, attachmentId: json.attachment.id });
         }
         setProgress({ done: i + 1, total: files.length });
       }
