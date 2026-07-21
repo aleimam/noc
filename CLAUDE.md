@@ -433,13 +433,24 @@ headline) at the top of the findings file — **a later pass must not re-report 
   uploads copy failed was recorded SUCCESS; `RESTORE.md` didn't describe the off-site archive;
   trashed listings still emitted their old title/OG image as page metadata; five public write
   endpoints had no quota; dropped OTP requests left the login button spinning forever.
-- **Still open (4):** ① admin English coverage (~200 files hard-code Arabic; wants a shared
-  `L(ar,en)` + lint rule — **owner decision pending**, may be a non-issue if nobody uses the English
-  admin) · ② media cleanup second half (superseded stamped renditions never unlinked — **blocked on
-  a product question**: the watermark system is reversible by design, so deleting old renditions may
-  break revert) · ③ analytics rollup / price-index still materialize in Node (backfill arg now capped
-  at 120 days; low risk at current volume) · ④ **nothing is click-tested** — all of it is reasoned,
-  typechecked, built, deployed and HTTP-probed, but no admin/partner session was ever exercised.
+- **Owner decisions taken 2026-07-22 — do not re-litigate:**
+  - **ADMIN-EN-COVERAGE → DEFERRED (won't-do for now).** Owner: "we run the admin in Arabic most of
+    the time and we can translate; if it requires big effort, ignore it." It IS big (~200 files plus
+    a lint rule to stop the drift). Parked by name in the waiting list — do NOT start it
+    opportunistically or "while nearby".
+  - **Watermark reversibility → CONFIRMED A HARD RULE:** "the watermark system should be reversible
+    all the time." Pure originals (`Attachment.originalPath`) and a map's `cleanPath` are **NEVER**
+    deleted. Superseded STAMPED renditions ARE now unlinked (`b993c7d`) — safe because
+    `revertCategory()` restores `path` from `originalPath` (maps from `cleanPath`) and never reads a
+    previous stamp, so a re-stamp regenerates it from the untouched original. **Any future code that
+    writes a new rendition must call `unlinkSupersededStamp()` in `lib/stamp.ts`** — it refuses to
+    delete the original, anything not actually superseded, or anything outside `/uploads`.
+- **Still open (3):** ① branded MAP renditions (`alswareyPath`/`newobourPath`) still leak on
+  re-stamp — same `randomUUID()` pattern as photos, far lower frequency (admin-triggered, not
+  per-save) · ② analytics rollup / price-index still materialize their working set in Node (backfill
+  arg capped at 120 days; low risk at current volume) · ③ **nothing is click-tested** — all of it is
+  reasoned, typechecked, built, deployed and HTTP-probed, but no admin/partner session was ever
+  exercised (the agent has no login, and entering passwords is off-limits).
 
 **2026-07-15→17: gallery/perf/admin-UX batch (commits `eaf3708`→`df78560`, all deployed+verified).**
 - **Hero gallery + lightbox** on both sites' listing pages (see Feature map) + **first-party photo
