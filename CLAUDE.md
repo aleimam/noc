@@ -384,16 +384,25 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
    sitemap moved from "Couldn't fetch" to Success.
 
 **Verification pending (needs a staff/admin login — I can't from a shell; everything else this
-session is backed by real command output):** three of the Codex-audit UI fixes are reasoned +
-typechecked but not click-tested — (a) the admin archive toggle now shows ONLY on
-PUBLISHED/ARCHIVED rows (`/admin/marketplace/listings`); (b) Approve is disabled with the missing
-details named when a pending row is incomplete; (c) the listing form's auto-save shows a red
-«لم يتم الحفظ» panel + Retry button on failure; and (d) the per-row 🖼️ poster / 🗺️ map quick-links
-(commit `17a68a3` — partner «إعلاناتي» → UNBRANDED poster + clean map, theirs to reuse; admin recent
-list → New Obour-branded; each hidden when the asset doesn't exist; shared resolver
-`@noc/partner-portal/assets`). Asset URLs already confirmed serving 200 image/png; only the rendered
-rows are unconfirmed. Confirm these once when convenient. (Same login also covers the partner UI
-click-test, item 4.)
+session is backed by real command output). These are reasoned + typechecked + built, deployed, but
+NOT click-tested — confirm them in one admin session when convenient:**
+- (a) the admin archive toggle now shows ONLY on PUBLISHED/ARCHIVED rows (`/admin/marketplace/listings`);
+- (b) Approve is disabled with the missing details named when a pending row is incomplete;
+- (c) the listing form's auto-save shows a red «لم يتم الحفظ» panel + Retry button on failure;
+- (d) the per-row 🖼️ poster / 🗺️ map quick-links (commit `17a68a3` — partner «إعلاناتي» → UNBRANDED
+  poster + clean map; admin recent list → New Obour-branded; each hidden when the asset doesn't exist;
+  shared resolver `@noc/partner-portal/assets`). Asset URLs already confirmed serving 200 image/png —
+  only the rendered rows are unconfirmed;
+- (e) missing-required-field highlighting on BOTH listing forms (commit `b21395e` — the 5 basic fields
+  Type/Purpose/Condition/Title/Phone now get the same red ring + inline «هذا الحقل مطلوب» note the
+  catalog details already had, all missing fields named at once, scroll-to-topmost; partner lean form
+  is now `noValidate` so the Arabic red note replaces the browser's English bubble). Verify by hitting
+  Publish with a couple of fields blank.
+- The map annotator (Brave banner + UUID ids) is separately click-verified in Chrome (Konva 9.3.22),
+  so it is NOT in this list.
+
+(Same admin login also covers the partner UI click-test, owner-blocked item 4 — create a fresh test
+partner first, since `testpartner` was deleted.)
 
 **Codex deep audit — ongoing, owner-driven in steps (see `CODEX_AUDIT_FINDINGS.md`):** pass 1 of 16
 (listings + EAV) is COMPLETE — Codex found 7 defects, all fixed + 7 extras + the 3 UI/UX

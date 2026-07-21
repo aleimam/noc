@@ -134,9 +134,12 @@ Full detail in `CLAUDE.md` → owner-blocked list. Short version, roughly by eff
    actually done through it). Create a FRESH partner properly first (admin → Owners → add owner →
    its partner card: login + both sites + category grants), submit the lean form on each `/partner`
    site, confirm PENDING in moderation, **then delete that owner+user.**
-9. **Click-test 3 Codex-audit UI fixes** (same admin login as #8): the archive toggle only on
-   PUBLISHED/ARCHIVED rows, Approve disabled + missing-details named on incomplete pending rows, and
-   the listing form's red auto-save-failed panel + Retry. Reasoned + typechecked, not yet clicked.
+9. **Click-test the admin/listing UI changes** (same admin login as #8) — all reasoned +
+   typechecked + deployed, none clicked: (a) archive toggle only on PUBLISHED/ARCHIVED rows;
+   (b) Approve disabled + missing-details named on incomplete pending rows; (c) listing form's red
+   auto-save-failed panel + Retry; (d) per-row 🖼️ poster / 🗺️ map quick-links in both listing lists;
+   (e) missing-required-field red highlight + «هذا الحقل مطلوب» note on both listing forms (hit
+   Publish with fields blank). Full list in `CLAUDE.md` → "Verification pending".
 10. **Continue the Codex deep audit** — pass 1 of 16 done (14 fixes live; resolution table in
    `CODEX_AUDIT_FINDINGS.md`). Run passes 2–16 a pass at a time from `CODEX_AUDIT_BRIEF.md`
    (read-only, chatgpt.com/codex), bring each back for verify-then-fix. `/code-review ultra`
