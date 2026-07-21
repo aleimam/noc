@@ -1,12 +1,16 @@
 # Codex Deep Audit Findings
 
+**Pass 16 addendum:** The tiered off-site backup module, retention deletion, secret handling, archive staging, scheduler, transport paths, admin actions, and restore runbook have been audited. Findings below are new to this pass and de-duplicated against Passes 1–15.
+
+**Passes 12–15 addendum:** RTL/i18n, public responsive/accessibility UX, admin/partner workflows, and the cross-cutting UI/UX synthesis are complete. Findings below are new to these passes and de-duplicated against Passes 1–11.
+
 **Passes 9–11 addendum:** Analytics/ops crons and backups, performance/schema, and the full security sweep are complete. Findings below are new to these passes and de-duplicated against Passes 1–8.
 
 **Passes 5–8 addendum:** Rationing, geo/lands, search/public endpoints, and the media pipeline are complete. Findings below are new to these passes and de-duplicated against Passes 1–4.
 
 **Pass 4 addendum:** Admin RBAC coverage is complete for every `/admin` route and every `apps/portal/app/admin/**/actions.ts`. Those findings remain in Section 1 and are de-duplicated against the earlier passes.
 
-Audit status: **Passes 1–11 of 16 complete** — listings + EAV; soft delete + public visibility; partner portal auth, ownership/IDOR, lean form, listing save, and fast edit; admin RBAC; rationing; geo/lands; search/public endpoints; media pipeline; analytics/ops; performance/schema; security sweep. Passes 12–16 have not yet been performed. This report is intentionally cumulative; later focused passes should append, de-duplicate, and re-sort it.
+Audit status: **Passes 1–16 of 16 complete** — listings + EAV; soft delete + public visibility; partner portal auth, ownership/IDOR, lean form, listing save, and fast edit; admin RBAC; rationing; geo/lands; search/public endpoints; media pipeline; analytics/ops; performance/schema; security sweep; RTL/i18n; public, admin, and partner UI/UX; UI/UX synthesis; tiered off-site backup and restore validation. This report is intentionally cumulative; later focused passes should append, de-duplicate, and re-sort it.
 
 ## RESOLUTION — all 7 pass-1 defects FIXED, deployed and live-verified 2026-07-20
 
@@ -717,6 +721,132 @@ Baseline: both app typechecks pass after Pass 8 as well. `npm install` still can
 - Suggested fix: Use a fixed per-app public default or return a relative redirect; never use `req.url` as the origin fallback.
 - Blast radius: Public branding/favicons and the brokerage admin-view exit path during configuration drift.
 
+### [P1] Admin defaults to English, but a large set of admin screens is Arabic-only
+- Confidence: CONFIRMED (traced)
+- Type: UX/i18n
+- Location: packages/i18n/src/request.ts:5-24; apps/portal/app/admin/(protected)/layout.tsx:15-18; representative unlocalized screens: apps/portal/app/admin/(protected)/guide/conditions/page.tsx:14-48; apps/portal/app/admin/(protected)/settings/watermark/WatermarkClient.tsx:12-31,73-80; apps/portal/app/admin/(protected)/settings/modules/ModulesClient.tsx:22-39; apps/portal/app/admin/(protected)/marketplace/offers/page.tsx; apps/portal/app/admin/(protected)/pages/PageEditor.tsx
+- What's wrong: The request config intentionally defaults `/admin` to `en`, and the protected shell localizes its navigation, but many child pages and client editors hard-code Arabic labels, headings, empty states, status text, and action buttons. The English admin therefore changes language at the shell boundary while core workflows remain Arabic-only; the message catalogs themselves have matching key sets, so this is component coverage, not a missing catalog key.
+- Failure scenario: An English-speaking staff member opens Building conditions, Watermark, Modules, Offers, or Pages. The route loads successfully, but the title, form labels, save/error feedback, and table actions are Arabic, so the operator cannot reliably configure, publish, or recover from an error.
+- Suggested fix: Make every admin page/editor consume the shared `admin`/`common` messages (or a typed `L(ar, en)` helper) and add a CI check that rejects new user-facing literals in admin components. Keep direction and numeric fields explicit where Arabic data is intentional.
+- Blast radius: Most of the 205 files under `apps/portal/app/admin`, including content, marketplace, settings, and moderation workflows; every staff member who selects English.
+
+### [P1] Brokerage sell-page guidance ignores the selected locale
+- Confidence: CONFIRMED (traced)
+- Type: UX/i18n
+- Location: apps/brokerage/app/sell/page.tsx:71-97 (policy link, details summary, pricing heading, and table headers)
+- What's wrong: The brokerage shell exposes a language switcher, but the sell page renders its policy/pricing headings and table labels as hard-coded Arabic strings and does not read the active locale or shared messages. Dynamic pricing values may be bilingual, while the surrounding instructions remain Arabic.
+- Failure scenario: An English-speaking owner opens `/sell` or switches language from the header. The page title/guide is understandable only in Arabic, so the seller cannot interpret the pricing bands or policy link and may submit a poorly priced offer.
+- Suggested fix: Move all sell-page copy into the shared Arabic/English messages (or a typed locale helper), including the policy fallback, summary, pricing headers, and any instructional bullets; verify both languages at the language switcher boundary.
+- Blast radius: Public sell guidance for every brokerage visitor who selects English.
+
+### [P1] Login OTP network failures leave the user in a permanent loading state
+- Confidence: CONFIRMED (traced)
+- Type: UX/reliability
+- Location: packages/partner-portal/src/PartnerLogin.tsx:70-92; apps/brokerage/app/account/login/page.tsx:35-56; apps/portal/app/account/login/page.tsx:36-75
+- What's wrong: Each OTP request sets `loading` before `fetch`, but a network rejection (offline device, timeout, or aborted request) escapes before the success/error code and `setLoading(false)` run. None of the three surfaces wraps the request in `try/catch/finally`.
+- Failure scenario: A low-connectivity phone taps “Send code” while the request is interrupted. The button stays disabled/spinning forever, no localized error or retry is shown, and the user must reload (losing the entered phone and context).
+- Suggested fix: Wrap request and JSON parsing in `try/catch/finally`, map network/timeout failures to a plain localized message, and leave the form retryable; preserve the identifier and step when retrying.
+- Blast radius: Customer login on both brands and the shared partner portal, especially mobile users on unstable connections.
+
+### [P1] Brokerage account and sell tables have no horizontal overflow at mobile widths
+- Confidence: CONFIRMED (traced)
+- Type: UX/responsive
+- Location: apps/brokerage/app/account/page.tsx:58-75; apps/brokerage/app/sell/page.tsx:83-97
+- What's wrong: Both tables are wrapped in `overflow-hidden` containers rather than an `overflow-x-auto` scroller or a narrow-screen card layout. Their long Arabic land/title/date and pricing headers are rendered in an unbreakable table grid.
+- Failure scenario: At 320–375px, a signed-in buyer viewing requests or a seller opening the pricing details sees clipped columns or a page that expands beyond the viewport; key status/date or sale-speed information is unreachable without zooming or sideways page movement.
+- Suggested fix: Put each table in a dedicated `overflow-x-auto` region with a sensible `min-width`, or switch to stacked labelled cards below `sm`; keep the page itself overflow-safe and preserve logical text alignment.
+- Blast radius: Mobile account requests and the public sell/pricing page, the primary form factor for the Arabic-first audience.
+
+### [P1] Storefront category dropdowns are hover-only and unreachable from the keyboard
+- Confidence: CONFIRMED (traced)
+- Type: accessibility
+- Location: apps/brokerage/app/_components/StoreShell.tsx:106-118
+- What's wrong: Each category group is a `group` whose submenu is `invisible` until `group-hover`; the trigger is a plain button with no `aria-expanded`/`aria-controls`, focus state, or click/keyboard disclosure state. Tabbing to the button does not expose the links.
+- Failure scenario: A keyboard-only or switch-access user reaches “Lands”/“Units” in the desktop navigation but cannot open its submenu, so those destinations are not discoverable. The same failure affects users who cannot use precise hover on a touch/trackpad device at desktop breakpoints.
+- Suggested fix: Implement a disclosure button with controlled open state, `aria-expanded`, `aria-controls`, Escape/arrow handling, and a `focus-within`/click fallback; keep the mobile menu's explicit links as the accessible baseline.
+- Blast radius: Every brokerage desktop page with grouped navigation and all keyboard/switch users.
+
+### [P1] There are no app-controlled loading or error boundaries in either Next.js app
+- Confidence: CONFIRMED (traced)
+- Type: UX/reliability
+- Location: apps/portal/app/** and apps/brokerage/app/** (recursive inventory found no `loading.tsx`, `error.tsx`, or `global-error.tsx`; only the root `not-found.tsx` files exist)
+- What's wrong: Server routes and client transitions have no route-level loading skeleton/status or localized error boundary. A slow request therefore presents no explicit progress state, while an uncaught server/render failure falls through to the framework's generic recovery behavior instead of an actionable, audience-appropriate message.
+- Failure scenario: A mobile user taps a public search/filter, admin report, or partner listing action and sees a frozen page during a slow query; if rendering then fails, there is no nearby retry/back action and any unsaved context is easy to abandon.
+- Suggested fix: Add root `loading.tsx`/`error.tsx` plus boundaries for high-traffic public, partner, and admin segments. Use Arabic/English messages from the active locale, `role="status"` for progress, a clear Retry button, and a safe Back/Home path while preserving form state where possible.
+- Blast radius: All routes in both apps; this compounds the OTP, table, and server-action failures above.
+
+### [P2] Partner listing actions and photo removal controls are below the 40px touch-target floor
+- Confidence: CONFIRMED (traced)
+- Type: UX/accessibility
+- Location: packages/partner-portal/src/LeanListingForm.tsx:418-423; packages/partner-portal/src/PartnerListings.tsx:115-150
+- What's wrong: The photo remove button is an icon-only `h-5 w-5` (20px), and poster/map/market/edit actions use `px-3 py-1 text-xs` anchors whose hit boxes are typically under 40px. They have accessible names, but the visible target is too small for a low-literacy phone workflow.
+- Failure scenario: A partner tries to remove a mistaken photo or open the poster/map on a narrow phone and repeatedly misses the control, potentially tapping a neighboring action instead.
+- Suggested fix: Give every partner action a minimum 40×40px hit area (`min-h-10 min-w-10`), keep a visible word beside icons, and position photo removal with adequate separation from the thumbnail.
+- Blast radius: All partner listing cards and the lean create/edit form, especially on 320–375px screens.
+
+### [P2] Lightbox close/zoom/action controls are undersized and partly icon-only
+- Confidence: CONFIRMED (traced)
+- Type: UX/accessibility
+- Location: packages/ui/src/components/Lightbox.tsx:197-224
+- What's wrong: Close is a symbol-only button with `px-3 py-1`, zoom controls are fixed at `h-9 w-9` (36px), and the bottom text actions use `py-1.5`; all fall below the brief's 40px minimum. Close/zoom rely on `aria-label` rather than a visible word, which is fragile for low-literacy users and touch input.
+- Failure scenario: On a phone, a user misses the small close/zoom target or cannot tell what a symbol does, then gets stuck in the full-screen viewer or accidentally activates an adjacent control.
+- Suggested fix: Standardize media controls at ≥40px with visible labels where space permits (or a persistent labelled toolbar), retain the localized ARIA names, and add a high-contrast focus-visible ring.
+- Blast radius: Every public/admin/partner image viewer built on the shared Lightbox component.
+
+### [P1] Failed archive builds leave sensitive staging trees behind in `/tmp`
+- Confidence: CONFIRMED (traced)
+- Type: engineering / security
+- Location: packages/backup/src/service.ts:129-184; packages/backup/src/service.ts:206-263
+- What's wrong: `buildArchive` creates its `mkdtemp` directory before dumping the database, copying uploads, and creating the tar, but `runTier` only assigns `tmpDir` after `buildArchive` resolves. Any dump, copy, disk-full, or tar failure before the return therefore skips the `finally` cleanup; the staging tree can contain `database.sql`, `env.txt`, and a partial `uploads/` tree.
+- Failure scenario: A full backup hits disk pressure or tar fails after staging hundreds of megabytes. The run is marked FAILED, but `/tmp/noc-backup-*` remains; repeated retries consume disk and leave restore-critical secrets/data on the host until manual cleanup.
+- Suggested fix: Own cleanup inside `buildArchive` (or return/claim the temp path in an outer `try` immediately after creation) so every rejection removes the directory; add a bounded staging-space check before copying uploads.
+- Blast radius: Backup host disk availability and plaintext database/config/media exposure after any failed scheduled or manual run.
+
+### [P1] A FULL tier can report SUCCESS after an upload-copy failure and ship a database-only archive
+- Confidence: CONFIRMED (traced)
+- Type: engineering
+- Location: packages/backup/src/service.ts:157-175; packages/backup/src/service.ts:243-250
+- What's wrong: The `FULL` upload copy catches every exception—including unreadable files, I/O errors, and a partial copy—and simply sets `hasUploads = false`. The service then writes a truthful-looking `db[,env]` manifest, uploads it, and records `BackupRun.status = SUCCESS`; no failure/alert distinguishes a deliberately DB-only tier from a failed full snapshot.
+- Failure scenario: One unreadable media file or a disk error occurs while copying `/uploads`. The remote “daily full” archive succeeds and is retained, but a disaster restore silently lacks some or all media; the successful run suppresses the operational signal to retry.
+- Suggested fix: Treat a missing uploads directory as the only allowed DB-only case; if the directory exists and copy fails, fail the run and retain the previous full archive. Surface the missing component in the run status/alert.
+- Blast radius: Every FULL daily/weekly/manual archive and any recovery that depends on listing photos, posters, or uploaded maps.
+
+### [P1] Tier-folder isolation can be bypassed by a partial or path-aliased tier update
+- Confidence: CONFIRMED (traced)
+- Type: engineering
+- Location: apps/portal/app/admin/(protected)/settings/backups/offsite-actions.ts:72-98; packages/backup/src/transport.ts:26-43; packages/backup/src/service.ts:222-240
+- What's wrong: `saveTiers` compares only the paths present in the submitted array, trims trailing slashes, and never compares against the other persisted tiers or a canonical path. A stale/forged one-tier payload can reuse another tier's folder; `/home//daily` also canonicalizes to `/home/daily` at transport time while passing the duplicate check. Each run then prunes all parseable `noc-` archives in the shared directory.
+- Failure scenario: A request updates HOURLY alone to `/home/daily` (or submits `/home//daily` while DAILY already uses `/home/daily`). The save succeeds, and the hourly retention policy can delete the daily full archives—or vice versa—despite the UI warning that folders must be independent.
+- Suggested fix: Load all tiers, canonicalize/reject dot and duplicate segments with one shared path helper, validate the complete resulting set in a transaction, and refuse any collision before persisting.
+- Blast radius: Remote retention history for every tier sharing the Storage Box, including the only surviving full restore copy.
+
+### [P1] Invalid tier frequencies are stored and silently scheduled as monthly
+- Confidence: CONFIRMED (traced)
+- Type: engineering
+- Location: apps/portal/app/admin/(protected)/settings/backups/offsite-actions.ts:81-94; packages/backup/src/service.ts:194-200; packages/backup/src/logic.ts:45-88
+- What's wrong: The server action writes `t.frequency` without an allow-list, then `scheduleOf` casts the arbitrary string to `Frequency`. `lastScheduledFireTime` handles only OFF/HOURLY/DAILY/WEEKLY and falls through to the MONTHLY branch for any unknown value.
+- Failure scenario: A stale browser or direct action posts `frequency: "BOGUS"` (or a malformed OFF value). The database accepts it, the UI may show it as a saved tier, and the 10-minute scheduler runs it on monthly slots instead of rejecting it or keeping it OFF.
+- Suggested fix: Runtime-validate `frequency` against the five enum values before update and make the scheduler reject unknown persisted values rather than defaulting to MONTHLY.
+- Blast radius: Unexpected archive creation and retention pruning for any tier whose settings payload is malformed or tampered with.
+
+### [P1] The restore runbook does not describe the live tiered archive format
+- Confidence: CONFIRMED (traced)
+- Type: operational recovery
+- Location: packages/backup/src/service.ts:138-182; ops/RESTORE.md:3-20,30-76
+- What's wrong: Production tiered archives are `tar.gz` bundles containing `database.sql`, optional `env.txt`, optional `uploads/`, and `manifest.json`; the only restore guide documents the older separate `.sql.gz`, uploads tarball, and config snapshot under `/root/backups`. It has no SFTP retrieval, manifest check, DB import, env restore, or FULL extraction procedure for the new archive.
+- Failure scenario: After losing the VPS, an operator follows `RESTORE.md`, treats `noc-backup-full-…tar.gz` as the old uploads archive or pipes it to `zcat`, and cannot recover the database/config/media from the off-site copy without inventing recovery commands during the outage.
+- Suggested fix: Add a versioned tiered-archive restore section with `tar -tzf`/manifest verification, safe extraction to a scratch directory, `database.sql` test import, `env.txt` permissions, uploads restore, and an explicit destructive production sequence.
+- Blast radius: Disaster recovery from the newest/live off-site backups—the very path intended to survive loss of `/root/backups` and the VPS.
+
+### [P2] “Test connection” does not test the folders or write path that scheduled tiers actually use
+- Confidence: CONFIRMED (traced)
+- Type: engineering / operations
+- Location: packages/backup/src/service.ts:62-82; packages/backup/src/service.ts:222-240; apps/portal/app/admin/(protected)/settings/backups/offsite-actions.ts:27-51,108-112
+- What's wrong: The connection test creates/lists only `BackupConfig.remotePath`. Scheduled/manual runs instead use each `BackupTier.remotePath`, upload a large archive, verify its size, and prune. The two path sets are independent, so a successful test can leave every real tier folder uncreated, unwritable, or outside the tested directory.
+- Failure scenario: An admin changes the base folder to `/home/noc` and sees “Connected,” while the seeded tier paths remain `/home/hourly`, `/home/daily`, etc. The next scheduled run fails (or writes somewhere unexpected) despite the green test result.
+- Suggested fix: Test every enabled tier's canonical folder (including create/write/list/remove of a uniquely named probe), or derive tier paths from one validated base and report per-tier readiness before enabling scheduling.
+- Blast radius: False confidence in off-site readiness and missed backups after destination changes or sub-account permission changes.
+
 ## Section 2 — UI/UX enhancements
 
 ### Make draft-save state persistent and actionable
@@ -738,6 +868,34 @@ Baseline: both app typechecks pass after Pass 8 as well. `npm install` still can
 - Proposed change: Add “Leave blank for price on request,” set appropriate `min`/`step`, and show the normalized public preview beside the field.
 - Serves the GOLDEN RULE? It removes an ambiguous numeric convention and shows the exact wording buyers will see.
 - Expected impact: More consistent prices and fewer staff corrections.
+- Effort: S
+
+### Ship a shared bilingual admin surface instead of per-page string patches
+- Problem it solves: Shell navigation is translated, but individual admin editors still drift into Arabic-only text and inconsistent status wording.
+- Proposed change: Add typed admin message namespaces and a small server/client `L()` wrapper; migrate the representative content, marketplace, and settings screens first, then enforce a literal-string lint check in `apps/portal/app/admin`.
+- Serves the GOLDEN RULE? Staff always get one clear language, explicit field labels, and actionable save/error copy.
+- Expected impact: Fewer operator mistakes and faster moderation/configuration for mixed-language teams.
+- Effort: M
+
+### Establish a resilient route-state and mutation-feedback kit
+- Problem it solves: Slow transitions and rejected network requests currently look like frozen screens or permanently disabled buttons.
+- Proposed change: Provide shared localized `LoadingPanel`, `ErrorPanel` (Retry + Back/Home), and mutation status primitives (`idle/saving/saved/failed`) with `role="status"`; require them in public, partner, and admin segment templates and OTP flows.
+- Serves the GOLDEN RULE? Every wait/error state uses plain words and one obvious recovery action while preserving entered work.
+- Expected impact: Lower abandonment and support load on unreliable mobile connections.
+- Effort: M
+
+### Make all dense data mobile-first
+- Problem it solves: Tables and compact action rails are the main source of clipping and missed taps at 320–375px.
+- Proposed change: Adopt a table-to-card breakpoint pattern, dedicated overflow regions, and a shared ≥40px action-button primitive for partner/media controls; add visual regression checks at 320/375/768/1024/1440px.
+- Serves the GOLDEN RULE? Users can see every field and hit the intended action without zooming or horizontal page movement.
+- Expected impact: Fewer mobile mis-taps and inaccessible clipped data across both brands.
+- Effort: M
+
+### Replace hover menus with keyboard/touch-safe disclosures and focus styling
+- Problem it solves: Hover-only storefront navigation and inconsistent focus rings hide destinations from keyboard, switch, and touch users.
+- Proposed change: Standardize disclosure buttons (`aria-expanded`, `aria-controls`, Escape/arrow behavior), add `focus-visible` rings to the shared UI primitives, and test tab order/return focus in Lightbox and menus.
+- Serves the GOLDEN RULE? Navigation and modal controls remain understandable and operable without a mouse.
+- Expected impact: WCAG keyboard compliance and more predictable desktop/tablet navigation.
 - Effort: S
 
 ## Section 3 — Coverage log
@@ -772,4 +930,9 @@ Baseline: both app typechecks pass after Pass 8 as well. `npm install` still can
 - Pass-9 coverage note: reviewed the analytics collector/route pair, raw analytics rollup/prune, price-snapshot and purge crons, city-mandatory/backfill scripts, backup-tick/service/transport/retention logic, local/off-site backup scripts, and admin backup status/download boundaries. Cross-brand collector identity, unbounded aggregators/purge, backup reentrancy, missing env success, host-key verification, and malformed retention timestamps are reported; the earlier backup-download RBAC finding remains separate.
 - Pass-10 coverage note: reviewed public/admin sitemap and count reads, analytics/search/price aggregations, cron-scale imports/backfills, and the Prisma indexes for listings, analytics, SearchLog, LandFollow, geo updates, and backup history. Unbounded sitemap/materialization, silent analytics caps, and predicate/index mismatches are reported; the existing rationing/media scale findings remain separate.
 - Pass-11 coverage note: swept both Next security-header/CSP configs, all public upload/brand/thumbnail paths, rich-HTML and JSON-LD sinks, raw SQL/process execution, environment/secret references, session/OTP boundaries, and redirect construction. The new collector identity, SFTP host-key, and localhost fallback findings are reported; existing auth/OTP/RBAC and upload findings were not duplicated. A repository secret-pattern scan found no committed private-key or cloud-key material. Dependency installation/audit remains unverified because the machine npm launcher is broken.
-- Not covered yet: UI/UX passes 12–15 and the deeper backup/restore validation in Pass 16.
+- Pass-12 coverage note: compared Arabic/English message catalogs, traced locale selection and the protected admin shell, sampled every admin subtree and the public brokerage sell flow for untranslated user-facing literals, and scanned directional CSS/RTL overrides. Catalog keys are in parity; the reported defects are page/component translation coverage rather than missing keys.
+- Pass-13 coverage note: walked public landing, search, listing/detail, compare, account, sell, media/lightbox, and mobile navigation surfaces at the required responsive breakpoints. The brokerage account/sell table overflow and Lightbox target-size defects are reported; deliberate poster order and mobile menu choices were not re-reported.
+- Pass-14 coverage note: walked partner login/dashboard/listing create-edit/fast-edit/media controls and the protected admin shell, including loading/empty/error/success/permission-denied states and keyboard/tap affordances. The OTP network failure, partner hit-target, admin i18n, storefront disclosure, and missing boundary defects are reported; existing RBAC/ownership findings were not duplicated.
+- Pass-15 coverage note: synthesized the UI findings into shared bilingual admin, route-state, mobile-density, and keyboard/focus enhancements in Section 2, with impact/effort and Golden Rule rationale.
+- Pass-16 coverage note: read the 24 retention/scheduling tests first, then traced `packages/backup` logic, AES-GCM secret handling, archive staging, MariaDB dump invocation, SFTP transport/path guards, tier scheduler/manual callers, all backup admin actions/UI/download authZ, migration/schema, cron wrappers, local/legacy backup coexistence, and `ops/RESTORE.md`. Retention prefix/keepLast guards, null-secret failure, argv-safe dump credentials, temp cleanup on successful runs, per-action `requirePermission`, and the full restore drill documented in `CLAUDE.md` were checked clean; the new staging, FULL-copy, path-isolation, enum, readiness-test, and restore-runbook defects are reported above. A live remote prune/delete and a second independent restore were not run from this workspace (no production credentials/DB), so those remain operationally unverified.
+- Not covered yet: none of the planned audit passes. Live remote deletion and an independent production restore were not exercised; this is explicitly unverified, not treated as a clean result.

@@ -13,6 +13,9 @@ declare module 'ssh2-sftp-client' {
     username?: string;
     password?: string;
     readyTimeout?: number;
+    // Passed through to ssh2: verify the server's host key during the handshake. Return true to
+    // accept, false to abort the connection (before auth, so it also protects the password).
+    hostVerifier?: (key: Buffer) => boolean;
   };
 
   export default class SftpClient {

@@ -1,4 +1,5 @@
 /// <reference path="./ssh2-sftp-client.d.ts" />
+import { createHash } from 'node:crypto';
 // Remote transport. SFTP only — FTPS cannot work against a Hetzner Storage Box from
 // a CSF-firewalled box (spec §8.2: IPv6 passive listener, TLS servername, and an
 // ephemeral data port range that TCP_OUT will never allow). SFTP moves data over the
@@ -68,6 +69,19 @@ function explain(err: unknown, homeDir: string | null): Error {
   return err instanceof Error ? err : new Error(msg);
 }
 
+// Pinned Storage Box SSH host-key fingerprints (OpenSSH SHA256 form, "SHA256:" prefix optional).
+// Without this ssh2 accepts ANY host key, so a man-in-the-middle could receive the whole archive
+// (DB dump + .env with AUTH_SECRET + DB creds) AND the login password. A key not in this set
+// REFUSES the connection — the backup fails loudly instead of leaking. Rotate via
+// BACKUP_SFTP_HOST_FP (comma-separated) if Hetzner ever changes its keys.
+const PINNED_HOST_FPS: string[] = (
+  process.env.BACKUP_SFTP_HOST_FP ||
+  'SHA256:XqONwb1S0zuj5A1CDxpOSuD2hnAArV1A3wKY7Z3sdgM,SHA256:EMlfI8GsRIfpVkoW1H2u0zYVpFGKkIMKHFZIRkf2ioI'
+)
+  .split(',')
+  .map((s) => s.trim().replace(/^SHA256:/i, ''))
+  .filter(Boolean);
+
 /** Connect over SFTP. Caller MUST call end() (use try/finally). */
 export async function connectSftp(cfg: RemoteConfig): Promise<Transport> {
   // Dynamic import: ssh2 carries a native addon, so it must stay out of the
@@ -75,13 +89,33 @@ export async function connectSftp(cfg: RemoteConfig): Promise<Transport> {
   const { default: SftpClient } = await import('ssh2-sftp-client');
   const client = new SftpClient();
 
-  await client.connect({
-    host: cfg.host,
-    port: cfg.port,
-    username: cfg.username,
-    password: cfg.password,
-    readyTimeout: 20_000,
-  });
+  // Host-key verification runs BEFORE auth, so a rejected key never sees the password either.
+  let hostKeyMismatch: string | null = null;
+  try {
+    await client.connect({
+      host: cfg.host,
+      port: cfg.port,
+      username: cfg.username,
+      password: cfg.password,
+      readyTimeout: 20_000,
+      hostVerifier: (key: Buffer) => {
+        const fp = createHash('sha256').update(key).digest('base64').replace(/=+$/, '');
+        if (PINNED_HOST_FPS.includes(fp)) return true;
+        hostKeyMismatch = fp;
+        return false;
+      },
+    });
+  } catch (e) {
+    if (hostKeyMismatch) {
+      throw new Error(
+        `SFTP host-key verification FAILED for ${cfg.host}:${cfg.port}. The server presented ` +
+          `SHA256:${hostKeyMismatch}, which is NOT in the pinned set — refusing to send the backup ` +
+          `(possible man-in-the-middle, wrong host, or a Hetzner key rotation). If Hetzner rotated ` +
+          `keys, set BACKUP_SFTP_HOST_FP to the new fingerprint(s) and redeploy.`,
+      );
+    }
+    throw e;
+  }
 
   let homeDir: string | null = null;
   try {
