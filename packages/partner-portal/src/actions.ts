@@ -2,35 +2,111 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@noc/db';
-import { requirePartner, hashPassword, rateLimit, MIN_PASSWORD_LENGTH } from '@noc/auth';
+import {
+  requirePartner, hashPassword, rateLimit, MIN_PASSWORD_LENGTH,
+  currentSite, requestOtp, requestEmailOtp, verifyOtp, verifyEmailOtp, normalizePhone,
+} from '@noc/auth';
 import { isValidEmail, isValidPhone, parsePriceInput } from '@noc/config';
 
 type Result = { ok: true } | { ok: false; error: string };
 
-/** Partner self-service: update own login identifiers + password (owner decision). */
-export async function partnerUpdateAccount(input: { username: string; email: string; phone: string; password: string }): Promise<Result> {
+const otpBrand = () => (currentSite() === 'alsawarey' ? 'alsawarey' : 'newobour');
+const dupOrFail = (e: unknown) => {
+  const msg = e instanceof Error ? e.message : String(e);
+  return { ok: false as const, error: msg.includes('Unique constraint') || msg.includes('P2002') ? 'duplicate_key' : 'failed' };
+};
+
+/** Partner self-service: update the NON-destination credentials — username + password only.
+ *  Email and phone are OTP LOGIN destinations, so they can never be written here: proving
+ *  control of a new destination requires the verify-before-commit flow below. (Previously this
+ *  wrote a new phone/email immediately, so a partner could point the account's OTP login at a
+ *  number/address they don't control — takeover — or typo it and lock themselves out.) */
+export async function partnerUpdateAccount(input: { username: string; password: string }): Promise<Result> {
   const { userId } = await requirePartner();
   if (!rateLimit(`pacct:${userId}`, 5, 10 * 60 * 1000)) return { ok: false, error: 'rate_limited' };
   const username = input.username.trim().toLowerCase() || null;
-  const email = input.email.trim().toLowerCase() || null;
-  const phone = input.phone.trim() || null;
-  if (!username && !email && !phone) return { ok: false, error: 'identifier_required' };
-  if (phone && !isValidPhone(phone)) return { ok: false, error: 'invalid_phone' };
-  // The email field is submitted by a button handler, not a <form>, so the browser's own
-  // type="email" validation never runs — without this an OTP-only partner could save `x` as
-  // their sole login route and lock themselves out after sign-out.
-  if (email && !isValidEmail(email)) return { ok: false, error: 'invalid_email' };
   const newPassword = input.password.trim();
   if (newPassword && newPassword.length < MIN_PASSWORD_LENGTH) return { ok: false, error: 'password_short' };
+  const cur = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, phone: true, passwordHash: true } });
+  // Never leave the account with no way in. A login is either OTP (needs email or phone) or
+  // password (needs an identifier — username/email/phone — AND a stored password).
+  const willHavePassword = newPassword ? true : !!cur?.passwordHash;
+  const otpRoute = !!cur?.email || !!cur?.phone;
+  const passwordRoute = (!!username || !!cur?.email || !!cur?.phone) && willHavePassword;
+  if (!otpRoute && !passwordRoute) return { ok: false, error: 'identifier_required' };
   try {
     const passPatch = newPassword ? { passwordHash: await hashPassword(newPassword) } : {};
-    await prisma.user.update({ where: { id: userId }, data: { username, email, phone, ...passPatch } });
+    await prisma.user.update({ where: { id: userId }, data: { username, ...passPatch } });
     revalidatePath('/partner/account');
     return { ok: true };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: msg.includes('Unique constraint') || msg.includes('P2002') ? 'duplicate_key' : 'failed' };
+    return dupOrFail(e);
   }
+}
+
+/** Step 1 of an email/phone change: send a code to the NEW destination. Nothing is written —
+ *  this only proves the partner can receive at that destination before it becomes a login route. */
+export async function partnerRequestIdentifierChange(input: { field: 'email' | 'phone'; value: string; locale?: 'ar' | 'en' }): Promise<Result> {
+  const { userId } = await requirePartner();
+  if (!rateLimit(`pacctid:${userId}`, 5, 10 * 60 * 1000)) return { ok: false, error: 'rate_limited' };
+  const locale: 'ar' | 'en' = input.locale === 'en' ? 'en' : 'ar';
+  if (input.field === 'phone') {
+    const phone = input.value.trim();
+    if (!isValidPhone(phone)) return { ok: false, error: 'invalid_phone' };
+    // Reject a destination already tied to another account before spending an SMS on it.
+    const clash = await prisma.user.findFirst({ where: { phone: normalizePhone(phone), id: { not: userId } }, select: { id: true } });
+    if (clash) return { ok: false, error: 'duplicate_key' };
+    return requestOtp(phone, locale, otpBrand());
+  }
+  const email = input.value.trim().toLowerCase();
+  if (!isValidEmail(email)) return { ok: false, error: 'invalid_email' };
+  const clash = await prisma.user.findFirst({ where: { email, id: { not: userId } }, select: { id: true } });
+  if (clash) return { ok: false, error: 'duplicate_key' };
+  return requestEmailOtp(email, locale, otpBrand());
+}
+
+/** Step 2: verify the code for that destination, then commit that ONE field. verify*Otp keys on
+ *  the same normalized destination request*Otp stored, so a code only validates for the exact
+ *  address/number it was sent to. */
+export async function partnerConfirmIdentifierChange(input: { field: 'email' | 'phone'; value: string; code: string }): Promise<Result> {
+  const { userId } = await requirePartner();
+  if (!rateLimit(`pacctid:${userId}`, 10, 10 * 60 * 1000)) return { ok: false, error: 'rate_limited' };
+  const code = input.code.trim();
+  try {
+    if (input.field === 'phone') {
+      const phone = input.value.trim();
+      if (!isValidPhone(phone)) return { ok: false, error: 'invalid_phone' };
+      const v = await verifyOtp(phone, code);
+      if (!v.ok) return { ok: false, error: 'bad_code' };
+      await prisma.user.update({ where: { id: userId }, data: { phone: normalizePhone(phone) } });
+    } else {
+      const email = input.value.trim().toLowerCase();
+      if (!isValidEmail(email)) return { ok: false, error: 'invalid_email' };
+      const v = await verifyEmailOtp(email, code);
+      if (!v.ok) return { ok: false, error: 'bad_code' };
+      await prisma.user.update({ where: { id: userId }, data: { email } });
+    }
+    revalidatePath('/partner/account');
+    return { ok: true };
+  } catch (e) {
+    return dupOrFail(e);
+  }
+}
+
+/** Remove an email/phone login route. No OTP needed (removing, not adding), but at least one
+ *  working login route must survive so the partner can't lock themselves out. */
+export async function partnerClearIdentifier(input: { field: 'email' | 'phone' }): Promise<Result> {
+  const { userId } = await requirePartner();
+  if (!rateLimit(`pacctid:${userId}`, 10, 10 * 60 * 1000)) return { ok: false, error: 'rate_limited' };
+  const cur = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, phone: true, username: true, passwordHash: true } });
+  if (!cur) return { ok: false, error: 'failed' };
+  const after = { email: input.field === 'email' ? null : cur.email, phone: input.field === 'phone' ? null : cur.phone };
+  const otpRoute = !!after.email || !!after.phone;
+  const passwordRoute = (!!cur.username || !!after.email || !!after.phone) && !!cur.passwordHash;
+  if (!otpRoute && !passwordRoute) return { ok: false, error: 'identifier_required' };
+  await prisma.user.update({ where: { id: userId }, data: { [input.field]: null } });
+  revalidatePath('/partner/account');
+  return { ok: true };
 }
 
 // Fast edits are instant (owner decision: structural changes need approval, price and
