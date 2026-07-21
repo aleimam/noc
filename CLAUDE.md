@@ -352,15 +352,16 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
 **Owner-blocked (waiting on the owner, everything else is prepped):**
 1. **Cloudflare proxy flip (Part C)** — pure dashboard task now; ordered checklist in
    `ops/CLOUDFLARE.md` (TLS-first, one zone at a time; www is proxy-safe since the SAN reissue).
-2. ~~Off-site backup target~~ **✅ DONE 2026-07-20** — the tiered SFTP module is live on Hetzner
-   sub-account `u635384-sub6`; scheduled runs fire and a restore drill passed (see the server map).
-   **Open decision (one blocker left):** retire the OLD local module (`ops/backup.sh` + rsync
-   `offsite-backup.sh` + their admin sections)? The only thing not yet proven is a retention prune
-   deleting a real remote file — the **first prune is due ~2026-07-21 08:00 UTC (the 25th hourly
-   archive) and a scheduled check fires 2026-07-21 13:00 Cairo** to confirm it. Once that passes,
-   this is a clean yes/no (recommendation: keep local `ops/backup.sh`, drop only the rsync
-   `offsite-backup.sh` + its admin section, which the new module replaces). Local retention already
-   cut 14 → 5 days.
+2. ~~Off-site backup target~~ **✅ DONE + fully proven 2026-07-21** — the tiered SFTP module is live
+   on Hetzner sub-account `u635384-sub6`; scheduled runs fire, a restore drill passed, and the
+   **first retention prune ran + was verified 2026-07-21 07:00 UTC**: it deleted exactly the oldest
+   hourly (`noc-backup-db-20260720-080002.tar.gz`) and `/home/hourly` now holds exactly 24, all
+   `noc-backup-` (remote listing confirmed; NOC's sub-account is isolated so no other app's files
+   are even visible, and the `noc-` prefix guard is belt-and-suspenders on top). **Decision now
+   UNBLOCKED — owner's call:** retire the OLD local module? Recommendation: keep local `ops/backup.sh`
+   (cheap, 5-day local copy) and drop only the rsync `offsite-backup.sh` + its admin section, which
+   the new module fully replaces. Say the word and I'll do it. (Also: the SFTP host key is now pinned
+   + verified — see the Codex-audit note below.)
 3. **Rotate the Brevo SMTP key** (it appeared in a chat once) — then update `/etc/postfix/sasl_passwd`
    (see `ops/mail-relay-brevo.sh`) and `postmap` + reload.
 4. **Partner portal UI click-test** — backend pipeline fully verified by script; a human should
@@ -398,18 +399,31 @@ NOT click-tested — confirm them in one admin session when convenient:**
   catalog details already had, all missing fields named at once, scroll-to-topmost; partner lean form
   is now `noValidate` so the Arabic red note replaces the browser's English bubble). Verify by hitting
   Publish with a couple of fields blank.
+- (f) one-click ✓ approve on the New Obour market list (commit `7ea6139`, `/admin/newobour/market`) —
+  a green ✓ اعتماد on قيد-المراجعة rows only; reuses `approveListing` so the required-details gate
+  still applies (names what's missing in the toast). Verify by approving a pending row.
 - The map annotator (Brave banner + UUID ids) is separately click-verified in Chrome (Konva 9.3.22),
-  so it is NOT in this list.
+  so it is NOT in this list. The alsawarey footer redesign (Option B, commit `5c81238`) is a public
+  page — content confirmed live via page text; a visual glance is enough (no login needed).
 
 (Same admin login also covers the partner UI click-test, owner-blocked item 4 — create a fresh test
 partner first, since `testpartner` was deleted.)
 
-**Codex deep audit — ongoing, owner-driven in steps (see `CODEX_AUDIT_FINDINGS.md`):** pass 1 of 16
-(listings + EAV) is COMPLETE — Codex found 7 defects, all fixed + 7 extras + the 3 UI/UX
-enhancements (commits `06e58e5`→`baf90b1`, live-verified; resolution table at the top of that file
-so a later pass won't re-report them). **Passes 2–16 have not been run.** The owner runs them a pass
-at a time from `CODEX_AUDIT_BRIEF.md`; bring each pass's findings back here for verify-then-fix (two
-of pass 1's were only provable against live data, so re-verify every finding before acting).
+**Codex deep audit — ongoing, owner-driven in steps (see `CODEX_AUDIT_FINDINGS.md`):**
+- **Pass 1** (listings + EAV) — COMPLETE, all fixed + verified (commits `06e58e5`→`baf90b1`;
+  resolution table at the top of the findings file).
+- **Passes 2–11** have been RUN — their findings are appended to `CODEX_AUDIT_FINDINGS.md` but are
+  **UNVERIFIED / untriaged** (committed as-is at `24035d4`). **Passes 12–16 not yet run.**
+- **One pass-9 finding already actioned ahead of the batch:** the SFTP host key is now PINNED +
+  verified (commit `65a1f7e`) — `connectSftp` refuses any key not in the pinned set (protects the
+  archive's DB + `.env` + `AUTH_SECRET` and the login password); the ED25519 fp
+  `SHA256:XqON…sdgM` was confirmed genuine across two independent networks (Hetzner no longer
+  publishes a static list); rotate via `BACKUP_SFTP_HOST_FP`. Mark it resolved in the findings file
+  during triage.
+- **Next:** run passes 12–16, then a single verify-then-fix triage of the whole accumulated set.
+  Re-verify EVERY finding before acting — pass 1 proved some are already-fixed, deliberate, or only
+  provable against live data (e.g. the ".env omitted but SUCCESS" pass-9 item is a design choice, not
+  a bug).
 
 **2026-07-15→17: gallery/perf/admin-UX batch (commits `eaf3708`→`df78560`, all deployed+verified).**
 - **Hero gallery + lightbox** on both sites' listing pages (see Feature map) + **first-party photo

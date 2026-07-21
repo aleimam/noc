@@ -114,13 +114,12 @@ Full detail in `CLAUDE.md` → owner-blocked list. Short version, roughly by eff
    was never actually done through it). Create a FRESH partner properly first (admin → Owners → add
    owner → its partner card: login + both sites + category grants), log in on each `/partner` site,
    submit the lean form, confirm PENDING in moderation, **then delete that owner+user.**
-2. ~~Off-site backups~~ **✅ DONE 2026-07-20** — tiered SFTP module live on sub-account
-   `u635384-sub6`, scheduled runs firing, restore drill passed. **One decision waiting on ONE
-   event:** whether to retire the OLD local module (`ops/backup.sh` + `offsite-backup.sh` rsync +
-   their admin sections). Everything is proven EXCEPT a retention prune deleting a real remote file
-   — the first prune is due ~**2026-07-21 08:00 UTC** and a scheduled check fires **13:00 Cairo**
-   the same day. Once it passes: keep local `ops/backup.sh`, drop only the rsync `offsite-backup.sh`
-   + its admin section. Local retention already cut 14 → **5 days**.
+2. ~~Off-site backups~~ **✅ DONE + fully proven 2026-07-21** — tiered SFTP module live; scheduled
+   runs firing, restore drill passed, and the **first retention prune ran + was verified** (07:00 UTC:
+   deleted exactly the oldest hourly, `/home/hourly` now holds exactly 24, all `noc-backup-`, no
+   other app's files touched). SFTP host key now pinned + verified too. **Decision now UNBLOCKED
+   (owner's call):** retire the OLD local module? Recommendation — keep local `ops/backup.sh`, drop
+   only the rsync `offsite-backup.sh` + its admin section (the new module replaces it). Say the word.
 3. **Rotate the Brevo SMTP key**, then re-apply via `ops/mail-relay-brevo.sh`.
 4. **Price Index toggle** — Settings → Modules → مؤشر الأسعار, whenever wanted.
 5. **Cloudflare proxy flip (Part C)** — biggest remaining security win; ordered checklist in
@@ -139,7 +138,11 @@ Full detail in `CLAUDE.md` → owner-blocked list. Short version, roughly by eff
    (b) Approve disabled + missing-details named on incomplete pending rows; (c) listing form's red
    auto-save-failed panel + Retry; (d) per-row 🖼️ poster / 🗺️ map quick-links in both listing lists;
    (e) missing-required-field red highlight + «هذا الحقل مطلوب» note on both listing forms (hit
-   Publish with fields blank). Full list in `CLAUDE.md` → "Verification pending".
+   Publish with fields blank); (f) one-click ✓ approve on قيد-المراجعة rows at `/admin/newobour/market`.
+   Full list in `CLAUDE.md` → "Verification pending".
+10. **Codex audit** — pass 1 fixed+verified; passes 2–11 run (findings in `CODEX_AUDIT_FINDINGS.md`,
+   UNVERIFIED); one pass-9 item (SFTP host-key pin) already fixed+verified. Run passes 12–16, then
+   one verify-then-fix triage of the whole set.
 10. **Continue the Codex deep audit** — pass 1 of 16 done (14 fixes live; resolution table in
    `CODEX_AUDIT_FINDINGS.md`). Run passes 2–16 a pass at a time from `CODEX_AUDIT_BRIEF.md`
    (read-only, chatgpt.com/codex), bring each back for verify-then-fix. `/code-review ultra`
