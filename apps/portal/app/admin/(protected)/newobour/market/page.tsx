@@ -3,6 +3,7 @@ import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { currency } from '@noc/i18n';
 import { DeleteListingButton } from './DeleteListingButton';
+import { ApproveListingButton } from './ApproveListingButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,6 +68,8 @@ export default async function NewObourMarket() {
                   <td className="p-2">{l.showOnBrokerage ? '✔' : '—'}</td>
                   <td className="p-2 text-end">
                     <span className="inline-flex items-center gap-3">
+                      {/* One-click approve for pending rows only — published/rejected/etc. don't need it. */}
+                      {l.status === 'PENDING' && <ApproveListingButton id={l.id} />}
                       <a href={`/admin/marketplace/listings/${l.id}/edit`} className="text-accent hover:underline">{t('edit')}</a>
                       <DeleteListingButton id={l.id} title={l.title} />
                     </span>
