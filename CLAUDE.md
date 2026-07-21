@@ -445,33 +445,43 @@ headline) at the top of the findings file — **a later pass must not re-report 
     previous stamp, so a re-stamp regenerates it from the untouched original. **Any future code that
     writes a new rendition must call `unlinkSupersededStamp()` in `lib/stamp.ts`** — it refuses to
     delete the original, anything not actually superseded, or anything outside `/uploads`.
-- **⚠️ STILL OPEN — 20 items, each re-verified against code 2026-07-22.** (An earlier revision of
-  this file claimed "3 open". That was WRONG: waves were marked done on their headline items without
-  reconciling item-by-item against the verification lists. **Reconcile per finding, not per wave.**)
-  - **Operational (staff/visitors see something untrue):** ① `OwnerEditor.tsx` site-access helper
-    still says "and where their listings appear" — contradicts the login-only rule, so staff think
-    disabling a site hides that partner's listings (it does not) · ② brokerage public home counts
-    (`apps/brokerage/app/page.tsx:46-47`) still hard-code `showOnBrokerage` instead of
-    `STOREFRONT_STATUS` (sitemap + admin KPI were fixed, these were missed) · ③ `packages/auth/src/otp.ts`
-    hard-codes "New Obour" in every OTP body, so Al Sawarey partners get the other brand.
-  - **Security / integrity:** ④ partner OTP identifier change has NO proof-of-control (format
-    validation only) — takeover/lockout vector · ⑤ `registerScans` trusts caller-supplied
-    path/mime/attachmentId · ⑥ `stampAndUpsertAreaMap` has no uploader/unattached check and no
-    trashed-listing guard · ⑦ city/district/neighborhood deletes leave `AreaMap` rows + files
-    orphaned (polymorphic, no FK) · ⑧ brokerage upload route has no post-write failure cleanup
-    (portal's was fixed).
-  - **UX / data loss:** ⑨ brokerage `partner/listings/new` has no grant gate → dead-end form ·
-    ⑩ lean form Cancel has no dirty-state guard → silent loss of a long mobile form · ⑪ fast
-    Available/Hide fire on first tap with no confirmation · ⑫ `/sell` ignores locale entirely ·
-    ⑬ lean create is not idempotent (unconditional `listing.create`) → duplicate PENDING rows.
-  - **Perf / hygiene:** ⑭ branded MAP renditions leak on re-stamp (photos fixed, maps not) ·
-    ⑮ `plotGroups`/`plotsSummary` still materialize (metering added, SQL not) · ⑯ purge cron
-    unbounded/non-resumable · ⑰ missing composite indexes (SearchLog site+surface+createdAt;
-    LandFollow districtId/blockId) · ⑱ backup "Test connection" doesn't probe tier folders ·
-    ⑲ rollup/price-index still materialize in Node · ⑳ city-mandatory backfill one-shot (already
-    run; low value).
-  - **Plus: nothing is click-tested** — all of the above is reasoned, typechecked, built, deployed
-    and HTTP-probed, but no admin/partner session was ever exercised (no login available).
+- **✅ ALL 20 REMAINING ITEMS WORKED 2026-07-22** in four commits — `032d831` (operational) ·
+  `01dd1d0` (security + UX) · `3ae36ea` (perf/hygiene, +migration) · `d3011de` (P0 identifier
+  verification). All deployed; server HEAD verified `d3011de`; both sites 200; prod index confirmed.
+  (An earlier revision of this file claimed "3 open" — that was WRONG: waves had been marked done on
+  their headline items. **Reconcile per FINDING, not per wave.**)
+  - **Fixed (18):** ① OwnerEditor site-access copy now says login-only · ② brokerage home counts use
+    `STOREFRONT_STATUS` · ③ OTP bodies carry the right brand (`OtpBrand`, default `newobour`; the
+    three brokerage routes pass `alsawarey`) + the portal partner route stopped hard-coding `'ar'` ·
+    **④ partner email/phone changes now require an OTP to the NEW destination** (`partnerUpdateAccount`
+    handles username+password ONLY; request/confirm/clear actions added; no path can leave the account
+    with zero login routes) · ⑤ `registerScans` takes only an attachment id and reads path/mime off
+    the caller's own row · ⑥ `stampAndUpsertAreaMap` requires a caller-owned/unattached attachment
+    and refuses trashed listings · ⑦ geo deletes clear their FK-less `AreaMap`/masterplan/update
+    assets via `geoCleanupOps()` · ⑧ brokerage upload cleans up after a failed row write ·
+    ⑨ brokerage `partner/listings/new` has the 🔒 no-grant card · ⑩ lean-form Cancel has a
+    dirty-check confirm · ⑪ «إخفاء» confirms before pulling a listing off both sites · ⑫ `/sell`
+    localizes headings + geo names · ⑬ lean CREATE is idempotent (identical trio+title from the same
+    owner within 60s updates instead of twinning) · ⑭ branded MAP renditions are reclaimed at all
+    three re-stamp sites via `unlinkSupersededStamp()` (clean map is the guard) · ⑯ purge cron pages
+    in 200-row batches · ⑰ `SearchLog(site, surface, createdAt)` added (migration
+    `20260722120000_searchlog_surface_index`) · ⑱ backup Test-connection now probes EVERY enabled
+    tier's own folder · ⑳ city-mandatory backfill pages 500 at a time over `values: { none }`.
+  - **Verified already-done — re-check before ever re-reporting:** the plots-tab quota gate (wave 6:
+    `consumeRationingQuota` runs BEFORE `plotGroups`) · the analytics-rollup backfill cap
+    (`MAX_BACKFILL_DAYS = 120`) · **`LandFollow.districtId`/`blockId` indexes** — they already exist
+    as `LandFollow_blockId_fkey`/`_districtId_fkey`, because **MySQL auto-creates an index for every
+    FK constraint**; adding `@@index` would be a pure duplicate. (Same class of false positive as the
+    `dedupeKey` one — check the live schema, not just `schema.prisma`.)
+  - **Deliberately deferred (documented, not forgotten):** converting the analytics rollup /
+    price-index / `plotsSummary` Node materialization to SQL aggregation. Each is a sizeable rewrite
+    of a working, verified feature with no measurable impact at current volume (~1200 distinct plots;
+    the rollup's backfill is already capped). Revisit if traffic or inventory grows an order of
+    magnitude.
+  - **⚠️ Plus: nothing in this whole audit is click-tested** — all of it is reasoned, typechecked,
+    built, deployed and HTTP-probed, but no admin/partner session was ever exercised (no login
+    available to the agent, and entering passwords is off-limits). **The new partner account page
+    (verify-before-commit for email/phone) is the highest-value thing to click-test first.**
 
 **2026-07-15→17: gallery/perf/admin-UX batch (commits `eaf3708`→`df78560`, all deployed+verified).**
 - **Hero gallery + lightbox** on both sites' listing pages (see Feature map) + **first-party photo

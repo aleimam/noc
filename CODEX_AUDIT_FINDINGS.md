@@ -84,12 +84,33 @@ Shipped in nine commits, each typechecked + built + deployed + verified on produ
   and per-ROW rather than one batch-wide transaction (≈4.8k rows would exceed Prisma's transaction
   timeout and hold locks throughout, turning a recoverable partial import into a guaranteed failure).
 
-### ⚠️ Still open — 20 items (corrected 2026-07-22)
+### ✅ CLOSED — all 20 worked 2026-07-22 (list kept below for traceability)
 
 **An earlier revision of this section claimed "4 open". That was WRONG.** Waves were marked done on
 their headline items without reconciling item-by-item against the per-batch verification lists, so
 partial waves were silently counted as complete. **Reconcile per FINDING, not per wave.** Every item
-below was re-verified against the code on 2026-07-22.
+below was re-verified against the code on 2026-07-22, then worked to completion in four commits:
+
+| Commit | Covers |
+|---|---|
+| `032d831` | 1, 2, 3 — operational (site-access copy, storefront counts, OTP brand + portal locale) |
+| `01dd1d0` | 5, 6, 7, 8, 9, 10, 11, 12, 13 — asset provenance, geo-delete orphans, partner-form data loss |
+| `3ae36ea` | 14, 16, 17, 18, 20 — map-rendition reclaim, SearchLog index (+migration), bounded cron/backfill, tier-folder probe |
+| `d3011de` | **4** — P0: partner email/phone changes require an OTP to the NEW destination |
+
+**Re-verification outcomes that must NOT be re-reported as defects:**
+- **17 (LandFollow half) — FALSE POSITIVE.** `districtId`/`blockId` already have indexes:
+  `LandFollow_blockId_fkey` / `LandFollow_districtId_fkey`. **MySQL auto-creates an index for every
+  FK constraint**, so an added `@@index` would be a pure duplicate. Only the `SearchLog` composite
+  was a genuine gap. Check the LIVE schema (`SHOW INDEX`), not just `schema.prisma`.
+- **15 (metering half) — ALREADY DONE** in wave 6: `consumeRationingQuota` runs before `plotGroups`
+  and returns the limit card, so the "walk every page unmetered" scenario no longer exists.
+- **19 (cap half) — ALREADY DONE**: `MAX_BACKFILL_DAYS = 120` in `ops/analytics-rollup.ts`.
+
+**Deliberately deferred (documented, not forgotten):** the remaining halves of 15 and 19 — converting
+the analytics rollup, price-index and `plotsSummary` Node materialization to SQL aggregation. Each is
+a sizeable rewrite of a working, verified feature with no measurable impact at current volume (~1200
+distinct plots; the rollup backfill is already capped). Revisit if traffic/inventory grows ~10×.
 
 **Operational — something untrue is shown to staff or visitors**
 1. `OwnerEditor.tsx` site-access helper still reads "…and where their listings appear". The rule is
