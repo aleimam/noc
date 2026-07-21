@@ -39,8 +39,15 @@ const secsSince = (start: Date): number => Math.max(0, Math.round((Date.now() - 
 
 /** Ingest one beacon: upsert the visitor + session (enriching on first sight), then record
  *  the pageview / leave / event. Best-effort — never throws to the caller. */
-export async function handleCollect(input: CollectInput, ctx: { ip: string | null; ua: string | null; userId?: string | null }): Promise<void> {
-  const site: CollectSite = input.site === 'alsawarey' ? 'alsawarey' : 'newobour';
+export async function handleCollect(
+  input: CollectInput,
+  ctx: { ip: string | null; ua: string | null; userId?: string | null; site: CollectSite },
+): Promise<void> {
+  // The brand is decided by the ROUTE (each app process serves exactly one site), never by the
+  // payload. `input.site` used to pick it, so a script could POST `site:'alsawarey'` to the
+  // portal origin and pollute the other brand's sessions, rollups and conversion attribution
+  // while every request still returned the expected 204.
+  const site: CollectSite = ctx.site;
   const vid = cap(input.vid, 64);
   const sid = cap(input.sid, 64);
   if (!vid || !sid) return;
@@ -91,7 +98,15 @@ export async function handleCollect(input: CollectInput, ctx: { ip: string | nul
     await prisma.visitor.update({ where: { id: visitor.id }, data: { pageviews: { increment: 1 } } });
   } else if (input.type === 'pageleave' && input.pvId) {
     const pvId = cap(input.pvId, 191)!;
-    await prisma.pageView.update({ where: { id: pvId }, data: { durationSec: clampInt(input.durationSec, 0, 86400), scrollPct: clampInt(input.scrollPct, 0, 100) } }).catch(() => {});
+    // Scope the update to THIS session + site. Keyed on the client-supplied id alone, a caller
+    // could replay any known page-view id and write fabricated duration/scroll onto another
+    // visitor's row — per-page engagement is reported straight from these fields.
+    await prisma.pageView
+      .updateMany({
+        where: { id: pvId, sessionId: session.id, site },
+        data: { durationSec: clampInt(input.durationSec, 0, 86400), scrollPct: clampInt(input.scrollPct, 0, 100) },
+      })
+      .catch(() => {});
     await prisma.visitSession.update({ where: { id: session.id }, data: { lastEventAt: new Date(), durationSec: secsSince(session.startedAt) } }).catch(() => {});
   } else if (input.type === 'event' && input.eventType) {
     await prisma.analyticsEvent.create({

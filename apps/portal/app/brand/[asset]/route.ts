@@ -53,6 +53,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ asse
     }
   }
 
-  // Behind the reverse proxy req.url is localhost — redirect via the public origin.
-  return NextResponse.redirect(new URL('/logo.png', process.env.PORTAL_URL || req.url), 307);
+  // Behind the reverse proxy req.url is the INTERNAL localhost origin, so it must never be the
+  // fallback — during env drift that leaks deployment topology and yields a broken public
+  // redirect. Use the known public origin instead.
+  return NextResponse.redirect(new URL('/logo.png', process.env.PORTAL_URL || 'https://newobour.com'), 307);
 }

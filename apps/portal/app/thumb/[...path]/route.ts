@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { uploadRoot } from '../../../lib/uploads';
+import { clientIp, rateLimit } from '../../../lib/rateLimit';
 
 // On-demand card-cover thumbnails: /thumb/w480/2026/07/x.png resizes /uploads/2026/07/x.png
 // to 480px-wide WebP (q72), caches the result under <uploads>/.thumbs/w480/… and serves it
@@ -30,6 +31,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pat
     return new NextResponse(new Uint8Array(cached), { headers });
   } catch {
     /* not cached yet */
+  }
+  // Cache HITS stay unmetered (they're a file read). Only MISSES are rate-limited: each one
+  // runs sharp and writes an immutable cache file, so walking valid paths × 4 widths was an
+  // uncapped CPU/disk sink. A real visitor triggers a handful of misses per page.
+  if (!rateLimit(`thumbmiss:${clientIp(_req.headers)}`, 60, 60_000)) {
+    return new NextResponse('Too many requests', { status: 429 });
   }
   try {
     const buf = await sharp(src)

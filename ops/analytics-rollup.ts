@@ -44,7 +44,11 @@ async function rollupDay(site: string, dayStart: Date) {
 }
 
 async function main() {
-  const days = Math.max(1, Number(process.argv[2]) || 2);
+  // Cap the backfill. Each day loads that day's raw sessions into memory, so an unbounded
+  // argument (the docs mention 400) could blow the cron process's heap or run past its window.
+  // Backfill further in chunks rather than one giant run.
+  const MAX_BACKFILL_DAYS = 120;
+  const days = Math.min(MAX_BACKFILL_DAYS, Math.max(1, Number(process.argv[2]) || 2));
   const now = new Date();
   const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   let written = 0;

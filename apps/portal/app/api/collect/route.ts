@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { handleCollect, type CollectInput } from '@noc/analytics';
 import { auth } from '@noc/auth';
+import { rateLimit } from '../../../lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,14 @@ function clientIp(req: NextRequest): string | null {
 /** First-party analytics collector for New Obour. Always returns 204 — the beacon must
  *  never surface an error to the visitor. */
 export async function POST(req: NextRequest): Promise<Response> {
+  // Unauthenticated write endpoint: each accepted beacon upserts a visitor/session and creates a
+  // PageView or AnalyticsEvent. The body cap alone bounded SIZE, not VOLUME — a loop could grow
+  // those tables and skew every dashboard. Beacon convention: 60/min/IP, plus a global ceiling.
+  // Still 204 either way: the visitor must never see analytics throttling.
+  const ip = clientIp(req);
+  if (!rateLimit(`collect:${ip ?? 'unknown'}`, 60, 60_000)) return new Response(null, { status: 204 });
+  if (!rateLimit('collect:global', 6000, 60_000)) return new Response(null, { status: 204 });
+
   let input: CollectInput | null = null;
   try {
     const body = await req.text();
@@ -35,7 +44,8 @@ export async function POST(req: NextRequest): Promise<Response> {
   } catch { /* anonymous */ }
 
   try {
-    await handleCollect(input, { ip: clientIp(req), ua: req.headers.get('user-agent'), userId });
+    // `site` is server-trusted — this process IS New Obour. Never take it from the payload.
+    await handleCollect(input, { ip, ua: req.headers.get('user-agent'), userId, site: 'newobour' });
   } catch { /* swallow — analytics must not break */ }
   return new Response(null, { status: 204 });
 }

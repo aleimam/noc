@@ -89,6 +89,16 @@ export default async function VisitorAnalyticsPage({ searchParams }: { searchPar
       {/* Saved filter presets */}
       <SavedViews views={savedViews} current={{ days: range.days, site: range.site }} locale={locale} />
 
+      {/* Raw-row cap reached: say so instead of showing confidently wrong percentages. */}
+      {ov.truncated && (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          {L(
+            `هذه الفترة أكبر من حد العيّنة. «الزوّار» و«الجلسات» و«مشاهدات الصفحات» أرقام كاملة، أما باقي النسب والقوائم فمحسوبة من أحدث ${ov.sampled.sessions.toLocaleString('en-US')} جلسة و${ov.sampled.pageviews.toLocaleString('en-US')} مشاهدة فقط. اختر فترة أقصر لنتائج دقيقة.`,
+            `This window exceeds the sample cap. Visitors, sessions and pageviews are exact totals, but the other rates and lists are computed from only the most recent ${ov.sampled.sessions.toLocaleString('en-US')} sessions and ${ov.sampled.pageviews.toLocaleString('en-US')} pageviews. Pick a shorter window for exact figures.`,
+          )}
+        </p>
+      )}
+
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {kpis.map((k) => (

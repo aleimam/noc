@@ -33,15 +33,26 @@ export async function getOverview({ from, to, site }: Range) {
   const sWhere = { startedAt: { gte: from, lte: to }, device: { not: 'bot' }, ...siteWhere(site) };
   const pWhere = { ts: { gte: from, lte: to }, session: { device: { not: 'bot' } }, ...siteWhere(site) };
 
-  const [sessions, pageviews, newVisitors] = await Promise.all([
+  // The caps below are SAMPLES, not totals. Without an explicit order they returned whatever
+  // MariaDB produced first, and every KPI/series/top-list was computed from that slice with no
+  // indication on screen — staff saw plausible percentages that silently undercounted. We now
+  // (a) order deterministically (newest first) so the sample is at least well-defined, and
+  // (b) compare against real COUNTs so callers can surface a truncation warning.
+  const SESSION_CAP = 50000;
+  const PV_CAP = 100000;
+  const [sessions, pageviews, newVisitors, sessionTotal, pvTotal] = await Promise.all([
     prisma.visitSession.findMany({
       where: sWhere,
-      take: 50000,
+      orderBy: { startedAt: 'desc' },
+      take: SESSION_CAP,
       select: { startedAt: true, durationSec: true, isBounce: true, device: true, os: true, browser: true, country: true, region: true, source: true, visitorId: true, userId: true, language: true },
     }),
-    prisma.pageView.findMany({ where: pWhere, take: 100000, select: { path: true, ts: true, durationSec: true, scrollPct: true } }),
+    prisma.pageView.findMany({ where: pWhere, orderBy: { ts: 'desc' }, take: PV_CAP, select: { path: true, ts: true, durationSec: true, scrollPct: true } }),
     prisma.visitor.count({ where: { firstSeen: { gte: from, lte: to }, ...siteWhere(site) } }),
+    prisma.visitSession.count({ where: sWhere }),
+    prisma.pageView.count({ where: pWhere }),
   ]);
+  const truncated = sessionTotal > sessions.length || pvTotal > pageviews.length;
 
   const sessionCount = sessions.length;
   const pvCount = pageviews.length;
@@ -87,9 +98,16 @@ export async function getOverview({ from, to, site }: Range) {
 
   return {
     kpis: {
-      visitors, newVisitors, sessions: sessionCount, pageviews: pvCount, avgDuration, bounceRate, loggedIn,
-      pagesPerSession: sessionCount ? Number((pvCount / sessionCount).toFixed(1)) : 0,
+      // sessions/pageviews report the TRUE totals; the derived figures below still come from
+      // the (capped) sample, which `truncated` flags.
+      visitors, newVisitors, sessions: sessionTotal, pageviews: pvTotal, avgDuration, bounceRate, loggedIn,
+      pagesPerSession: sessionTotal ? Number((pvTotal / sessionTotal).toFixed(1)) : 0,
     },
+    /** True when the window exceeded a raw-row cap: everything except the session/pageview
+     *  totals is then computed from the newest N rows, not the whole window. Surface this
+     *  beside the affected figures rather than showing a confidently wrong percentage. */
+    truncated,
+    sampled: { sessions: sessionCount, pageviews: pvCount, sessionCap: SESSION_CAP, pageviewCap: PV_CAP },
     series,
     cohorts,
     devices: topBy(sessions, (s) => s.device),

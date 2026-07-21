@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { uploadRoot } from '../../../lib/uploads';
+import { clientIp, rateLimit } from '../../../lib/rateLimit';
 
 // On-demand card-cover thumbnails: /thumb/w480/2026/07/x.png resizes /uploads/2026/07/x.png
 // to 480px-wide WebP (q72), caches the result under <uploads>/.thumbs/w480/… and serves it
@@ -30,6 +31,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pat
     return new NextResponse(new Uint8Array(cached), { headers });
   } catch {
     /* not cached yet */
+  }
+  // MIRRORED with the portal route: cache hits are free, misses are metered because each one
+  // runs sharp and writes a new immutable cache file.
+  if (!rateLimit(`thumbmiss:${clientIp(_req.headers)}`, 60, 60_000)) {
+    return new NextResponse('Too many requests', { status: 429 });
   }
   try {
     const buf = await sharp(src)

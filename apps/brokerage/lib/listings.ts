@@ -198,7 +198,7 @@ function toCard(l: Prisma.ListingGetPayload<{ select: typeof cardSelect }>, cove
 // Listings visible on the storefront: published (available) or sold — both shown publicly.
 // Also limited to Types/Purposes still allowed on Al Sawarey (null = legacy/unset → allowed),
 // so disallowing a Type/Purpose in the admin instantly hides its listings here.
-const STOREFRONT_STATUS: Prisma.ListingWhereInput = {
+export const STOREFRONT_STATUS: Prisma.ListingWhereInput = {
   status: { in: ['PUBLISHED', 'SOLD'] },
   AND: [
     { OR: [{ typeOptionId: null }, { typeOption: { allowedOnAlsawarey: true } }] },

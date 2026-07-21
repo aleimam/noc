@@ -53,6 +53,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ asse
     }
   }
 
-  // Behind the reverse proxy req.url is localhost — redirect via the public origin.
-  return NextResponse.redirect(new URL('/logo.png', process.env.BROKERAGE_URL || req.url), 307);
+  // Behind the reverse proxy req.url is the INTERNAL localhost origin — never fall back to it
+  // (topology leak + broken public redirect). Use the known public origin.
+  return NextResponse.redirect(new URL('/logo.png', process.env.BROKERAGE_URL || 'https://alsawarey.com'), 307);
 }

@@ -1,13 +1,28 @@
 import type { MetadataRoute } from 'next';
 import { prisma } from '@noc/db';
-import { listingHref } from '../lib/listings';
+import { listingHref, STOREFRONT_STATUS } from '../lib/listings';
 
 export const dynamic = 'force-dynamic';
+
+/** Hard ceiling on sitemap entries. The route previously loaded EVERY qualifying listing and
+ *  then EVERY attachment for that whole id set, with no `take` anywhere, and rebuilt the entire
+ *  XML in memory on each request (no caching, force-dynamic) — so a crawler hitting
+ *  /sitemap.xml repeatedly scaled straight with inventory. 5k URLs is well inside the 50k
+ *  sitemap limit; past that we'd partition into a sitemap index. */
+const MAX_URLS = 5000;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = (process.env.BROKERAGE_URL || 'https://alsawarey.com').replace(/\/$/, '');
   const [lands, pages] = await Promise.all([
-    prisma.listing.findMany({ where: { showOnBrokerage: true, status: { in: ['PUBLISHED', 'SOLD'] }, deletedAt: null }, select: { id: true, adNumber: true, area: true, updatedAt: true, typeOption: { select: { nameEn: true } } } }),
+    // Use the SAME predicate as the live catalogue. Hard-coding `showOnBrokerage` omitted
+    // partner-owned listings that ARE visible, and emitted toggled rows whose Type/Purpose is
+    // no longer allowed — whose detail URLs 404 for the crawler.
+    prisma.listing.findMany({
+      where: STOREFRONT_STATUS,
+      orderBy: { updatedAt: 'desc' },
+      take: MAX_URLS,
+      select: { id: true, adNumber: true, area: true, updatedAt: true, typeOption: { select: { nameEn: true } } },
+    }),
     prisma.page.findMany({ where: { brand: 'alsawarey', published: true }, select: { slug: true, updatedAt: true } }),
   ]);
 
@@ -19,6 +34,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ? await prisma.attachment.findMany({
         where: { ownerType: 'Listing', ownerId: { in: landIds }, attributeId: null },
         orderBy: { createdAt: 'asc' },
+        // Bounded: we keep at most 3 images per land below, so there is no reason to
+        // materialize every gallery photo for the entire catalogue first.
+        take: MAX_URLS * 3,
         select: { ownerId: true, path: true },
       })
     : [];

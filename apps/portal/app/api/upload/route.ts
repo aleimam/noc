@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { auth } from '@noc/auth';
 import { prisma } from '@noc/db';
@@ -126,18 +126,30 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const attachment = await prisma.attachment.create({
-    data: {
-      filename: pureName,
-      originalName: file.name || pureName,
-      path: displayPath,
-      originalPath: purePath,
-      stampCategory: category,
-      mime,
-      size: displaySize,
-      uploaderId: session.user.id,
-    },
-  });
+  // Bytes are on disk BEFORE the attachment row exists, so a DB failure here used to leave an
+  // unowned file under /uploads that no purge job could ever identify (nothing references it).
+  // Compensate: delete what we just wrote, then surface the error.
+  let attachment;
+  try {
+    attachment = await prisma.attachment.create({
+      data: {
+        filename: pureName,
+        originalName: file.name || pureName,
+        path: displayPath,
+        originalPath: purePath,
+        stampCategory: category,
+        mime,
+        size: displaySize,
+        uploaderId: session.user.id,
+      },
+    });
+  } catch (e) {
+    const written = [path.join(dir, pureName)];
+    if (displayPath !== purePath) written.push(path.join(uploadRoot(), displayPath.replace(/^\/uploads\//, '')));
+    await Promise.all(written.map((f) => rm(f, { force: true }).catch(() => {})));
+    console.error('upload: attachment row failed, wrote-then-removed files', e);
+    return NextResponse.json({ ok: false, error: 'failed' }, { status: 500 });
+  }
 
   return NextResponse.json({
     ok: true,
