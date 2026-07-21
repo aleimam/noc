@@ -107,6 +107,9 @@ function findSerialGaps(names: Iterable<string>): { gaps: { label: string; prese
 
 /** Build the matched / orphan / missing report from current scans + sheet sourceFiles. */
 export async function buildScanReport(): Promise<ScanReport> {
+  // Exported server action → reachable directly. It returns scan filenames/paths and
+  // import-batch metadata, so it needs the same gate as its sibling scan actions.
+  await requirePermission('sheets', 'VIEW');
   const [scans, sourceGroups, batchGroups] = await Promise.all([
     prisma.rationingScan.findMany({ orderBy: { fileName: 'asc' } }),
     prisma.rationingSheet.groupBy({

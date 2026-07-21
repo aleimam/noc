@@ -21,5 +21,8 @@ export async function generateListingPosters(listingId: string): Promise<Result>
 }
 
 export async function listListingPosters(listingId: string): Promise<GenImage[]> {
+  // Exported server action → reachable directly. Without this gate it returned internal
+  // generated-media paths for ANY listing id (including drafts and trashed rows).
+  await requirePermission('listings', 'VIEW');
   return listListingImages(listingId);
 }

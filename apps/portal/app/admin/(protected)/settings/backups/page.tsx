@@ -8,7 +8,9 @@ import { prisma } from '@noc/db';
 export const dynamic = 'force-dynamic';
 
 export default async function BackupsPage() {
-  await requirePermission('settings', 'VIEW');
+  // MANAGE, not VIEW — the page lists (and links downloads for) database/uploads archives.
+  // Keep ordinary settings:VIEW limited to non-sensitive configuration.
+  await requirePermission('settings', 'MANAGE');
   const files = await listBackupFiles();
   const [summary, retentionDays, schedule, alert] = await Promise.all([
     backupsSummary(files),

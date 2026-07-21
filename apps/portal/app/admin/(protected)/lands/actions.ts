@@ -421,11 +421,27 @@ export async function setMasterplan(input: { level: 'district' | 'neighborhood';
   const session = await auth();
   const uid = session?.user?.id ?? null;
   try {
-    await prisma.attachment.updateMany({ where: { ownerType: 'Masterplan', ownerId: input.targetId }, data: { ownerType: null, ownerId: null } });
-    await prisma.attachment.updateMany({
-      where: { id: input.attachmentId, ...(uid ? { uploaderId: uid } : {}) },
-      data: { ownerType: 'Masterplan', ownerId: input.targetId },
+    // Validate the replacement BEFORE detaching the current map. Previously the clear ran first
+    // and the attach was a filtered updateMany, so a foreign/invalid attachment id matched zero
+    // rows yet still returned ok — silently losing the existing masterplan. Also restricts the
+    // claim to an unattached upload (or this target's own map) so another area's map can't be
+    // reassigned here.
+    const next = await prisma.attachment.findFirst({
+      where: {
+        id: input.attachmentId,
+        ...(uid ? { uploaderId: uid } : {}),
+        OR: [{ ownerType: null }, { ownerType: 'Masterplan', ownerId: input.targetId }],
+      },
+      select: { id: true },
     });
+    if (!next) return { ok: false, error: 'attachment_not_available' };
+    await prisma.$transaction([
+      prisma.attachment.updateMany({
+        where: { ownerType: 'Masterplan', ownerId: input.targetId, id: { not: next.id } },
+        data: { ownerType: null, ownerId: null },
+      }),
+      prisma.attachment.update({ where: { id: next.id }, data: { ownerType: 'Masterplan', ownerId: input.targetId } }),
+    ]);
     revDetail(input.level, input.targetId);
     return { ok: true };
   } catch (e) {
@@ -683,8 +699,11 @@ export async function setNeighborhoodAdjacency(id: string, neighborIds: string[]
 // ── Amenity categories: a Shared Option List (find-or-create, id pinned in Settings) ──
 const AMENITY_CATEGORY_LIST_KEY = 'amenity.categoryListId';
 
-/** Returns the id of the "Amenity categories" Shared Option List, creating it on first use. */
+/** Returns the id of the "Amenity categories" Shared Option List, creating it on first use.
+ *  Exported from a 'use server' module, so it is a directly reachable action — and it WRITES
+ *  (OptionList + Setting) on first call. Gated to match its only caller (the lands amenity page). */
 export async function getAmenityCategoryListId(): Promise<string> {
+  await requirePermission('lands', 'VIEW');
   const row = await prisma.setting.findUnique({ where: { key: AMENITY_CATEGORY_LIST_KEY } });
   if (row?.value) {
     const exists = await prisma.optionList.findUnique({ where: { id: row.value }, select: { id: true } });

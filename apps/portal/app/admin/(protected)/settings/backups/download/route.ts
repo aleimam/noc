@@ -16,7 +16,9 @@ const NAME_OK = /^[A-Za-z0-9._-]+\.(sql\.gz|tar\.gz)$/;
 
 /** GET /admin/settings/backups/download?kind=db|uploads&file=<name> → streams the file. */
 export async function GET(req: NextRequest) {
-  await requirePermission('settings', 'VIEW');
+  // MANAGE, not VIEW: these archives hold password hashes, owner/customer PII and internal
+  // media, so a read-only settings grant must not be able to stream them out.
+  await requirePermission('settings', 'MANAGE');
 
   const kind = req.nextUrl.searchParams.get('kind') ?? '';
   const name = req.nextUrl.searchParams.get('file') ?? '';

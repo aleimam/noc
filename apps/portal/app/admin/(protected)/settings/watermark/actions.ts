@@ -192,7 +192,9 @@ export async function saveBrandContact(input: ContactInput): Promise<Result> {
 }
 
 export async function deleteBrandContact(id: string): Promise<Result> {
-  await requirePermission('appearance', 'UPDATE');
+  // DELETE, not UPDATE — this permanently removes a brand contact row that feeds the public
+  // stamped footer; an edit-only appearance grant must not be able to destroy it.
+  await requirePermission('appearance', 'DELETE');
   try {
     await prisma.brandContact.delete({ where: { id } });
     revalidatePath('/admin/settings/watermark');

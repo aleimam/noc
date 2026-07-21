@@ -11,7 +11,7 @@ type Staff = { id: string; email: string; name: string; isActive: boolean; roleK
 type Draft = { id?: string; email: string; name: string; password: string; isActive: boolean; roleKeys: string[] };
 const inp = 'w-full rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm';
 
-export function StaffManager({ staff, roleOptions }: { staff: Staff[]; roleOptions: RoleOption[] }) {
+export function StaffManager({ staff, roleOptions, selfId }: { staff: Staff[]; roleOptions: RoleOption[]; selfId?: string }) {
   const t = useTranslations('admin');
   const locale = useLocale() as 'ar' | 'en';
   const tc = useTranslations('common');
@@ -23,6 +23,22 @@ export function StaffManager({ staff, roleOptions }: { staff: Staff[]; roleOptio
   const blank: Draft = { email: '', name: '', password: '', isActive: true, roleKeys: [] };
   const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
   const roleName = (k: string) => roleOptions.find((r) => r.key === k)?.name ?? k;
+  // Editing your own row: roles are locked (the server refuses self-escalation anyway).
+  const editingSelf = !!draft?.id && draft.id === selfId;
+
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
+  const errorText = (code: string) =>
+    ({
+      forbidden_super_admin: L('لا يمكنك منح دور المدير العام.', 'You cannot grant the SUPER_ADMIN role.'),
+      cant_change_own_roles: L('لا يمكنك تغيير أدوار حسابك — اطلب ذلك من مدير آخر.', "You cannot change your own roles — ask another admin."),
+      not_staff: L('هذا الحساب ليس حساب موظف.', 'That account is not a staff account.'),
+      not_found: L('الحساب غير موجود.', 'Account not found.'),
+      duplicate: L('البريد مستخدم بالفعل.', 'That email is already in use.'),
+      email_required: L('البريد مطلوب.', 'Email is required.'),
+      password_required: L('كلمة المرور مطلوبة.', 'Password is required.'),
+      password_short: L('كلمة المرور قصيرة جدًا.', 'Password is too short.'),
+      cant_delete_self: L('لا يمكنك حذف حسابك.', 'You cannot delete your own account.'),
+    })[code] ?? code;
 
   function save() {
     if (!draft) return;
@@ -47,7 +63,7 @@ export function StaffManager({ staff, roleOptions }: { staff: Staff[]; roleOptio
 
   return (
     <div className="space-y-4">
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600">{errorText(error)}</p>}
       <div className="overflow-x-auto rounded-lg border border-graphite/15">
         <table className="w-full text-sm">
           <thead className="opacity-60">
@@ -89,13 +105,18 @@ export function StaffManager({ staff, roleOptions }: { staff: Staff[]; roleOptio
           </div>
           <div className="text-sm">
             <div className="mb-1 opacity-70">{t('roles')}</div>
-            <div className="flex flex-wrap gap-2">
+            <div className={`flex flex-wrap gap-2 ${editingSelf ? 'opacity-50' : ''}`}>
               {roleOptions.map((r) => (
-                <label key={r.key} className={`cursor-pointer rounded border px-3 py-1.5 ${draft.roleKeys.includes(r.key) ? 'border-accent bg-accent/10' : 'border-graphite/20'}`}>
-                  <input type="checkbox" className="hidden" checked={draft.roleKeys.includes(r.key)} onChange={() => setDraft({ ...draft, roleKeys: toggle(draft.roleKeys, r.key) })} /> {r.name}
+                <label key={r.key} className={`rounded border px-3 py-1.5 ${editingSelf ? 'cursor-not-allowed' : 'cursor-pointer'} ${draft.roleKeys.includes(r.key) ? 'border-accent bg-accent/10' : 'border-graphite/20'}`}>
+                  <input type="checkbox" className="hidden" disabled={editingSelf} checked={draft.roleKeys.includes(r.key)} onChange={() => setDraft({ ...draft, roleKeys: toggle(draft.roleKeys, r.key) })} /> {r.name}
                 </label>
               ))}
             </div>
+            {editingSelf && (
+              <p className="mt-1 text-xs opacity-70">
+                {L('لا يمكنك تغيير أدوار حسابك بنفسك.', 'You cannot change your own roles.')}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button disabled={pending || !draft.email.trim()} onClick={save} className="rounded bg-primary px-4 py-2 text-sm text-soft disabled:opacity-50">{tc('save')}</button>
