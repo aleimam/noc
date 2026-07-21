@@ -84,21 +84,60 @@ Shipped in nine commits, each typechecked + built + deployed + verified on produ
   and per-ROW rather than one batch-wide transaction (≈4.8k rows would exceed Prisma's transaction
   timeout and hold locks throughout, turning a recoverable partial import into a guaranteed failure).
 
-### Still open (4)
+### ⚠️ Still open — 20 items (corrected 2026-07-22)
 
-1. **Admin English coverage** — `/admin` defaults to `en` and the shell is translated, but ~200
-   child files hard-code Arabic. Catalog keys are at parity; this is component coverage. Wants a
-   shared `L(ar,en)` helper + a lint rule banning bare user-facing literals under
-   `apps/portal/app/admin`, not per-screen patches. **Owner decision pending** — may be a non-issue
-   if nobody runs the admin in English.
-2. **Media cleanup, second half** — re-stamp / poster-regen / attachment-replace still never unlink
-   the superseded rendition. **Blocked on a product question:** the watermark system is reversible
-   by design (`originalPath`), so deleting old *stamped* renditions may break revert. Pure originals
-   must stay regardless.
-3. **Analytics rollup / price-index memory** — still materialize their working set in Node. Bounded
-   the backfill argument (120 days); SQL-side aggregation not done. Low risk at current volume.
-4. **Click-testing** — everything above is reasoned, typechecked, built, deployed and HTTP-probed,
-   but nothing was exercised through a real admin/partner session (no login available to the agent).
+**An earlier revision of this section claimed "4 open". That was WRONG.** Waves were marked done on
+their headline items without reconciling item-by-item against the per-batch verification lists, so
+partial waves were silently counted as complete. **Reconcile per FINDING, not per wave.** Every item
+below was re-verified against the code on 2026-07-22.
+
+**Operational — something untrue is shown to staff or visitors**
+1. `OwnerEditor.tsx` site-access helper still reads "…and where their listings appear". The rule is
+   login-only (decoupled 2026-07-18), so staff disabling a site believe they hid that partner's
+   listings. They did not. Highest operational risk on this list.
+2. Brokerage public home counts (`apps/brokerage/app/page.tsx:46-47`) still hard-code
+   `showOnBrokerage`. The sitemap and admin KPI were fixed in waves 7/4; these two were missed.
+3. `packages/auth/src/otp.ts` hard-codes "New Obour" in every SMS/email body → Al Sawarey partners
+   receive the other brand's identity.
+
+**Security / integrity**
+4. `partnerUpdateAccount` still writes a new phone/email with NO proof of control (wave 5 added
+   format validation only). Takeover + self-lockout vector.
+5. `registerScans` trusts caller-supplied `path` / `mime` / `attachmentId`.
+6. `stampAndUpsertAreaMap` reassigns any attachment id (no uploader/unattached check) and has no
+   trashed-listing guard. (`setMasterplan` WAS fixed in wave 1.)
+7. City/district/neighborhood deletes leave `AreaMap` rows + their files orphaned (polymorphic
+   `level`/`areaId`, no FK).
+8. Brokerage upload route has no post-write failure cleanup — the portal's was fixed in wave 7.
+
+**UX / data loss**
+9. Brokerage `partner/(protected)/listings/new` has no `hasGrant` gate → a partner with no category
+   grant fills the whole form and is rejected on save. The portal route has the gate.
+10. Lean form Cancel is a plain link with no dirty-state guard → one mis-tap loses a long mobile form.
+11. Fast Available / Hide change public lifecycle on the FIRST tap, no confirmation, no undo.
+12. `/sell` has zero locale awareness (no `getTranslations`/`getLocale`).
+13. Lean create is not idempotent (unconditional `listing.create` when no id) → duplicate PENDING
+    rows on retry or double-tap.
+
+**Performance / hygiene**
+14. Branded MAP renditions (`alswareyPath`/`newobourPath`) still leak on re-stamp. Photos were fixed
+    in `b993c7d` via `unlinkSupersededStamp()`; maps use the same pattern and were not wired up.
+15. `plotGroups`/`plotsSummary` still materialize the full plot set (wave 6 added metering only).
+16. `ops/purge-deleted-listings.ts` still unbounded / non-resumable (no take, cursor or claim).
+17. Missing composite indexes: `SearchLog(site,surface,createdAt)` and `LandFollow(districtId)`,
+    `(blockId)`.
+18. Backup "Test connection" probes only `BackupConfig.remotePath`, never the per-tier folders the
+    scheduled runs actually write to.
+19. Analytics rollup + price-index still materialize in Node (backfill argument capped at 120 days).
+20. `ops/city-mandatory.ts` one-shot backfill (already run on prod — low value).
+
+**Deferred by owner decision (not counted above):** admin English coverage. Owner 2026-07-22: "we run
+the admin in Arabic most of the time and we can translate; if it requires big effort, ignore it." It
+is ~200 files plus a lint rule. Do NOT start it opportunistically.
+
+**Standing caveat:** nothing in this audit is click-tested. Everything is reasoned, typechecked,
+built, deployed and HTTP-probed (several fixes verified against live production data), but no
+admin/partner session was ever exercised — the agent has no login.
 
 ## Section 1 — Defects
 

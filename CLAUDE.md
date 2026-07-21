@@ -445,12 +445,33 @@ headline) at the top of the findings file — **a later pass must not re-report 
     previous stamp, so a re-stamp regenerates it from the untouched original. **Any future code that
     writes a new rendition must call `unlinkSupersededStamp()` in `lib/stamp.ts`** — it refuses to
     delete the original, anything not actually superseded, or anything outside `/uploads`.
-- **Still open (3):** ① branded MAP renditions (`alswareyPath`/`newobourPath`) still leak on
-  re-stamp — same `randomUUID()` pattern as photos, far lower frequency (admin-triggered, not
-  per-save) · ② analytics rollup / price-index still materialize their working set in Node (backfill
-  arg capped at 120 days; low risk at current volume) · ③ **nothing is click-tested** — all of it is
-  reasoned, typechecked, built, deployed and HTTP-probed, but no admin/partner session was ever
-  exercised (the agent has no login, and entering passwords is off-limits).
+- **⚠️ STILL OPEN — 20 items, each re-verified against code 2026-07-22.** (An earlier revision of
+  this file claimed "3 open". That was WRONG: waves were marked done on their headline items without
+  reconciling item-by-item against the verification lists. **Reconcile per finding, not per wave.**)
+  - **Operational (staff/visitors see something untrue):** ① `OwnerEditor.tsx` site-access helper
+    still says "and where their listings appear" — contradicts the login-only rule, so staff think
+    disabling a site hides that partner's listings (it does not) · ② brokerage public home counts
+    (`apps/brokerage/app/page.tsx:46-47`) still hard-code `showOnBrokerage` instead of
+    `STOREFRONT_STATUS` (sitemap + admin KPI were fixed, these were missed) · ③ `packages/auth/src/otp.ts`
+    hard-codes "New Obour" in every OTP body, so Al Sawarey partners get the other brand.
+  - **Security / integrity:** ④ partner OTP identifier change has NO proof-of-control (format
+    validation only) — takeover/lockout vector · ⑤ `registerScans` trusts caller-supplied
+    path/mime/attachmentId · ⑥ `stampAndUpsertAreaMap` has no uploader/unattached check and no
+    trashed-listing guard · ⑦ city/district/neighborhood deletes leave `AreaMap` rows + files
+    orphaned (polymorphic, no FK) · ⑧ brokerage upload route has no post-write failure cleanup
+    (portal's was fixed).
+  - **UX / data loss:** ⑨ brokerage `partner/listings/new` has no grant gate → dead-end form ·
+    ⑩ lean form Cancel has no dirty-state guard → silent loss of a long mobile form · ⑪ fast
+    Available/Hide fire on first tap with no confirmation · ⑫ `/sell` ignores locale entirely ·
+    ⑬ lean create is not idempotent (unconditional `listing.create`) → duplicate PENDING rows.
+  - **Perf / hygiene:** ⑭ branded MAP renditions leak on re-stamp (photos fixed, maps not) ·
+    ⑮ `plotGroups`/`plotsSummary` still materialize (metering added, SQL not) · ⑯ purge cron
+    unbounded/non-resumable · ⑰ missing composite indexes (SearchLog site+surface+createdAt;
+    LandFollow districtId/blockId) · ⑱ backup "Test connection" doesn't probe tier folders ·
+    ⑲ rollup/price-index still materialize in Node · ⑳ city-mandatory backfill one-shot (already
+    run; low value).
+  - **Plus: nothing is click-tested** — all of the above is reasoned, typechecked, built, deployed
+    and HTTP-probed, but no admin/partner session was ever exercised (no login available).
 
 **2026-07-15→17: gallery/perf/admin-UX batch (commits `eaf3708`→`df78560`, all deployed+verified).**
 - **Hero gallery + lightbox** on both sites' listing pages (see Feature map) + **first-party photo
