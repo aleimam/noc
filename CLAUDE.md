@@ -227,7 +227,9 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 
 ## Current state & pending (as of 2026-07-22)
 
-**Everything below is deployed + live-verified; the tree is clean; local `main` = prod (`e346bfb`).**
+**Everything below is deployed + live-verified; the tree is clean; local `main` = prod.** Last
+CODE commit at handoff was `e346bfb` (docs-only commits may sit on top of it) — **always confirm
+with `git log --oneline -1` on BOTH local and `ssh noc`** rather than trusting this hash.
 
 **2026-07-22 — BIG DAY (32 commits). Six things changed the shape of the system:**
 1. **⭐ The Codex audit is CLOSED** — all 20 remaining findings worked (see the audit block below

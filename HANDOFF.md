@@ -19,7 +19,8 @@ Users are low-literacy/low-tech on phones — the design rule is *biggest, simpl
 ## Current status — NOTHING is mid-flight
 
 **Live, healthy, fully deployed, clean tree.** Local `main` and production are in sync — last
-commit **`e346bfb`** (verified 2026-07-22 on both local and `ssh noc`; always re-verify with
+CODE commit **`e346bfb`** at handoff, with docs-only commits on top (verified 2026-07-22 on both
+local and `ssh noc` — this hash is a landmark, not a guarantee; always re-verify with
 `git log --oneline -1` on the server). Both pm2 apps online. Every feature requested to date is
 shipped, deployed, and live-verified — there is **no half-finished work** (build passes 3/3;
 `git status` is clean; `npx vitest run` = 35/35).
