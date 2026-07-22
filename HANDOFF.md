@@ -19,12 +19,12 @@ Users are low-literacy/low-tech on phones — the design rule is *biggest, simpl
 ## Current status — NOTHING is mid-flight
 
 **Live, healthy, fully deployed, clean tree.** Local `main` and production are in sync — last
-commit **`07cbe4c`** (verified 2026-07-22 on both local and `ssh noc`; always re-verify with
+commit **`e346bfb`** (verified 2026-07-22 on both local and `ssh noc`; always re-verify with
 `git log --oneline -1` on the server). Both pm2 apps online. Every feature requested to date is
 shipped, deployed, and live-verified — there is **no half-finished work** (build passes 3/3;
 `git status` is clean; `npx vitest run` = 35/35).
 
-**Four things changed the shape of the system on 2026-07-22 — read `CLAUDE.md` → "Current state
+**Six things changed the shape of the system on 2026-07-22 — read `CLAUDE.md` → "Current state
 & pending" for the detail, but do not miss these:**
 1. **Cloudflare is LIVE in front of both domains** (proxied, Full-strict, WAF + Bot Fight Mode +
    rate limiting + hotlink protection). **Never enable Rocket Loader** (breaks Next hydration) or
@@ -41,8 +41,26 @@ shipped, deployed, and live-verified — there is **no half-finished work** (bui
    leak in «الصواري». Its switch convention is a settled owner decision: *green + right = live
    and sellable*.
 
+5. **⚠️ B3 (lock the origin to Cloudflare) is OFF — it was tried and rolled back.**
+   `ops/cloudflare-lockdown.sh` is correct and ready, but enabling it 2h after the flip broke
+   alsawarey.com for the owner: their browser still had the pre-flip A record cached and hit the
+   origin directly, getting a hard nginx 403. **Do not enable until ~24–48h past the DNS TTL**,
+   and confirm from a NORMAL browser (never `curl --resolve`, which hides this entirely). Two
+   reusable traps are in the script header: nginx `allow`/`deny` sees `$remote_addr` AFTER
+   `real_ip` rewrites it, and Cloudflare blocks this box's own IP so server-side "does it work
+   through Cloudflare?" checks are guaranteed false negatives. B3 also makes rollback two steps:
+   `lockdown off` FIRST, then grey-cloud.
+6. **Dark mode is GONE from both public sites** (owner decision — accidental-tap footgun for
+   low-literacy visitors). Nothing can add the `dark` class; `ThemeScript` clears it and expires
+   the old cookie. **The 123 `dark:` classes across 36 files are dormant ON PURPOSE** — don't
+   "tidy" them away; leaving them keeps the decision reversible in one commit.
+
 **⚠️ The one thing still owed by the owner: revoke the OLD Brevo SMTP key in the dashboard.**
 The rotation is otherwise complete and verified, but the leaked key stays valid until they do.
+
+**Also unverified (not broken — just never exercised in a browser):** the whole `/admin` surface
+(6 items listed in `CLAUDE.md`), the partner account page's new OTP-verified email/phone change,
+and sold → hide → show returning as sold. Everything else was click-tested by the owner today.
 
 ## Done LAST (2026-07-20, final block): Codex audit pass 1 — 7 defects + 7 extras, all fixed
 

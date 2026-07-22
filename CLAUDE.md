@@ -222,14 +222,14 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 | Web analytics | admin `/admin/analytics` | first-party: sessions, events, funnel, Web Vitals, cohorts, rollups, saved views |
 | **Search Intelligence** | public search on market/storefront/rationing · admin `/admin/analytics/search` | every search logged to `SearchLog` (Arabic-normalized, zeroResult, usedFastSearch) + select/convert attribution via `/api/search-event` beacons (heuristic recency — no server session id). Dashboard (funnel, top/zero/converting terms, filter by window·site·surface, RBAC `analytics`) hosts the **synonym dictionary** (`SearchSynonym` groups expand query tokens: term AND kept, variants OR'd) and the **zero-result lead inbox** (`SearchLead` — leads carry a phone, so inbox + editors need `analytics:MANAGE`). Public extras: zero-result "leave your number" card (`ZeroResultLead` → rate-limited `/api/search-lead`) and autocomplete (`SearchAutocomplete` → `/api/search-suggest`: cached corpus of types + geo names, trending when empty; picked suggestion sets `fast=1` → `usedFastSearch`). ⚠️ `apps/{portal,brokerage}/lib/search.ts` are MIRRORS — keep identical |
 | Backups | admin `/admin/settings/backups` | see server map above |
-| Appearance/theming | admin settings | per-site colors/fonts via Setting `theme.<brand>` |
+| Appearance/theming | admin settings | per-site colors/fonts via Setting `theme.<brand>`. **Both public sites are LIGHT-ONLY since 2026-07-22** (owner decision — the «داكن» toggle was an accidental-tap footgun for low-literacy visitors; admin was already light-only). Nothing can add the `dark` class: `ThemeScript` actively removes it and expires the old `NOC_THEME` cookie. The 123 `dark:` classes across 36 files are DORMANT on purpose — do not "clean them up" without reason; leaving them keeps the decision reversible in one commit. |
 | Security posture | admin settings | `security.level` LIGHT/MEDIUM/HIGH gates scans/maps/quotas |
 
 ## Current state & pending (as of 2026-07-22)
 
-**Everything below is deployed + live-verified; the tree is clean; local `main` = prod (`07cbe4c`).**
+**Everything below is deployed + live-verified; the tree is clean; local `main` = prod (`e346bfb`).**
 
-**2026-07-22 — BIG DAY (27 commits). Four things changed the shape of the system:**
+**2026-07-22 — BIG DAY (32 commits). Six things changed the shape of the system:**
 1. **⭐ The Codex audit is CLOSED** — all 20 remaining findings worked (see the audit block below
    for the per-finding table and the two FALSE POSITIVES never to re-report).
 2. **⭐ Cloudflare is LIVE in front of both domains** (Part C flipped + settings pass). Real
@@ -249,6 +249,29 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
    Hiding now REMEMBERS «تم البيع» (`Listing.statusBeforeHide`, migration
    `20260722140000_listing_status_before_hide`), with the transition matrix as a pure
    unit-tested function (`packages/partner-portal/src/availability.ts`, 10 vitest cases).
+
+5. **⚠️ B3 (lock the origin to Cloudflare) was ATTEMPTED AND ROLLED BACK — it is OFF.** The
+   script (`ops/cloudflare-lockdown.sh on|off|status`) is written, correct and ready, but
+   enabling it **2h after the proxy flip broke alsawarey.com for the owner**: their browser still
+   had the pre-flip A record cached, went straight to the origin, and got a hard nginx 403.
+   **Do not enable until DNS propagation has fully drained (~24–48h past TTL)**, and confirm from
+   a NORMAL browser (no `curl --resolve`) that both names resolve to Cloudflare first. Three
+   lessons are in the script header — the two most reusable: nginx `allow`/`deny` matches
+   `$remote_addr` AFTER `real_ip` rewrites it (so it must key on `$realip_remote_addr`, else it
+   blocks EVERYONE — this caused a ~40s outage), and **Cloudflare blocks requests from this
+   box's own datacenter IP, so verifying "does it work through Cloudflare?" FROM THE SERVER is a
+   guaranteed false negative.** Also note **B3 changes the rollback**: grey-clouding alone would
+   then 403 everyone, so rollback becomes `lockdown off` FIRST, then grey-cloud.
+6. **Dark mode REMOVED from both public sites (owner decision).** The «داكن» toggle sat in the
+   header of sites used by low-literacy visitors, often on a relative's phone — one accidental
+   tap flipped everything with no obvious undo (same reasoning that removed it from admin
+   earlier). Toggle deleted from all three shells + the component + its export; the customer
+   login no longer re-applies a stored `appearance` (that path would have re-darkened the site
+   for the very people who'd tried it). `ThemeScript` is REPURPOSED to clear the class and expire
+   the year-long `NOC_THEME` cookie, so existing dark users heal on next load. **The 123 `dark:`
+   utility classes across 36 files were deliberately LEFT dormant** — nothing can add the `dark`
+   class any more so they never match; stripping them is churn with real regression risk and no
+   user benefit. That also makes the whole decision reversible in one commit.
 
 GSC check-up also run: **alsawarey's sitemap moved "Couldn't fetch" → Success** (read Jul 22,
 i.e. after the Cloudflare flip); page-indexing coverage on both properties still says
@@ -388,7 +411,9 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
    the edge; ACME renewal still served through the proxy; hydration works in a real browser;
    hotlink allows no-referer (WhatsApp/OG previews safe) and blocks foreign referers;
    `cf-cache-status: DYNAMIC` so no logged-in HTML is cached. Rollback = grey-cloud, one click.
-   Optional leftover: **B3** (restrict :80/:443 to Cloudflare ranges) after a soak period.
+   Leftover: **B3** (restrict the origin to Cloudflare) — **tried 2026-07-22 and ROLLED BACK,
+   currently OFF**; it broke alsawarey for the owner because DNS hadn't propagated. Re-run
+   `ops/cloudflare-lockdown.sh on` only after ~24–48h of drain, and verify from a normal browser.
 2. ~~Off-site backup target~~ **✅ DONE + fully proven 2026-07-21** — the tiered SFTP module is live
    on Hetzner sub-account `u635384-sub6`; scheduled runs fire, a restore drill passed, and the
    **first retention prune ran + was verified 2026-07-21 07:00 UTC**: it deleted exactly the oldest

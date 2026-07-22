@@ -62,15 +62,38 @@ done
 csf -r
 ```
 
-### B3. (Recommended, after a soak period) Lock 80/443 to Cloudflare only
+### B3. Lock the origin to Cloudflare — ⚠️ BUILT, TRIED, ROLLED BACK. CURRENTLY **OFF**.
 
-Once everything is proven through Cloudflare, block direct-to-IP access so scrapers
-can't bypass the WAF by hitting `77.42.66.76` directly:
-- Keep `80,443` in CSF `TCP_IN`, but add an `csf.allow`-style restriction, or use
-  Nginx: a `default_server` catch-all on :80/:443 that returns 444 already exists via
-  CWP's own vhosts — verify with `curl -k https://77.42.66.76/` (should NOT serve our
-  sites' content when SNI/Host is wrong).
-- Don't do this on day one — it complicates debugging the cutover.
+Blocks direct-to-IP access so scrapers can't bypass the WAF / Bot Fight Mode / rate limits by
+hitting `77.42.66.76`. Implemented as **`ops/cloudflare-lockdown.sh {on|off|status}`** — the
+script is correct and ready; only the TIMING was wrong.
+
+**What happened (2026-07-22).** Enabled ~2h after the proxy flip. The owner's own browser still
+had the pre-flip A record cached, so it connected straight to the origin and got a hard nginx
+**403 on alsawarey.com/listings**. Turned off immediately; both sites verified back.
+
+**When it is safe:** once DNS propagation has fully drained — **~24–48h past the record TTL**.
+Before enabling, confirm from a NORMAL browser on a normal connection that both names resolve to
+Cloudflare. **Never validate with `curl --resolve <cf-edge>`** — that forces traffic through
+Cloudflare and hides this failure completely. It tests the path you assume, not the path a
+visitor takes.
+
+**Three traps, all paid for in production:**
+1. `allow`/`deny` matches `$remote_addr` **after** the `real_ip` module rewrites it (we set
+   `real_ip_header CF-Connecting-IP` in B1), so by then it holds the VISITOR's IP, never
+   Cloudflare's — the rule rejected everyone (~40s outage). Must key on **`$realip_remote_addr`**.
+2. A self-check that curls the site through Cloudflare **from this box** is a guaranteed false
+   negative: Cloudflare blocks this datacenter IP, so it returns 403 whether B3 is on or off. It
+   auto-reverted a perfectly good config once.
+3. **B3 changes the rollback procedure.** Grey-clouding alone would then send visitors to an
+   origin that answers 403. Rollback is **two steps, in order: `cloudflare-lockdown.sh off`
+   FIRST, then grey-cloud.**
+
+Scope (deliberate — a blanket rule causes outages): only the two **apex** `:443` vhosts. `www.*`
+is still DNS-only/grey, so restricting it would 403 real visitors; it only `return 301`s to the
+apex anyway. `:80` stays open for `/.well-known/acme-challenge/`. CWP's `webmail.noc` /
+`mail.noc` / `cpanel.noc` / bare-IP vhosts are untouched — restricting those locks the owner out
+of webmail and the control panel.
 
 ### App note (no change needed)
 
