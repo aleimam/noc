@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LanguageSwitcher, ThemeToggle } from '@noc/ui';
+import { LanguageSwitcher } from '@noc/ui';
 
 type Item = { label: string; href: string };
 type Group = { title: string; links: Item[] };
@@ -68,7 +68,7 @@ export function StoreMobileMenu({
             <div className="my-2 border-t border-white/10" />
             <Row href={wishlist.href} label={`♥ ${wishlist.label}`} />
             <Row href={account.href} label={account.label} />
-            <div className="flex items-center gap-3 px-5 py-4"><LanguageSwitcher /><ThemeToggle /></div>
+            <div className="flex items-center gap-3 px-5 py-4"><LanguageSwitcher /></div>
           </nav>
         </div>
       )}

@@ -4,7 +4,6 @@ export { Analytics, ConsentBanner } from './components/Analytics';
 export { Tracker, nocEvent, TrackEvent } from './components/Tracker';
 export { LanguageSwitcher } from './components/LanguageSwitcher';
 export { TrackView, RecentlyViewed } from './components/RecentlyViewed';
-export { ThemeToggle } from './components/ThemeToggle';
 export { ThemeScript } from './components/ThemeScript';
 export { EnterToSubmit } from './components/EnterToSubmit';
 export { toast, Toaster } from './components/Toast';

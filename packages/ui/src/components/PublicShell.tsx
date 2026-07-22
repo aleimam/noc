@@ -4,7 +4,6 @@ import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '../lib/cn';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { ThemeToggle } from './ThemeToggle';
 
 const NAV = [
   { href: '/', key: 'home' },
@@ -88,7 +87,6 @@ export function PublicShell({
           <div className="flex items-center gap-2">
             {partners && <a href={partners.href} className="hidden rounded-md px-2.5 py-2 text-sm font-semibold text-soft/85 transition-colors hover:text-gold sm:block">{partners.label}</a>}
             <div className="hidden sm:block"><LanguageSwitcher /></div>
-            <ThemeToggle />
             <AccountLink />
             <button
               type="button"

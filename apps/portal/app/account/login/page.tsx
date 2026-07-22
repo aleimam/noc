@@ -123,11 +123,9 @@ export default function CustomerLoginPage() {
           if (p?.locale) {
             document.cookie = `NEXT_LOCALE=${String(p.locale).toLowerCase()};path=/;max-age=31536000;samesite=lax`;
           }
-          if (p?.appearance && p.appearance !== 'SYSTEM') {
-            const th = String(p.appearance).toLowerCase();
-            document.cookie = `NOC_THEME=${th};path=/;max-age=31536000;samesite=lax`;
-            document.documentElement.classList.toggle('dark', th === 'dark');
-          }
+          // `appearance` is deliberately NOT applied: the public sites are light-only since
+          // 2026-07-22. Restoring a stored DARK here would have re-darkened the site for exactly
+          // the customers who once tried the (now removed) toggle. The column stays for history.
         } catch {
           /* ignore */
         }

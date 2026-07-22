@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@noc/db';
 import { waPhone } from '@noc/config';
-import { LanguageSwitcher, ThemeToggle, FloatingWhatsApp } from '@noc/ui';
+import { LanguageSwitcher, FloatingWhatsApp } from '@noc/ui';
 import { getStorefront } from '../../lib/storefront';
 import { getAdminViewer } from '../../lib/adminView';
 import { SearchBox } from './SearchBox';
@@ -136,7 +136,6 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
             <Link href="/wishlist" aria-label={L('المفضلة', 'Wishlist')} className="rounded-lg px-2 py-1.5 text-lg hover:bg-white/10">♥</Link>
             <Link href="/account" className="whitespace-nowrap rounded-lg border border-white/20 px-3 py-1.5 text-sm hover:bg-white/10">{L('حسابي', 'Account')}</Link>
             <LanguageSwitcher />
-            <ThemeToggle />
           </div>
         </div>
       </header>
