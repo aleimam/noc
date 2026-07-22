@@ -13,8 +13,8 @@ export type BrandTheme = {
   gold?: string; // accent / trust-mark — derives the gold ramp
   bg?: string; // light background
   fg?: string; // light text
-  darkBg?: string; // dark-mode background
-  darkFg?: string; // dark-mode text
+  darkBg?: string; // legacy — dark mode was removed; kept so stored theme JSON still parses
+  darkFg?: string; // legacy — dark mode was removed; kept so stored theme JSON still parses
   font?: string; // font key (see THEME_FONTS)
   radius?: 'sharp' | 'soft' | 'round';
   density?: 'compact' | 'normal' | 'airy';
@@ -74,7 +74,6 @@ function ramp(base: string): Record<number, string> {
 export function buildThemeCss(theme: BrandTheme | null | undefined): string {
   if (!theme) return '';
   const root: string[] = [];
-  const dark: string[] = [];
 
   if (theme.navy && parseHex(theme.navy)) {
     const r = ramp(theme.navy);
@@ -97,12 +96,9 @@ export function buildThemeCss(theme: BrandTheme | null | undefined): string {
     root.push(`--radius-sm:${sm}px`, `--radius-md:${md}px`, `--radius-lg:${lg}px`, `--radius-xl:${xl}px`, `--radius-2xl:${x2}px`);
   }
   if (theme.density && DENSITY_FONT[theme.density]) root.push(`font-size:${DENSITY_FONT[theme.density]}`);
-  if (theme.darkBg && parseHex(theme.darkBg)) dark.push(`--bg:${theme.darkBg}`);
-  if (theme.darkFg && parseHex(theme.darkFg)) dark.push(`--fg:${theme.darkFg}`);
 
   let css = '';
   if (root.length) css += `:root{${root.join(';')}}`;
-  if (dark.length) css += `.dark{${dark.join(';')}}`;
   return css;
 }
 
