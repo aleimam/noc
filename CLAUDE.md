@@ -184,6 +184,14 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   papers block were merged into it on both sites. Don't add a second staff-only box; extend the
   card. Papers therefore inherit the card's gate (they used to render on a bare
   `session.user.type === 'STAFF'` check with no permission test and no live re-read).
+  **COMPACT layout is an owner decision (2026-07-22)** — the card is ONE wrapping row of xs chips
+  (papers included, as `🗂️ تحصيص ✓ 📎` links to the scan rather than inline thumbnails). Don't
+  re-expand it into a `<dl>` or bring back the 112px paper previews; that height is exactly what
+  the owner asked to remove.
+- **Market listing page order (owner, 2026-07-22):** «مميزات المنطقة» (`AreaAdvantages`) is the
+  LAST content block on `/market/[id]`, below similar-listings and the offer CTAs, wrapped in
+  `mb-24` to clear the sticky contact bar and skipped entirely when the neighborhood has no
+  advantages. It used to sit mid-page and interrupt the listing's own details — don't move it back.
 - **Owner display rule:** partners see UNBRANDED assets only; branded posters are per-brand
   (photo-stamping engine with per-category rules).
 - **EAV SELECT read path:** since the 2026-07 option-lists migration, SELECT values are stored
