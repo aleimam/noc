@@ -538,7 +538,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         </div>
       ))}
 
-      <AreaAdvantages heading={L('مميزات المنطقة', 'Area advantages')} groups={advGroups} />
+      {/* (Advantages moved to the BOTTOM of the page — owner request 2026-07-22.) */}
 
       {/* About the area — inherited area content (matrix-gated), closed by default so it
           never buries the listing itself. */}
@@ -635,6 +635,14 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       {!viewerId && (
         <div className="mb-24 rounded-2xl border border-ink-200 bg-white p-4 text-center text-sm">
           <a href={`/account/login?next=${canonicalPath}`} className="font-bold text-accent">{t('negoLoginToOffer')}</a>
+        </div>
+      )}
+
+      {/* Area advantages — LAST content block on the page (owner request 2026-07-22), so the
+          listing's own details and CTAs come first. mb-24 clears the sticky contact bar. */}
+      {advGroups.length > 0 && (
+        <div className="mb-24">
+          <AreaAdvantages heading={L('مميزات المنطقة', 'Area advantages')} groups={advGroups} />
         </div>
       )}
 
