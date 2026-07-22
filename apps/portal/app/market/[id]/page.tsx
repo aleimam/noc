@@ -141,8 +141,10 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const isSeller = !!viewerId && viewerId === listing.sellerId;
   const negotiation = viewerId && !isSeller ? await getBuyerNegotiation(listing.id, viewerId) : null;
   const saved = (await wishedSet([listing.id])).has(listing.id);
-  // Staff admin view only — never fetched (let alone rendered) for a visitor.
-  const adminDetail = (await getAdminViewer()) ? await ownerDetailFor(listing.id) : null;
+  // Staff admin view only — never fetched (let alone rendered) for a visitor. ONE gate for the
+  // whole internal card (owner + floor price + official papers + the edit link).
+  const isAdminViewer = !!(await getAdminViewer());
+  const adminDetail = isAdminViewer ? await ownerDetailFor(listing.id) : null;
 
   // Main gallery = attachments with no attribute. Per-property files carry an attributeId.
   const [photos, propRows] = await Promise.all([
@@ -167,10 +169,9 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
 
   const partnershipsOn = await partnershipsEnabled();
 
-  // Official papers (internal): the full block is shown only to a logged-in STAFF member
-  // browsing the site; the public never sees it.
-  const isStaffViewer = session?.user?.type === 'STAFF';
-  const paperRows = isStaffViewer
+  // Official papers (internal): merged INTO the single admin card below, so they share its gate
+  // (live STAFF row + `owners:VIEW`) instead of the weaker session-type check they used before.
+  const paperRows = isAdminViewer
     ? await prisma.attachment.findMany({ where: { ownerType: 'ListingPaper', ownerId: id }, select: { path: true, stampCategory: true } })
     : [];
   const paperPhoto = (cat: string) => paperRows.find((p) => p.stampCategory === cat)?.path ?? null;
@@ -380,13 +381,17 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
           ))}
         </div>
         <h1 className="mt-2 text-2xl font-bold text-primary">{listing.title}</h1>
-        <div className="mt-2"><AdminEditButton href={`/admin/marketplace/listings/${listing.id}/edit`} section="listings" /></div>
-        {/* Staff admin view: internal owner contact + floor price. Gated on the LIVE staff row +
-            `owners:VIEW` (see lib/adminView), so a visitor can never receive any of this. */}
+        {/* Staff admin view — THE single internal card (owner contact + floor price + official
+            papers + the edit link). Owner rule 2026-07-22: everything admin-only lives here and
+            NOWHERE else on the page. Gated on the LIVE staff row + `owners:VIEW`, so a visitor
+            can never receive any of it. */}
         {adminDetail && (
           <section className="mt-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-navy-800">
-            <div className="flex items-center gap-1.5 text-sm font-bold text-amber-800">
-              🔒 {L('بيانات داخلية — للإدارة فقط', 'Internal — staff only')}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-sm font-bold text-amber-800">
+                🔒 {L('بيانات داخلية — للإدارة فقط', 'Internal — staff only')}
+              </div>
+              <AdminEditButton href={`/admin/marketplace/listings/${listing.id}/edit`} section="listings" />
             </div>
             <dl className="mt-2 flex flex-wrap gap-x-8 gap-y-2 text-sm">
               <div className="flex items-baseline gap-1.5">
@@ -421,6 +426,33 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
               </div>
             </dl>
             {adminDetail.details && <p className="mt-2 border-t border-amber-200 pt-2 text-sm">{adminDetail.details}</p>}
+
+            {/* Official papers — merged in here (owner rule 2026-07-22: one admin card only). */}
+            <div className="mt-3 border-t border-amber-200 pt-3">
+              <div className="mb-2 text-sm font-bold text-amber-800">🗂️ {L('الأوراق الرسمية', 'Official papers')}</div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { label: L('جواب التحصيص', 'Allocation letter'), has: listing.hasAllocationLetter, date: listing.allocationLetterDate, photo: paperPhoto('allocation_letter') },
+                  { label: L('توكيل بيع', 'Sale mandate'), has: listing.hasSaleMandate, date: listing.saleMandateDate, photo: paperPhoto('sale_mandate') },
+                ].map((p, i) => (
+                  <div key={i} className="rounded-lg border border-amber-200 bg-white/70 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold">{p.label}</span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${p.has ? 'bg-green/15 text-green' : 'bg-graphite/10 text-graphite/60'}`}>
+                        {p.has ? L('متوفر', 'Available') : L('غير متوفر', 'Not available')}
+                      </span>
+                    </div>
+                    {p.has && p.date && <div className="mt-1 text-xs opacity-70" dir="ltr">{p.date}</div>}
+                    {p.has && p.photo && (
+                      <a href={p.photo} target="_blank" rel="noreferrer" className="mt-2 block">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={p.photo} alt="" className="h-28 w-full rounded object-cover ring-1 ring-graphite/20" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
         )}
         {listing.area != null && (
@@ -447,34 +479,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         <span className="font-medium">{weAreContact ? t('listedByUs') : ownerName || '—'}</span>
       </div>
 
-      {/* Official papers (internal) — staff-only on the frontend; hidden from the public. */}
-      {isStaffViewer && (
-        <div className="rounded-lg border-2 border-dashed border-accent/40 bg-accent/5 p-4">
-          <div className="mb-2 text-sm font-bold text-accent">🗂️ {L('الأوراق الرسمية (للإدارة فقط)', 'Official papers (staff only)')}</div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {[
-              { label: L('جواب التحصيص', 'Allocation letter'), has: listing.hasAllocationLetter, date: listing.allocationLetterDate, photo: paperPhoto('allocation_letter') },
-              { label: L('توكيل بيع', 'Sale mandate'), has: listing.hasSaleMandate, date: listing.saleMandateDate, photo: paperPhoto('sale_mandate') },
-            ].map((p, i) => (
-              <div key={i} className="rounded-lg border border-graphite/15 bg-white/70 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold">{p.label}</span>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${p.has ? 'bg-green/15 text-green' : 'bg-graphite/10 text-graphite/60'}`}>
-                    {p.has ? L('متوفر', 'Available') : L('غير متوفر', 'Not available')}
-                  </span>
-                </div>
-                {p.has && p.date && <div className="mt-1 text-xs opacity-70" dir="ltr">{p.date}</div>}
-                {p.has && p.photo && (
-                  <a href={p.photo} target="_blank" rel="noreferrer" className="mt-2 block">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.photo} alt="" className="h-28 w-full rounded object-cover ring-1 ring-graphite/20" />
-                  </a>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* (Official papers moved INTO the single admin card above — owner rule 2026-07-22.) */}
 
       {/* Plot consolidation & partnerships: the owner opted this plot in. */}
       {listing.isPartnership && partnershipsOn && (

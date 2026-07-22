@@ -302,35 +302,36 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
               </a>
             </div>
             {owner.details && <p className="mt-2 border-t border-amber-200 pt-2 text-sm text-navy-700">{owner.details}</p>}
-          </section>
-        )}
 
-        {/* Official papers (internal) — staff only; hidden from the public. */}
-        {isAdminViewer && nb && (
-          <section className="mt-6 rounded-2xl border-2 border-amber-400 bg-amber-50 px-5 py-4 text-navy-800">
-            <div className="mb-3 flex items-center gap-1.5 font-bold text-amber-800">🗂️ {L('الأوراق الرسمية (للإدارة فقط)', 'Official papers (staff only)')}</div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {[
-                { label: L('جواب التحصيص', 'Allocation letter'), has: nb.hasAllocationLetter, date: nb.allocationLetterDate, photo: paperPhotos['allocation_letter'] },
-                { label: L('توكيل بيع', 'Sale mandate'), has: nb.hasSaleMandate, date: nb.saleMandateDate, photo: paperPhotos['sale_mandate'] },
-              ].map((p, i) => (
-                <div key={i} className="rounded-xl border border-amber-200 bg-white/70 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold">{p.label}</span>
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${p.has ? 'bg-success/15 text-success' : 'bg-ink-100 text-ink-500'}`}>
-                      {p.has ? L('متوفر', 'Available') : L('غير متوفر', 'Not available')}
-                    </span>
-                  </div>
-                  {p.has && p.date && <div className="mt-1 font-num text-xs text-ink-500" dir="ltr">{p.date}</div>}
-                  {p.has && p.photo && (
-                    <a href={p.photo} target="_blank" rel="noreferrer" className="mt-2 block">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.photo} alt="" className="h-28 w-full rounded-lg object-cover ring-1 ring-ink-100" />
-                    </a>
-                  )}
+            {/* Official papers — merged in here (owner rule 2026-07-22: ONE admin card only, and
+                nothing admin-only anywhere else on the page). */}
+            {nb && (
+              <div className="mt-3 border-t border-amber-200 pt-3">
+                <div className="mb-2 flex items-center gap-1.5 text-sm font-bold text-amber-800">🗂️ {L('الأوراق الرسمية', 'Official papers')}</div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    { label: L('جواب التحصيص', 'Allocation letter'), has: nb.hasAllocationLetter, date: nb.allocationLetterDate, photo: paperPhotos['allocation_letter'] },
+                    { label: L('توكيل بيع', 'Sale mandate'), has: nb.hasSaleMandate, date: nb.saleMandateDate, photo: paperPhotos['sale_mandate'] },
+                  ].map((p, i) => (
+                    <div key={i} className="rounded-xl border border-amber-200 bg-white/70 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold">{p.label}</span>
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${p.has ? 'bg-success/15 text-success' : 'bg-ink-100 text-ink-500'}`}>
+                          {p.has ? L('متوفر', 'Available') : L('غير متوفر', 'Not available')}
+                        </span>
+                      </div>
+                      {p.has && p.date && <div className="mt-1 font-num text-xs text-ink-500" dir="ltr">{p.date}</div>}
+                      {p.has && p.photo && (
+                        <a href={p.photo} target="_blank" rel="noreferrer" className="mt-2 block">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={p.photo} alt="" className="h-28 w-full rounded-lg object-cover ring-1 ring-ink-100" />
+                        </a>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </section>
         )}
 
