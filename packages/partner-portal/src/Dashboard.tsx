@@ -16,7 +16,7 @@ export async function PartnerDashboard() {
       where: { ownerId, deletedAt: null },
       orderBy: { updatedAt: 'desc' },
       select: {
-        id: true, title: true, adNumber: true, status: true, price: true, soldPrice: true, views: true, rejectionReason: true,
+        id: true, title: true, adNumber: true, status: true, statusBeforeHide: true, price: true, soldPrice: true, views: true, rejectionReason: true,
         // Storefront eligibility: the Al Sawarey detail page 404s Types/Purposes not allowed there.
         typeOption: { select: { allowedOnAlsawarey: true } },
         purposeOption: { select: { allowedOnAlsawarey: true } },
@@ -50,6 +50,7 @@ export async function PartnerDashboard() {
     title: l.title,
     adNumber: l.adNumber,
     status: l.status,
+    statusBeforeHide: l.statusBeforeHide,
     price: l.price != null ? String(l.price) : '',
     views: l.views,
     rejectionReason: l.rejectionReason,

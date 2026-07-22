@@ -551,6 +551,12 @@ model Listing {
   priceUnit       PriceUnit     @default(TOTAL) // price is per: total plot / unit / m²
   priceNegotiable Boolean       @default(false)
   soldPrice       Decimal?      @db.Decimal(14, 2) // set by staff when marked SOLD; optionally shown publicly
+  // What the listing WAS before it was hidden (ARCHIVED) — 'PUBLISHED' | 'SOLD', else null.
+  // `status` is one column, so hiding a SOLD listing used to lose the sale: un-hiding silently
+  // returned it to «متاح». Written on the way into ARCHIVED, consumed + cleared on the way out.
+  // Deliberately NOT an orthogonal `hidden` flag: ARCHIVED is woven through 12 files of
+  // visibility logic, and this delivers the same behaviour without touching any of them.
+  statusBeforeHide String?      @db.VarChar(191)
   lowestPrice     Decimal?      @db.Decimal(14, 2) // internal floor / walk-away price — admins & owner only, NEVER rendered publicly
   deletedAt       DateTime? // soft delete: hidden everywhere except the admin trash; purged for good after 90 days (cron)
   adNumber        String?       @unique // public ad reference YYMM+owner(2)+seq, frozen at publish

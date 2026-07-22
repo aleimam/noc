@@ -7,6 +7,7 @@ import {
   currentSite, requestOtp, requestEmailOtp, verifyOtp, verifyEmailOtp, normalizePhone,
 } from '@noc/auth';
 import { isValidEmail, isValidPhone, parsePriceInput } from '@noc/config';
+import { resolveAvailabilityTransition } from './availability';
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -122,7 +123,7 @@ type FastStatus = (typeof FAST_STATUSES)[number];
 async function ownListing(listingId: string, ownerId: string) {
   return prisma.listing.findFirst({
     where: { id: listingId, ownerId, deletedAt: null },
-    select: { id: true, ownerId: true, status: true },
+    select: { id: true, ownerId: true, status: true, statusBeforeHide: true },
   });
 }
 
@@ -162,12 +163,18 @@ export async function partnerSetAvailability(listingId: string, status: FastStat
   // Same one money rule for the recorded sale price (0 ⇒ null, never a literal «0 ج.م»).
   const parsedSold = parsePriceInput(soldPrice);
   if (!parsedSold.ok) return { ok: false, error: 'invalid' };
+
+  // Hiding is a PAUSE, not a state change — the transition matrix (including "un-hiding a sold
+  // listing restores SOLD") lives in ./availability as a pure, unit-tested function.
+  const next = resolveAvailabilityTransition(l, status, parsedSold.value);
+
   // Conditional write — see partnerUpdatePrice.
   const upd = await prisma.listing.updateMany({
     where: { id: listingId, ownerId, deletedAt: null, status: { in: [...FAST_STATUSES] } },
     data: {
-      status,
-      soldPrice: status === 'SOLD' ? parsedSold.value : null,
+      status: next.status,
+      statusBeforeHide: next.statusBeforeHide,
+      ...('soldPrice' in next ? { soldPrice: next.soldPrice } : {}),
     },
   });
   if (upd.count === 0) return { ok: false, error: 'conflict' };

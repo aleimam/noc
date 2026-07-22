@@ -10,6 +10,7 @@ export type PartnerRow = {
   title: string;
   adNumber: string | null;
   status: string;
+  statusBeforeHide?: string | null; // what it was before hiding — so «الحالة» stays truthful while hidden
   price: string; // decimal as string
   views: number;
   rejectionReason: string | null;
@@ -210,10 +211,13 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
                       colour meant opposite things. */}
                   <Switch
                     label={L('الحالة', 'Status')}
-                    on={r.status !== 'SOLD'}
+                    // While hidden the row's status IS 'ARCHIVED', so read the REMEMBERED sale
+                    // state instead — otherwise a hidden sold listing would display «متاح» and
+                    // then come back sold, which looks like the switch lied.
+                    on={(r.status === 'ARCHIVED' ? r.statusBeforeHide : r.status) !== 'SOLD'}
                     onLabel={L('متاح', 'Available')}
                     offLabel={L('تم البيع', 'Sold')}
-                    // Hidden listings aren't public, so the sale state is meaningless until shown.
+                    // Editing the sale state is only meaningful once the listing is public again.
                     disabled={pending || r.status === 'ARCHIVED'}
                     onChange={(next) => {
                       if (!next) { setSoldRow(r.id); setSoldInput(prices[r.id] ?? ''); }
@@ -235,7 +239,11 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
                     }}
                   />
                   {r.status === 'ARCHIVED' && (
-                    <span className="text-xs text-ink-500">{L('أظهر الإعلان أولاً لتغيير الحالة.', 'Show the listing first to change its status.')}</span>
+                    <span className="text-xs text-ink-500">
+                      {r.statusBeforeHide === 'SOLD'
+                        ? L('مخفي — سيعود «تم البيع» عند الإظهار.', 'Hidden — it will return as Sold when shown.')
+                        : L('أظهر الإعلان أولاً لتغيير الحالة.', 'Show the listing first to change its status.')}
+                    </span>
                   )}
                 </div>
               </div>
