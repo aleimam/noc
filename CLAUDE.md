@@ -388,11 +388,20 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
    back to Arabic where admin EN fields are empty — biggest gaps: the whole `/sell` page content
    + storefront hero title/subtitle (Admin → Storefront editor). Same visit: upload a hero image
    (improves homepage + OG share preview, which falls back to the logo today). Pure content entry.
-8. **GSC check-up ~2026-07-23:** Google Search Console was connected for BOTH domains on
-   2026-07-16 (HTML-tag verified — tokens live in Settings `gsc_newobour`/`gsc_alsawarey`,
-   rendered as meta tags; **never delete them**, verification depends on them). Sitemaps
-   submitted, homepage indexing requested. A week later: check coverage + that the alsawarey
-   sitemap moved from "Couldn't fetch" to Success.
+8. **GSC check-up — ✅ RUN 2026-07-22 (in the owner's Chrome).** Both properties stay HTML-tag
+   verified (tokens in Settings `gsc_newobour`/`gsc_alsawarey` render as meta tags — confirmed
+   still present through Cloudflare; **never delete them**, verification depends on them).
+   - **⭐ alsawarey sitemap moved "Couldn't fetch" → `Success`**, last read **Jul 22** — i.e. Google
+     fetched it fine AFTER the Cloudflare flip. newobour sitemap also `Success` (read Jul 19).
+   - **Crawl surface verified healthy through the edge:** Googlebot UA gets 200 on `/`,
+     `/robots.txt`, `/sitemap.xml` on both zones (Bot Fight Mode is NOT challenging crawlers),
+     robots allows content while blocking `/admin` `/account` `/api`, and **all 22 alsawarey
+     sitemap URLs return 200**.
+   - **GSC's "discovered pages" lags the live sitemap** (81 vs 95 on newobour, 9 vs 22 on
+     alsawarey) — expected, the sitemaps grew as listings were published; not a defect.
+   - **Still pending:** Page-indexing coverage reads "Processing data, check again in a day or so"
+     on BOTH properties (they're only ~6 days old). Performance so far: 2 total clicks on
+     newobour. **Re-check coverage in a few days** — that's the only outstanding piece.
 
 **Verification pending (needs a staff/admin login — I can't from a shell; everything else this
 session is backed by real command output). These are reasoned + typechecked + built, deployed, but
