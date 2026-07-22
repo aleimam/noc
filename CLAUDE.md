@@ -2,7 +2,7 @@
 
 Master onboarding for anyone (human or Claude session) picking up this repo. It captures the
 architecture, the production runbook, and every hard-won gotcha. Deeper docs are linked at the
-bottom. Last full update: **2026-07-20**. Mid-flight state (if any) lives in `HANDOFF.md`.
+bottom. Last full update: **2026-07-22**. Mid-flight state (if any) lives in `HANDOFF.md`.
 
 ## What this is
 
@@ -225,9 +225,37 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 | Appearance/theming | admin settings | per-site colors/fonts via Setting `theme.<brand>` |
 | Security posture | admin settings | `security.level` LIGHT/MEDIUM/HIGH gates scans/maps/quotas |
 
-## Current state & pending (as of 2026-07-20)
+## Current state & pending (as of 2026-07-22)
 
-**Everything below is deployed + live-verified; the tree is clean; local `main` = prod (`e395a3d`).**
+**Everything below is deployed + live-verified; the tree is clean; local `main` = prod (`07cbe4c`).**
+
+**2026-07-22 — BIG DAY (27 commits). Four things changed the shape of the system:**
+1. **⭐ The Codex audit is CLOSED** — all 20 remaining findings worked (see the audit block below
+   for the per-finding table and the two FALSE POSITIVES never to re-report).
+2. **⭐ Cloudflare is LIVE in front of both domains** (Part C flipped + settings pass). Real
+   visitor IPs still reach nginx, cert renewal survives the proxy, hotlink protection allows
+   no-referer so WhatsApp/OG previews still work. **Never enable Rocket Loader or "Cache
+   Everything".** Full detail + the verification evidence in `ops/CLOUDFLARE.md`.
+3. **⭐ The leaked Brevo SMTP key is retired** — relay now authenticates as
+   `b19e6d001@smtp-brevo.com`. ⚠️ **That account has an Authorised-IPs allowlist with
+   `77.42.66.76` on it — if the server IP ever changes, ALL mail dies with `525 5.7.1
+   Unauthorized IP address` until the new IP is added in Brevo.** `ops/mail-relay-brevo.sh`
+   gained `verify`/`rotate`/`rollback`, and **`rotate` now authenticates BEFORE writing** (the
+   old write-then-test order silently deferred live mail twice while we were rotating).
+   **OWNER STILL TO DO: revoke the OLD key in the Brevo dashboard** — it remains valid until then.
+4. **Partner portal click-tested by the owner and fixed** (see the Feature-map row): the
+   «الصواري» tab was leaking OTHER partners' listings, the active tab wasn't highlighted, and the
+   three status buttons became two switches under one rule — *green + right = live and sellable*.
+   Hiding now REMEMBERS «تم البيع» (`Listing.statusBeforeHide`, migration
+   `20260722140000_listing_status_before_hide`), with the transition matrix as a pure
+   unit-tested function (`packages/partner-portal/src/availability.ts`, 10 vitest cases).
+
+GSC check-up also run: **alsawarey's sitemap moved "Couldn't fetch" → Success** (read Jul 22,
+i.e. after the Cloudflare flip); page-indexing coverage on both properties still says
+"Processing data" — re-check in a few days. A full production sweep at the end of the day was
+clean: both apps online, no 5xx, disk 31%, all 7 crons present, local backup current, off-site
+hourly runs SUCCESS. The only app error all day was a single 29-request scanner burst at 03:04
+(malformed Server Action probes) — pre-Cloudflare, never repeated.
 
 **2026-07-20 (last): CODEX AUDIT PASS 1 — all 7 defects + 7 extras fixed** (commits `06e58e5`→
 `baf90b1`, all deployed + live-verified). Codex ran pass 1 of `CODEX_AUDIT_BRIEF.md` (listings +

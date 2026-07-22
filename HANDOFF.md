@@ -1,10 +1,10 @@
 # Project Handoff — NOC platform (newobour.com + alsawarey.com)
 
-_Last updated: 2026-07-20 (end of day) · Written so a new Claude session (on any account, same device) can continue this project._
+_Last updated: 2026-07-22 (end of day) · Written so a new Claude session (on any account, same device) can continue this project._
 
 > **Read `CLAUDE.md` first — it is the master onboarding doc** (architecture, the production
 > deploy runbook with every gotcha, the server map, feature map, architecture rules, and the
-> owner-blocked list; last full update 2026-07-20 — same day as this file). This HANDOFF only
+> owner-blocked list; last full update 2026-07-22 — same day as this file). This HANDOFF only
 > covers **session-transition facts**: what state you're inheriting and what lives on this
 > device but outside the repo.
 
@@ -19,10 +19,30 @@ Users are low-literacy/low-tech on phones — the design rule is *biggest, simpl
 ## Current status — NOTHING is mid-flight
 
 **Live, healthy, fully deployed, clean tree.** Local `main` and production are in sync — last
-commit **`baf90b1`** (verified 2026-07-20 on both local and `ssh noc`; always re-verify with
+commit **`07cbe4c`** (verified 2026-07-22 on both local and `ssh noc`; always re-verify with
 `git log --oneline -1` on the server). Both pm2 apps online. Every feature requested to date is
 shipped, deployed, and live-verified — there is **no half-finished work** (build passes 3/3;
-`git status` is clean).
+`git status` is clean; `npx vitest run` = 35/35).
+
+**Four things changed the shape of the system on 2026-07-22 — read `CLAUDE.md` → "Current state
+& pending" for the detail, but do not miss these:**
+1. **Cloudflare is LIVE in front of both domains** (proxied, Full-strict, WAF + Bot Fight Mode +
+   rate limiting + hotlink protection). **Never enable Rocket Loader** (breaks Next hydration) or
+   **"Cache Everything"** (would cache admin/logged-in HTML). Rollback = grey-cloud, one click.
+2. **The Brevo SMTP key was rotated** to login `b19e6d001@smtp-brevo.com`. ⚠️ That account has an
+   **Authorised-IPs allowlist** containing `77.42.66.76`. **If the server IP ever changes, ALL
+   outbound mail (OTP, backup alerts) dies with `525 5.7.1 Unauthorized IP address`** until the
+   new IP is added in Brevo. Rotate only via `ops/mail-relay-brevo.sh rotate` — it authenticates
+   BEFORE writing.
+3. **The Codex audit is CLOSED** — all 20 remaining findings worked. Two FALSE POSITIVES are
+   recorded in `CODEX_AUDIT_FINDINGS.md`; do not re-act on them (`RationingSheet.dedupeKey`
+   UNIQUE index, and `LandFollow` indexes that already exist as FK indexes).
+4. **Partner portal was click-tested by the owner and fixed** — including a real cross-partner
+   leak in «الصواري». Its switch convention is a settled owner decision: *green + right = live
+   and sellable*.
+
+**⚠️ The one thing still owed by the owner: revoke the OLD Brevo SMTP key in the dashboard.**
+The rotation is otherwise complete and verified, but the leaked key stays valid until they do.
 
 ## Done LAST (2026-07-20, final block): Codex audit pass 1 — 7 defects + 7 extras, all fixed
 
