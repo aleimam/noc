@@ -41,15 +41,28 @@ reload_or_revert() {
   return 1
 }
 
-# Prove the site still serves THROUGH Cloudflare. The first version of this script only checked
-# that direct access was blocked — which passed while everything was 403.
-verify_through_cloudflare() {
-  local edge code
-  edge=$(nslookup newobour.com 1.1.1.1 2>/dev/null | awk '/^Address: /{print $2}' | grep -E '^[0-9]+\.' | head -1)
-  [ -n "$edge" ] || { echo "could not resolve a Cloudflare edge IP — skipping self-check" >&2; return 1; }
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 --resolve "newobour.com:443:$edge" https://newobour.com/ || echo 000)
-  echo "  self-check via Cloudflare edge $edge → HTTP $code"
-  [ "$code" = "200" ]
+# Self-check, scoped to what the SERVER can actually prove.
+#
+# ⚠️ Do NOT "improve" this by curling the site through Cloudflare from here. Cloudflare blocks
+#    requests originating from this box's own datacenter IP (Bot Fight Mode / WAF), so that test
+#    returns 403 whether B3 is on or OFF — it is a guaranteed false negative, and an earlier
+#    version of this script auto-reverted a perfectly good config because of it. Confirmed
+#    2026-07-22: with B3 OFF, `curl` from here through the edge returned 403 for both a default
+#    and a browser User-Agent.
+#
+# The "does the site still serve through Cloudflare?" check must be run FROM OUTSIDE — see the
+# operator step printed at the end.
+verify_locally() {
+  local geo_entries vhosts
+  geo_entries=$(grep -cE '^\s+[0-9a-f]+[0-9a-f.:]*/' "$GEO" 2>/dev/null || echo 0)
+  vhosts=$(grep -c "$MARK" "$CONF" 2>/dev/null || echo 0)
+  echo "  geo map      : $geo_entries CIDR entries loaded"
+  echo "  vhosts gated : $vhosts (expected 2)"
+  # A known Cloudflare range must be present, else the map is empty/garbled and everything 403s.
+  grep -q '173.245.48.0/20' "$GEO" || { echo "  ✗ Cloudflare ranges missing from the geo map" >&2; return 1; }
+  [ "$vhosts" -eq 2 ] || { echo "  ✗ wrong number of gated vhosts" >&2; return 1; }
+  nginx -t >/dev/null 2>&1 || { echo "  ✗ nginx config invalid" >&2; return 1; }
+  echo "  ✓ config valid, ranges present, exactly the 2 apex vhosts gated"
 }
 
 case "${1:-status}" in
@@ -83,13 +96,16 @@ case "${1:-status}" in
     fi
     reload_or_revert "$BAK" || exit 1
 
-    if verify_through_cloudflare; then
-      echo "B3 ON — apex :443 accepts Cloudflare only, and the site still serves through it."
+    if verify_locally; then
+      echo "B3 ON — apex :443 accepts Cloudflare only (backup: $BAK)"
+      echo
+      echo "⚠️ NOW VERIFY FROM OUTSIDE THIS SERVER (a browser, or curl from your own machine):"
+      echo "     https://newobour.com/   and   https://alsawarey.com/   must load."
+      echo "   If they DON'T:  bash $0 off"
     else
-      echo "SELF-CHECK FAILED — the site is NOT serving through Cloudflare. Reverting." >&2
+      echo "SELF-CHECK FAILED — reverting, nothing left applied." >&2
       cp -a "$BAK" "$CONF"
       nginx -t >/dev/null 2>&1 && systemctl reload nginx
-      echo "Reverted. B3 is OFF and the site is reachable again." >&2
       exit 1
     fi
     ;;
