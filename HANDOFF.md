@@ -1,6 +1,6 @@
 # Project Handoff — NOC platform (newobour.com + alsawarey.com)
 
-_Last updated: 2026-07-22 (end of day) · Written so a new Claude session (on any account, same device) can continue this project._
+_Last updated: 2026-07-22 (after the admin-English sweep) · Written so a new Claude session (on any account, same device) can continue this project._
 
 > **Read `CLAUDE.md` first — it is the master onboarding doc** (architecture, the production
 > deploy runbook with every gotcha, the server map, feature map, architecture rules, and the
@@ -18,14 +18,26 @@ Users are low-literacy/low-tech on phones — the design rule is *biggest, simpl
 
 ## Current status — NOTHING is mid-flight
 
-**Live, healthy, fully deployed, clean tree.** Local `main` and production are in sync — last
-CODE commit **`e346bfb`** at handoff, with docs-only commits on top (verified 2026-07-22 on both
-local and `ssh noc` — this hash is a landmark, not a guarantee; always re-verify with
-`git log --oneline -1` on the server). Both pm2 apps online. Every feature requested to date is
-shipped, deployed, and live-verified — there is **no half-finished work** (build passes 3/3;
-`git status` is clean; `npx vitest run` = 35/35).
+**Live, healthy, fully deployed, clean tree.** Local `main` and production are in sync at
+**`e6184ed`** — verified on both sides at handoff time, not assumed (last CODE commit is
+`8bbc722`; `e6184ed` is docs-only on top). **This hash is a landmark, not a guarantee — always
+re-verify with `git log --oneline -1` locally AND on `ssh noc`.** Every feature requested to date
+is shipped, deployed and live-verified; there is **no half-finished work**.
 
-**Six things changed the shape of the system on 2026-07-22 — read `CLAUDE.md` → "Current state
+Verified at handoff (2026-07-22, after the admin-English sweep):
+- both pm2 apps `online`; `git status` clean locally; build 3/3; `npx vitest run` 35/35
+- five live URLs 200 (both homepages, `/admin/login`, `/market`, `/listings`)
+- no new errors in `noc-portal-error.log` since the deploy (the three older entries are from
+  07-20 and 07-22 02:27 and predate it)
+- disk 31% · all 7 `noc-*` crons present · local nightly backup current (07-22 03:30, 677 MB)
+- tiered off-site backup healthy — hourly runs `SUCCESS` every hour through 07-22 10:00
+
+⚠️ The server working tree carries a modified `package-lock.json` again (npm install dirties it)
+plus three untracked `*-backup-*.json` files left in `/root/noc` from 2026-07-05. Untracked files
+are harmless, but **the lock file will abort the next `git pull --ff-only`** — the runbook's
+`git checkout -- package-lock.json` first step is not optional.
+
+**Seven things changed the shape of the system on 2026-07-22 — read `CLAUDE.md` → "Current state
 & pending" for the detail, but do not miss these:**
 1. **Cloudflare is LIVE in front of both domains** (proxied, Full-strict, WAF + Bot Fight Mode +
    rate limiting + hotlink protection). **Never enable Rocket Loader** (breaks Next hydration) or
@@ -83,7 +95,41 @@ deliberately forced the condition: the listing-form auto-save FAILURE panel (nee
 actually fail), the partner account page's OTP-verified email/phone change, and sold → hide → show
 restoring SOLD (covered by 10 vitest cases, never in a UI).
 
-## Done LAST (2026-07-20, final block): Codex audit pass 1 — 7 defects + 7 extras, all fixed
+## Done LAST (2026-07-22, final block): admin English coverage — all 93 files
+
+Commits `f0f92aa` → `8bbc722` (+ docs `e6184ed`), deployed and live-verified. The owner reversed
+that morning's "deferred" decision and asked for the whole sweep, with one binding constraint:
+**translate UI chrome only; admin-EDITABLE content stays Arabic in both languages.**
+
+What a next session needs to know:
+
+1. **The pattern, if you add an admin screen.** `NextIntlClientProvider` is mounted at the root
+   layout, so nothing needs prop-threading: client components do `const locale = useLocale() as
+   'ar' | 'en'`, server components `const locale = (await getLocale()) as 'ar' | 'en'`, then the
+   inline `const L = (ar, en) => (locale === 'ar' ? ar : en)` that 47 admin files already used.
+   Module-scope constant maps can't see the locale, so their labels are `[ar, en]` tuples spread
+   as `L(...MAP[key])`.
+2. **The estimate that was wrong.** This was previously scoped at "~200 files plus a lint rule" and
+   deferred on that basis. It was **93 files / 596 lines / 326 distinct strings**, because the
+   expensive part (locale threading) did not exist. Worth re-measuring before deferring similar work.
+3. **Two traps that will recur in any translation sweep.**
+   - *Logic that keys off display text breaks silently.* `offers/[id]/page.tsx` chose text direction
+     by regex-matching the Arabic label (`dir={/هاتف|السعر|المساحة/.test(k) ...}`). Translating the
+     labels would have flipped RTL/LTR on every phone, price and area value — no type error, nothing
+     visible in a build. Grep for that shape BEFORE translating.
+   - *A line-by-line "is this translated?" check cannot see a multi-line `L(` call.* It reports the
+     Arabic argument as untranslated; I "fixed" ~10 of those into 3-argument calls before tsc caught
+     it. All reverted.
+4. **Deliberately still Arabic — do not "finish" these.** The Excel export routes (their
+   `Arabic / English` headers belong together in one cell, since the file is shared outside the
+   admin), the import template's Arabic sample rows, and the SMS bodies sent to citizens.
+5. **What is NOT proven.** Only `/admin/login` was ever seen rendered (locale switching confirmed
+   live: `NEXT_LOCALE=en` → "Sign in / Email / Password"). The other 92 files are typechecked,
+   built, deployed and HTTP-probed but never clicked — no admin login is available here. A static
+   check did confirm all **1074** ar/en pairs are ordered Arabic-first (a swapped pair would compile
+   cleanly and render wrong in both languages).
+
+## Done earlier (2026-07-20): Codex audit pass 1 — 7 defects + 7 extras, all fixed
 
 Commits `06e58e5` → `baf90b1`, all deployed + live-verified. Codex ran **pass 1 of 16** from
 `CODEX_AUDIT_BRIEF.md` (listings + EAV) into **`CODEX_AUDIT_FINDINGS.md`**, which now carries a
@@ -165,53 +211,57 @@ All deployed + live-verified (commits `2356b26` → `e395a3d`). Full detail in `
   neighborhood/district was deleted) was *offered but not built* — there are currently zero orphans,
   so it's pure convenience. Build it only if the owner asks.
 
-## Next steps — ALL owner-action, nothing is dev-blocked
+## Next steps — nothing is dev-blocked
 
-Full detail in `CLAUDE.md` → owner-blocked list. Short version, roughly by effort:
+Everything below waits on the owner or on the clock. Ordered by what unblocks soonest.
 
-1. **Partner portal click-test** (5 min) — the old `testpartner` was **deleted from prod
-   2026-07-20** (orphan login: `User.ownerId` NULL → no owner/grants → couldn't post, so the test
-   was never actually done through it). Create a FRESH partner properly first (admin → Owners → add
-   owner → its partner card: login + both sites + category grants), log in on each `/partner` site,
-   submit the lean form, confirm PENDING in moderation, **then delete that owner+user.**
-2. ~~Off-site backups~~ **✅ DONE + fully proven 2026-07-21** — tiered SFTP module live; scheduled
-   runs firing, restore drill passed, and the **first retention prune ran + was verified** (07:00 UTC:
-   deleted exactly the oldest hourly, `/home/hourly` now holds exactly 24, all `noc-backup-`, no
-   other app's files touched). SFTP host key now pinned + verified too. **✅ OLD off-site rsync
-   RETIRED 2026-07-21** (owner chose "off-site rsync only"): deleted `offsite-backup.sh`,
-   `offsite.env.example`, `OFFSITE.md`, the `noc-offsite` cron, and the off-site config/test panel +
-   server actions from the Backups admin. The LOCAL nightly `ops/backup.sh` (+ its cron, alerts,
-   download/restore) is deliberately KEPT as the on-box safety layer.
-3. **Rotate the Brevo SMTP key**, then re-apply via `ops/mail-relay-brevo.sh`.
-4. **Price Index toggle** — Settings → Modules → مؤشر الأسعار, whenever wanted.
-5. **Cloudflare proxy flip (Part C)** — biggest remaining security win; ordered checklist in
-   `ops/CLOUDFLARE.md`; grey-cloud is the instant rollback.
-6. **English content entry** (owner paused "later") — `/sell` page + storefront hero title/subtitle
-   + hero image, in the admin Storefront editor.
-7. **GSC check-up ~2026-07-23** — coverage on both domains + that the alsawarey sitemap moved to
-   Success.
-8. **Partner portal click-test** — the old `testpartner` was **deleted from prod 2026-07-20**
-   (orphan login: `User.ownerId` NULL → no owner/grants → couldn't post, so the test was never
-   actually done through it). Create a FRESH partner properly first (admin → Owners → add owner →
-   its partner card: login + both sites + category grants), submit the lean form on each `/partner`
-   site, confirm PENDING in moderation, **then delete that owner+user.**
-9. **Click-test the admin/listing UI changes** (same admin login as #8) — all reasoned +
-   typechecked + deployed, none clicked: (a) archive toggle only on PUBLISHED/ARCHIVED rows;
-   (b) Approve disabled + missing-details named on incomplete pending rows; (c) listing form's red
-   auto-save-failed panel + Retry; (d) per-row 🖼️ poster / 🗺️ map quick-links in both listing lists;
-   (e) missing-required-field red highlight + «هذا الحقل مطلوب» note on both listing forms (hit
-   Publish with fields blank); (f) one-click ✓ approve on قيد-المراجعة rows at `/admin/newobour/market`.
-   Full list in `CLAUDE.md` → "Verification pending".
-10. **Codex audit** — pass 1 fixed+verified; passes 2–11 run (findings in `CODEX_AUDIT_FINDINGS.md`,
-   UNVERIFIED); one pass-9 item (SFTP host-key pin) already fixed+verified. Run passes 12–16, then
-   one verify-then-fix triage of the whole set.
-10. **Continue the Codex deep audit** — pass 1 of 16 done (14 fixes live; resolution table in
-   `CODEX_AUDIT_FINDINGS.md`). Run passes 2–16 a pass at a time from `CODEX_AUDIT_BRIEF.md`
-   (read-only, chatgpt.com/codex), bring each back for verify-then-fix. `/code-review ultra`
-   (billed, owner-triggered) is the separate heavyweight option; fold either's findings into
-   `security.md` §7.
-11. **Rationing photo backlog** — 8 unscanned April pages need photographing; one-click filename-typo
-   fixes wait in `/admin/rationing/scans`.
+1. **⏳ Cloudflare B3 — the only timed item.** `ops/cloudflare-lockdown.sh on` restricts the origin
+   to Cloudflare's ranges. It is **OFF**; it was enabled on 2026-07-22 and rolled back because the
+   owner's browser still had the pre-flip A record cached and hit the origin directly (hard nginx
+   403 on alsawarey). **Wait ~24–48h past the DNS TTL from the 07-22 flip**, then — before enabling
+   — confirm in a NORMAL browser that both names resolve to Cloudflare. **Never validate with
+   `curl --resolve`**: it forces traffic through Cloudflare and hides exactly this failure. After
+   enabling, rollback becomes two ordered steps: `lockdown off` FIRST, then grey-cloud.
+2. **⏳ GSC page-indexing coverage** — both properties still said "Processing data" on 07-22
+   (they are only ~6 days old). Re-check in a few days. Sitemaps are already `Success` on both.
+3. **Click-test the admin in English** (owner, ~10 min) — the 2026-07-22 sweep translated all 93
+   admin files, but **only `/admin/login` was ever seen rendered**; the other 92 are typechecked,
+   built, deployed and HTTP-probed, never clicked. A pass through the admin with the language set
+   to English is the one gap no agent here can close (no admin login available). Look for awkward
+   phrasing rather than breakage — argument order was verified statically across 1074 pairs.
+4. **Three behaviours that a normal click-through cannot reach** — each needs a deliberately forced
+   condition, so treat them as unproven:
+   - the listing form's red «لم يتم الحفظ» auto-save panel + Retry (kill the network mid-edit);
+   - the partner account page's OTP-verified email/phone change (`d3011de`) — needs a real code
+     delivered to a NEW destination and entered. **Highest value of the three**, it is a P0
+     identifier-change path;
+   - sold → hide → show restoring «تم البيع» (`07cbe4c`) — proven by 10 vitest cases, never in a UI.
+5. **Price Index module** — Settings → Modules → مؤشر الأسعار. Page + monthly snapshot cron are
+   live but hidden behind the toggle. Owner's call on timing (deferred once already).
+6. **English CONTENT entry** (owner paused 2026-07-16 — "later"). ⚠️ **Not the same thing as the
+   admin-English sweep, which is done.** That was the admin's own UI chrome, in code. This is the
+   owner typing English *content* into admin fields: the whole `/sell` page + the storefront hero
+   title/subtitle, plus uploading a hero image (improves the homepage and the WhatsApp/OG share
+   preview, which falls back to the logo today). All plumbing exists; pure data entry.
+7. **`/code-review ultra`** — owner-triggered and billed; cannot be launched from here. Fold any
+   findings into `security.md` §7.
+8. **Rationing photo backlog** — ~8 unscanned April pages need photographing. Separately, a few
+   filename-typo fixes are waiting as one-click actions in `/admin/rationing/scans`.
+9. **Listing #2607501 still has no drawn location map.** The card thumbnail is covered by the
+   masterplan fallback, but the big annotated map on its poster/detail appears only once someone
+   draws the plot (admin → Edit → ✎ «إنشاء خريطة الموقع من مخطط الأصل» → mark plot → Save →
+   regenerate). Only the owner knows where the plot sits.
+
+**Explicitly NOT to do** (each was decided, not forgotten):
+- Don't add a UNIQUE index on `RationingSheet.dedupeKey`, and don't add `@@index` for
+  `LandFollow.districtId`/`blockId` — both are recorded false positives in
+  `CODEX_AUDIT_FINDINGS.md`. Check the LIVE schema, not just `schema.prisma`.
+- Don't strip the 123 dormant `dark:` classes across 36 files — they are left on purpose so the
+  dark-mode removal stays reversible in one commit.
+- Don't add an i18n lint rule to "stop the drift" without asking — that was part of an estimate the
+  owner rejected, not of what was approved.
+- Don't "finish" the Arabic left in the Excel export routes, the import template's sample rows, or
+  the citizen SMS bodies — all three are deliberate.
 
 ## What lives on this device but NOT in the repo
 
@@ -281,6 +331,24 @@ Still inside the repo: `Identity/` (tracked brand assets — real logos: ALSWARY
 
 ## Key files — where the latest-session work lives
 
+**Admin English coverage (2026-07-22, the last block):**
+- Spread across all 93 files under `apps/portal/app/admin/` — no new module, no message files.
+  The convention is the inline `L('ar','en')` helper plus `useLocale()` / `await getLocale()`.
+- `apps/portal/app/admin/(protected)/marketplace/offers/[id]/page.tsx` — the one structural change:
+  table rows are now `[label, value, forceLtr]` because direction used to be inferred by
+  regex-matching the Arabic label.
+- `packages/config/src/index.ts` — `buildThemeCss` no longer emits a `.dark{...}` block (dead since
+  dark mode was removed); `darkBg`/`darkFg` stay as legacy optional fields so stored theme JSON
+  still parses.
+
+**Partner portal switches + dark-mode removal (2026-07-22):**
+- `packages/partner-portal/src/{PartnerNav.tsx,PartnerListings.tsx,availability.ts,Browse.tsx}` —
+  shared nav with active-tab highlight, the two switches, the tested transition matrix, and the
+  owner-type gate that fixed the cross-partner leak.
+- `packages/partner-portal/src/availability.test.ts` — 10 vitest cases (35 in the suite overall).
+- `packages/ui/src/components/ThemeScript.tsx` — repurposed to REMOVE the `dark` class and expire
+  the old `NOC_THEME` cookie.
+
 **Required listing details (2026-07-19→20):**
 - `packages/db/prisma/migrations/20260719120000_attribute_required/` — the additive migration.
 - `apps/portal/app/account/listings/{ListingForm.tsx,actions.ts,catalog.ts}` — full form + server save.
@@ -308,7 +376,9 @@ Still inside the repo: `Identity/` (tracked brand assets — real logos: ALSWARY
 - `apps/portal/lib/poster/generate.ts` — `POSTER_CARD_ORDER` (poster card order by section key).
 - `apps/portal/lib/poster/render.ts` — poster SVG layout (row-major grid, map slot 1).
 - `packages/partner-portal/src/visibility.ts` — the decoupled visibility helpers.
-- `apps/{portal,brokerage}/app/partner/(protected)/layout.tsx` — partner nav (إعلاناتي / عروض الصواري).
+- `apps/{portal,brokerage}/app/partner/(protected)/layout.tsx` — partner shells. ⚠️ The nav itself
+  moved to the shared `PartnerNav.tsx` on 07-22 and the second tab is now «الصواري» (renamed from
+  «عروض الصواري»).
 - `packages/ui/src/components/RecentlyViewed.tsx` + `apps/{portal,brokerage}/app/api/listings/alive/route.ts` — auto-prune dead cards.
 - `apps/brokerage/lib/listings.ts` + `apps/portal/lib/listingCovers.ts` — 0-price + masterplan cover fallback.
 
