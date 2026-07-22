@@ -14,6 +14,7 @@ export function ListingCard({
   meta,
   alt,
   listingId,
+  adminInfo,
 }: {
   href: string;
   cover?: string | null;
@@ -29,6 +30,9 @@ export function ListingCard({
   meta?: ReactNode; // a small line under the title (location, etc.)
   alt?: string; // cover alt text (image SEO); defaults to the listing title
   listingId?: string; // when set, exposes data-listing-id for search select-tracking
+  /** Staff-only internal strip (owner + floor price). The CALLER must gate this on its admin
+   *  check — a visitor must never be passed anything here. */
+  adminInfo?: ReactNode;
 }) {
   return (
     <a
@@ -62,6 +66,7 @@ export function ListingCard({
         ) : priceOnRequest ? (
           <div className="mt-auto pt-1 text-base font-bold text-gold-700">{priceOnRequest}</div>
         ) : null}
+        {adminInfo ? <div className="pt-2">{adminInfo}</div> : null}
       </div>
     </a>
   );

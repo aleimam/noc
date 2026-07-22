@@ -5,7 +5,7 @@ import { prisma } from '@noc/db';
 import { listingVisibleOnNewObour } from '@noc/partner-portal/visibility';
 import { marketHref, resolveMarketListingId } from '../../../lib/listings';
 import { cityHref, districtHref, neighborhoodHref } from '../../../lib/geoHref';
-import { PhotoGallery, HeroGallery, TrackView, ListingCard, AreaAdvantages } from '@noc/ui';
+import { PhotoGallery, HeroGallery, TrackView, ListingCard, AreaAdvantages, AdminInfoStrip } from '@noc/ui';
 import { localizeUnit, currency } from '@noc/i18n';
 import { formatDetailValue, waPhone, isStoredPrice, type DetailConfig } from '@noc/config';
 import { newObourVisibility } from '@noc/partner-portal/visibility';
@@ -22,6 +22,7 @@ import { AdminEditButton } from '../../_components/AdminEditButton';
 import { pageMeta, breadcrumbLd, ldJson, abs } from '../../../lib/seo';
 import { listingAlt } from '../../../lib/imageAlt';
 import { coversForListings } from '../../../lib/listingCovers';
+import { getAdminViewer, ownerDetailFor } from '../../../lib/adminView';
 import { thumbUrl } from '../../../lib/thumb';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -140,6 +141,8 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   const isSeller = !!viewerId && viewerId === listing.sellerId;
   const negotiation = viewerId && !isSeller ? await getBuyerNegotiation(listing.id, viewerId) : null;
   const saved = (await wishedSet([listing.id])).has(listing.id);
+  // Staff admin view only — never fetched (let alone rendered) for a visitor.
+  const adminDetail = (await getAdminViewer()) ? await ownerDetailFor(listing.id) : null;
 
   // Main gallery = attachments with no attribute. Per-property files carry an attributeId.
   const [photos, propRows] = await Promise.all([
@@ -378,6 +381,48 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         </div>
         <h1 className="mt-2 text-2xl font-bold text-primary">{listing.title}</h1>
         <div className="mt-2"><AdminEditButton href={`/admin/marketplace/listings/${listing.id}/edit`} section="listings" /></div>
+        {/* Staff admin view: internal owner contact + floor price. Gated on the LIVE staff row +
+            `owners:VIEW` (see lib/adminView), so a visitor can never receive any of this. */}
+        {adminDetail && (
+          <section className="mt-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-navy-800">
+            <div className="flex items-center gap-1.5 text-sm font-bold text-amber-800">
+              🔒 {L('بيانات داخلية — للإدارة فقط', 'Internal — staff only')}
+            </div>
+            <dl className="mt-2 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+              <div className="flex items-baseline gap-1.5">
+                <dt className="text-xs opacity-70">{L('المالك', 'Owner')}</dt>
+                <dd className="font-semibold">{adminDetail.ownerName ?? '—'}</dd>
+              </div>
+              {adminDetail.phone1 && (
+                <div className="flex items-baseline gap-1.5">
+                  <dt className="text-xs opacity-70">{L('هاتف ١', 'Phone 1')}</dt>
+                  <dd className="font-num font-semibold" dir="ltr">{adminDetail.phone1}</dd>
+                </div>
+              )}
+              {adminDetail.phone2 && (
+                <div className="flex items-baseline gap-1.5">
+                  <dt className="text-xs opacity-70">{L('هاتف ٢', 'Phone 2')}</dt>
+                  <dd className="font-num font-semibold" dir="ltr">{adminDetail.phone2}</dd>
+                </div>
+              )}
+              <div className="flex items-baseline gap-1.5">
+                <dt className="text-xs opacity-70">{L('أضيف بواسطة', 'Posted by')}</dt>
+                <dd className="font-semibold">{adminDetail.createdByName ?? '—'}</dd>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <dt className="text-xs opacity-70">{L('أقل سعر', 'Floor price')}</dt>
+                <dd className="font-bold text-amber-900">
+                  {adminDetail.lowestPrice != null ? (
+                    <><span className="font-num" dir="ltr">{adminDetail.lowestPrice.toLocaleString('en-US')}</span> {currency(locale)}</>
+                  ) : (
+                    <span className="font-normal opacity-60">{L('غير محدد', 'not set')}</span>
+                  )}
+                </dd>
+              </div>
+            </dl>
+            {adminDetail.details && <p className="mt-2 border-t border-amber-200 pt-2 text-sm">{adminDetail.details}</p>}
+          </section>
+        )}
         {listing.area != null && (
           <div className="mt-1 text-lg font-semibold text-primary">
             {locale === 'ar' ? 'المساحة الفعلية' : 'Actual area'}: {Number(listing.area).toLocaleString('en-US')} <span className="text-sm font-normal">{locale === 'ar' ? 'م²' : 'm²'}</span>

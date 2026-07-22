@@ -17,6 +17,7 @@ export { PasswordInput } from './components/PasswordInput';
 export { PhotoGallery } from './components/PhotoGallery';
 export { HeroGallery, type GalleryItem } from './components/HeroGallery';
 export { ListingCard } from './components/ListingCard';
+export { AdminInfoStrip } from './components/AdminInfoStrip';
 export { SearchSelectTracker } from './components/SearchSelectTracker';
 export { trackSelect, trackConvert, type SearchSite } from './lib/searchEvent';
 export { ZeroResultLead } from './components/ZeroResultLead';

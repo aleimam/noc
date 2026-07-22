@@ -1,11 +1,12 @@
 import Link from 'next/link';
+import { AdminInfoStrip } from '@noc/ui';
 import type { LandCard } from '../../lib/listings';
 import { WishlistButton } from './WishlistButton';
 import { CompareToggle } from './CompareToggle';
 
 const fmt = (n: number) => n.toLocaleString('en');
 
-export function StoreLandCard({ land, locale, wishlisted = false, owner }: { land: LandCard; locale: 'ar' | 'en'; wishlisted?: boolean; owner?: { name: string; phone: string | null } }) {
+export function StoreLandCard({ land, locale, wishlisted = false, owner }: { land: LandCard; locale: 'ar' | 'en'; wishlisted?: boolean; owner?: { name: string; phone: string | null; lowestPrice?: number | null } }) {
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const sold = land.status === 'SOLD';
   const meta = [
@@ -43,10 +44,16 @@ export function StoreLandCard({ land, locale, wishlisted = false, owner }: { lan
           {land.adNumber && <div className="font-num text-xs text-ink-400" dir="ltr">#{land.adNumber}</div>}
           <div className="font-bold text-navy-800 line-clamp-1 dark:text-soft">{land.title}</div>
           {meta && <div className="text-xs text-ink-500 dark:text-white/55">{meta}</div>}
+          {/* Staff admin view only — gated by getAdminViewer() in the page that renders this. */}
           {owner && (
-            <div className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800" dir="auto">
-              🔒 {owner.name}{owner.phone ? ` · ` : ''}{owner.phone && <span className="font-num" dir="ltr">{owner.phone}</span>}
-            </div>
+            <AdminInfoStrip
+              compact
+              ownerName={owner.name}
+              phone={owner.phone}
+              lowestPrice={owner.lowestPrice != null ? fmt(owner.lowestPrice) : null}
+              floorLabel={L('أقل سعر', 'Floor')}
+              currency={L('ج.م', 'EGP')}
+            />
           )}
           <div className="mt-auto pt-1">
             {sold ? (

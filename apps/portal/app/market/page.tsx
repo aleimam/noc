@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { prisma, Prisma } from '@noc/db';
 import { auth } from '@noc/auth';
 import { newObourVisibility } from '@noc/partner-portal/visibility';
-import { ListingCard, RecentlyViewed, TrackEvent, SearchSelectTracker, ZeroResultLead, SearchAutocomplete } from '@noc/ui';
+import { ListingCard, RecentlyViewed, TrackEvent, SearchSelectTracker, ZeroResultLead, SearchAutocomplete, AdminInfoStrip } from '@noc/ui';
 import { SiteShell } from '../_components/SiteShell';
 import { currency } from '@noc/i18n';
 import { MarketFilters } from './MarketFilters';
@@ -11,6 +11,7 @@ import { MarketCardActions } from '../_components/MarketCardActions';
 import { CompareBar } from '../_components/CompareBar';
 import { wishedSet } from '../../lib/wishlist';
 import { coversForListings } from '../../lib/listingCovers';
+import { getAdminViewer, ownerBadges } from '../../lib/adminView';
 import { pageMeta } from '../../lib/seo';
 import { SeoIntro } from '../_components/SeoText';
 import { getSeoIntro } from '../../lib/seoContent';
@@ -145,6 +146,9 @@ export default async function MarketPage({
   // Cover chain (location map → photo) — plot listings have maps, not photos.
   const cover = await coversForListings(ids);
   const wished = await wishedSet(ids);
+  // Staff admin view: internal owner + floor price per card. Gated on the live staff row +
+  // `owners:VIEW`; a visitor is never passed anything here.
+  const adminBadges = (await getAdminViewer()) ? await ownerBadges(ids) : null;
 
   return (
     <SiteShell active="market">
@@ -204,6 +208,20 @@ export default async function MarketPage({
             meta={l.isPartnership && partnershipsOn ? (
               <span className="inline-block rounded-full bg-gold/20 px-2 py-0.5 text-xs font-bold text-navy-800">🤝 {t('partnershipBadge')}</span>
             ) : undefined}
+            adminInfo={(() => {
+              const b = adminBadges?.get(l.id);
+              if (!b) return undefined;
+              return (
+                <AdminInfoStrip
+                  compact
+                  ownerName={b.name}
+                  phone={b.phone}
+                  lowestPrice={b.lowestPrice != null ? b.lowestPrice.toLocaleString('en-US') : null}
+                  floorLabel={L('أقل سعر', 'Floor')}
+                  currency={currency(locale)}
+                />
+              );
+            })()}
           />
         ))}
       </div>

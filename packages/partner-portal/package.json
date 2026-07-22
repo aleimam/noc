@@ -11,7 +11,8 @@
     "./visibility": "./src/visibility.ts",
     "./required": "./src/requiredDetails.ts",
     "./values": "./src/valueValidation.ts",
-    "./assets": "./src/listingAssets.ts"
+    "./assets": "./src/listingAssets.ts",
+    "./admin-details": "./src/adminDetails.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

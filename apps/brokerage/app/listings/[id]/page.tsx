@@ -281,6 +281,17 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
                   <div className="flex items-center gap-1.5"><dt className="text-xs text-ink-500">{L('هاتف ٢', 'Phone 2')}</dt><dd className="whitespace-nowrap"><OwnerPhone num={owner.phone2} wa={owner.phone2Whatsapp} /></dd></div>
                 )}
                 <div className="flex items-baseline gap-1.5"><dt className="text-xs text-ink-500">{L('أضافه', 'Added by')}</dt><dd className="whitespace-nowrap font-semibold">{owner.createdByName ?? '—'}</dd></div>
+                {/* Internal floor / walk-away price — staff only, never rendered to a visitor. */}
+                <div className="flex items-baseline gap-1.5">
+                  <dt className="text-xs text-ink-500">{L('أقل سعر', 'Floor price')}</dt>
+                  <dd className="whitespace-nowrap font-bold text-amber-900">
+                    {owner.lowestPrice != null ? (
+                      <><span className="font-num" dir="ltr">{fmt(owner.lowestPrice)}</span> {L('ج.م', 'EGP')}</>
+                    ) : (
+                      <span className="font-normal text-ink-500">{L('غير محدد', 'not set')}</span>
+                    )}
+                  </dd>
+                </div>
               </dl>
               {/* Staff-only deep link to the backend edit page (portal domain). */}
               <a
