@@ -48,11 +48,25 @@ try:
     print("  RESULT  : ✅ AUTH OK")
 except smtplib.SMTPAuthenticationError as e:
     err = e.smtp_error.decode(errors="replace") if isinstance(e.smtp_error, bytes) else e.smtp_error
-    print(f"  RESULT  : ❌ AUTH REJECTED — {e.smtp_code} {err}")
-    print("  HINT    : a correctly-shaped key + 535 usually means the key and the LOGIN come")
-    print("            from DIFFERENT Brevo accounts. Take BOTH from the same SMTP page:")
-    print("            SMTP & API > SMTP  ->  copy that page's own login AND its key, then run")
-    print("            `rotate '<login-from-that-page>'`.")
+    print(f"  RESULT  : ❌ REJECTED — {e.smtp_code} {err}")
+    if e.smtp_code == 525 or "unauthorized ip" in str(err).lower():
+        # NOT a credential problem: Brevo accepted login+key, then blocked the sender IP.
+        print("  MEANING : the credentials are CORRECT — Brevo blocked this SERVER'S IP.")
+        print("            The account has the Authorised-IPs allowlist switched on.")
+        print("  FIX     : Brevo > SMTP & API > SMTP > Authorised IPs -> add this server:")
+        try:
+            import socket as _s
+            c = _s.create_connection((host, port), timeout=10)
+            print(f"            {c.getsockname()[0]}   (the source IP Brevo actually sees)")
+            c.close()
+        except Exception:
+            print("            (run: curl -s https://api.ipify.org  on the server)")
+        print("            Then re-run this command — nothing else needs to change.")
+    else:
+        print("  HINT    : a correctly-shaped key rejected with 535 usually means the key and the")
+        print("            LOGIN come from DIFFERENT Brevo accounts. Take BOTH from the same page:")
+        print("            SMTP & API > SMTP  ->  that page's own login AND its key, then run")
+        print("            `rotate '<login-from-that-page>'`.")
     sys.exit(1)
 except Exception as e:
     print(f"  RESULT  : ❌ connection/other error — {type(e).__name__}: {e}")
