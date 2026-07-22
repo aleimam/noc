@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLocale } from 'next-intl';
 import { toast } from '@noc/ui';
 import type { SellContent } from '@noc/config';
 import { saveSellContent } from './actions';
@@ -13,6 +14,8 @@ const ta = `${inp} font-sans`;
 
 export function SellContentEditor({ initial }: { initial: SellContent }) {
   const router = useRouter();
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const [pending, start] = useTransition();
   const [saved, setSaved] = useState(false);
 
@@ -47,7 +50,7 @@ export function SellContentEditor({ initial }: { initial: SellContent }) {
     start(async () => {
       const r = await saveSellContent(content);
       if (r.ok) { setSaved(true); router.refresh(); }
-      else toast('تعذّر الحفظ / Save failed', 'error');
+      else toast(L('تعذّر الحفظ', 'Save failed'), 'error');
     });
   }
 
@@ -61,42 +64,42 @@ export function SellContentEditor({ initial }: { initial: SellContent }) {
   return (
     <div className="space-y-5">
       <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
-        <h2 className="font-semibold text-primary">الإعلان الرئيسي</h2>
-        <label className="block text-sm">العنوان<input value={announceTitle} onChange={(e) => setT(e.target.value)} className={inp} /></label>
-        <label className="block text-sm">النص<textarea value={announceBody} onChange={(e) => setB(e.target.value)} rows={2} className={ta} /></label>
-        <label className="block text-sm">رابط صفحة السياسات (slug من قسم الصفحات)<input dir="ltr" value={policyPageSlug} onChange={(e) => setSlug(e.target.value)} className={inp} placeholder="sell-policy" /><span className="mt-1 block text-xs opacity-50">اتركه فارغاً لعرض السياسات والتسعير داخل صفحة البيع. عند تعبئته يظهر رابط «سياسة البيع والتسعير» ويُشار إليه بجوار حقل السعر.</span></label>
+        <h2 className="font-semibold text-primary">{L('الإعلان الرئيسي', 'Main announcement')}</h2>
+        <label className="block text-sm">{L('العنوان', 'Title')}<input value={announceTitle} onChange={(e) => setT(e.target.value)} className={inp} /></label>
+        <label className="block text-sm">{L('النص', 'Body')}<textarea value={announceBody} onChange={(e) => setB(e.target.value)} rows={2} className={ta} /></label>
+        <label className="block text-sm">{L('رابط صفحة السياسات (slug من قسم الصفحات)', 'Policy page link (slug from the Pages section)')}<input dir="ltr" value={policyPageSlug} onChange={(e) => setSlug(e.target.value)} className={inp} placeholder="sell-policy" /><span className="mt-1 block text-xs opacity-50">{L('اتركه فارغاً لعرض السياسات والتسعير داخل صفحة البيع. عند تعبئته يظهر رابط «سياسة البيع والتسعير» ويُشار إليه بجوار حقل السعر.', 'Leave empty to show the policy and pricing inside the sell page. When filled, a “sale policy and pricing” link appears and is referenced next to the price field.')}</span></label>
       </section>
 
       <section className="grid gap-4 rounded-lg border border-graphite/15 p-4 sm:grid-cols-2">
-        <Field label="الخدمات" value={services} onChange={setServices} rows={7} hint="سطر لكل خدمة" />
-        <Field label="سياسة البيع" value={policy} onChange={setPolicy} rows={7} hint="سطر لكل بند" />
+        <Field label={L('الخدمات', 'Services')} value={services} onChange={setServices} rows={7} hint={L('سطر لكل خدمة', 'One line per service')} />
+        <Field label={L('سياسة البيع', 'Sale policy')} value={policy} onChange={setPolicy} rows={7} hint={L('سطر لكل بند', 'One line per item')} />
         <div className="sm:col-span-2">
-          <Field label="جدول التسعير" value={pricing} onChange={setPricing} rows={5} hint="كل سطر: سعر العرض | سرعة البيع" />
+          <Field label={L('جدول التسعير', 'Pricing table')} value={pricing} onChange={setPricing} rows={5} hint={L('كل سطر: سعر العرض | سرعة البيع', 'Each line: asking price | selling speed')} />
         </div>
       </section>
 
       <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
-        <h2 className="font-semibold text-primary">المطلوب — أرض في كشف التقنين</h2>
+        <h2 className="font-semibold text-primary">{L('المطلوب — أرض في كشف التقنين', 'Required — land on a rationing sheet')}</h2>
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="إثبات الملكية" value={shProof} onChange={setShProof} hint="سطر لكل عنصر" />
-          <Field label="معلومات الأرض" value={shLand} onChange={setShLand} hint="سطر لكل عنصر" />
-          <Field label="السعر المطلوب" value={shPrice} onChange={setShPrice} hint="سطر لكل عنصر" />
+          <Field label={L('إثبات الملكية', 'Proof of ownership')} value={shProof} onChange={setShProof} hint={L('سطر لكل عنصر', 'One line per item')} />
+          <Field label={L('معلومات الأرض', 'Land information')} value={shLand} onChange={setShLand} hint={L('سطر لكل عنصر', 'One line per item')} />
+          <Field label={L('السعر المطلوب', 'Asking price')} value={shPrice} onChange={setShPrice} hint={L('سطر لكل عنصر', 'One line per item')} />
         </div>
       </section>
 
       <section className="space-y-3 rounded-lg border border-graphite/15 p-4">
-        <h2 className="font-semibold text-primary">المطلوب — أرض مخصصة (تخصيص)</h2>
+        <h2 className="font-semibold text-primary">{L('المطلوب — أرض مخصصة (تخصيص)', 'Required — allocated land')}</h2>
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="إثبات الملكية" value={alProof} onChange={setAlProof} hint="سطر لكل عنصر" />
-          <Field label="معلومات الأرض" value={alLand} onChange={setAlLand} hint="سطر لكل عنصر" />
-          <Field label="السعر المطلوب" value={alPrice} onChange={setAlPrice} hint="سطر لكل عنصر" />
+          <Field label={L('إثبات الملكية', 'Proof of ownership')} value={alProof} onChange={setAlProof} hint={L('سطر لكل عنصر', 'One line per item')} />
+          <Field label={L('معلومات الأرض', 'Land information')} value={alLand} onChange={setAlLand} hint={L('سطر لكل عنصر', 'One line per item')} />
+          <Field label={L('السعر المطلوب', 'Asking price')} value={alPrice} onChange={setAlPrice} hint={L('سطر لكل عنصر', 'One line per item')} />
         </div>
       </section>
 
       <div className="flex items-center gap-3">
-        <button disabled={pending} onClick={save} className="rounded-md bg-primary px-5 py-2 text-sm text-soft disabled:opacity-50">{pending ? 'جارٍ الحفظ…' : 'حفظ'}</button>
-        {saved && <span className="text-sm text-green">تم الحفظ ✓</span>}
-        <a href="https://alsawarey.com/sell" target="_blank" rel="noreferrer" className="text-sm text-accent">معاينة الصفحة ↗</a>
+        <button disabled={pending} onClick={save} className="rounded-md bg-primary px-5 py-2 text-sm text-soft disabled:opacity-50">{pending ? L('جارٍ الحفظ…', 'Saving…') : L('حفظ', 'Save')}</button>
+        {saved && <span className="text-sm text-green">{L('تم الحفظ ✓', 'Saved ✓')}</span>}
+        <a href="https://alsawarey.com/sell" target="_blank" rel="noreferrer" className="text-sm text-accent">{L('معاينة الصفحة ↗', 'Preview the page ↗')}</a>
       </div>
     </div>
   );

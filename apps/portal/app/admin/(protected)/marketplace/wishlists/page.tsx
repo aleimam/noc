@@ -1,9 +1,12 @@
+import { getLocale } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 
 export const dynamic = 'force-dynamic';
 
 export default async function WishlistsAdmin() {
+  const locale = (await getLocale()) as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   await requirePermission('listings', 'VIEW');
 
   const [lists, top] = await Promise.all([
@@ -29,14 +32,14 @@ export default async function WishlistsAdmin() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-primary">قوائم المفضلة</h1>
-        <a href="/admin/marketplace" className="text-sm text-accent">← السوق</a>
+        <h1 className="text-2xl font-bold text-primary">{L('قوائم المفضلة', 'Wishlists')}</h1>
+        <a href="/admin/marketplace" className="text-sm text-accent">{L('← السوق', '← Marketplace')}</a>
       </div>
 
       <section className="space-y-2">
-        <h2 className="font-semibold">الأكثر إضافةً للمفضلة</h2>
+        <h2 className="font-semibold">{L('الأكثر إضافةً للمفضلة', 'Most wishlisted')}</h2>
         {top.length === 0 ? (
-          <p className="text-sm opacity-60">لا توجد بيانات بعد</p>
+          <p className="text-sm opacity-60">{L('لا توجد بيانات بعد', 'No data yet')}</p>
         ) : (
           <div className="overflow-hidden rounded-lg border border-graphite/15">
             <table className="w-full text-sm">
@@ -55,22 +58,22 @@ export default async function WishlistsAdmin() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="font-semibold">كل القوائم ({lists.length})</h2>
+        <h2 className="font-semibold">{L('كل القوائم', 'All lists')} ({lists.length})</h2>
         <div className="overflow-x-auto rounded-lg border border-graphite/15">
           <table className="w-full text-sm">
             <thead className="opacity-60">
               <tr>
-                <th className="p-2 text-start">القائمة</th>
-                <th className="p-2 text-start">المالك</th>
-                <th className="p-2 text-start">عدد الأراضي</th>
+                <th className="p-2 text-start">{L('القائمة', 'List')}</th>
+                <th className="p-2 text-start">{L('المالك', 'Owner')}</th>
+                <th className="p-2 text-start">{L('عدد الأراضي', 'Land count')}</th>
               </tr>
             </thead>
             <tbody>
-              {lists.length === 0 && <tr><td colSpan={3} className="p-4 text-center opacity-60">لا توجد قوائم</td></tr>}
+              {lists.length === 0 && <tr><td colSpan={3} className="p-4 text-center opacity-60">{L('لا توجد قوائم', 'No lists')}</td></tr>}
               {lists.map((l) => (
                 <tr key={l.id} className="border-t border-graphite/10">
                   <td className="p-2 font-medium">{l.name}</td>
-                  <td className="p-2" dir="ltr">{l.user ? l.user.phone ?? l.user.name : 'زائر'}</td>
+                  <td className="p-2" dir="ltr">{l.user ? l.user.phone ?? l.user.name : L('زائر', 'Guest')}</td>
                   <td className="p-2">{l._count.items}</td>
                 </tr>
               ))}
