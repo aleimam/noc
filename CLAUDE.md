@@ -244,7 +244,14 @@ with `git log --oneline -1` on BOTH local and `ssh noc`** rather than trusting t
    Unauthorized IP address` until the new IP is added in Brevo.** `ops/mail-relay-brevo.sh`
    gained `verify`/`rotate`/`rollback`, and **`rotate` now authenticates BEFORE writing** (the
    old write-then-test order silently deferred live mail twice while we were rotating).
-   **OWNER STILL TO DO: revoke the OLD key in the Brevo dashboard** — it remains valid until then.
+   **The OLD key is retired — CLOSED 2026-07-22.** It belonged to login `b17e37001`, whose Brevo
+   organisation the owner has since deleted, and deleting an org revokes its credentials. Verified
+   what could be verified: this account's SMTP key list holds no stale NOC key (the only one named
+   NOC ends `…2GmpgV` and is the LIVE one — matched against the server before touching anything).
+   Not provable beyond that: Brevo returns an identical `535` for an unknown login and a wrong key
+   (deliberate — no account enumeration), and the old key's only copy was `shred`ded with the
+   sasl_passwd backups, so it can't be re-tested. Residual risk is low — a key is useless without
+   its login, and that login's account is gone.
 4. **Partner portal click-tested by the owner and fixed** (see the Feature-map row): the
    «الصواري» tab was leaking OTHER partners' listings, the active tab wasn't highlighted, and the
    three status buttons became two switches under one rule — *green + right = live and sellable*.
@@ -432,7 +439,8 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
    the server had been holding an older one, `b17e37001`, which still worked). Proven by a real
    send: DKIM-signed `s=default, d=newobour.com` → `status=sent (250 2.0.0 OK: queued)`. All
    `sasl_passwd.bak-*` files were `shred -u`'d, so the old secret is off disk; `sasl_passwd` is
-   600 root. **Owner still to do: revoke the OLD key in the Brevo dashboard.**
+   600 root. **Old key retired 2026-07-22** — its organisation was deleted by the owner, which
+   revokes its credentials; this account's key list contains no stale NOC key.
    - **⚠️ That account has Brevo's Authorised-IPs allowlist ON.** `77.42.66.76` is allowlisted
      (verified as the source IP Brevo actually sees — the box has IPv6 egress too, but
      `smtp-relay.brevo.com` publishes no AAAA, so SMTP is always IPv4). **If the server IP ever

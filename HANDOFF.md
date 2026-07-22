@@ -56,8 +56,16 @@ shipped, deployed, and live-verified — there is **no half-finished work** (bui
    the old cookie. **The 123 `dark:` classes across 36 files are dormant ON PURPOSE** — don't
    "tidy" them away; leaving them keeps the decision reversible in one commit.
 
-**⚠️ The one thing still owed by the owner: revoke the OLD Brevo SMTP key in the dashboard.**
-The rotation is otherwise complete and verified, but the leaked key stays valid until they do.
+**The Brevo rotation is fully CLOSED (2026-07-22).** The old key belonged to login `b17e37001`,
+whose organisation the owner deleted — that revokes its credentials. The live account's SMTP key
+list was checked directly and holds no stale NOC key: the only row named NOC ends `…2GmpgV`,
+which was matched against the server BEFORE touching anything (deleting it would have killed OTP
+and backup mail instantly). Not independently provable — Brevo answers an identical `535` for an
+unknown login and a wrong key, and the old key's last copy was shredded with the backups.
+
+⚠️ **When auditing SMTP keys in that Brevo account, note it also holds keys for OTHER projects**
+(veeey.net, EVnet, WC, egyptvitamins.net). Always match a key's last 6 characters against what is
+live for that project before deleting a row.
 
 **Also unverified (not broken — just never exercised in a browser):** the whole `/admin` surface
 (6 items listed in `CLAUDE.md`), the partner account page's new OTP-verified email/phone change,
