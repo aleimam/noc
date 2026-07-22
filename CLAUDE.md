@@ -179,6 +179,11 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   (STAFF + isActive + `owners:VIEW`) on every request** — never trust the JWT's `perms` for this,
   or deactivating staff won't take effect until token expiry (the Codex-audit revocation bug).
   Render only via `AdminInfoStrip` (@noc/ui, amber + 🔒 so it can't read as public content).
+  **ONE CARD RULE (owner, 2026-07-22):** on a listing DETAIL page every admin-only thing lives in
+  that single amber card and NOWHERE else — the «تعديل (إدارة)» link and the «الأوراق الرسمية»
+  papers block were merged into it on both sites. Don't add a second staff-only box; extend the
+  card. Papers therefore inherit the card's gate (they used to render on a bare
+  `session.user.type === 'STAFF'` check with no permission test and no live re-read).
 - **Owner display rule:** partners see UNBRANDED assets only; branded posters are per-brand
   (photo-stamping engine with per-category rules).
 - **EAV SELECT read path:** since the 2026-07 option-lists migration, SELECT values are stored
