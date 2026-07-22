@@ -204,16 +204,19 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
                     state, one for public visibility. Each shows its CURRENT state as words, not
                     just a colour — our sellers are low-literacy and often on a relative's phone. */}
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                  {/* BOTH switches read the same way: ON = green = the listing is live and
+                      sellable. Previously «الحالة» treated SOLD as ON, so "available" showed grey
+                      while "shown" showed green — two identical-looking controls where the same
+                      colour meant opposite things. */}
                   <Switch
                     label={L('الحالة', 'Status')}
-                    on={r.status === 'SOLD'}
-                    onLabel={L('تم البيع', 'Sold')}
-                    offLabel={L('متاح', 'Available')}
-                    tone="sold"
+                    on={r.status !== 'SOLD'}
+                    onLabel={L('متاح', 'Available')}
+                    offLabel={L('تم البيع', 'Sold')}
                     // Hidden listings aren't public, so the sale state is meaningless until shown.
                     disabled={pending || r.status === 'ARCHIVED'}
                     onChange={(next) => {
-                      if (next) { setSoldRow(r.id); setSoldInput(prices[r.id] ?? ''); }
+                      if (!next) { setSoldRow(r.id); setSoldInput(prices[r.id] ?? ''); }
                       else setAvail(r.id, 'PUBLISHED');
                     }}
                   />
@@ -222,7 +225,6 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
                     on={r.status !== 'ARCHIVED'}
                     onLabel={L('ظاهر', 'Shown')}
                     offLabel={L('مخفي', 'Hidden')}
-                    tone="shown"
                     disabled={pending}
                     onChange={(next) => {
                       // Hiding pulls the listing off BOTH public sites instantly — confirm it.
@@ -286,12 +288,18 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
   );
 }
 
-/** Labelled on/off switch. The knob uses flex justify-start/end rather than a translate, so it
- *  slides toward the correct edge in RTL *and* LTR without a direction check. The current state
- *  is always spelled out beside it — colour alone is not a label for our audience, and a
- *  colour-blind or low-literacy seller must still be able to tell Sold from Available. */
+/** Labelled on/off switch, identical in meaning wherever it appears:
+ *    ON  = green, knob on the RIGHT  = the listing is live / sellable
+ *    OFF = grey,  knob on the LEFT   = it is not
+ *
+ *  The track carries dir="ltr" ON PURPOSE. Platform convention mirrors switches in RTL, which
+ *  would put "on" on the left in Arabic and on the right in English — the same control moving
+ *  opposite ways per locale. Our sellers are low-tech and the admin is often run in English, so
+ *  one physical mental model ("push it right to turn on") beats locale-correctness here.
+ *  The state is also spelled out in words beside the track, because colour alone is not a label
+ *  for a low-literacy or colour-blind seller. */
 function Switch({
-  label, on, onLabel, offLabel, onChange, disabled = false, tone,
+  label, on, onLabel, offLabel, onChange, disabled = false,
 }: {
   label: string;
   on: boolean;
@@ -299,10 +307,7 @@ function Switch({
   offLabel: string;
   onChange: (next: boolean) => void;
   disabled?: boolean;
-  tone: 'sold' | 'shown';
 }) {
-  // 'shown' is good when ON (green) and a warning when OFF; 'sold' is informational when ON.
-  const track = !on ? (tone === 'shown' ? 'bg-red-400' : 'bg-graphite/30') : tone === 'sold' ? 'bg-gold' : 'bg-green';
   return (
     <span className="inline-flex items-center gap-2">
       <span className="text-xs font-semibold text-ink-500">{label}</span>
@@ -315,10 +320,13 @@ function Switch({
         onClick={() => onChange(!on)}
         className="inline-flex min-h-11 items-center gap-2 rounded-full px-1 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <span className={`flex h-7 w-12 flex-none items-center rounded-full p-1 transition-colors ${on ? 'justify-end' : 'justify-start'} ${track}`}>
+        <span
+          dir="ltr"
+          className={`flex h-7 w-12 flex-none items-center rounded-full p-1 transition-colors ${on ? 'justify-end bg-green' : 'justify-start bg-graphite/40'}`}
+        >
           <span className="h-5 w-5 rounded-full bg-white shadow" />
         </span>
-        <span className="text-sm font-bold">{on ? onLabel : offLabel}</span>
+        <span className={`text-sm font-bold ${on ? '' : 'text-ink-500'}`}>{on ? onLabel : offLabel}</span>
       </button>
     </span>
   );
