@@ -2,6 +2,7 @@ import { getLocale } from 'next-intl/server';
 import { requirePartner } from '@noc/auth';
 import { prisma } from '@noc/db';
 import { partnerCanBrowseListings } from '@noc/partner-portal/server';
+import { PartnerNav } from '@noc/partner-portal';
 import { SignOutButton } from '../../account/SignOutButton';
 import { StoreShell } from '../../_components/StoreShell';
 
@@ -40,9 +41,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
               <span className="rounded-full bg-gold/20 px-3 py-1 text-sm font-bold text-gold-300">{owner?.name ?? ''}</span>
             </span>
             <nav className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
-              {nav.map((n) => (
-                <a key={n.href} href={n.href} className="rounded-md px-3 py-2 hover:bg-white/10 hover:text-gold-300">{n.label}</a>
-              ))}
+              <PartnerNav items={nav} />
               <SignOutButton label={L('خروج', 'Sign out')} />
             </nav>
           </div>

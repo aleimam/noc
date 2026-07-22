@@ -6,12 +6,17 @@ import { formatMoneyEgp, formatArea } from '@noc/config';
 import { partnerCanBrowseListings } from './partner';
 import { alsawareyVisibility } from './visibility';
 
-// Owner rule: partners browse OUR store only — exactly the offers visible on the Al Sawarey
-// storefront: published + Type/Purpose allowed on Al Sawarey + the storefront's partner-site
-// visibility rule (non-partner listings keep the per-listing `showOnBrokerage` toggle).
-// Mirrors the catalogue where-clause in apps/brokerage/lib/listings.ts (available only, no SOLD).
+// Owner rule: «عروض الصواري» is OUR OWN inventory only — listings whose Owner is type `US`
+// (الصواري, codes 00–09). It is NOT the storefront catalogue.
+//
+// This previously relied on alsawareyVisibility() alone, which by design admits ANY
+// partner-owned listing — so a partner browsing here saw their own listings AND every other
+// partner's. On prod that meant 19 rows (12 the viewer's, 4 a second partner's, 3 actually ours)
+// and exposed one partner's inventory to another. The owner-type filter is the real gate;
+// the storefront predicates below stay as a narrowing (published + Al-Sawarey-eligible).
 const BROWSE_WHERE: Prisma.ListingWhereInput = {
   status: 'PUBLISHED',
+  owner: { is: { type: 'US' } },
   AND: [
     { OR: [{ typeOptionId: null }, { typeOption: { allowedOnAlsawarey: true } }] },
     { OR: [{ purposeOptionId: null }, { purposeOption: { allowedOnAlsawarey: true } }] },
