@@ -281,6 +281,31 @@ with `git log --oneline -1` on BOTH local and `ssh noc`** rather than trusting t
    utility classes across 36 files were deliberately LEFT dormant** — nothing can add the `dark`
    class any more so they never match; stripping them is churn with real regression risk and no
    user benefit. That also makes the whole decision reversible in one commit.
+7. **⭐ ADMIN ENGLISH COVERAGE IS DONE — all 93 files** (`f0f92aa` · `e70fa42` · `2d933c5` ·
+   `8bbc722`). The owner reversed the morning's "deferred" decision and asked for the whole thing,
+   with one binding constraint: **UI chrome only; admin-EDITABLE content stays Arabic in both
+   languages.** Every admin screen now renders its own labels in the UI language; none of the
+   editable VALUES were touched (they live in `packages/config` or the DB).
+   **The old "~200 files" estimate was wrong — it was 93 files / 596 lines**, and the expensive
+   part everyone feared (threading a locale everywhere) doesn't exist: `NextIntlClientProvider` is
+   mounted at the root layout, so a client component needs one `useLocale()` line and a server
+   component one `await getLocale()`. Everything uses the inline `L('ar','en')` helper that 47
+   admin files already used; module-scope maps became `[ar, en]` tuples spread via `L(...MAP[k])`.
+   **Two traps worth remembering for any future sweep of this kind:**
+   - `offers/[id]/page.tsx` chose text direction by **regex-matching the Arabic label**
+     (`dir={/هاتف|السعر|المساحة/.test(k) ...}`). Translating the labels would have broken RTL/LTR
+     on every phone/price/area value — silently, with no type error and nothing visible in a build.
+     Direction is now explicit data on each row. **Grep for logic that keys off display text
+     before translating it.**
+   - A line-by-line "is this string translated?" check **cannot see a multi-line `L(\n 'عربي',\n
+     'English',\n)` call** and will report the Arabic argument as untranslated. I "fixed" ~10 of
+     those by adding an English argument that was already there, producing 3-arg calls; tsc caught
+     it and they were reverted. The scanner now inspects the opening line too.
+   The scanner also ignores Arabic that isn't UI (comments, the Arabic range inside slugify
+   regexes, `'، '` join separators) and carries a **deliberate list**: the Excel export routes
+   (their `Arabic / English` headers belong together in one cell — the file is shared outside the
+   admin), the import template's Arabic sample rows, and the SMS bodies sent to citizens. Those are
+   correct as they are — **do not "finish" them.**
 
 GSC check-up also run: **alsawarey's sitemap moved "Couldn't fetch" → Success** (read Jul 22,
 i.e. after the Cloudflare flip); page-indexing coverage on both properties still says
@@ -537,10 +562,21 @@ headline) at the top of the findings file — **a later pass must not re-report 
   trashed listings still emitted their old title/OG image as page metadata; five public write
   endpoints had no quota; dropped OTP requests left the login button spinning forever.
 - **Owner decisions taken 2026-07-22 — do not re-litigate:**
-  - **ADMIN-EN-COVERAGE → DEFERRED (won't-do for now).** Owner: "we run the admin in Arabic most of
-    the time and we can translate; if it requires big effort, ignore it." It IS big (~200 files plus
-    a lint rule to stop the drift). Parked by name in the waiting list — do NOT start it
-    opportunistically or "while nearby".
+  - ~~**ADMIN-EN-COVERAGE → DEFERRED**~~ → **✅ DONE 2026-07-22** (commits `f0f92aa` · `e70fa42` ·
+    `2d933c5` · `8bbc722`). The owner reversed the deferral the same day and asked for **all 93
+    files**, with one binding constraint: **translate UI CHROME ONLY — admin-EDITABLE content stays
+    Arabic in both languages** ("keep Arabic copy used in both languages, like lists"). That holds:
+    the storefront/sell defaults live in `packages/config`, and option lists, geo names and
+    attribute labels all render from the DB, so none of it was touched.
+    **The "~200 files" estimate was wrong — it was 93 files / 596 lines / 326 distinct strings**,
+    and the main feared cost (threading a locale through every component) did not exist:
+    `NextIntlClientProvider` is mounted at the root layout, so any client component gets the locale
+    with one `useLocale()` line and server components with `await getLocale()`. Pattern is the
+    inline `L('ar','en')` helper already used by 47 other admin files — no new i18n infrastructure,
+    no message-file churn. Module-scope constant maps (which can't see the locale) became
+    `[ar, en]` tuples spread into `L(...MAP[key])`.
+    **Do NOT add a lint rule to "stop the drift" without asking** — it was part of the old
+    estimate, not part of what the owner approved.
   - **Watermark reversibility → CONFIRMED A HARD RULE:** "the watermark system should be reversible
     all the time." Pure originals (`Attachment.originalPath`) and a map's `cleanPath` are **NEVER**
     deleted. Superseded STAMPED renditions ARE now unlinked (`b993c7d`) — safe because

@@ -55,6 +55,13 @@ shipped, deployed, and live-verified — there is **no half-finished work** (bui
    low-literacy visitors). Nothing can add the `dark` class; `ThemeScript` clears it and expires
    the old cookie. **The 123 `dark:` classes across 36 files are dormant ON PURPOSE** — don't
    "tidy" them away; leaving them keeps the decision reversible in one commit.
+7. **Admin English coverage is DONE — all 93 files.** The owner reversed the morning's "deferred"
+   decision. Binding constraint, already applied: **UI chrome only — admin-EDITABLE content stays
+   Arabic in both languages** (storefront/sell defaults in `packages/config`, option lists, geo
+   names). If you add an admin screen, translate its labels with the inline `L('ar','en')` helper
+   and get the locale from `useLocale()` (client) or `await getLocale()` (server) — the provider is
+   already at the root layout, so nothing needs threading. **Don't add an i18n lint rule without
+   asking**; that was part of the rejected estimate, not of what was approved.
 
 **The Brevo rotation is fully CLOSED (2026-07-22).** The old key belonged to login `b17e37001`,
 whose organisation the owner deleted — that revokes its credentials. The live account's SMTP key
