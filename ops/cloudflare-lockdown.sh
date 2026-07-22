@@ -15,6 +15,14 @@
 #    including legitimate traffic through the proxy. $realip_remote_addr keeps the true TCP peer.
 #    DO NOT "simplify" this back to allow/deny.
 #
+# ⚠️⚠️ DO NOT ENABLE UNTIL DNS PROPAGATION HAS FULLY DRAINED (~24–48h past the record TTL).
+#    Tried on 2026-07-22, ~2h after the proxy flip: the OWNER's own browser still had the
+#    pre-flip A record cached, so it connected STRAIGHT TO THE ORIGIN and got a hard nginx 403
+#    on alsawarey.com/listings. Every visitor whose resolver still holds the old IP is in that
+#    state. Verifying with `curl --resolve <cf-edge>` HIDES this completely — it tests the path
+#    you assume, not the path a real visitor takes. Before enabling, confirm from a normal
+#    browser on a normal connection (no --resolve) that both sites resolve to Cloudflare IPs.
+#
 # ⚠️ THIS CHANGES THE CLOUDFLARE ROLLBACK PROCEDURE.
 #    Normally rolling Cloudflare back = grey-cloud the DNS record. With B3 on, grey-clouding
 #    sends visitors straight to an origin that answers 403. **Rollback is TWO steps, in this
