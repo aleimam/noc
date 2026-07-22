@@ -386,73 +386,43 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
             NOWHERE else on the page. Gated on the LIVE staff row + `owners:VIEW`, so a visitor
             can never receive any of it. */}
         {adminDetail && (
-          <section className="mt-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-navy-800">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 text-sm font-bold text-amber-800">
-                🔒 {L('بيانات داخلية — للإدارة فقط', 'Internal — staff only')}
-              </div>
-              <AdminEditButton href={`/admin/marketplace/listings/${listing.id}/edit`} section="listings" />
-            </div>
-            <dl className="mt-2 flex flex-wrap gap-x-8 gap-y-2 text-sm">
-              <div className="flex items-baseline gap-1.5">
-                <dt className="text-xs opacity-70">{L('المالك', 'Owner')}</dt>
-                <dd className="font-semibold">{adminDetail.ownerName ?? '—'}</dd>
-              </div>
+          <section className="mt-2 rounded-lg border border-amber-400 bg-amber-50 px-2.5 py-1.5 text-navy-800">
+            {/* COMPACT (owner request 2026-07-22): one wrapping row of chips instead of a dl +
+                a papers grid. Papers are chips; a paper that has a scan links to it (📎). */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs leading-tight">
+              <span className="font-bold text-amber-800">🔒 {L('داخلي', 'Internal')}</span>
+              <span><span className="opacity-60">{L('المالك', 'Owner')}:</span> <b>{adminDetail.ownerName ?? '—'}</b></span>
               {adminDetail.phone1 && (
-                <div className="flex items-baseline gap-1.5">
-                  <dt className="text-xs opacity-70">{L('هاتف ١', 'Phone 1')}</dt>
-                  <dd className="font-num font-semibold" dir="ltr">{adminDetail.phone1}</dd>
-                </div>
+                <span className="font-num" dir="ltr">{adminDetail.phone1}</span>
               )}
-              {adminDetail.phone2 && (
-                <div className="flex items-baseline gap-1.5">
-                  <dt className="text-xs opacity-70">{L('هاتف ٢', 'Phone 2')}</dt>
-                  <dd className="font-num font-semibold" dir="ltr">{adminDetail.phone2}</dd>
-                </div>
-              )}
-              <div className="flex items-baseline gap-1.5">
-                <dt className="text-xs opacity-70">{L('أضيف بواسطة', 'Posted by')}</dt>
-                <dd className="font-semibold">{adminDetail.createdByName ?? '—'}</dd>
-              </div>
-              <div className="flex items-baseline gap-1.5">
-                <dt className="text-xs opacity-70">{L('أقل سعر', 'Floor price')}</dt>
-                <dd className="font-bold text-amber-900">
-                  {adminDetail.lowestPrice != null ? (
-                    <><span className="font-num" dir="ltr">{adminDetail.lowestPrice.toLocaleString('en-US')}</span> {currency(locale)}</>
-                  ) : (
-                    <span className="font-normal opacity-60">{L('غير محدد', 'not set')}</span>
-                  )}
-                </dd>
-              </div>
-            </dl>
-            {adminDetail.details && <p className="mt-2 border-t border-amber-200 pt-2 text-sm">{adminDetail.details}</p>}
-
-            {/* Official papers — merged in here (owner rule 2026-07-22: one admin card only). */}
-            <div className="mt-3 border-t border-amber-200 pt-3">
-              <div className="mb-2 text-sm font-bold text-amber-800">🗂️ {L('الأوراق الرسمية', 'Official papers')}</div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {[
-                  { label: L('جواب التحصيص', 'Allocation letter'), has: listing.hasAllocationLetter, date: listing.allocationLetterDate, photo: paperPhoto('allocation_letter') },
-                  { label: L('توكيل بيع', 'Sale mandate'), has: listing.hasSaleMandate, date: listing.saleMandateDate, photo: paperPhoto('sale_mandate') },
-                ].map((p, i) => (
-                  <div key={i} className="rounded-lg border border-amber-200 bg-white/70 p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold">{p.label}</span>
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${p.has ? 'bg-green/15 text-green' : 'bg-graphite/10 text-graphite/60'}`}>
-                        {p.has ? L('متوفر', 'Available') : L('غير متوفر', 'Not available')}
-                      </span>
-                    </div>
-                    {p.has && p.date && <div className="mt-1 text-xs opacity-70" dir="ltr">{p.date}</div>}
-                    {p.has && p.photo && (
-                      <a href={p.photo} target="_blank" rel="noreferrer" className="mt-2 block">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={p.photo} alt="" className="h-28 w-full rounded object-cover ring-1 ring-graphite/20" />
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
+              {adminDetail.phone2 && <span className="font-num" dir="ltr">{adminDetail.phone2}</span>}
+              <span><span className="opacity-60">{L('أضافه', 'By')}:</span> <b>{adminDetail.createdByName ?? '—'}</b></span>
+              <span className="rounded bg-amber-200/70 px-1.5 py-0.5 font-bold text-amber-900">
+                {L('أقل سعر', 'Floor')}:{' '}
+                {adminDetail.lowestPrice != null ? (
+                  <><span className="font-num" dir="ltr">{adminDetail.lowestPrice.toLocaleString('en-US')}</span> {currency(locale)}</>
+                ) : (
+                  <span className="font-normal opacity-70">{L('غير محدد', 'not set')}</span>
+                )}
+              </span>
+              {[
+                { label: L('تحصيص', 'Allocation'), has: listing.hasAllocationLetter, photo: paperPhoto('allocation_letter') },
+                { label: L('توكيل', 'Mandate'), has: listing.hasSaleMandate, photo: paperPhoto('sale_mandate') },
+              ].map((p, i) => {
+                const chip = (
+                  <span className={`rounded-full px-1.5 py-0.5 font-bold ${p.has ? 'bg-green/15 text-green' : 'bg-graphite/10 text-graphite/50'}`}>
+                    🗂️ {p.label} {p.has ? '✓' : '✗'}{p.has && p.photo ? ' 📎' : ''}
+                  </span>
+                );
+                return p.has && p.photo ? (
+                  <a key={i} href={p.photo} target="_blank" rel="noreferrer" title={p.label}>{chip}</a>
+                ) : (
+                  <span key={i}>{chip}</span>
+                );
+              })}
+              <span className="ms-auto"><AdminEditButton href={`/admin/marketplace/listings/${listing.id}/edit`} section="listings" compact /></span>
             </div>
+            {adminDetail.details && <p className="mt-1 text-[11px] leading-snug opacity-80">{adminDetail.details}</p>}
           </section>
         )}
         {listing.area != null && (

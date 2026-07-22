@@ -271,67 +271,46 @@ export default async function LandDetail({ params }: { params: Promise<{ id: str
             the fields (which size to their content). Seller + Type dropped; the 2nd phone is
             hidden when the owner has only one number. */}
         {owner && (
-          <section className="mt-6 rounded-2xl border-2 border-amber-400 bg-amber-50 px-5 py-3 text-navy-800">
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
-              <span className="flex items-center gap-1.5 whitespace-nowrap font-bold text-amber-800">🔒 {L('بيانات المالك', 'Owner details')}</span>
-              <dl className="flex flex-wrap items-center gap-x-8 gap-y-2">
-                <div className="flex items-baseline gap-1.5"><dt className="text-xs text-ink-500">{L('المالك', 'Owner')}</dt><dd className="whitespace-nowrap font-semibold">{owner.ownerName ?? '—'}</dd></div>
-                <div className="flex items-center gap-1.5"><dt className="text-xs text-ink-500">{L('هاتف ١', 'Phone 1')}</dt><dd className="whitespace-nowrap"><OwnerPhone num={owner.phone1} wa={owner.phone1Whatsapp} /></dd></div>
-                {owner.phone2 && (
-                  <div className="flex items-center gap-1.5"><dt className="text-xs text-ink-500">{L('هاتف ٢', 'Phone 2')}</dt><dd className="whitespace-nowrap"><OwnerPhone num={owner.phone2} wa={owner.phone2Whatsapp} /></dd></div>
+          <section className="mt-4 rounded-lg border border-amber-400 bg-amber-50 px-2.5 py-1.5 text-navy-800">
+            {/* COMPACT (owner request 2026-07-22): one wrapping row of chips. Papers are chips;
+                a paper with a scan links to it (📎). */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs leading-tight">
+              <span className="whitespace-nowrap font-bold text-amber-800">🔒 {L('داخلي', 'Internal')}</span>
+              <span><span className="text-ink-500">{L('المالك', 'Owner')}:</span> <b>{owner.ownerName ?? '—'}</b></span>
+              <OwnerPhone num={owner.phone1} wa={owner.phone1Whatsapp} />
+              {owner.phone2 && <OwnerPhone num={owner.phone2} wa={owner.phone2Whatsapp} />}
+              <span><span className="text-ink-500">{L('أضافه', 'By')}:</span> <b>{owner.createdByName ?? '—'}</b></span>
+              <span className="whitespace-nowrap rounded bg-amber-200/70 px-1.5 py-0.5 font-bold text-amber-900">
+                {L('أقل سعر', 'Floor')}:{' '}
+                {owner.lowestPrice != null ? (
+                  <><span className="font-num" dir="ltr">{fmt(owner.lowestPrice)}</span> {L('ج.م', 'EGP')}</>
+                ) : (
+                  <span className="font-normal opacity-70">{L('غير محدد', 'not set')}</span>
                 )}
-                <div className="flex items-baseline gap-1.5"><dt className="text-xs text-ink-500">{L('أضافه', 'Added by')}</dt><dd className="whitespace-nowrap font-semibold">{owner.createdByName ?? '—'}</dd></div>
-                {/* Internal floor / walk-away price — staff only, never rendered to a visitor. */}
-                <div className="flex items-baseline gap-1.5">
-                  <dt className="text-xs text-ink-500">{L('أقل سعر', 'Floor price')}</dt>
-                  <dd className="whitespace-nowrap font-bold text-amber-900">
-                    {owner.lowestPrice != null ? (
-                      <><span className="font-num" dir="ltr">{fmt(owner.lowestPrice)}</span> {L('ج.م', 'EGP')}</>
-                    ) : (
-                      <span className="font-normal text-ink-500">{L('غير محدد', 'not set')}</span>
-                    )}
-                  </dd>
-                </div>
-              </dl>
-              {/* Staff-only deep link to the backend edit page (portal domain). */}
+              </span>
+              {nb && [
+                { label: L('تحصيص', 'Allocation'), has: nb.hasAllocationLetter, photo: paperPhotos['allocation_letter'] },
+                { label: L('توكيل', 'Mandate'), has: nb.hasSaleMandate, photo: paperPhotos['sale_mandate'] },
+              ].map((p, i) => {
+                const chip = (
+                  <span className={`whitespace-nowrap rounded-full px-1.5 py-0.5 font-bold ${p.has ? 'bg-success/15 text-success' : 'bg-ink-100 text-ink-500'}`}>
+                    🗂️ {p.label} {p.has ? '✓' : '✗'}{p.has && p.photo ? ' 📎' : ''}
+                  </span>
+                );
+                return p.has && p.photo ? (
+                  <a key={i} href={p.photo} target="_blank" rel="noreferrer" title={p.label}>{chip}</a>
+                ) : (
+                  <span key={i}>{chip}</span>
+                );
+              })}
               <a
                 href={`${portalBase}/admin/marketplace/listings/${listingId}/edit`}
-                className="ms-auto inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-amber-400 bg-white px-4 py-1.5 text-sm font-bold text-amber-800 hover:bg-amber-100"
+                className="ms-auto inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-amber-400 bg-white px-2 py-0.5 text-[11px] font-bold text-amber-800 hover:bg-amber-100"
               >
-                ✎ {L('تعديل (إدارة)', 'Edit (staff)')}
+                ✎ {L('تعديل', 'Edit')}
               </a>
             </div>
-            {owner.details && <p className="mt-2 border-t border-amber-200 pt-2 text-sm text-navy-700">{owner.details}</p>}
-
-            {/* Official papers — merged in here (owner rule 2026-07-22: ONE admin card only, and
-                nothing admin-only anywhere else on the page). */}
-            {nb && (
-              <div className="mt-3 border-t border-amber-200 pt-3">
-                <div className="mb-2 flex items-center gap-1.5 text-sm font-bold text-amber-800">🗂️ {L('الأوراق الرسمية', 'Official papers')}</div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {[
-                    { label: L('جواب التحصيص', 'Allocation letter'), has: nb.hasAllocationLetter, date: nb.allocationLetterDate, photo: paperPhotos['allocation_letter'] },
-                    { label: L('توكيل بيع', 'Sale mandate'), has: nb.hasSaleMandate, date: nb.saleMandateDate, photo: paperPhotos['sale_mandate'] },
-                  ].map((p, i) => (
-                    <div key={i} className="rounded-xl border border-amber-200 bg-white/70 p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold">{p.label}</span>
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${p.has ? 'bg-success/15 text-success' : 'bg-ink-100 text-ink-500'}`}>
-                          {p.has ? L('متوفر', 'Available') : L('غير متوفر', 'Not available')}
-                        </span>
-                      </div>
-                      {p.has && p.date && <div className="mt-1 font-num text-xs text-ink-500" dir="ltr">{p.date}</div>}
-                      {p.has && p.photo && (
-                        <a href={p.photo} target="_blank" rel="noreferrer" className="mt-2 block">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={p.photo} alt="" className="h-28 w-full rounded-lg object-cover ring-1 ring-ink-100" />
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {owner.details && <p className="mt-1 text-[11px] leading-snug text-navy-700">{owner.details}</p>}
           </section>
         )}
 
