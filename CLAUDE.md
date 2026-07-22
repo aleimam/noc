@@ -167,6 +167,18 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
 - **Listings are EAV:** `Listing` + `ListingValue` (typed columns per row) + a 3-classifier
   model (Type/Purpose/Condition) gating attribute applicability. Photos/papers ride the
   polymorphic `Attachment` (`ownerType`/`ownerId`/`attributeId`).
+- **⭐ Staff "admin view" on the PUBLIC fronts (2026-07-22):** signed-in staff see an internal
+  block on listing CARDS and DETAIL pages of BOTH sites — owner name/type/phones/notes, «أضيف
+  بواسطة», and the **floor/walk-away price `lowestPrice` («أقل سعر»)**. **A visitor must never
+  receive any of it** (leak-tested anonymously on both fronts after deploy — re-test if you touch
+  this). WHAT is exposed lives once in **`@noc/partner-portal/admin-details`** so the two fronts
+  can't drift; only the viewer check differs, and it MUST stay per-app because the auth differs:
+  Al Sawarey is a separate domain needing the signed `sw_admin` cookie (`/admin-enter`, issued by
+  the portal's `/admin/store-admin`), while New Obour's admin + public site share one origin and
+  read the NextAuth session (`apps/portal/lib/adminView.ts`). **Both re-read the LIVE `User` row
+  (STAFF + isActive + `owners:VIEW`) on every request** — never trust the JWT's `perms` for this,
+  or deactivating staff won't take effect until token expiry (the Codex-audit revocation bug).
+  Render only via `AdminInfoStrip` (@noc/ui, amber + 🔒 so it can't read as public content).
 - **Owner display rule:** partners see UNBRANDED assets only; branded posters are per-brand
   (photo-stamping engine with per-category rules).
 - **EAV SELECT read path:** since the 2026-07 option-lists migration, SELECT values are stored
