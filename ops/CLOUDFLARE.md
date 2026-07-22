@@ -124,10 +124,13 @@ Do it **one zone at a time**, in **this order** (TLS mode BEFORE the DNS flip):
 9. **Scrape Shield → Hotlink protection ON** (both zones) — stops other sites embedding
    `/uploads/*`. Same-zone referers still work; the NO↔AS image sharing goes through each
    app's own proxy route (same-origin), so it's unaffected.
-10. **After the flip — renewal sanity:** cert renews via **HTTP-01** (`certbot`,
-    authenticator=nginx). It keeps working behind the proxy, but run one dry run to be
-    sure: `certbot renew --dry-run` on the VPS. If it ever fails, switch to a Cloudflare
-    **Origin Certificate** (15-yr, CF→origin only) — also removes the www-SAN gap.
+10. **After the flip — renewal sanity:** cert renews via **HTTP-01 with the `webroot`
+    authenticator** (`/usr/local/apache/autossl_tmp`) — **NOT** the certbot *nginx*
+    authenticator, which is broken on this CWP box (see CLAUDE.md). The :80 vhosts serve
+    `/.well-known/acme-challenge/` before redirecting, and Cloudflare's *Always Use HTTPS*
+    keeps its built-in ACME exception, so renewal survives the proxy. Confirm with one
+    `certbot renew --dry-run` on the VPS after the flip. If it ever fails, switch to a
+    Cloudflare **Origin Certificate** (15-yr, CF→origin only).
 
 ---
 
