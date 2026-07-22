@@ -6,11 +6,11 @@
 #            login = the SMTP login shown in Brevo under "SMTP & API > SMTP" (an address like
 #                    9abc12@smtp-brevo.com); key = an SMTP key generated there (NOT the account
 #                    password).
-# VERIFY:  bash ops/mail-relay-brevo.sh verify            <- ALWAYS run this FIRST
+# VERIFY:  bash ops/mail-relay-brevo.sh verify            <- optional pre-check
 #            Tests a candidate key against the relay WITHOUT touching Postfix, so a bad key
 #            can never interrupt live mail. Reports pass/fail + key shape (a 535 is usually a
 #            v3 API key 'xkeysib-…' pasted instead of an SMTP key).
-# ROTATE:  bash ops/mail-relay-brevo.sh rotate            <- only after verify passes
+# ROTATE:  bash ops/mail-relay-brevo.sh rotate            <- SAFE: verifies before writing
 #            Reuses the configured login and reads the new key from STDIN (hidden), so the
 #            secret never touches argv (/proc-readable) or your shell history. Backs up the
 #            old map first; `rollback` restores it if the new key fails to authenticate.
@@ -22,6 +22,43 @@ set -euo pipefail
 HOST="smtp-relay.brevo.com"
 PORT="587"
 CMD="${1:-}"
+
+# Authenticate LOGIN/KEY against the relay without touching any config.
+# Exit 0 = accepted. Prints key SHAPE (never the value) to help diagnose a rejection.
+check_auth() {
+  KEY="$1" LOGIN="$2" HOST="$HOST" PORT="$PORT" python3 - <<'PY'
+import os, smtplib, ssl, sys
+key, login = os.environ["KEY"], os.environ["LOGIN"]
+host, port = os.environ["HOST"], int(os.environ["PORT"])
+if key.startswith("xkeysib-"):
+    shape = "starts with xkeysib- => that is a v3 API KEY, not an SMTP key"
+elif key.startswith("xsmtpsib-"):
+    shape = "starts with xsmtpsib- => correct SMTP-key format"
+else:
+    shape = "no xsmtpsib-/xkeysib- prefix => unusual for a Brevo SMTP key"
+print(f"  login   : {login}")
+print(f"  key     : {len(key)} chars, {shape}")
+if key != key.strip():
+    print("  ⚠ leading/trailing whitespace in the key — copy/paste artefact")
+try:
+    s = smtplib.SMTP(host, port, timeout=20)
+    s.starttls(context=ssl.create_default_context())
+    s.login(login, key)
+    s.quit()
+    print("  RESULT  : ✅ AUTH OK")
+except smtplib.SMTPAuthenticationError as e:
+    err = e.smtp_error.decode(errors="replace") if isinstance(e.smtp_error, bytes) else e.smtp_error
+    print(f"  RESULT  : ❌ AUTH REJECTED — {e.smtp_code} {err}")
+    print("  HINT    : a correctly-shaped key + 535 usually means the key and the LOGIN come")
+    print("            from DIFFERENT Brevo accounts. Take BOTH from the same SMTP page:")
+    print("            SMTP & API > SMTP  ->  copy that page's own login AND its key, then run")
+    print("            `rotate '<login-from-that-page>'`.")
+    sys.exit(1)
+except Exception as e:
+    print(f"  RESULT  : ❌ connection/other error — {type(e).__name__}: {e}")
+    sys.exit(1)
+PY
+}
 
 case "$CMD" in
   apply)
@@ -55,29 +92,7 @@ case "$CMD" in
     printf 'Paste the key to TEST (input hidden), then Enter: ' >&2
     read -r -s KEY; printf '\n' >&2
     [ -n "$KEY" ] || { echo "empty key — aborted" >&2; exit 2; }
-    KEY="$KEY" LOGIN="$LOGIN" HOST="$HOST" PORT="$PORT" python3 - <<'PY'
-import os, smtplib, ssl, sys
-key, login = os.environ["KEY"], os.environ["LOGIN"]
-host, port = os.environ["HOST"], int(os.environ["PORT"])
-# Shape hints only — never the value itself.
-shape = "looks like a v3 API key (xkeysib-…) — that is NOT an SMTP key" if key.startswith("xkeysib-") else "no xkeysib- prefix (consistent with an SMTP key)"
-print(f"  login    : {login}")
-print(f"  key len  : {len(key)} chars, {shape}")
-if key != key.strip():
-    print("  ⚠ key has leading/trailing whitespace — likely a copy/paste artefact")
-try:
-    s = smtplib.SMTP(host, port, timeout=20)
-    s.starttls(context=ssl.create_default_context())
-    s.login(login, key)
-    s.quit()
-    print("  RESULT   : ✅ AUTH OK — safe to apply with `rotate`")
-except smtplib.SMTPAuthenticationError as e:
-    print(f"  RESULT   : ❌ AUTH REJECTED — {e.smtp_code} {e.smtp_error.decode(errors='replace') if isinstance(e.smtp_error, bytes) else e.smtp_error}")
-    sys.exit(1)
-except Exception as e:
-    print(f"  RESULT   : ❌ connection/other error — {type(e).__name__}: {e}")
-    sys.exit(1)
-PY
+    check_auth "$KEY" "$LOGIN"
     ;;
   rotate)
     # Rotate ONLY the SMTP key, reading it from STDIN — never argv. argv is world-readable via
@@ -94,6 +109,13 @@ PY
     printf 'Paste the NEW Brevo SMTP key (input hidden), then Enter: ' >&2
     read -r -s KEY; printf '\n' >&2
     [ -n "$KEY" ] || { echo "empty key — aborted, nothing changed" >&2; exit 2; }
+    # VERIFY BEFORE WRITING. A rejected key must never reach the live config: it silently
+    # defers OTP and backup-alert mail until someone notices and rolls back.
+    echo "Checking the key against $HOST before applying…" >&2
+    if ! check_auth "$KEY" "$LOGIN"; then
+      echo "ABORTED — nothing was changed, mail keeps flowing on the current key." >&2
+      exit 1
+    fi
     BAK="/etc/postfix/sasl_passwd.bak-$(date -u +%Y%m%dT%H%M%SZ)"
     [ -f /etc/postfix/sasl_passwd ] && cp -a /etc/postfix/sasl_passwd "$BAK" && chmod 600 "$BAK"
     umask 077
