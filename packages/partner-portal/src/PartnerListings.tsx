@@ -200,23 +200,41 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
                     {L('حفظ السعر', 'Save price')}
                   </button>
                 </div>
-                <div className="flex gap-2">
-                  {(['PUBLISHED', 'SOLD', 'ARCHIVED'] as const).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => {
-                        if (s === 'SOLD') { setSoldRow(r.id); setSoldInput(prices[r.id] ?? ''); }
-                        // Hiding pulls the listing off BOTH public sites instantly. SOLD already
-                        // has its own confirm panel; re-publishing is harmless. This one tap isn't.
-                        else if (s === 'ARCHIVED' && !confirm(L('سيتم إخفاء الإعلان من الموقع. هل أنت متأكد؟', 'This will hide the listing from the website. Are you sure?'))) return;
-                        else setAvail(r.id, s);
-                      }}
-                      disabled={pending || r.status === s}
-                      className={`rounded-lg px-4 py-2 text-sm font-bold ${r.status === s ? 'bg-navy-800 text-white' : 'border border-graphite/25 hover:bg-graphite/10'} disabled:cursor-default`}
-                    >
-                      {s === 'PUBLISHED' ? L('متاح', 'Available') : s === 'SOLD' ? L('تم البيع', 'Sold') : L('إخفاء', 'Hide')}
-                    </button>
-                  ))}
+                {/* Two independent switches instead of three competing buttons: one for the sale
+                    state, one for public visibility. Each shows its CURRENT state as words, not
+                    just a colour — our sellers are low-literacy and often on a relative's phone. */}
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                  <Switch
+                    label={L('الحالة', 'Status')}
+                    on={r.status === 'SOLD'}
+                    onLabel={L('تم البيع', 'Sold')}
+                    offLabel={L('متاح', 'Available')}
+                    tone="sold"
+                    // Hidden listings aren't public, so the sale state is meaningless until shown.
+                    disabled={pending || r.status === 'ARCHIVED'}
+                    onChange={(next) => {
+                      if (next) { setSoldRow(r.id); setSoldInput(prices[r.id] ?? ''); }
+                      else setAvail(r.id, 'PUBLISHED');
+                    }}
+                  />
+                  <Switch
+                    label={L('الظهور', 'Visibility')}
+                    on={r.status !== 'ARCHIVED'}
+                    onLabel={L('ظاهر', 'Shown')}
+                    offLabel={L('مخفي', 'Hidden')}
+                    tone="shown"
+                    disabled={pending}
+                    onChange={(next) => {
+                      // Hiding pulls the listing off BOTH public sites instantly — confirm it.
+                      if (!next) {
+                        if (!window.confirm(L('سيتم إخفاء الإعلان من الموقع. هل أنت متأكد؟', 'This will hide the listing from the website. Are you sure?'))) return;
+                        setAvail(r.id, 'ARCHIVED');
+                      } else setAvail(r.id, 'PUBLISHED');
+                    }}
+                  />
+                  {r.status === 'ARCHIVED' && (
+                    <span className="text-xs text-ink-500">{L('أظهر الإعلان أولاً لتغيير الحالة.', 'Show the listing first to change its status.')}</span>
+                  )}
                 </div>
               </div>
             ) : r.status === 'REJECTED' ? (
@@ -265,5 +283,43 @@ export function PartnerListings({ rows, locale, publicBase = '/market' }: { rows
         );
       })}
     </div>
+  );
+}
+
+/** Labelled on/off switch. The knob uses flex justify-start/end rather than a translate, so it
+ *  slides toward the correct edge in RTL *and* LTR without a direction check. The current state
+ *  is always spelled out beside it — colour alone is not a label for our audience, and a
+ *  colour-blind or low-literacy seller must still be able to tell Sold from Available. */
+function Switch({
+  label, on, onLabel, offLabel, onChange, disabled = false, tone,
+}: {
+  label: string;
+  on: boolean;
+  onLabel: string;
+  offLabel: string;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+  tone: 'sold' | 'shown';
+}) {
+  // 'shown' is good when ON (green) and a warning when OFF; 'sold' is informational when ON.
+  const track = !on ? (tone === 'shown' ? 'bg-red-400' : 'bg-graphite/30') : tone === 'sold' ? 'bg-gold' : 'bg-green';
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="text-xs font-semibold text-ink-500">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={`${label}: ${on ? onLabel : offLabel}`}
+        disabled={disabled}
+        onClick={() => onChange(!on)}
+        className="inline-flex min-h-11 items-center gap-2 rounded-full px-1 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span className={`flex h-7 w-12 flex-none items-center rounded-full p-1 transition-colors ${on ? 'justify-end' : 'justify-start'} ${track}`}>
+          <span className="h-5 w-5 rounded-full bg-white shadow" />
+        </span>
+        <span className="text-sm font-bold">{on ? onLabel : offLabel}</span>
+      </button>
+    </span>
   );
 }

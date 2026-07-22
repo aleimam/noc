@@ -22,7 +22,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   const nav = [
     { href: '/partner', label: L('إعلاناتي', 'My listings') },
     { href: '/partner/listings/new', label: L('+ إضافة إعلان', '+ Add listing') },
-    ...(canBrowse ? [{ href: '/partner/browse', label: L('عروض الصواري', 'Al Sawarey offers') }] : []),
+    ...(canBrowse ? [{ href: '/partner/browse', label: L('الصواري', 'Al Sawarey') }] : []),
     { href: '/partner/analytics', label: L('الإحصائيات', 'Analytics') },
     { href: '/partner/account', label: L('حسابي', 'My account') },
   ];
