@@ -1,6 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
+import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
@@ -11,6 +12,8 @@ import { approveListing } from '../../marketplace/actions';
  *  still applies: if a required detail is missing, approveListing refuses and names it, and that
  *  name is surfaced in the toast instead of a bare failure. */
 export function ApproveListingButton({ id }: { id: string }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const t = useTranslations('mp');
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -26,13 +29,13 @@ export function ApproveListingButton({ id }: { id: string }) {
           if (!r.ok) {
             toast(
               r.error === 'missing_required' && r.missing?.length
-                ? `لا يمكن النشر — بيانات مطلوبة ناقصة: ${r.missing.join('، ')}`
-                : 'تعذّر النشر / Approve failed',
+                ? L(`لا يمكن النشر — بيانات مطلوبة ناقصة: ${r.missing.join('، ')}`, `Cannot publish — required details are missing: ${r.missing.join(', ')}`)
+                : L('تعذّر النشر', 'Approve failed'),
               'error',
             );
             return;
           }
-          toast('تم النشر / Published');
+          toast(L('تم النشر', 'Published'));
           router.refresh();
         })
       }

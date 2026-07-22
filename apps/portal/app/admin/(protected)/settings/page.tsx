@@ -1,20 +1,22 @@
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SettingsHub() {
+  const locale = (await getLocale()) as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   await requirePermission('settings', 'VIEW');
   const t = await getTranslations('admin');
   // System-only cards (2026-07 RBAC restructure): appearance and people pages have
   // their own sidebar groups now, so the hub keeps just the `settings`-gated surfaces.
   const cards = [
-    { href: '/admin/settings/modules', label: 'الخدمات الظاهرة', desc: 'تفعيل/إخفاء خدمات العبور الجديدة' },
+    { href: '/admin/settings/modules', label: L('الخدمات الظاهرة', 'Visible services'), desc: L('تفعيل/إخفاء خدمات العبور الجديدة', 'Turn New Obour services on or off') },
     { href: '/admin/settings/apis', label: t('settingsApis'), desc: t('settingsApisDesc') },
-    { href: '/admin/settings/security', label: 'الأمان والحماية', desc: 'مستوى حماية البيانات من النسخ' },
-    { href: '/admin/settings/analytics', label: 'التحليلات والتتبّع', desc: 'GA4 و Meta Pixel و Search Console' },
-    { href: '/admin/settings/site', label: 'إعدادات الموقع العامة', desc: 'قائمة الجوال، حقوق النشر، واتساب المساعدة' },
-    { href: '/admin/settings/backups', label: 'النسخ الاحتياطي', desc: 'تحميل النسخ، نسخة فورية، ونسخة على خادم خارجي' },
+    { href: '/admin/settings/security', label: L('الأمان والحماية', 'Security & protection'), desc: L('مستوى حماية البيانات من النسخ', 'How strongly data is protected against scraping') },
+    { href: '/admin/settings/analytics', label: L('التحليلات والتتبّع', 'Analytics & tracking'), desc: L('GA4 و Meta Pixel و Search Console', 'GA4, Meta Pixel and Search Console') },
+    { href: '/admin/settings/site', label: L('إعدادات الموقع العامة', 'General site settings'), desc: L('قائمة الجوال، حقوق النشر، واتساب المساعدة', 'Mobile menu, copyright, help WhatsApp') },
+    { href: '/admin/settings/backups', label: L('النسخ الاحتياطي', 'Backups'), desc: L('تحميل النسخ، نسخة فورية، ونسخة على خادم خارجي', 'Download backups, run one now, and copy off-server') },
     { href: '/admin/settings/account', label: t('settingsAccount'), desc: t('settingsAccountDesc') },
   ];
   return (

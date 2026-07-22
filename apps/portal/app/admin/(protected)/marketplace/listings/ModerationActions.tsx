@@ -2,11 +2,13 @@
 
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
 import { approveListing, rejectListing } from '../actions';
 
 export function ModerationActions({ id, incomplete = false }: { id: string; incomplete?: boolean }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const t = useTranslations('mp');
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -23,8 +25,8 @@ export function ModerationActions({ id, incomplete = false }: { id: string; inco
         // and the admin has no other way to know which required field is empty.
         toast(
           r.error === 'missing_required' && r.missing?.length
-            ? `لا يمكن النشر — بيانات مطلوبة ناقصة: ${r.missing.join('، ')}`
-            : 'تعذّر الحفظ / Save failed',
+            ? L(`لا يمكن النشر — بيانات مطلوبة ناقصة: ${r.missing.join('، ')}`, `Cannot publish — required details are missing: ${r.missing.join(', ')}`)
+            : L('تعذّر الحفظ', 'Save failed'),
           'error',
         );
         return;
@@ -43,7 +45,7 @@ export function ModerationActions({ id, incomplete = false }: { id: string; inco
     setReasonMissing(false);
     start(async () => {
       const r = await rejectListing(id, reason);
-      if (!r.ok) { toast('تعذّر الحفظ / Save failed', 'error'); return; }
+      if (!r.ok) { toast(L('تعذّر الحفظ', 'Save failed'), 'error'); return; }
       router.refresh();
     });
   }
@@ -58,7 +60,7 @@ export function ModerationActions({ id, incomplete = false }: { id: string; inco
           placeholder={t('rejectionReason')}
           className={`rounded border bg-transparent px-2 py-1 text-sm ${reasonMissing ? 'border-red-600' : 'border-graphite/20'}`}
         />
-        {reasonMissing && <p className="mt-0.5 text-xs text-red-600">سبب الرفض مطلوب / Reason is required</p>}
+        {reasonMissing && <p className="mt-0.5 text-xs text-red-600">{L('سبب الرفض مطلوب', 'A rejection reason is required')}</p>}
       </div>
       <button disabled={pending} onClick={reject} className="rounded bg-red-600 px-2 py-1 text-sm text-white">{t('reject')}</button>
       <button onClick={() => { setRejecting(false); setReasonMissing(false); }} className="text-sm opacity-60">{t('cancel')}</button>
@@ -70,7 +72,7 @@ export function ModerationActions({ id, incomplete = false }: { id: string; inco
       <button
         disabled={pending || incomplete}
         onClick={approve}
-        title={incomplete ? 'أكمل البيانات المطلوبة أولاً / Complete the required details first' : undefined}
+        title={incomplete ? L('أكمل البيانات المطلوبة أولاً', 'Complete the required details first') : undefined}
         className="rounded bg-primary px-3 py-1 text-sm text-soft disabled:opacity-40"
       >
         {t('approve')}

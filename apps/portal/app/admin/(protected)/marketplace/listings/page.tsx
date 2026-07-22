@@ -56,7 +56,7 @@ export default async function ModerationPage() {
         <h1 className="text-2xl font-bold text-primary">{t('moderation')}</h1>
         <div className="flex items-center gap-3">
           <a href="/admin/marketplace/listings/new" className="rounded-md bg-primary px-3 py-1.5 text-sm text-soft">+ {t('addLand')}</a>
-          <a href="/admin/marketplace/listings/deleted" className="text-sm opacity-70 hover:opacity-100">🗑️ المحذوفات</a>
+          <a href="/admin/marketplace/listings/deleted" className="text-sm opacity-70 hover:opacity-100">🗑️ {L('المحذوفات', 'Trash')}</a>
           <a href="/admin/marketplace" className="text-sm text-accent">← {t('title')}</a>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
 
 export type CatalogRow = {
@@ -43,6 +43,8 @@ export function CatalogTable({
 }) {
   const t = useTranslations('mp');
   const router = useRouter();
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const [pending, start] = useTransition();
   const [draft, setDraft] = useState<UpsertInput | null>(null); // edit OR add (add has no id)
   const [error, setError] = useState('');
@@ -96,7 +98,7 @@ export function CatalogTable({
 
   return (
     <div className="space-y-3">
-      {error && <p className="text-sm text-red-600">تعذّر الحفظ / Save failed: {error}</p>}
+      {error && <p className="text-sm text-red-600">{L('تعذّر الحفظ', 'Save failed')}: {error}</p>}
       <div className="flex items-center justify-between gap-3">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('search')} className="w-full max-w-xs rounded-md border border-graphite/20 bg-transparent px-3 py-1.5 text-sm" />
         <span className="whitespace-nowrap text-xs opacity-60">{rows.length}/{initial.length}</span>
@@ -158,7 +160,7 @@ export function CatalogTable({
                     <button
                       disabled={pending}
                       onClick={() => {
-                        if (!window.confirm('حذف نهائيًا؟ / Delete permanently?')) return;
+                        if (!window.confirm(L('حذف نهائيًا؟', 'Delete permanently?'))) return;
                         run(() => remove(row.id), () => toast(t('deleted')));
                       }}
                       className="px-2 py-1 text-red-600"

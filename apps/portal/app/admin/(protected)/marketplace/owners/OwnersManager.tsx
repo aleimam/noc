@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
@@ -11,6 +12,8 @@ import { OwnerFields, OWNER_EMPTY, pad, type OwnerDraft, type OwnerType } from '
 type Owner = { id: string; name: string; type: OwnerType; codes: number[]; phone1: string | null; phone1Whatsapp: boolean; phone2: string | null; phone2Whatsapp: boolean; details: string | null };
 
 export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; takenCodes: number[] }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const t = useTranslations('mp');
   const tc = useTranslations('common');
   const router = useRouter();
@@ -39,7 +42,7 @@ export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; taken
     });
   }
   function del(id: string) {
-    if (!window.confirm('حذف نهائيًا؟ / Delete permanently?')) return;
+    if (!window.confirm(L('حذف نهائيًا؟', 'Delete permanently?'))) return;
     start(async () => {
       const r = await deleteOwner(id);
       if (r.ok) { router.refresh(); toast(t('deleted')); }
@@ -49,7 +52,7 @@ export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; taken
 
   return (
     <div className="space-y-4">
-      {error && <p className="text-sm text-red-600">{error === 'owner_code_taken' ? t('ownerCodeTaken') : error === 'owner_code_range' ? t('ownerCodesHint') : error === 'invalid_phone' ? tc('phoneInvalid') : 'تعذّر الحفظ / Save failed'}</p>}
+      {error && <p className="text-sm text-red-600">{error === 'owner_code_taken' ? t('ownerCodeTaken') : error === 'owner_code_range' ? t('ownerCodesHint') : error === 'invalid_phone' ? tc('phoneInvalid') : L('تعذّر الحفظ', 'Save failed')}</p>}
 
       {draft ? (
         <div className="space-y-3 rounded-lg border border-graphite/15 p-4">

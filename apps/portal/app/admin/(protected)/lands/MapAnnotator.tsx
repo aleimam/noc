@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Stage, Layer, Image as KonvaImage, Rect, Circle, Arrow, Line, Transformer } from 'react-konva';
 import type Konva from 'konva';
 
@@ -44,6 +44,8 @@ export function MapAnnotator({
   onClose: () => void;
   onSaved: (attachmentId: string, shapes: Shape[]) => Promise<void> | void;
 }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const t = useTranslations('lands');
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [display, setDisplay] = useState({ w: 0, h: 0 });
@@ -72,7 +74,7 @@ export function MapAnnotator({
   const dirty = shapes !== initialShapesRef.current;
 
   function requestClose() {
-    if (dirty && shapes.length > 0 && !window.confirm('تجاهل التعديلات؟ / Discard changes?')) return;
+    if (dirty && shapes.length > 0 && !window.confirm(L('تجاهل التعديلات؟', 'Discard changes?'))) return;
     onClose();
   }
 
@@ -205,7 +207,7 @@ export function MapAnnotator({
               <button key={c} type="button" onClick={() => recolor(c)} aria-label={c} className={`h-6 w-6 rounded-full ring-2 ${color === c ? 'ring-primary' : 'ring-graphite/20'}`} style={{ backgroundColor: c }} />
             ))}
           </span>
-          <button type="button" onClick={undo} disabled={shapes.length === 0} className="rounded-lg border border-graphite/25 px-3 py-1.5 text-sm disabled:opacity-40">↩ تراجع / Undo</button>
+          <button type="button" onClick={undo} disabled={shapes.length === 0} className="rounded-lg border border-graphite/25 px-3 py-1.5 text-sm disabled:opacity-40">↩ {L('تراجع', 'Undo')}</button>
           <button type="button" onClick={removeSelected} disabled={!selectedId} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 disabled:opacity-40">✕ {t('annotDelete')}</button>
           <div className="ms-auto flex items-center gap-2">
             <button type="button" onClick={requestClose} className="rounded-lg border border-graphite/25 px-3 py-1.5 text-sm">{t('annotCancel')}</button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
@@ -15,6 +16,8 @@ const cell = 'flex-1 rounded border border-graphite/20 bg-transparent px-2 py-1 
 const EMPTY: Draft = { name: '', items: [] };
 
 export function OptionListsManager({ lists }: { lists: List[] }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const t = useTranslations('mp');
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -34,12 +37,12 @@ export function OptionListsManager({ lists }: { lists: List[] }) {
     });
   }
   function del(id: string) {
-    if (!window.confirm('حذف نهائيًا؟ / Delete permanently?')) return;
+    if (!window.confirm(L('حذف نهائيًا؟', 'Delete permanently?'))) return;
     setError('');
     start(async () => {
       const r = await deleteOptionList(id);
       if (r.ok) { router.refresh(); toast(t('deleted')); }
-      else setError(r.error === 'in_use' ? t('inUse') : 'تعذّر الحفظ / Save failed');
+      else setError(r.error === 'in_use' ? t('inUse') : L('تعذّر الحفظ', 'Save failed'));
     });
   }
 
@@ -47,7 +50,7 @@ export function OptionListsManager({ lists }: { lists: List[] }) {
     const d = draft;
     return (
       <div className="space-y-4 rounded-lg border border-graphite/15 p-4">
-        {error && <p className="text-sm text-red-600">{error === 'failed' ? 'تعذّر الحفظ / Save failed' : error}</p>}
+        {error && <p className="text-sm text-red-600">{error === 'failed' ? L('تعذّر الحفظ', 'Save failed') : error}</p>}
         <label className="block text-sm">{t('listName')}<input value={d.name} onChange={(e) => setDraft({ ...d, name: e.target.value })} className={inp} /></label>
         <div className="space-y-2">
           <div className="flex items-center justify-between">

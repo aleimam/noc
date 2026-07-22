@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -18,6 +18,8 @@ export function OrderableList({
   action: (ids: string[]) => Promise<Result>;
   title?: string;
 }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const t = useTranslations('mp');
   const router = useRouter();
   const [order, setOrder] = useState<Item[]>(items);
@@ -44,7 +46,7 @@ export function OrderableList({
         toast(t('savedOk'));
         router.refresh();
       } else {
-        toast('تعذّر الحفظ / Save failed', 'error');
+        toast(L('تعذّر الحفظ', 'Save failed'), 'error');
       }
     });
   }

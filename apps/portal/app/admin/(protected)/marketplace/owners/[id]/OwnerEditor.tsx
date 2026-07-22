@@ -97,7 +97,7 @@ export function OwnerEditor({
       ? L('حساب الشريك موجود بالفعل — أدخل اسم مستخدم أو بريدًا أو هاتفًا واحدًا على الأقل', 'The partner account exists — keep at least one of username / email / phone')
     : code === 'duplicate_key'
       ? L('اسم المستخدم / البريد / الهاتف مستخدم بالفعل', 'Username / email / phone already in use')
-    : 'تعذّر الحفظ / Save failed';
+    : L('تعذّر الحفظ', 'Save failed');
 
   function save() {
     if (!draft.name.trim()) { setError('failed'); return; }
@@ -137,7 +137,7 @@ export function OwnerEditor({
 
   function del() {
     if (!initial.id) return;
-    if (!window.confirm('حذف نهائيًا؟ / Delete permanently?')) return;
+    if (!window.confirm(L('حذف نهائيًا؟', 'Delete permanently?'))) return;
     start(async () => {
       const r = await deleteOwner(initial.id!);
       if (r.ok) { toast(t('deleted')); router.push('/admin/marketplace/owners'); }

@@ -1,18 +1,21 @@
 'use client';
 
 import { useTransition } from 'react';
+import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { toast } from '@noc/ui';
 import { setOfferStatus, deleteOffer } from './actions';
 
-const STATUSES: { key: 'NEW' | 'REVIEWING' | 'ACCEPTED' | 'REJECTED'; ar: string }[] = [
-  { key: 'NEW', ar: 'جديد' },
-  { key: 'REVIEWING', ar: 'قيد المراجعة' },
-  { key: 'ACCEPTED', ar: 'مقبول' },
-  { key: 'REJECTED', ar: 'مرفوض' },
+const STATUSES: { key: 'NEW' | 'REVIEWING' | 'ACCEPTED' | 'REJECTED'; ar: string; en: string }[] = [
+  { key: 'NEW', ar: 'جديد', en: 'New' },
+  { key: 'REVIEWING', ar: 'قيد المراجعة', en: 'Reviewing' },
+  { key: 'ACCEPTED', ar: 'مقبول', en: 'Accepted' },
+  { key: 'REJECTED', ar: 'مرفوض', en: 'Rejected' },
 ];
 
 export function OfferStatusButtons({ id, current }: { id: string; current: string }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const router = useRouter();
   const [pending, start] = useTransition();
   return (
@@ -24,7 +27,7 @@ export function OfferStatusButtons({ id, current }: { id: string; current: strin
           onClick={() =>
             start(async () => {
               const r = await setOfferStatus(id, s.key);
-              if (!r.ok) { toast('تعذّر الحفظ / Save failed', 'error'); return; }
+              if (!r.ok) { toast(L('تعذّر الحفظ', 'Save failed'), 'error'); return; }
               router.refresh();
             })
           }
@@ -38,26 +41,28 @@ export function OfferStatusButtons({ id, current }: { id: string; current: strin
 }
 
 export function DeleteOfferButton({ id, redirectTo }: { id: string; redirectTo?: string }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const router = useRouter();
   const [pending, start] = useTransition();
   return (
     <button
       disabled={pending}
       onClick={() => {
-        if (!confirm('حذف هذا العرض نهائيًا؟ لا يمكن التراجع.')) return;
+        if (!confirm(L('حذف هذا العرض نهائيًا؟ لا يمكن التراجع.', 'Delete this offer permanently? This cannot be undone.'))) return;
         start(async () => {
           const r = await deleteOffer(id);
           if (r.ok) {
             if (redirectTo) router.push(redirectTo);
             else router.refresh();
           } else {
-            toast('تعذّر الحذف / Delete failed', 'error');
+            toast(L('تعذّر الحذف', 'Delete failed'), 'error');
           }
         });
       }}
       className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
     >
-      حذف
+      {L('حذف', 'Delete')}
     </button>
   );
 }

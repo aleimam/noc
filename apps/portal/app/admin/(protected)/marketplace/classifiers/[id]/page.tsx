@@ -14,6 +14,7 @@ export default async function ClassifierOptionsPage({ params }: { params: Promis
   const { id } = await params;
   const t = await getTranslations('mp');
   const locale = (await getLocale()) as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const classifier = await prisma.classifier.findUnique({
     where: { id },
     include: { options: { orderBy: { order: 'asc' }, include: { parentLinks: { select: { parentId: true } } } } },
@@ -46,7 +47,7 @@ export default async function ClassifierOptionsPage({ params }: { params: Promis
       <p className="rounded-lg border border-graphite/15 bg-graphite/5 px-3 py-2 text-xs opacity-80">
         {locale === 'en'
           ? 'Managing which attributes apply to each option now lives in one place: '
-          : 'إدارة الحقول التي تنطبق على كل تصنيف أصبحت في مكان واحد: '}
+          : L('إدارة الحقول التي تنطبق على كل تصنيف أصبحت في مكان واحد: ', 'Managing the fields that apply to each classifier now lives in one place: ')}
         <a href="/admin/marketplace/category-attributes" className="text-accent underline">
           {locale === 'en' ? 'Category attributes' : 'حقول التصنيفات'}
         </a>

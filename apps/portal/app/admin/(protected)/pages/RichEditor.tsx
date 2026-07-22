@@ -13,6 +13,7 @@ import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { compressImage } from '@noc/ui';
+import { useLocale } from 'next-intl';
 
 const FONT_SIZES = ['', '14px', '16px', '20px', '28px'];
 
@@ -31,6 +32,8 @@ function Btn({ onClick, active, children, title }: { onClick: () => void; active
 }
 
 function Toolbar({ editor }: { editor: Editor }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   async function addImage() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -47,7 +50,7 @@ function Toolbar({ editor }: { editor: Editor }) {
     input.click();
   }
   function addLink() {
-    const url = prompt('رابط (URL):', 'https://');
+    const url = prompt(L('رابط (URL):', 'Link (URL):'), 'https://');
     if (url) editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
     else editor.chain().focus().unsetLink().run();
   }
@@ -73,7 +76,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         onChange={(e) => (e.target.value ? editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run() : editor.chain().focus().setMark('textStyle', { fontSize: null }).run())}
         className="rounded border border-graphite/20 bg-transparent px-1 py-1 text-sm"
       >
-        {FONT_SIZES.map((s) => <option key={s} value={s}>{s || 'حجم'}</option>)}
+        {FONT_SIZES.map((s) => <option key={s} value={s}>{s || L('حجم', 'Size')}</option>)}
       </select>
       <span className="mx-1 h-5 w-px bg-graphite/20" />
       <Btn title="Link" active={editor.isActive('link')} onClick={addLink}>🔗</Btn>

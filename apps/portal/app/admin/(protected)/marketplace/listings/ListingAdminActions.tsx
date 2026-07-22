@@ -1,6 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
+import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
@@ -11,6 +12,8 @@ import { setListingArchived, deleteListing } from '../actions';
  *  not a lifecycle shortcut. A REJECTED, SOLD or DRAFT listing must go back through the normal
  *  moderation flow (the server rejects those transitions too). */
 export function ListingAdminActions({ id, status }: { id: string; status: string }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const t = useTranslations('mp');
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -28,8 +31,8 @@ export function ListingAdminActions({ id, status }: { id: string; status: string
             if (!r.ok) {
               toast(
                 r.error === 'bad_status'
-                  ? 'تغيّرت حالة الإعلان — حدّث الصفحة / Listing status changed — refresh the page'
-                  : 'تعذّر الحفظ / Save failed',
+                  ? L('تغيّرت حالة الإعلان — حدّث الصفحة', 'Listing status changed — refresh the page')
+                  : L('تعذّر الحفظ', 'Save failed'),
                 'error',
               );
               return;
@@ -48,7 +51,7 @@ export function ListingAdminActions({ id, status }: { id: string; status: string
           if (!confirm(t('confirmDeleteListing'))) return;
           start(async () => {
             const r = await deleteListing(id);
-            if (!r.ok) { toast('تعذّر الحذف / Delete failed', 'error'); return; }
+            if (!r.ok) { toast(L('تعذّر الحذف', 'Delete failed'), 'error'); return; }
             router.refresh();
           });
         }}

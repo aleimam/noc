@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 type AttrType =
   | 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'PHOTOS' | 'DOCUMENTS'
@@ -37,13 +37,13 @@ const inp = 'w-full rounded-md border border-graphite/20 bg-transparent px-3 py-
 const cell = 'flex-1 rounded border border-graphite/20 bg-transparent px-2 py-1 text-sm';
 
 // Friendly Arabic labels for the value-type picker (raw enum shown in parens for reference).
-const TYPE_LABELS: Record<AttrType, string> = {
-  TEXT: 'نص قصير', TEXTAREA: 'نص طويل', NUMBER: 'رقم', BOOLEAN: 'مربع اختيار',
-  SELECT: 'اختيار من قائمة', MULTI_SELECT: 'اختيار متعدد', DATE: 'تاريخ (شهر/سنة)',
-  DATE_FULL: 'تاريخ (يوم/شهر/سنة)', PHOTOS: 'صور (عامة)', DOCUMENTS: 'مستندات (داخلية)',
-  URL: 'رابط', PHONE: 'رقم هاتف', MONEY: 'مبلغ بالجنيه', MONEY_THOUSANDS: 'مبلغ بالآلاف',
-  AREA_ORIGINAL: 'مساحة أصلية (م²)', AREA_ALLOCATED: 'مساحة مخصصة (م²)', YESNO: 'مفتاح نعم/لا',
-  DISTRICT: 'المنطقة (من قاعدة المناطق)', NEIGHBORHOOD: 'المجاورة (تتبع المنطقة)',
+const TYPE_LABELS: Record<AttrType, readonly [string, string]> = {
+  TEXT: ['نص قصير', 'Short text'], TEXTAREA: ['نص طويل', 'Long text'], NUMBER: ['رقم', 'Number'], BOOLEAN: ['مربع اختيار', 'Checkbox'],
+  SELECT: ['اختيار من قائمة', 'Pick from a list'], MULTI_SELECT: ['اختيار متعدد', 'Multi-select'], DATE: ['تاريخ (شهر/سنة)', 'Date (month/year)'],
+  DATE_FULL: ['تاريخ (يوم/شهر/سنة)', 'Date (day/month/year)'], PHOTOS: ['صور (عامة)', 'Photos (public)'], DOCUMENTS: ['مستندات (داخلية)', 'Documents (internal)'],
+  URL: ['رابط', 'Link'], PHONE: ['رقم هاتف', 'Phone number'], MONEY: ['مبلغ بالجنيه', 'Amount in EGP'], MONEY_THOUSANDS: ['مبلغ بالآلاف', 'Amount in thousands'],
+  AREA_ORIGINAL: ['مساحة أصلية (م²)', 'Original area (m²)'], AREA_ALLOCATED: ['مساحة مخصصة (م²)', 'Allocated area (m²)'], YESNO: ['مفتاح نعم/لا', 'Yes/No switch'],
+  DISTRICT: ['المنطقة (من قاعدة المناطق)', 'District (from the geo database)'], NEIGHBORHOOD: ['المجاورة (تتبع المنطقة)', 'Neighborhood (follows the district)'],
 };
 const ATTR_TYPES: AttrType[] = [
   'TEXT', 'TEXTAREA', 'NUMBER', 'SELECT', 'MULTI_SELECT', 'BOOLEAN', 'YESNO',
@@ -67,6 +67,8 @@ export function AttributeForm({
   action: (i: AttrData) => Promise<Result>;
   remove?: (id: string) => Promise<Result>;
 }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const t = useTranslations('mp');
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -161,7 +163,7 @@ export function AttributeForm({
         <label className="text-sm">
           {t('fieldType')}
           <select value={f.type} onChange={(e) => set({ type: e.target.value as AttrType })} className={inp}>
-            {ATTR_TYPES.map((x) => (<option key={x} value={x}>{TYPE_LABELS[x]} ({x})</option>))}
+            {ATTR_TYPES.map((x) => (<option key={x} value={x}>{L(...TYPE_LABELS[x])} ({x})</option>))}
           </select>
         </label>
         <label className="text-sm">{t('unit')}<input value={f.unit} onChange={(e) => set({ unit: e.target.value })} className={inp} /></label>
@@ -176,9 +178,9 @@ export function AttributeForm({
       {/* Yes/No switch — labels for each state. */}
       {f.type === 'YESNO' && (
         <div className="grid gap-4 rounded-lg border border-graphite/15 p-3 sm:grid-cols-2">
-          <label className="text-sm">{t('yesLabel')} ({t('labelAr')})<input value={f.config.yesLabelAr ?? ''} onChange={(e) => setCfg({ yesLabelAr: e.target.value })} placeholder="نعم" className={inp} /></label>
+          <label className="text-sm">{t('yesLabel')} ({t('labelAr')})<input value={f.config.yesLabelAr ?? ''} onChange={(e) => setCfg({ yesLabelAr: e.target.value })} placeholder={L('نعم', 'Yes')} className={inp} /></label>
           <label className="text-sm">{t('yesLabel')} ({t('labelEn')})<input dir="ltr" value={f.config.yesLabelEn ?? ''} onChange={(e) => setCfg({ yesLabelEn: e.target.value })} placeholder="Yes" className={inp} /></label>
-          <label className="text-sm">{t('noLabel')} ({t('labelAr')})<input value={f.config.noLabelAr ?? ''} onChange={(e) => setCfg({ noLabelAr: e.target.value })} placeholder="لا" className={inp} /></label>
+          <label className="text-sm">{t('noLabel')} ({t('labelAr')})<input value={f.config.noLabelAr ?? ''} onChange={(e) => setCfg({ noLabelAr: e.target.value })} placeholder={L('لا', 'No')} className={inp} /></label>
           <label className="text-sm">{t('noLabel')} ({t('labelEn')})<input dir="ltr" value={f.config.noLabelEn ?? ''} onChange={(e) => setCfg({ noLabelEn: e.target.value })} placeholder="No" className={inp} /></label>
         </div>
       )}

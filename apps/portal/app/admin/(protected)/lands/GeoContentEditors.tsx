@@ -462,6 +462,8 @@ export function CustomPhotosEditor({ level, targetId, photos }: { level: Level; 
 /** Reciprocal adjacency picker (admin-only). */
 export function AdjacencyEditor({ level, targetId, candidates, selected }: { level: Level; targetId: string; candidates: { id: string; name: string }[]; selected: string[] }) {
   const t = useTranslations('lands');
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const router = useRouter();
   const [pending, start] = useTransition();
   const [sel, setSel] = useState<Set<string>>(new Set(selected));
@@ -480,7 +482,7 @@ export function AdjacencyEditor({ level, targetId, candidates, selected }: { lev
     start(async () => {
       const ids = [...sel];
       const r = await (level === 'district' ? setDistrictAdjacency(targetId, ids) : setNeighborhoodAdjacency(targetId, ids));
-      if (!r.ok) { toast('تعذّر الحفظ / Save failed', 'error'); return; }
+      if (!r.ok) { toast(L('تعذّر الحفظ', 'Save failed'), 'error'); return; }
       setSaved(true);
       router.refresh();
     });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from '@noc/ui';
@@ -30,6 +31,8 @@ export function ClassifierOptionsEditor({
   remove: (id: string) => Promise<Result>;
   toggleFlag: (id: string, flag: 'isActive' | 'allowedOnAlsawarey', value: boolean) => Promise<Result>;
 }) {
+  const locale = useLocale() as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const t = useTranslations('mp');
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -56,7 +59,7 @@ export function ClassifierOptionsEditor({
     });
   }
   function del(id: string) {
-    if (!window.confirm('حذف نهائيًا؟ / Delete permanently?')) return;
+    if (!window.confirm(L('حذف نهائيًا؟', 'Delete permanently?'))) return;
     start(async () => {
       const r = await remove(id);
       if (r.ok) { router.refresh(); toast(t('deleted')); }
@@ -74,7 +77,7 @@ export function ClassifierOptionsEditor({
 
   return (
     <div className="space-y-4">
-      {error && <p className="text-sm text-red-600">{error === 'in_use' ? t('inUse') : error === 'duplicate_key' ? 'المفتاح مستخدم / Key already used' : 'تعذّر الحفظ / Save failed'}</p>}
+      {error && <p className="text-sm text-red-600">{error === 'in_use' ? t('inUse') : error === 'duplicate_key' ? L('المفتاح مستخدم', 'Key already used') : L('تعذّر الحفظ', 'Save failed')}</p>}
 
       {draft ? (
         <div className="grid gap-3 rounded-lg border border-graphite/15 p-4 sm:grid-cols-2">
@@ -85,9 +88,9 @@ export function ClassifierOptionsEditor({
           {parentOptions.length > 0 && (
             <div className="text-sm sm:col-span-2">
               <div className="mb-1 flex items-center justify-between gap-2">
-                <span>{parentLabel} (الأصل) <span className="opacity-60">— {t('parentMultiHint')}</span></span>
+                <span>{parentLabel} ({L('الأصل', 'parent')}) <span className="opacity-60">— {t('parentMultiHint')}</span></span>
                 <button type="button" onClick={toggleAllParents} className="whitespace-nowrap text-xs text-accent hover:underline">
-                  {allParentsSelected ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+                  {allParentsSelected ? L('إلغاء تحديد الكل', 'Clear all') : L('تحديد الكل', 'Select all')}
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-1 rounded-md border border-graphite/20 p-2 sm:grid-cols-3">

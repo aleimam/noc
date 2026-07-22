@@ -1,3 +1,4 @@
+import { getLocale } from 'next-intl/server';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
 import {
@@ -12,6 +13,8 @@ export const dynamic = 'force-dynamic';
 const KEYS = ['site.mobileMenu', 'site.slogan', 'site.slogan_en', 'copyright_newobour', 'copyright_newobour_en', 'copyright_alsawarey', 'copyright_alsawarey_en', 'site.whatsappHelp', 'whatsapp_float_newobour', 'whatsapp_float_msg_newobour', 'whatsapp_float_alsawarey', 'whatsapp_float_msg_alsawarey', 'gallery.photoAnalytics'];
 
 export default async function SiteSettingsPage() {
+  const locale = (await getLocale()) as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   await requirePermission('settings', 'VIEW');
   const rows = await prisma.setting.findMany({ where: { key: { in: KEYS } } });
   const v = Object.fromEntries(rows.map((r) => [r.key, r.value]));
@@ -36,10 +39,10 @@ export default async function SiteSettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-primary">إعدادات الموقع العامة</h1>
-        <a href="/admin/settings" className="text-sm text-accent">← الإعدادات</a>
+        <h1 className="text-2xl font-bold text-primary">{L('إعدادات الموقع العامة', 'General site settings')}</h1>
+        <a href="/admin/settings" className="text-sm text-accent">{L('← الإعدادات', '← Settings')}</a>
       </div>
-      <p className="text-sm opacity-70">قائمة الجوال، حقوق النشر (للموقعين)، رقم واتساب للمساعدة، وزر واتساب العائم لكل موقع.</p>
+      <p className="text-sm opacity-70">{L('قائمة الجوال، حقوق النشر (للموقعين)، رقم واتساب للمساعدة، وزر واتساب العائم لكل موقع.', 'Mobile menu, copyright (for both sites), a help WhatsApp number, and the floating WhatsApp button for each site.')}</p>
       <SiteSettingsClient initial={initial} />
     </div>
   );

@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 export default async function MissedSheetReportsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requirePermission('sheets', 'VIEW');
   const locale = (await getLocale()) as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const sp = await searchParams;
   const showDone = (typeof sp.done === 'string' ? sp.done : '') === '1';
 
@@ -40,32 +41,32 @@ export default async function MissedSheetReportsPage({ searchParams }: { searchP
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">
-          بلاغات كشوف ناقصة <span className="text-base font-normal opacity-60">({newCount} جديد)</span>
+          {L('بلاغات كشوف ناقصة', 'Missing-sheet reports')} <span className="text-base font-normal opacity-60">({newCount} {L('جديد', 'new')})</span>
         </h1>
-        <a href="/admin/rationing" className="text-sm text-accent">← التقنين</a>
+        <a href="/admin/rationing" className="text-sm text-accent">{L('← التقنين', '← Rationing')}</a>
       </div>
 
       <div className="flex gap-2 text-sm">
-        <a href="/admin/rationing/reports" className={`rounded-md px-3 py-1.5 ${!showDone ? 'bg-primary text-soft' : 'border border-graphite/25'}`}>الجديدة</a>
-        <a href="/admin/rationing/reports?done=1" className={`rounded-md px-3 py-1.5 ${showDone ? 'bg-primary text-soft' : 'border border-graphite/25'}`}>الكل</a>
+        <a href="/admin/rationing/reports" className={`rounded-md px-3 py-1.5 ${!showDone ? 'bg-primary text-soft' : 'border border-graphite/25'}`}>{L('الجديدة', 'New')}</a>
+        <a href="/admin/rationing/reports?done=1" className={`rounded-md px-3 py-1.5 ${showDone ? 'bg-primary text-soft' : 'border border-graphite/25'}`}>{L('الكل', 'All')}</a>
       </div>
 
       {reports.length === 0 ? (
-        <p className="py-12 text-center opacity-60">لا توجد بلاغات{showDone ? '' : ' جديدة'}.</p>
+        <p className="py-12 text-center opacity-60">{showDone ? L('لا توجد بلاغات.', 'No reports.') : L('لا توجد بلاغات جديدة.', 'No new reports.')}</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-graphite/15">
           <table className="w-full whitespace-nowrap text-sm">
             <thead>
               <tr className="opacity-60">
-                <th className="p-2 text-start">التاريخ</th>
-                <th className="p-2 text-start">المُبلِّغ</th>
-                <th className="p-2 text-start">الهاتف</th>
-                <th className="p-2 text-start">نشر فيسبوك</th>
-                <th className="p-2 text-start">الجمعية</th>
-                <th className="p-2 text-start">المالك الأصلي</th>
-                <th className="p-2 text-start">البلوك</th>
-                <th className="p-2 text-start">القطعة</th>
-                <th className="p-2 text-start">الصور</th>
+                <th className="p-2 text-start">{L('التاريخ', 'Date')}</th>
+                <th className="p-2 text-start">{L('المُبلِّغ', 'Reporter')}</th>
+                <th className="p-2 text-start">{L('الهاتف', 'Phone')}</th>
+                <th className="p-2 text-start">{L('نشر فيسبوك', 'Facebook post')}</th>
+                <th className="p-2 text-start">{L('الجمعية', 'Association')}</th>
+                <th className="p-2 text-start">{L('المالك الأصلي', 'Original owner')}</th>
+                <th className="p-2 text-start">{L('البلوك', 'Block')}</th>
+                <th className="p-2 text-start">{L('القطعة', 'Plot')}</th>
+                <th className="p-2 text-start">{L('الصور', 'Photos')}</th>
                 <th className="p-2"></th>
               </tr>
             </thead>
@@ -75,7 +76,7 @@ export default async function MissedSheetReportsPage({ searchParams }: { searchP
                   <td className="p-2" dir="ltr">{fmt(r.createdAt)}</td>
                   <td className="p-2 font-medium">
                     {r.reporterName}
-                    {r.userId && <span className="ms-1.5 rounded bg-navy-50 px-1.5 py-0.5 text-[10px] text-navy-700">حساب</span>}
+                    {r.userId && <span className="ms-1.5 rounded bg-navy-50 px-1.5 py-0.5 text-[10px] text-navy-700">{L('حساب', 'Account')}</span>}
                   </td>
                   <td className="p-2" dir="ltr"><a href={`tel:${r.reporterPhone}`} className="text-accent hover:underline">{r.reporterPhone || '—'}</a></td>
                   <td className="p-2" dir="ltr">{fmt(r.fbDate)}</td>

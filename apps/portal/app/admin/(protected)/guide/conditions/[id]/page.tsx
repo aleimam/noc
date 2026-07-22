@@ -1,3 +1,4 @@
+import { getLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { requirePermission } from '@noc/auth';
 import { prisma } from '@noc/db';
@@ -6,6 +7,8 @@ import { ConditionEditor } from '../ConditionEditor';
 export const dynamic = 'force-dynamic';
 
 export default async function EditBuildingCondition({ params }: { params: Promise<{ id: string }> }) {
+  const locale = (await getLocale()) as 'ar' | 'en';
+  const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   await requirePermission('content', 'VIEW');
   const { id } = await params;
   const c = await prisma.buildingCondition.findUnique({ where: { id } });
@@ -14,10 +17,10 @@ export default async function EditBuildingCondition({ params }: { params: Promis
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-primary">تعديل: {c.unitLabelAr}</h1>
+        <h1 className="text-2xl font-bold text-primary">{L('تعديل', 'Edit')}: {c.unitLabelAr}</h1>
         <div className="flex items-center gap-4">
-          <a href={`/guide/conditions/${c.slug}`} target="_blank" rel="noopener noreferrer" className="text-sm text-accent">عرض الصفحة ↗</a>
-          <a href="/admin/guide/conditions" className="text-sm text-accent">← رجوع</a>
+          <a href={`/guide/conditions/${c.slug}`} target="_blank" rel="noopener noreferrer" className="text-sm text-accent">{L('عرض الصفحة ↗', 'View page ↗')}</a>
+          <a href="/admin/guide/conditions" className="text-sm text-accent">{L('← رجوع', '← Back')}</a>
         </div>
       </div>
       <ConditionEditor
