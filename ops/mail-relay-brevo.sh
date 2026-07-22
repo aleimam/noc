@@ -6,7 +6,11 @@
 #            login = the SMTP login shown in Brevo under "SMTP & API > SMTP" (an address like
 #                    9abc12@smtp-brevo.com); key = an SMTP key generated there (NOT the account
 #                    password).
-# ROTATE:  bash ops/mail-relay-brevo.sh rotate            <- PREFERRED for key rotation
+# VERIFY:  bash ops/mail-relay-brevo.sh verify            <- ALWAYS run this FIRST
+#            Tests a candidate key against the relay WITHOUT touching Postfix, so a bad key
+#            can never interrupt live mail. Reports pass/fail + key shape (a 535 is usually a
+#            v3 API key 'xkeysib-…' pasted instead of an SMTP key).
+# ROTATE:  bash ops/mail-relay-brevo.sh rotate            <- only after verify passes
 #            Reuses the configured login and reads the new key from STDIN (hidden), so the
 #            secret never touches argv (/proc-readable) or your shell history. Backs up the
 #            old map first; `rollback` restores it if the new key fails to authenticate.
@@ -37,6 +41,43 @@ case "$CMD" in
     chmod 600 /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db
     systemctl reload postfix
     echo "OK: Postfix now relays through $HOST:$PORT. Local OpenDKIM still signs (d=newobour.com/alsawarey.com)."
+    ;;
+  verify)
+    # Test a candidate credential against the relay WITHOUT touching Postfix config, so a bad
+    # key can never interrupt live mail (OTP, backup alerts). Reads the key from STDIN, reports
+    # only pass/fail + the server's reply, and also describes the key's SHAPE — the usual cause
+    # of a 535 is pasting a v3 API key (`xkeysib-…`) instead of an SMTP key.
+    LOGIN="${2:-}"
+    if [ -z "$LOGIN" ]; then
+      LOGIN=$(sed -nE 's/^\[[^]]+\]:[0-9]+ ([^:]+):.*$/\1/p' /etc/postfix/sasl_passwd 2>/dev/null || true)
+      [ -n "$LOGIN" ] || { echo "no existing login found — pass it: $0 verify <login>" >&2; exit 2; }
+    fi
+    printf 'Paste the key to TEST (input hidden), then Enter: ' >&2
+    read -r -s KEY; printf '\n' >&2
+    [ -n "$KEY" ] || { echo "empty key — aborted" >&2; exit 2; }
+    KEY="$KEY" LOGIN="$LOGIN" HOST="$HOST" PORT="$PORT" python3 - <<'PY'
+import os, smtplib, ssl, sys
+key, login = os.environ["KEY"], os.environ["LOGIN"]
+host, port = os.environ["HOST"], int(os.environ["PORT"])
+# Shape hints only — never the value itself.
+shape = "looks like a v3 API key (xkeysib-…) — that is NOT an SMTP key" if key.startswith("xkeysib-") else "no xkeysib- prefix (consistent with an SMTP key)"
+print(f"  login    : {login}")
+print(f"  key len  : {len(key)} chars, {shape}")
+if key != key.strip():
+    print("  ⚠ key has leading/trailing whitespace — likely a copy/paste artefact")
+try:
+    s = smtplib.SMTP(host, port, timeout=20)
+    s.starttls(context=ssl.create_default_context())
+    s.login(login, key)
+    s.quit()
+    print("  RESULT   : ✅ AUTH OK — safe to apply with `rotate`")
+except smtplib.SMTPAuthenticationError as e:
+    print(f"  RESULT   : ❌ AUTH REJECTED — {e.smtp_code} {e.smtp_error.decode(errors='replace') if isinstance(e.smtp_error, bytes) else e.smtp_error}")
+    sys.exit(1)
+except Exception as e:
+    print(f"  RESULT   : ❌ connection/other error — {type(e).__name__}: {e}")
+    sys.exit(1)
+PY
     ;;
   rotate)
     # Rotate ONLY the SMTP key, reading it from STDIN — never argv. argv is world-readable via
@@ -90,6 +131,6 @@ case "$CMD" in
     echo "Reverted: relayhost cleared, SASL disabled, credentials removed."
     ;;
   *)
-    echo "usage: $0 {apply <login> <key> | rotate [login] | rollback | test <from> <to> | revert}" >&2; exit 2
+    echo "usage: $0 {apply <login> <key> | verify [login] | rotate [login] | rollback | test <from> <to> | revert}" >&2; exit 2
     ;;
 esac
