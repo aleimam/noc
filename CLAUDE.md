@@ -97,9 +97,11 @@ ssh noc 'cd /root/noc && git checkout -- package-lock.json 2>/dev/null; \
   Outlook/live.com → spam (shared-IP reputation; auth is verified correct — do not chase DNS).**
   A Postfix `transport_maps` rule DISCARDS mail to the placeholder `yourdomain.com` /
   `noc.yourdomain.com` (hourly cron mail used to hard-bounce via Brevo and hurt reputation).
-- **DNS:** Cloudflare is authoritative for both domains but records are **DNS-only (grey)** —
-  the proxy flip (Part C) is prepped and waiting on the owner: see `ops/CLOUDFLARE.md`.
-  Server side (real-IP restore + CSF trusting CF ranges) is already live.
+- **DNS:** Cloudflare is authoritative for both domains and **both apexes are PROXIED (orange)
+  since 2026-07-22** — WAF, Bot Fight Mode, rate limiting and hotlink protection are live; see
+  `ops/CLOUDFLARE.md`. Real-IP restore (`CF-Connecting-IP`) + CSF trusting CF ranges are live, so
+  nginx and the app's rate limiter still see true visitor IPs. **Never enable Rocket Loader**
+  (breaks Next.js hydration) and **never "Cache Everything"** (would cache admin/logged-in HTML).
 - **Crons** (`/etc/cron.d/`): `noc-backup` 02:30 (DB+uploads+.env, 5-day rotation) ·
   `noc-backup-alert` 04:00 (emails/SMSes owner if backups are stale) ·
   `noc-analytics-rollup` 03:05 · `noc-analytics-prune` 03:15 ·
@@ -351,8 +353,14 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
 `https://`); PasswordInput's eye label follows the UI locale at every call site.
 
 **Owner-blocked (waiting on the owner, everything else is prepped):**
-1. **Cloudflare proxy flip (Part C)** — pure dashboard task now; ordered checklist in
-   `ops/CLOUDFLARE.md` (TLS-first, one zone at a time; www is proxy-safe since the SAN reissue).
+1. ~~**Cloudflare proxy flip (Part C)**~~ **✅ DONE + verified 2026-07-22.** Both apexes are
+   orange-clouded on **Full (strict)**, with the settings pass applied (Always-Use-HTTPS, HTTP/3,
+   Bot Fight Mode, Security Medium, Managed Ruleset, one rate-limit rule per zone, hotlink
+   protection; **Rocket Loader OFF**). Proven, not assumed: real visitor IP reaches nginx through
+   the edge; ACME renewal still served through the proxy; hydration works in a real browser;
+   hotlink allows no-referer (WhatsApp/OG previews safe) and blocks foreign referers;
+   `cf-cache-status: DYNAMIC` so no logged-in HTML is cached. Rollback = grey-cloud, one click.
+   Optional leftover: **B3** (restrict :80/:443 to Cloudflare ranges) after a soak period.
 2. ~~Off-site backup target~~ **✅ DONE + fully proven 2026-07-21** — the tiered SFTP module is live
    on Hetzner sub-account `u635384-sub6`; scheduled runs fire, a restore drill passed, and the
    **first retention prune ran + was verified 2026-07-21 07:00 UTC**: it deleted exactly the oldest

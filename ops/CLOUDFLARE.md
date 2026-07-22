@@ -82,10 +82,26 @@ feed the app real IPs automatically. The app's rate-limiter keys keep working.
 
 ## Part C — Cloudflare dashboard checklist (each zone)
 
-**Current state (2026-07-10):** zones are Active on Cloudflare (Part A done) but every
-A record is **DNS-only (grey)** — so Cloudflare is only doing authoritative DNS today,
-zero proxy/WAF/CDN. Part B (server real-IP + CSF trust) is **done and verified live**.
-This is the "flip it on" run.
+> ## ✅ DONE — both zones proxied and verified 2026-07-22
+> Apex records for **newobour.com** and **alsawarey.com** are orange-clouded, SSL/TLS is
+> **Full (strict)**, and the settings pass (steps 4–9) is applied on both. Verified end to end:
+> - `Server: cloudflare` + `CF-RAY` on both; `alt-svc: h3` (HTTP/3 on); HTTP→HTTPS 301 at the edge.
+> - **Real visitor IP restored** — probed through the edge, nginx saw the true client IP, not a
+>   Cloudflare range. (Access logging is `off` globally on this box, so this was proved with a
+>   temporary `location = /__cfprobe` returning `$remote_addr`, then removed.)
+> - **Cert renewal survives the proxy** — `/.well-known/acme-challenge/` served through Cloudflare
+>   on both zones.
+> - **Rocket Loader off** (0 refs) and **hydration works** — theme toggle flips live in Chrome.
+> - **Hotlink protection behaves**: no-referer → 200 (social/WhatsApp previews safe), same-site →
+>   200, foreign referer → 403. Cross-brand 403 is harmless: each app serves `/uploads` same-origin.
+> - `cf-cache-status: DYNAMIC` on both homepages — logged-in/admin HTML is NOT being cached.
+>
+> Rollback remains one click: set the record back to **grey (DNS-only)**.
+> Remaining optional hardening: **B3** (lock :80/:443 to Cloudflare ranges only) after a soak.
+
+**State before the flip (2026-07-10 → 2026-07-22):** zones were Active on Cloudflare (Part A done)
+but every A record was **DNS-only (grey)** — Cloudflare did authoritative DNS only, zero
+proxy/WAF/CDN. Part B (server real-IP + CSF trust) was done and verified live.
 
 **Pre-flight — verified on the origin `77.42.66.76:443` (2026-07-10):**
 - The Let's Encrypt cert is a **SAN cert for all four names** — `newobour.com`,
