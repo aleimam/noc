@@ -372,8 +372,19 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
    panel + its server actions from the Backups admin. The LOCAL nightly backup (`ops/backup.sh`,
    `noc-backup` cron, staleness alerts, download/restore) is deliberately KEPT as the on-box safety
    layer. (The SFTP host key is pinned + verified — see the Codex-audit note below.)
-3. **Rotate the Brevo SMTP key** (it appeared in a chat once) — then update `/etc/postfix/sasl_passwd`
-   (see `ops/mail-relay-brevo.sh`) and `postmap` + reload.
+3. ~~**Rotate the Brevo SMTP key**~~ **✅ DONE + verified 2026-07-22.** The leaked key is retired.
+   Relay now authenticates as **`b19e6d001@smtp-brevo.com`** (the account's CURRENT SMTP login —
+   the server had been holding an older one, `b17e37001`, which still worked). Proven by a real
+   send: DKIM-signed `s=default, d=newobour.com` → `status=sent (250 2.0.0 OK: queued)`. All
+   `sasl_passwd.bak-*` files were `shred -u`'d, so the old secret is off disk; `sasl_passwd` is
+   600 root. **Owner still to do: revoke the OLD key in the Brevo dashboard.**
+   - **⚠️ That account has Brevo's Authorised-IPs allowlist ON.** `77.42.66.76` is allowlisted
+     (verified as the source IP Brevo actually sees — the box has IPv6 egress too, but
+     `smtp-relay.brevo.com` publishes no AAAA, so SMTP is always IPv4). **If the server IP ever
+     changes, mail dies with `525 5.7.1 Unauthorized IP address` — add the new IP there first.**
+   - `ops/mail-relay-brevo.sh` gained `verify` / `rotate` / `rollback`. **`rotate` authenticates
+     BEFORE writing** and reads the key from STDIN (never argv, never shell history). Use it for
+     any future rotation — a rejected key changes nothing instead of silently deferring mail.
 4. **Partner portal UI click-test** — backend pipeline fully verified by script; a human should
    log in once on each site, submit the lean form, confirm PENDING in moderation. The old
    `testpartner` account was **deleted from prod 2026-07-20** (it was an orphan PARTNER login:
