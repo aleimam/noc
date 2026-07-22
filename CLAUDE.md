@@ -477,9 +477,21 @@ surfaces failures via toast; the RTL-placeholder CSS excludes `input[type=url]` 
      on BOTH properties (they're only ~6 days old). Performance so far: 2 total clicks on
      newobour. **Re-check coverage in a few days** — that's the only outstanding piece.
 
-**Verification pending (needs a staff/admin login — I can't from a shell; everything else this
-session is backed by real command output). These are reasoned + typechecked + built, deployed, but
-NOT click-tested — confirm them in one admin session when convenient:**
+**✅ CLICK-TESTED BY THE OWNER 2026-07-22 — the partner AND admin portals were both exercised in a
+real browser session and NO defects were reported.** That closes the standing "reasoned but never
+click-tested" caveat that had applied to the whole Codex audit. Earlier the same day the owner's
+partner-portal pass DID surface two real defects (the «الصواري» cross-partner leak and the missing
+active-tab highlight), so this pass finding nothing is meaningful signal, not silence.
+
+**⚠️ Three things a normal click-through cannot reach** — they need a deliberately induced
+condition, so treat them as still unproven unless someone specifically forced them:
+  1. **(c) below** — the auto-save failure panel + Retry needs the save request to actually FAIL
+     (kill the network / block the action mid-edit).
+  2. **The partner account page's OTP-verified email/phone change** (`d3011de`) — needs a real
+     code delivered to a new destination and entered.
+  3. **sold → hide → show restoring SOLD** (`07cbe4c`) — proven by 10 vitest cases, not in a UI.
+
+**The list that was pending (kept for traceability; (a),(b),(d),(e),(f) are now covered):**
 - (a) the admin archive toggle now shows ONLY on PUBLISHED/ARCHIVED rows (`/admin/marketplace/listings`);
 - (b) Approve is disabled with the missing details named when a pending row is incomplete;
 - (c) the listing form's auto-save shows a red «لم يتم الحفظ» panel + Retry button on failure;
@@ -499,8 +511,8 @@ NOT click-tested — confirm them in one admin session when convenient:**
   so it is NOT in this list. The alsawarey footer redesign (Option B, commit `5c81238`) is a public
   page — content confirmed live via page text; a visual glance is enough (no login needed).
 
-(Same admin login also covers the partner UI click-test, owner-blocked item 4 — create a fresh test
-partner first, since `testpartner` was deleted.)
+(The partner UI click-test — owner-blocked item 4 — is ALSO done: the owner exercised the partner
+portal on 2026-07-22, which is how the «الصواري» leak and the missing tab highlight were found.)
 
 **Codex deep audit — ✅ ALL 16 PASSES RUN AND TRIAGED (see `CODEX_AUDIT_FINDINGS.md`).**
 Pass 1 was fixed earlier (`06e58e5`→`baf90b1`). **Passes 2–16 were triaged, fixed, deployed and

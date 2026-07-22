@@ -67,9 +67,14 @@ unknown login and a wrong key, and the old key's last copy was shredded with the
 (veeey.net, EVnet, WC, egyptvitamins.net). Always match a key's last 6 characters against what is
 live for that project before deleting a row.
 
-**Also unverified (not broken — just never exercised in a browser):** the whole `/admin` surface
-(6 items listed in `CLAUDE.md`), the partner account page's new OTP-verified email/phone change,
-and sold → hide → show returning as sold. Everything else was click-tested by the owner today.
+**✅ CLICK-TESTED: the owner exercised BOTH the partner and admin portals on 2026-07-22 and reported
+no defects — closing the standing "never click-tested" caveat on the whole audit. (Their earlier
+partner pass that day DID find two real defects, so a clean pass is signal, not silence.)
+
+⚠️ Three things a normal click-through CANNOT reach, so treat them as unproven unless someone
+deliberately forced the condition: the listing-form auto-save FAILURE panel (needs the save to
+actually fail), the partner account page's OTP-verified email/phone change, and sold → hide → show
+restoring SOLD (covered by 10 vitest cases, never in a UI).
 
 ## Done LAST (2026-07-20, final block): Codex audit pass 1 — 7 defects + 7 extras, all fixed
 
@@ -93,9 +98,10 @@ here, the three things most worth knowing:
    «السعر عند الطلب», negative/non-finite ⇒ error. Don't reintroduce a bare `price != null` check;
    that is exactly what put «0 ج.م» on the public home page and in the Google/WhatsApp description.
 
-**Not click-tested** (needs a staff login, everything else is backed by real command output): the
-archive toggle only showing on PUBLISHED/ARCHIVED rows, the Approve-disabled-when-incomplete state
-in the moderation queue, and the auto-save retry panel.
+~~**Not click-tested**~~ **SUPERSEDED — the owner click-tested the partner AND admin portals on
+2026-07-22 with no defects reported** (see "Current status" above). The archive toggle and the
+Approve-disabled-when-incomplete state are covered by that pass; only the auto-save FAILURE panel
+still needs a deliberately induced failure to prove.
 
 ## Done earlier the same day (2026-07-19 → 20)
 
