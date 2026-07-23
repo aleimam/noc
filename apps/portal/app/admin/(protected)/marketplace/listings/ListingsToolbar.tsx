@@ -4,9 +4,9 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 
 /** Filter toolbar for the listings table. Drives the server query via URL search params
- *  (?q=&status=&type=&amin=&amax=&page=), so it's shareable/bookmarkable and works with the back
+ *  (?q=&status=&type=&area=&page=), so it's shareable/bookmarkable and works with the back
  *  button. Any change resets to page 1. Sorting lives on the table's clickable column headers (?sort=). */
-export function ListingsToolbar({ types, total }: { types: { id: string; label: string }[]; total: number }) {
+export function ListingsToolbar({ types, areas, total }: { types: { id: string; label: string }[]; areas: number[]; total: number }) {
   const locale = useLocale() as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const router = useRouter();
@@ -18,14 +18,6 @@ export function ListingsToolbar({ types, total }: { types: { id: string; label: 
     if (val) p.set(key, val);
     else p.delete(key);
     if (key !== 'page') p.delete('page'); // filter change → back to the first page
-    const s = p.toString();
-    router.push(s ? `${pathname}?${s}` : pathname);
-  };
-  // Set several params at once (used by the area-range form so min+max apply together).
-  const setMany = (entries: Record<string, string>) => {
-    const p = new URLSearchParams(sp.toString());
-    for (const [k, v] of Object.entries(entries)) { if (v) p.set(k, v); else p.delete(k); }
-    p.delete('page');
     const s = p.toString();
     router.push(s ? `${pathname}?${s}` : pathname);
   };
@@ -63,25 +55,13 @@ export function ListingsToolbar({ types, total }: { types: { id: string; label: 
         {types.map((tp) => (<option key={tp.id} value={tp.id}>{tp.label}</option>))}
       </select>
 
-      {/* Actual-area range (م²). Applies min+max together on submit/Enter. */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const f = e.currentTarget;
-          setMany({
-            amin: (f.elements.namedItem('amin') as HTMLInputElement).value.trim(),
-            amax: (f.elements.namedItem('amax') as HTMLInputElement).value.trim(),
-          });
-        }}
-        className="flex items-center gap-1"
-      >
-        <span className="text-xs opacity-60">{L('المساحة', 'Area')}</span>
-        <input name="amin" type="number" min="0" inputMode="numeric" defaultValue={sp.get('amin') ?? ''} placeholder={L('من', 'min')} className={`${inp} w-20`} dir="ltr" />
-        <input name="amax" type="number" min="0" inputMode="numeric" defaultValue={sp.get('amax') ?? ''} placeholder={L('إلى', 'max')} className={`${inp} w-20`} dir="ltr" />
-        <button type="submit" className="rounded-md bg-primary px-2 py-1.5 text-xs text-soft">{L('تصفية', 'Apply')}</button>
-      </form>
+      {/* Pick a specific actual area (م²) from the areas that exist in the inventory. */}
+      <select value={sp.get('area') ?? ''} onChange={(e) => set('area', e.target.value)} className={inp} aria-label={L('المساحة', 'Area')}>
+        <option value="">{L('كل المساحات', 'All areas')}</option>
+        {areas.map((a) => (<option key={a} value={a}>{a} {L('م²', 'm²')}</option>))}
+      </select>
 
-      {(sp.get('q') || sp.get('status') || sp.get('type') || sp.get('amin') || sp.get('amax') || sp.get('sort')) && (
+      {(sp.get('q') || sp.get('status') || sp.get('type') || sp.get('area') || sp.get('sort')) && (
         <button type="button" onClick={() => router.push(pathname)} className="text-sm text-accent underline">{L('مسح الفلاتر', 'Clear filters')}</button>
       )}
 

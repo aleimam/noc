@@ -50,8 +50,7 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
   const sort = ORDER[get('sort')] ? get('sort') : 'recent';
   const page = Math.max(1, Number(get('page')) || 1);
   const numOrNull = (v: string) => { const n = Number(v); return v && Number.isFinite(n) && n >= 0 ? n : null; };
-  const amin = numOrNull(get('amin'));
-  const amax = numOrNull(get('amax'));
+  const areaExact = numOrNull(get('area')); // pick a specific area (م²) from the dropdown
 
   // Pending moderation queue — the workflow section; not filtered/paginated (usually tiny).
   const pending = await prisma.listing.findMany({
@@ -72,14 +71,12 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
     deletedAt: null,
     status: statusFilter ? (statusFilter as Prisma.ListingWhereInput['status']) : { not: 'PENDING' },
     ...(typeFilter ? { typeOptionId: typeFilter } : {}),
-    // Actual area lives in the EAV `area` attribute (Listing.area scalar is legacy/null), so the
-    // range filter targets that value, not the column.
-    ...(amin != null || amax != null
-      ? { values: { some: { attribute: { key: 'area' }, number: { ...(amin != null ? { gte: amin } : {}), ...(amax != null ? { lte: amax } : {}) } } } }
-      : {}),
+    // Actual area lives in the EAV `area` attribute (Listing.area scalar is legacy/null), so an
+    // exact-area pick targets that value, not the column.
+    ...(areaExact != null ? { values: { some: { attribute: { key: 'area' }, number: areaExact } } } : {}),
     ...(q ? { OR: [{ title: { contains: q } }, { ownerName: { contains: q } }, { owner: { name: { contains: q } } }] } : {}),
   };
-  const [recentCount, recent, typeOpts] = await Promise.all([
+  const [recentCount, recent, typeOpts, areaValues] = await Promise.all([
     prisma.listing.count({ where: recentWhere }),
     prisma.listing.findMany({
       where: recentWhere,
@@ -95,9 +92,18 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
       },
     }),
     prisma.classifierOption.findMany({ where: { classifier: { key: 'type' }, isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true } }),
+    // Every distinct area (م²) in the live inventory — feeds the toolbar's «المساحة» dropdown.
+    // Base scope (not the active filters) so any area is always pickable.
+    prisma.listingValue.findMany({
+      where: { attribute: { key: 'area' }, number: { not: null }, listing: { deletedAt: null, status: { not: 'PENDING' } } },
+      select: { number: true },
+      distinct: ['number'],
+      orderBy: { number: 'asc' },
+    }),
   ]);
   const totalPages = Math.max(1, Math.ceil(recentCount / PER_PAGE));
   const types = typeOpts.map((o) => ({ id: o.id, label: L(o.nameAr, o.nameEn) }));
+  const areas = areaValues.map((v) => Number(v.number)).filter((n) => Number.isFinite(n));
 
   const assets = await resolveListingAssets(recent.map((l) => l.id), { branded: true });
   // Al Sawarey is a separate domain; its detail page only resolves for a PUBLISHED row whose
@@ -132,8 +138,7 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
     if (q) p.set('q', q);
     if (statusFilter) p.set('status', statusFilter);
     if (typeFilter) p.set('type', typeFilter);
-    if (amin != null) p.set('amin', String(amin));
-    if (amax != null) p.set('amax', String(amax));
+    if (areaExact != null) p.set('area', String(areaExact));
     if (sort !== 'recent') p.set('sort', sort);
     if (n > 1) p.set('page', String(n));
     const s = p.toString();
@@ -145,7 +150,8 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-primary">{t('moderation')}</h1>
         <div className="flex items-center gap-3">
-          <a href="/admin/marketplace/listings/new" className="rounded-md bg-primary px-3 py-1.5 text-sm text-soft">+ {t('addLand')}</a>
+          {/* «إضافة عرض» quick-add already lives in the admin topbar → the page-level add button
+              was a duplicate of the same /new route, so it was removed (owner, 2026-07-23). */}
           <a href="/admin/marketplace/listings/deleted" className="text-sm opacity-70 hover:opacity-100">🗑️ {L('المحذوفات', 'Trash')}</a>
           <a href="/admin/marketplace" className="text-sm text-accent">← {t('title')}</a>
         </div>
@@ -187,10 +193,10 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
 
       <section className="space-y-3">
         <h2 className="font-semibold opacity-70">{L('كل الإعلانات', 'All listings')}</h2>
-        <ListingsToolbar types={types} total={recentCount} />
+        <ListingsToolbar types={types} areas={areas} total={recentCount} />
         {/* key = the active query, so the optimistic client table remounts with fresh rows when a
             filter/sort/page changes (useState would otherwise keep the first page's rows). */}
-        <RecentListingsTable key={`${statusFilter}|${typeFilter}|${sort}|${q}|${amin}|${amax}|${page}`} rows={recentRows} />
+        <RecentListingsTable key={`${statusFilter}|${typeFilter}|${sort}|${q}|${areaExact}|${page}`} rows={recentRows} />
         {recentCount === 0 && <p className="p-4 text-center text-sm opacity-60">{L('لا توجد نتائج مطابقة', 'No matching results')}</p>}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-3 pt-1 text-sm">
