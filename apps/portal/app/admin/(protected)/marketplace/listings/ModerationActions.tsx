@@ -12,6 +12,7 @@ export function ModerationActions({ id, incomplete = false }: { id: string; inco
   const t = useTranslations('mp');
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [done, setDone] = useState<null | 'approved' | 'rejected'>(null); // instant feedback while the refresh lands
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
   const [reasonMissing, setReasonMissing] = useState(false);
@@ -31,6 +32,7 @@ export function ModerationActions({ id, incomplete = false }: { id: string; inco
         );
         return;
       }
+      setDone('approved');
       router.refresh();
     });
   }
@@ -46,8 +48,17 @@ export function ModerationActions({ id, incomplete = false }: { id: string; inco
     start(async () => {
       const r = await rejectListing(id, reason);
       if (!r.ok) { toast(L('تعذّر الحفظ', 'Save failed'), 'error'); return; }
+      setDone('rejected');
       router.refresh();
     });
+  }
+
+  if (done) {
+    return (
+      <span className="text-sm font-semibold text-green">
+        ✓ {done === 'approved' ? L('تم الاعتماد', 'Approved') : L('تم الرفض', 'Rejected')}
+      </span>
+    );
   }
 
   return rejecting ? (

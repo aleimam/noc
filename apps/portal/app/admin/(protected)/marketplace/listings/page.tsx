@@ -5,17 +5,12 @@ import { currency } from '@noc/i18n';
 import { missingRequiredForListing } from '@noc/partner-portal/required';
 import { resolveListingAssets } from '@noc/partner-portal/assets';
 import { ModerationActions } from './ModerationActions';
-import { FeaturedToggle } from './FeaturedToggle';
-import { ListingAdminActions } from './ListingAdminActions';
+import { RecentListingsTable, type RecentRow } from './RecentListingsTable';
 
-const STATUS_COLOR: Record<string, string> = {
-  PUBLISHED: 'bg-green/15 text-green',
-  PENDING: 'bg-gold/20 text-graphite',
-  REJECTED: 'bg-red-100 text-red-700',
-  SOLD: 'bg-navy/10 text-primary',
-  DRAFT: 'bg-graphite/10 text-graphite',
-  ARCHIVED: 'bg-graphite/10 text-graphite',
-};
+// Force-dynamic: this admin table mutates via server actions and must never be served from a
+// cached render — that (with the optimistic client controls) is why buttons no longer need a
+// manual page reload to reflect their result.
+export const dynamic = 'force-dynamic';
 
 export default async function ModerationPage() {
   await requirePermission('listings', 'VIEW');
@@ -49,6 +44,18 @@ export default async function ModerationPage() {
   // Grab-and-go generated assets for the recent (non-PENDING) rows — the branded big poster + the
   // map, opened directly so staff needn't enter the editor to view/download them.
   const assets = await resolveListingAssets(recent.map((l) => l.id), { branded: true });
+  const recentRows: RecentRow[] = recent.map((l) => ({
+    id: l.id,
+    title: l.title,
+    typeLabel: L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? ''),
+    area: l.area != null ? Number(l.area) : null,
+    ownerName: l.owner?.name ?? l.ownerName ?? '—',
+    status: l.status,
+    featured: l.featured,
+    showOnBrokerage: l.showOnBrokerage,
+    posterUrl: assets.get(l.id)?.posterUrl ?? null,
+    mapUrl: assets.get(l.id)?.mapUrl ?? null,
+  }));
 
   return (
     <div className="space-y-6">
@@ -97,46 +104,7 @@ export default async function ModerationPage() {
 
       <section className="space-y-2">
         <h2 className="font-semibold opacity-70">{t('statusPUBLISHED')} / {t('statusREJECTED')}</h2>
-        <div className="overflow-x-auto rounded-lg border border-graphite/15">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-graphite/15 bg-graphite/5 text-xs opacity-70">
-                <th className="p-2 text-start font-semibold">{L('العنوان', 'Title')}</th>
-                <th className="p-2 text-start font-semibold">{L('النوع', 'Type')}</th>
-                <th className="p-2 text-start font-semibold">{L('المالك', 'Owner')}</th>
-                <th className="p-2 text-start font-semibold">{L('الحالة', 'Status')}</th>
-                <th className="p-2 text-start font-semibold">{L('مميز', 'Featured')}</th>
-                <th className="p-2 text-end font-semibold">{L('إجراءات', 'Actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recent.map((l) => (
-                <tr key={l.id} className="border-t border-graphite/10 first:border-t-0">
-                  <td className="p-2">{l.title}</td>
-                  <td className="p-2 text-xs opacity-70">{L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}</td>
-                  <td className="p-2 text-xs opacity-70">{l.owner?.name ?? l.ownerName ?? '—'}</td>
-                  <td className="p-2">
-                    <span className={`inline-block rounded px-2 py-0.5 text-xs ${STATUS_COLOR[l.status] ?? ''}`}>{t(`status${l.status}`)}</span>
-                  </td>
-                  <td className="p-2">{l.showOnBrokerage && l.status === 'PUBLISHED' ? <FeaturedToggle id={l.id} initial={l.featured} /> : null}</td>
-                  <td className="p-2 text-end">
-                    <div className="flex flex-wrap items-center justify-end gap-3">
-                      {/* Icon-only (owner request) — the title tooltip still names each link. */}
-                      {assets.get(l.id)?.posterUrl && (
-                        <a href={assets.get(l.id)!.posterUrl!} target="_blank" rel="noopener noreferrer" className="text-lg leading-none" title={L('البوستر الكبير', 'Big poster')} aria-label={L('البوستر الكبير', 'Big poster')}>🖼️</a>
-                      )}
-                      {assets.get(l.id)?.mapUrl && (
-                        <a href={assets.get(l.id)!.mapUrl!} target="_blank" rel="noopener noreferrer" className="text-lg leading-none" title={L('خريطة الموقع', 'Location map')} aria-label={L('خريطة الموقع', 'Location map')}>🗺️</a>
-                      )}
-                      <a href={`/admin/marketplace/listings/${l.id}/edit`} className="text-accent">{t('edit')}</a>
-                      <ListingAdminActions id={l.id} status={l.status} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RecentListingsTable rows={recentRows} />
       </section>
     </div>
   );
