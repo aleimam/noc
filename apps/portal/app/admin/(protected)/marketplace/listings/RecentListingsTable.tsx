@@ -8,6 +8,7 @@ import { setListingArchived, deleteListing, toggleFeatured } from '../actions';
 
 export type RecentRow = {
   id: string;
+  adNumber: string | null;
   title: string;
   typeLabel: string;
   area: number | null;
@@ -134,6 +135,7 @@ export function RecentListingsTable({ rows: initialRows }: { rows: RecentRow[] }
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-graphite/15 bg-graphite/5 text-xs opacity-70">
+            {sortTh('adnum', L('رقم الإعلان', 'Ad no.'))}
             {sortTh('title', L('العنوان', 'Title'))}
             {sortTh('type', L('النوع', 'Type'))}
             {/* Area lives in the EAV `area` value, which Prisma can't orderBy — so it's filterable
@@ -141,7 +143,10 @@ export function RecentListingsTable({ rows: initialRows }: { rows: RecentRow[] }
             <th className={th}>{L('المساحة', 'Area')}</th>
             {sortTh('price', L('السعر', 'Price'))}
             {sortTh('owner', L('المالك', 'Owner'))}
-            <th className={th}>{L('الصواري', 'Storefront')}</th>
+            {/* «الصواري» column — the Al Sawarey brand mark stands in for the header word. */}
+            <th className={th}>
+              <img src="/alsawarey-mark.png" alt={L('الصواري', 'Al Sawarey')} title={L('معروض على الصواري', 'On the Al Sawarey storefront')} className="inline-block h-5 w-5 object-contain align-middle" />
+            </th>
             {sortTh('status', L('الحالة', 'Status'))}
             <th className={th}>{L('مميز', 'Featured')}</th>
             <th className={th}>{L('بوستر', 'Poster')}</th>
@@ -156,18 +161,21 @@ export function RecentListingsTable({ rows: initialRows }: { rows: RecentRow[] }
             const on = r.status === 'PUBLISHED';
             return (
               <tr key={r.id} className="border-t border-graphite/10 first:border-t-0 align-top">
+                <td className="whitespace-nowrap p-2">
+                  {/* Ad number is the New Obour view link (new tab) — but only PUBLISHED rows have a
+                      public page; others (drafts have no ad number anyway) show it as plain text. */}
+                  {r.adNumber ? (
+                    r.status === 'PUBLISHED' ? (
+                      <a href={`/market/${r.id}`} target="_blank" rel="noopener noreferrer" className="font-num font-semibold text-accent hover:underline" dir="ltr" title={L('فتح الإعلان في السوق (العبور)', 'Open on New Obour')}>{r.adNumber}</a>
+                    ) : (
+                      <span className="font-num opacity-70" dir="ltr">{r.adNumber}</span>
+                    )
+                  ) : (
+                    <span className="opacity-30">—</span>
+                  )}
+                </td>
                 <td className="p-2">
-                  {/* Title links to the public New Obour listing (new tab) when it's PUBLISHED —
-                      the only status with a public page; otherwise it opens the editor. */}
-                  <a
-                    href={r.status === 'PUBLISHED' ? `/market/${r.id}` : `/admin/marketplace/listings/${r.id}/edit`}
-                    target={r.status === 'PUBLISHED' ? '_blank' : undefined}
-                    rel={r.status === 'PUBLISHED' ? 'noopener noreferrer' : undefined}
-                    title={r.status === 'PUBLISHED' ? L('فتح الإعلان في السوق (العبور)', 'Open on New Obour') : L('فتح للتعديل', 'Open to edit')}
-                    className="block max-w-[18rem] whitespace-normal break-words font-medium text-accent hover:underline"
-                  >
-                    {r.title}
-                  </a>
+                  <div className="max-w-[18rem] whitespace-normal break-words font-medium" title={r.title}>{r.title}</div>
                 </td>
                 <td className="p-2 text-xs opacity-70">{r.typeLabel}</td>
                 <td className="whitespace-nowrap p-2 text-xs opacity-70">{r.area != null ? `${fmt(r.area)} ${L('م²', 'm²')}` : '—'}</td>
@@ -240,8 +248,8 @@ export function RecentListingsTable({ rows: initialRows }: { rows: RecentRow[] }
                 </td>
                 <td className="p-2">
                   <div className="flex items-center justify-end gap-3">
-                    <a href={`/admin/marketplace/listings/${r.id}/edit`} className="text-accent">{t('edit')}</a>
-                    <button type="button" disabled={isBusy} onClick={() => remove(r)} className="text-red-600 disabled:opacity-50">{t('delete')}</button>
+                    <a href={`/admin/marketplace/listings/${r.id}/edit`} className="text-lg leading-none" title={t('edit')} aria-label={t('edit')}>✏️</a>
+                    <button type="button" disabled={isBusy} onClick={() => remove(r)} className="text-lg leading-none disabled:opacity-40" title={t('delete')} aria-label={t('delete')}>🗑️</button>
                   </div>
                 </td>
               </tr>

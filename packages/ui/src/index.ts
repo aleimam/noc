@@ -6,6 +6,7 @@ export { LanguageSwitcher } from './components/LanguageSwitcher';
 export { TrackView, RecentlyViewed } from './components/RecentlyViewed';
 export { ThemeScript } from './components/ThemeScript';
 export { EnterToSubmit } from './components/EnterToSubmit';
+export { NavProgress } from './components/NavProgress';
 export { toast, Toaster } from './components/Toast';
 export { AdminShell, type AdminNavGroup, type AdminNavItem } from './components/AdminShell';
 export { AdminSidebar, ICONS as AdminNavIcons } from './components/AdminSidebar';

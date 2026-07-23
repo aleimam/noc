@@ -19,6 +19,8 @@ const PER_PAGE = 20;
 const ORDER: Record<string, Prisma.ListingOrderByWithRelationInput> = {
   recent: { updatedAt: 'desc' },
   oldest: { updatedAt: 'asc' },
+  adnum_asc: { adNumber: 'asc' },
+  adnum_desc: { adNumber: 'desc' },
   title_asc: { title: 'asc' },
   title_desc: { title: 'desc' },
   type_asc: { typeOption: { nameAr: 'asc' } },
@@ -109,6 +111,7 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
       (l.typeOption?.allowedOnAlsawarey ?? false) && (l.purposeOption?.allowedOnAlsawarey ?? false);
     return {
       id: l.id,
+      adNumber: l.adNumber,
       title: l.title,
       typeLabel: L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? ''),
       area,

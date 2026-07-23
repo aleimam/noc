@@ -3,7 +3,7 @@ import { Tajawal, Playfair_Display, Cairo, Almarai } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { dirForLocale, type Locale } from '@noc/i18n';
-import { ThemeScript, Analytics, ConsentBanner, EnterToSubmit, Tracker, Toaster } from '@noc/ui';
+import { ThemeScript, Analytics, ConsentBanner, EnterToSubmit, Tracker, Toaster, NavProgress } from '@noc/ui';
 import { buildThemeCss, parseSocialLinks, SOCIAL_SETTING_KEYS } from '@noc/config';
 import { prisma } from '@noc/db';
 import { getBrandTheme } from '../lib/theme';
@@ -69,6 +69,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-screen font-sans antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
+          <NavProgress />
           {children}
           <Toaster />
           <Tracker site="alsawarey" />
