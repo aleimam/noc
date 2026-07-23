@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { toast } from '@noc/ui';
 import { setListingArchived, deleteListing, toggleFeatured } from '../actions';
 
@@ -11,6 +11,7 @@ export type RecentRow = {
   title: string;
   typeLabel: string;
   area: number | null;
+  price: number | null;
   ownerName: string;
   status: string;
   featured: boolean;
@@ -33,10 +34,27 @@ export function RecentListingsTable({ rows: initialRows }: { rows: RecentRow[] }
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   const t = useTranslations('mp');
   const router = useRouter();
+  const pathname = usePathname();
+  const sp = useSearchParams();
   const [rows, setRows] = useState(initialRows);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [, start] = useTransition();
   const fmt = (n: number) => n.toLocaleString('en');
+
+  // Clickable-header sorting: cycle a column asc → desc → default(recent). Drives ?sort= in the URL
+  // so the server re-queries and this table remounts (via the parent's `key`) with sorted rows.
+  const currentSort = sp.get('sort') || 'recent';
+  const clickSort = (field: string) => {
+    const asc = `${field}_asc`;
+    const desc = `${field}_desc`;
+    const next = currentSort === asc ? desc : currentSort === desc ? 'recent' : asc;
+    const p = new URLSearchParams(sp.toString());
+    if (next === 'recent') p.delete('sort');
+    else p.set('sort', next);
+    p.delete('page');
+    const s = p.toString();
+    router.push(s ? `${pathname}?${s}` : pathname);
+  };
 
   const setRowBusy = (id: string, on: boolean) =>
     setBusy((prev) => {
@@ -101,16 +119,27 @@ export function RecentListingsTable({ rows: initialRows }: { rows: RecentRow[] }
   }
 
   const th = 'p-2 text-start font-semibold';
+  const arrowFor = (field: string) => (currentSort === `${field}_asc` ? '▲' : currentSort === `${field}_desc` ? '▼' : '');
+  const sortTh = (field: string, label: string) => (
+    <th className={th}>
+      <button type="button" onClick={() => clickSort(field)} className="inline-flex items-center gap-0.5 font-semibold hover:text-accent" title={L('اضغط للترتيب', 'Click to sort')}>
+        <span>{label}</span>
+        <span className="w-2 text-[9px] opacity-70">{arrowFor(field)}</span>
+      </button>
+    </th>
+  );
   return (
     <div className="overflow-x-auto rounded-lg border border-graphite/15">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-graphite/15 bg-graphite/5 text-xs opacity-70">
-            <th className={th}>{L('العنوان', 'Title')}</th>
-            <th className={th}>{L('النوع', 'Type')}</th>
-            <th className={th}>{L('المساحة', 'Area')}</th>
-            <th className={th}>{L('المالك', 'Owner')}</th>
-            <th className={th}>{L('الحالة', 'Status')}</th>
+            {sortTh('title', L('العنوان', 'Title'))}
+            {sortTh('type', L('النوع', 'Type'))}
+            {sortTh('area', L('المساحة', 'Area'))}
+            {sortTh('price', L('السعر', 'Price'))}
+            {sortTh('owner', L('المالك', 'Owner'))}
+            <th className={th}>{L('الصواري', 'Storefront')}</th>
+            {sortTh('status', L('الحالة', 'Status'))}
             <th className={th}>{L('مميز', 'Featured')}</th>
             <th className={th}>{L('بوستر', 'Poster')}</th>
             <th className={th}>{L('خريطة', 'Map')}</th>
@@ -127,7 +156,15 @@ export function RecentListingsTable({ rows: initialRows }: { rows: RecentRow[] }
                 <td className="p-2"><div className="max-w-[13rem] truncate" title={r.title}>{r.title}</div></td>
                 <td className="p-2 text-xs opacity-70">{r.typeLabel}</td>
                 <td className="whitespace-nowrap p-2 text-xs opacity-70">{r.area != null ? `${fmt(r.area)} ${L('م²', 'm²')}` : '—'}</td>
+                <td className="whitespace-nowrap p-2 text-xs opacity-70">
+                  {r.price != null ? <span dir="ltr" className="font-num">{fmt(r.price)}</span> : <span className="opacity-60">{L('عند الطلب', 'On req.')}</span>}
+                </td>
                 <td className="p-2 text-xs opacity-70">{r.ownerName}</td>
+                <td className="p-2 text-center">
+                  {r.showOnBrokerage
+                    ? <span className="text-green" title={L('معروض على الصواري', 'On Al Sawarey storefront')}>✓</span>
+                    : <span className="opacity-30">—</span>}
+                </td>
                 <td className="p-2">
                   {toggleable ? (
                     <button
@@ -182,6 +219,9 @@ export function RecentListingsTable({ rows: initialRows }: { rows: RecentRow[] }
                 </td>
                 <td className="p-2">
                   <div className="flex items-center justify-end gap-3">
+                    {r.status === 'PUBLISHED' && (
+                      <a href={`/market/${r.id}`} target="_blank" rel="noopener noreferrer" className="text-lg leading-none" title={L('عرض في السوق', 'View in market')} aria-label={L('عرض في السوق', 'View in market')}>🛒</a>
+                    )}
                     <a href={`/admin/marketplace/listings/${r.id}/edit`} className="text-accent">{t('edit')}</a>
                     <button type="button" disabled={isBusy} onClick={() => remove(r)} className="text-red-600 disabled:opacity-50">{t('delete')}</button>
                   </div>

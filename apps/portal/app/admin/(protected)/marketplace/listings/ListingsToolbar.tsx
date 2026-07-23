@@ -3,9 +3,9 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 
-/** Filter + sort toolbar for the listings table. Drives the server query via URL search params
- *  (?q=&status=&type=&sort=&page=), so it's shareable/bookmarkable and works with the back button.
- *  Any change resets to page 1. */
+/** Filter toolbar for the listings table. Drives the server query via URL search params
+ *  (?q=&status=&type=&amin=&amax=&page=), so it's shareable/bookmarkable and works with the back
+ *  button. Any change resets to page 1. Sorting lives on the table's clickable column headers (?sort=). */
 export function ListingsToolbar({ types, total }: { types: { id: string; label: string }[]; total: number }) {
   const locale = useLocale() as 'ar' | 'en';
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
@@ -17,7 +17,15 @@ export function ListingsToolbar({ types, total }: { types: { id: string; label: 
     const p = new URLSearchParams(sp.toString());
     if (val) p.set(key, val);
     else p.delete(key);
-    if (key !== 'page') p.delete('page'); // filter/sort change → back to the first page
+    if (key !== 'page') p.delete('page'); // filter change → back to the first page
+    const s = p.toString();
+    router.push(s ? `${pathname}?${s}` : pathname);
+  };
+  // Set several params at once (used by the area-range form so min+max apply together).
+  const setMany = (entries: Record<string, string>) => {
+    const p = new URLSearchParams(sp.toString());
+    for (const [k, v] of Object.entries(entries)) { if (v) p.set(k, v); else p.delete(k); }
+    p.delete('page');
     const s = p.toString();
     router.push(s ? `${pathname}?${s}` : pathname);
   };
@@ -30,15 +38,6 @@ export function ListingsToolbar({ types, total }: { types: { id: string; label: 
     ['REJECTED', 'مرفوض', 'Rejected'],
     ['SOLD', 'تم البيع', 'Sold'],
     ['DRAFT', 'مسودة', 'Draft'],
-  ];
-  const SORTS: Array<[string, string, string]> = [
-    ['recent', 'الأحدث', 'Newest'],
-    ['oldest', 'الأقدم', 'Oldest'],
-    ['price_desc', 'السعر (الأعلى)', 'Price (high)'],
-    ['price_asc', 'السعر (الأقل)', 'Price (low)'],
-    ['area_desc', 'المساحة (الأكبر)', 'Area (large)'],
-    ['area_asc', 'المساحة (الأصغر)', 'Area (small)'],
-    ['title', 'العنوان (أ–ي)', 'Title (A–Z)'],
   ];
 
   return (
@@ -64,11 +63,25 @@ export function ListingsToolbar({ types, total }: { types: { id: string; label: 
         {types.map((tp) => (<option key={tp.id} value={tp.id}>{tp.label}</option>))}
       </select>
 
-      <select value={sp.get('sort') ?? 'recent'} onChange={(e) => set('sort', e.target.value)} className={inp}>
-        {SORTS.map(([v, ar, en]) => (<option key={v} value={v}>{L(ar, en)}</option>))}
-      </select>
+      {/* Actual-area range (م²). Applies min+max together on submit/Enter. */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const f = e.currentTarget;
+          setMany({
+            amin: (f.elements.namedItem('amin') as HTMLInputElement).value.trim(),
+            amax: (f.elements.namedItem('amax') as HTMLInputElement).value.trim(),
+          });
+        }}
+        className="flex items-center gap-1"
+      >
+        <span className="text-xs opacity-60">{L('المساحة', 'Area')}</span>
+        <input name="amin" type="number" min="0" inputMode="numeric" defaultValue={sp.get('amin') ?? ''} placeholder={L('من', 'min')} className={`${inp} w-20`} dir="ltr" />
+        <input name="amax" type="number" min="0" inputMode="numeric" defaultValue={sp.get('amax') ?? ''} placeholder={L('إلى', 'max')} className={`${inp} w-20`} dir="ltr" />
+        <button type="submit" className="rounded-md bg-primary px-2 py-1.5 text-xs text-soft">{L('تصفية', 'Apply')}</button>
+      </form>
 
-      {(sp.get('q') || sp.get('status') || sp.get('type')) && (
+      {(sp.get('q') || sp.get('status') || sp.get('type') || sp.get('amin') || sp.get('amax') || sp.get('sort')) && (
         <button type="button" onClick={() => router.push(pathname)} className="text-sm text-accent underline">{L('مسح الفلاتر', 'Clear filters')}</button>
       )}
 

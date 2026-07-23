@@ -14,14 +14,23 @@ import { ListingsToolbar } from './ListingsToolbar';
 export const dynamic = 'force-dynamic';
 
 const PER_PAGE = 20;
+// Sort keys are `<column>_<dir>` so the table's clickable headers can toggle asc/desc per column;
+// `recent`/`oldest` (by updatedAt) stay as the header-less default + its reverse.
 const ORDER: Record<string, Prisma.ListingOrderByWithRelationInput> = {
   recent: { updatedAt: 'desc' },
   oldest: { updatedAt: 'asc' },
-  price_desc: { price: 'desc' },
-  price_asc: { price: 'asc' },
-  area_desc: { area: 'desc' },
+  title_asc: { title: 'asc' },
+  title_desc: { title: 'desc' },
+  type_asc: { typeOption: { nameAr: 'asc' } },
+  type_desc: { typeOption: { nameAr: 'desc' } },
   area_asc: { area: 'asc' },
-  title: { title: 'asc' },
+  area_desc: { area: 'desc' },
+  price_asc: { price: 'asc' },
+  price_desc: { price: 'desc' },
+  owner_asc: { ownerName: 'asc' },
+  owner_desc: { ownerName: 'desc' },
+  status_asc: { status: 'asc' },
+  status_desc: { status: 'desc' },
 };
 const VALID_STATUS = new Set(['PUBLISHED', 'ARCHIVED', 'REJECTED', 'SOLD', 'DRAFT']);
 
@@ -38,6 +47,9 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
   const typeFilter = get('type');
   const sort = ORDER[get('sort')] ? get('sort') : 'recent';
   const page = Math.max(1, Number(get('page')) || 1);
+  const numOrNull = (v: string) => { const n = Number(v); return v && Number.isFinite(n) && n >= 0 ? n : null; };
+  const amin = numOrNull(get('amin'));
+  const amax = numOrNull(get('amax'));
 
   // Pending moderation queue — the workflow section; not filtered/paginated (usually tiny).
   const pending = await prisma.listing.findMany({
@@ -58,6 +70,7 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
     deletedAt: null,
     status: statusFilter ? (statusFilter as Prisma.ListingWhereInput['status']) : { not: 'PENDING' },
     ...(typeFilter ? { typeOptionId: typeFilter } : {}),
+    ...(amin != null || amax != null ? { area: { ...(amin != null ? { gte: amin } : {}), ...(amax != null ? { lte: amax } : {}) } } : {}),
     ...(q ? { OR: [{ title: { contains: q } }, { ownerName: { contains: q } }, { owner: { name: { contains: q } } }] } : {}),
   };
   const [recentCount, recent, typeOpts] = await Promise.all([
@@ -80,6 +93,7 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
     title: l.title,
     typeLabel: L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? ''),
     area: l.area != null ? Number(l.area) : null,
+    price: l.price != null ? Number(l.price) : null,
     ownerName: l.owner?.name ?? l.ownerName ?? '—',
     status: l.status,
     featured: l.featured,
@@ -94,6 +108,8 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
     if (q) p.set('q', q);
     if (statusFilter) p.set('status', statusFilter);
     if (typeFilter) p.set('type', typeFilter);
+    if (amin != null) p.set('amin', String(amin));
+    if (amax != null) p.set('amax', String(amax));
     if (sort !== 'recent') p.set('sort', sort);
     if (n > 1) p.set('page', String(n));
     const s = p.toString();
@@ -150,7 +166,7 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
         <ListingsToolbar types={types} total={recentCount} />
         {/* key = the active query, so the optimistic client table remounts with fresh rows when a
             filter/sort/page changes (useState would otherwise keep the first page's rows). */}
-        <RecentListingsTable key={`${statusFilter}|${typeFilter}|${sort}|${q}|${page}`} rows={recentRows} />
+        <RecentListingsTable key={`${statusFilter}|${typeFilter}|${sort}|${q}|${amin}|${amax}|${page}`} rows={recentRows} />
         {recentCount === 0 && <p className="p-4 text-center text-sm opacity-60">{L('لا توجد نتائج مطابقة', 'No matching results')}</p>}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-3 pt-1 text-sm">
