@@ -267,6 +267,9 @@ export function ListingForm({
   const [annotating, setAnnotating] = useState(false);
   const [pendingMap, setPendingMap] = useState<{ attachmentId: string; shapes: Shape[]; src: string; nbId: string } | null>(null);
   const pendingValid = !!pendingMap && pendingMap.nbId === nbId; // discard if the neighborhood changed after drawing
+  // Persist state for the "save the drawn map immediately" flow (owner request 2026-07-23) — so a
+  // new listing's map is stored the moment it's annotated, not only when the listing is published.
+  const [mapStatus, setMapStatus] = useState<'idle' | 'saving' | 'saved' | 'needsBasics' | 'failed'>('idle');
 
   const L = (ar: string, en: string) => (locale === 'ar' ? ar : en);
   // Ids of required details left empty at the last publish attempt — highlighted red on the form.
@@ -493,6 +496,34 @@ export function ListingForm({
     };
   }
   buildInputRef.current = () => buildInput('DRAFT');
+
+  // Persist the drawn map to the DB immediately (owner request 2026-07-23), so it's saved even if
+  // the listing is never published. A map needs a listing row to attach to: adopt the auto-save
+  // draft if one exists, else create one now — which needs the basics (classifiers + title +
+  // phone). When those aren't filled yet, we keep the map in state and it saves on the next
+  // listing save (the guaranteed fallback in submit()).
+  async function persistDrawnMap(attachmentId: string, shapes: Shape[], mapNbId: string, src: string) {
+    if (!staffMode) return;
+    setMapStatus('saving');
+    let id = draftIdRef.current;
+    if (!id) {
+      const r = await saveListing(buildInput('DRAFT'));
+      if (r.ok) {
+        id = r.id;
+        draftIdRef.current = r.id;
+      } else {
+        setMapStatus('needsBasics'); // couldn't create a draft yet → will save when the listing is saved
+        return;
+      }
+    }
+    try {
+      await setAreaMap({ level: 'listing', targetId: id, kind: 'location', attachmentId, annotation: shapes, sourcePath: src });
+      // Guard against a neighborhood change between drawing and this async completing.
+      setMapStatus(mapNbId === nbId ? 'saved' : 'idle');
+    } catch {
+      setMapStatus('failed'); // held in pendingMap → saves on the next listing save
+    }
+  }
 
   function submit(status: 'DRAFT' | 'PENDING') {
     setError('');
@@ -951,8 +982,16 @@ export function ListingForm({
                       >
                         ✎ {t('genFromNbMasterplan')}
                       </button>
-                      {pendingValid && <p className="text-sm text-green">✓ {t('locationMapReady')}</p>}
-                      {!pendingValid && savedNeighborhoodId && nbId === savedNeighborhoodId && locationAnnotation && (
+                      {mapStatus === 'saving' && <p className="text-sm opacity-70">{L('جارٍ حفظ الخريطة…', 'Saving the map…')}</p>}
+                      {mapStatus === 'saved' && <p className="text-sm font-semibold text-green">✓ {L('تم حفظ الخريطة', 'Map saved')}</p>}
+                      {mapStatus === 'needsBasics' && (
+                        <p className="text-xs font-semibold text-amber-700">{L('الخريطة جاهزة — أكمل النوع والعنوان ورقم التواصل واحفظ الإعلان لتُحفظ الخريطة', 'Map ready — fill the type, title and phone and save the listing to store the map')}</p>
+                      )}
+                      {mapStatus === 'failed' && (
+                        <p className="text-xs font-semibold text-amber-700">{L('تعذّر حفظ الخريطة الآن — ستُحفظ عند حفظ الإعلان', 'Couldn’t save the map now — it will save when you save the listing')}</p>
+                      )}
+                      {mapStatus === 'idle' && pendingValid && <p className="text-sm text-green">✓ {t('locationMapReady')}</p>}
+                      {mapStatus === 'idle' && !pendingValid && savedNeighborhoodId && nbId === savedNeighborhoodId && locationAnnotation && (
                         <p className="text-xs opacity-60">{t('locationMapHasSaved')}</p>
                       )}
                     </>
@@ -973,6 +1012,9 @@ export function ListingForm({
                       onSaved={(attachmentId, shapes) => {
                         setAnnotating(false);
                         setPendingMap({ attachmentId, shapes, src: nbMasterplan, nbId });
+                        // Save it to the DB right away (creating a draft if needed); falls back to
+                        // save-on-submit when the basics aren't filled yet.
+                        void persistDrawnMap(attachmentId, shapes, nbId, nbMasterplan);
                       }}
                     />
                   )}

@@ -36,7 +36,7 @@ export default async function ModerationPage() {
     where: { status: { not: 'PENDING' }, deletedAt: null },
     orderBy: { updatedAt: 'desc' },
     take: 30,
-    include: { typeOption: { select: { nameAr: true, nameEn: true } } },
+    include: { typeOption: { select: { nameAr: true, nameEn: true } }, owner: { select: { name: true } } },
   });
   // Completeness per queued row. Required details are admin-configurable and can change AFTER a
   // listing enters the queue, so the queue itself must show what's missing — otherwise Approve
@@ -104,17 +104,19 @@ export default async function ModerationPage() {
                 <tr key={l.id} className="border-t border-graphite/10 first:border-t-0">
                   <td className="p-2">{l.title}</td>
                   <td className="p-2 text-xs opacity-70">{L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}</td>
+                  <td className="p-2 text-xs opacity-70">{t('owner')}: {l.owner?.name ?? l.ownerName ?? '—'}</td>
                   <td className="p-2">
                     <span className={`inline-block rounded px-2 py-0.5 text-xs ${STATUS_COLOR[l.status] ?? ''}`}>{t(`status${l.status}`)}</span>
                   </td>
                   <td className="p-2">{l.showOnBrokerage && l.status === 'PUBLISHED' ? <FeaturedToggle id={l.id} initial={l.featured} /> : null}</td>
                   <td className="p-2 text-end">
                     <div className="flex flex-wrap items-center justify-end gap-3">
+                      {/* Icon-only (owner request) — the title tooltip still names each link. */}
                       {assets.get(l.id)?.posterUrl && (
-                        <a href={assets.get(l.id)!.posterUrl!} target="_blank" rel="noopener noreferrer" className="text-accent" title={L('البوستر الكبير', 'Big poster')}>🖼️ {L('بوستر', 'Poster')}</a>
+                        <a href={assets.get(l.id)!.posterUrl!} target="_blank" rel="noopener noreferrer" className="text-lg leading-none" title={L('البوستر الكبير', 'Big poster')} aria-label={L('البوستر الكبير', 'Big poster')}>🖼️</a>
                       )}
                       {assets.get(l.id)?.mapUrl && (
-                        <a href={assets.get(l.id)!.mapUrl!} target="_blank" rel="noopener noreferrer" className="text-accent" title={L('خريطة الموقع', 'Location map')}>🗺️ {L('خريطة', 'Map')}</a>
+                        <a href={assets.get(l.id)!.mapUrl!} target="_blank" rel="noopener noreferrer" className="text-lg leading-none" title={L('خريطة الموقع', 'Location map')} aria-label={L('خريطة الموقع', 'Location map')}>🗺️</a>
                       )}
                       <a href={`/admin/marketplace/listings/${l.id}/edit`} className="text-accent">{t('edit')}</a>
                       <ListingAdminActions id={l.id} status={l.status} />
