@@ -22,10 +22,12 @@ export function FeaturedToggle({ id, initial }: { id: string; initial: boolean }
           if (!ok) setOn(!next); // revert the optimistic flip
         })
       }
-      title={L('مميز', 'Featured')}
-      className={`rounded px-2 py-0.5 text-sm ${on ? 'bg-gold-600 text-white' : 'border border-graphite/20 opacity-60'} disabled:opacity-40`}
+      title={on ? L('مميز — اضغط لإلغاء التمييز', 'Featured — click to unfeature') : L('تمييز', 'Feature')}
+      aria-label={on ? L('مميز', 'Featured') : L('تمييز', 'Feature')}
+      aria-pressed={on}
+      className={`rounded px-2 py-0.5 text-base leading-none ${on ? 'bg-gold-600 text-white' : 'border border-graphite/20 opacity-60'} disabled:opacity-40`}
     >
-      ★ {on ? L('مميز', 'Featured') : L('تمييز', 'Feature')}
+      ★
     </button>
   );
 }

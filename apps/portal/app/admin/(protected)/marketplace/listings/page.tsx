@@ -99,12 +99,22 @@ export default async function ModerationPage() {
         <h2 className="font-semibold opacity-70">{t('statusPUBLISHED')} / {t('statusREJECTED')}</h2>
         <div className="overflow-x-auto rounded-lg border border-graphite/15">
           <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-graphite/15 bg-graphite/5 text-xs opacity-70">
+                <th className="p-2 text-start font-semibold">{L('العنوان', 'Title')}</th>
+                <th className="p-2 text-start font-semibold">{L('النوع', 'Type')}</th>
+                <th className="p-2 text-start font-semibold">{L('المالك', 'Owner')}</th>
+                <th className="p-2 text-start font-semibold">{L('الحالة', 'Status')}</th>
+                <th className="p-2 text-start font-semibold">{L('مميز', 'Featured')}</th>
+                <th className="p-2 text-end font-semibold">{L('إجراءات', 'Actions')}</th>
+              </tr>
+            </thead>
             <tbody>
               {recent.map((l) => (
                 <tr key={l.id} className="border-t border-graphite/10 first:border-t-0">
                   <td className="p-2">{l.title}</td>
                   <td className="p-2 text-xs opacity-70">{L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? '')}</td>
-                  <td className="p-2 text-xs opacity-70">{t('owner')}: {l.owner?.name ?? l.ownerName ?? '—'}</td>
+                  <td className="p-2 text-xs opacity-70">{l.owner?.name ?? l.ownerName ?? '—'}</td>
                   <td className="p-2">
                     <span className={`inline-block rounded px-2 py-0.5 text-xs ${STATUS_COLOR[l.status] ?? ''}`}>{t(`status${l.status}`)}</span>
                   </td>
