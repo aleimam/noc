@@ -70,7 +70,11 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
     deletedAt: null,
     status: statusFilter ? (statusFilter as Prisma.ListingWhereInput['status']) : { not: 'PENDING' },
     ...(typeFilter ? { typeOptionId: typeFilter } : {}),
-    ...(amin != null || amax != null ? { area: { ...(amin != null ? { gte: amin } : {}), ...(amax != null ? { lte: amax } : {}) } } : {}),
+    // Actual area lives in the EAV `area` attribute (Listing.area scalar is legacy/null), so the
+    // range filter targets that value, not the column.
+    ...(amin != null || amax != null
+      ? { values: { some: { attribute: { key: 'area' }, number: { ...(amin != null ? { gte: amin } : {}), ...(amax != null ? { lte: amax } : {}) } } } }
+      : {}),
     ...(q ? { OR: [{ title: { contains: q } }, { ownerName: { contains: q } }, { owner: { name: { contains: q } } }] } : {}),
   };
   const [recentCount, recent, typeOpts] = await Promise.all([
@@ -80,7 +84,13 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
       orderBy: ORDER[sort],
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
-      include: { typeOption: { select: { nameAr: true, nameEn: true } }, owner: { select: { name: true } } },
+      include: {
+        typeOption: { select: { nameAr: true, nameEn: true, allowedOnAlsawarey: true } },
+        purposeOption: { select: { allowedOnAlsawarey: true } },
+        owner: { select: { name: true } },
+        // Actual area (Listing.area scalar is legacy/null — read the EAV `area` value).
+        values: { where: { attribute: { key: 'area' } }, select: { number: true } },
+      },
     }),
     prisma.classifierOption.findMany({ where: { classifier: { key: 'type' }, isActive: true }, orderBy: { order: 'asc' }, select: { id: true, nameAr: true, nameEn: true } }),
   ]);
@@ -88,19 +98,30 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
   const types = typeOpts.map((o) => ({ id: o.id, label: L(o.nameAr, o.nameEn) }));
 
   const assets = await resolveListingAssets(recent.map((l) => l.id), { branded: true });
-  const recentRows: RecentRow[] = recent.map((l) => ({
-    id: l.id,
-    title: l.title,
-    typeLabel: L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? ''),
-    area: l.area != null ? Number(l.area) : null,
-    price: l.price != null ? Number(l.price) : null,
-    ownerName: l.owner?.name ?? l.ownerName ?? '—',
-    status: l.status,
-    featured: l.featured,
-    showOnBrokerage: l.showOnBrokerage,
-    posterUrl: assets.get(l.id)?.posterUrl ?? null,
-    mapUrl: assets.get(l.id)?.mapUrl ?? null,
-  }));
+  // Al Sawarey is a separate domain; its detail page only resolves for a PUBLISHED row whose
+  // Type AND Purpose are both allowed on the storefront (else it 404s), so only linkify then.
+  const brokerageBase = (process.env.BROKERAGE_URL || 'https://alsawarey.com').replace(/\/$/, '');
+  const recentRows: RecentRow[] = recent.map((l) => {
+    const areaEav = l.values[0]?.number;
+    const area = l.area != null ? Number(l.area) : areaEav != null ? Number(areaEav) : null;
+    const onAlsawarey =
+      l.status === 'PUBLISHED' && l.showOnBrokerage &&
+      (l.typeOption?.allowedOnAlsawarey ?? false) && (l.purposeOption?.allowedOnAlsawarey ?? false);
+    return {
+      id: l.id,
+      title: l.title,
+      typeLabel: L(l.typeOption?.nameAr ?? '', l.typeOption?.nameEn ?? ''),
+      area,
+      price: l.price != null ? Number(l.price) : null,
+      ownerName: l.owner?.name ?? l.ownerName ?? '—',
+      status: l.status,
+      featured: l.featured,
+      showOnBrokerage: l.showOnBrokerage,
+      brokerageHref: onAlsawarey ? `${brokerageBase}/listings/${l.id}` : null,
+      posterUrl: assets.get(l.id)?.posterUrl ?? null,
+      mapUrl: assets.get(l.id)?.mapUrl ?? null,
+    };
+  });
 
   // Build a page URL that keeps the active filters/sort (server-rendered pagination links).
   const pageHref = (n: number) => {

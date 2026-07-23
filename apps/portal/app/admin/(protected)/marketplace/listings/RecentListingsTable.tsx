@@ -16,6 +16,7 @@ export type RecentRow = {
   status: string;
   featured: boolean;
   showOnBrokerage: boolean;
+  brokerageHref: string | null; // absolute alsawarey.com URL when the row is actually viewable there
   posterUrl: string | null;
   mapUrl: string | null;
 };
@@ -135,7 +136,9 @@ export function RecentListingsTable({ rows: initialRows }: { rows: RecentRow[] }
           <tr className="border-b border-graphite/15 bg-graphite/5 text-xs opacity-70">
             {sortTh('title', L('العنوان', 'Title'))}
             {sortTh('type', L('النوع', 'Type'))}
-            {sortTh('area', L('المساحة', 'Area'))}
+            {/* Area lives in the EAV `area` value, which Prisma can't orderBy — so it's filterable
+                (toolbar range) + displayed, but not a click-to-sort column. */}
+            <th className={th}>{L('المساحة', 'Area')}</th>
             {sortTh('price', L('السعر', 'Price'))}
             {sortTh('owner', L('المالك', 'Owner'))}
             <th className={th}>{L('الصواري', 'Storefront')}</th>
@@ -153,7 +156,19 @@ export function RecentListingsTable({ rows: initialRows }: { rows: RecentRow[] }
             const on = r.status === 'PUBLISHED';
             return (
               <tr key={r.id} className="border-t border-graphite/10 first:border-t-0 align-top">
-                <td className="p-2"><div className="max-w-[13rem] truncate" title={r.title}>{r.title}</div></td>
+                <td className="p-2">
+                  {/* Title links to the public New Obour listing (new tab) when it's PUBLISHED —
+                      the only status with a public page; otherwise it opens the editor. */}
+                  <a
+                    href={r.status === 'PUBLISHED' ? `/market/${r.id}` : `/admin/marketplace/listings/${r.id}/edit`}
+                    target={r.status === 'PUBLISHED' ? '_blank' : undefined}
+                    rel={r.status === 'PUBLISHED' ? 'noopener noreferrer' : undefined}
+                    title={r.status === 'PUBLISHED' ? L('فتح الإعلان في السوق (العبور)', 'Open on New Obour') : L('فتح للتعديل', 'Open to edit')}
+                    className="block max-w-[18rem] whitespace-normal break-words font-medium text-accent hover:underline"
+                  >
+                    {r.title}
+                  </a>
+                </td>
                 <td className="p-2 text-xs opacity-70">{r.typeLabel}</td>
                 <td className="whitespace-nowrap p-2 text-xs opacity-70">{r.area != null ? `${fmt(r.area)} ${L('م²', 'm²')}` : '—'}</td>
                 <td className="whitespace-nowrap p-2 text-xs opacity-70">
@@ -161,9 +176,15 @@ export function RecentListingsTable({ rows: initialRows }: { rows: RecentRow[] }
                 </td>
                 <td className="p-2 text-xs opacity-70">{r.ownerName}</td>
                 <td className="p-2 text-center">
-                  {r.showOnBrokerage
-                    ? <span className="text-green" title={L('معروض على الصواري', 'On Al Sawarey storefront')}>✓</span>
-                    : <span className="opacity-30">—</span>}
+                  {r.showOnBrokerage ? (
+                    r.brokerageHref ? (
+                      <a href={r.brokerageHref} target="_blank" rel="noopener noreferrer" className="text-green hover:underline" title={L('عرض على الصواري', 'View on Al Sawarey')}>✓</a>
+                    ) : (
+                      <span className="text-green" title={L('مُفعّل للصواري (غير قابل للعرض الآن)', 'Marked for Al Sawarey (not viewable now)')}>✓</span>
+                    )
+                  ) : (
+                    <span className="opacity-30">—</span>
+                  )}
                 </td>
                 <td className="p-2">
                   {toggleable ? (
@@ -219,9 +240,6 @@ export function RecentListingsTable({ rows: initialRows }: { rows: RecentRow[] }
                 </td>
                 <td className="p-2">
                   <div className="flex items-center justify-end gap-3">
-                    {r.status === 'PUBLISHED' && (
-                      <a href={`/market/${r.id}`} target="_blank" rel="noopener noreferrer" className="text-lg leading-none" title={L('عرض في السوق', 'View in market')} aria-label={L('عرض في السوق', 'View in market')}>🛒</a>
-                    )}
                     <a href={`/admin/marketplace/listings/${r.id}/edit`} className="text-accent">{t('edit')}</a>
                     <button type="button" disabled={isBusy} onClick={() => remove(r)} className="text-red-600 disabled:opacity-50">{t('delete')}</button>
                   </div>
