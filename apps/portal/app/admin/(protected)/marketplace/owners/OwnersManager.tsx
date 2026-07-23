@@ -21,14 +21,27 @@ export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; taken
   const [draft, setDraft] = useState<OwnerDraft | null>(null);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
+  const [sort, setSort] = useState<'name' | 'name_desc' | 'type'>('name');
+  const [page, setPage] = useState(1);
+  const PER = 25;
 
   const taken = new Set(takenCodes);
   const needle = q.trim().toLowerCase();
-  const shown = needle
+  const filtered = needle
     ? initial.filter((o) =>
         `${o.name} ${o.phone1 ?? ''} ${o.phone2 ?? ''} ${o.codes.map(pad).join(' ')}`.toLowerCase().includes(needle),
       )
     : initial;
+  const sorted = [...filtered].sort((a, b) =>
+    sort === 'name_desc'
+      ? b.name.localeCompare(a.name, 'ar')
+      : sort === 'type'
+        ? a.type.localeCompare(b.type) || a.name.localeCompare(b.name, 'ar')
+        : a.name.localeCompare(b.name, 'ar'),
+  );
+  const pageCount = Math.max(1, Math.ceil(sorted.length / PER));
+  const curPage = Math.min(page, pageCount);
+  const shown = sorted.slice((curPage - 1) * PER, curPage * PER);
 
   function save() {
     if (!draft || !draft.name.trim()) { setError('failed'); return; }
@@ -66,9 +79,14 @@ export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; taken
         <button onClick={() => setDraft({ ...OWNER_EMPTY })} className="rounded-md bg-primary px-3 py-1.5 text-sm text-soft">+ {t('add')}</button>
       )}
 
-      <div className="flex items-center justify-between gap-3">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('ownerSearch')} className="w-full max-w-xs rounded-md border border-graphite/20 bg-transparent px-3 py-1.5 text-sm" />
-        <span className="whitespace-nowrap text-xs opacity-60">{shown.length}/{initial.length}</span>
+      <div className="flex flex-wrap items-center gap-3">
+        <input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder={t('ownerSearch')} className="w-full max-w-xs rounded-md border border-graphite/20 bg-transparent px-3 py-1.5 text-sm" />
+        <select value={sort} onChange={(e) => { setSort(e.target.value as typeof sort); setPage(1); }} className="rounded-md border border-graphite/20 bg-transparent px-2 py-1.5 text-sm">
+          <option value="name">{L('الاسم (أ–ي)', 'Name (A–Z)')}</option>
+          <option value="name_desc">{L('الاسم (ي–أ)', 'Name (Z–A)')}</option>
+          <option value="type">{L('النوع', 'Type')}</option>
+        </select>
+        <span className="ms-auto whitespace-nowrap text-xs opacity-60">{sorted.length}/{initial.length}</span>
       </div>
 
       <div className="space-y-2">
@@ -92,6 +110,14 @@ export function OwnersManager({ initial, takenCodes }: { initial: Owner[]; taken
         ))}
         {shown.length === 0 && <p className="text-sm opacity-50">{t('none')}</p>}
       </div>
+
+      {pageCount > 1 && (
+        <div className="flex items-center justify-center gap-3 text-sm">
+          <button type="button" disabled={curPage <= 1} onClick={() => setPage(curPage - 1)} className="rounded border border-graphite/20 px-3 py-1 text-accent disabled:opacity-30">← {L('السابق', 'Prev')}</button>
+          <span className="opacity-70">{L('صفحة', 'Page')} <b className="font-num">{curPage}</b> {L('من', 'of')} <b className="font-num">{pageCount}</b></span>
+          <button type="button" disabled={curPage >= pageCount} onClick={() => setPage(curPage + 1)} className="rounded border border-graphite/20 px-3 py-1 text-accent disabled:opacity-30">{L('التالي', 'Next')} →</button>
+        </div>
+      )}
     </div>
   );
 }
