@@ -25,6 +25,11 @@ import { coversForListings } from '../../../lib/listingCovers';
 import { getAdminViewer, ownerDetailFor } from '../../../lib/adminView';
 import { thumbUrl } from '../../../lib/thumb';
 
+// Sections whose attributes are ADVANTAGES: only positive advantages belong here, so a boolean
+// attribute set to false (the absence of an advantage) is hidden. `location-pros` = «مميزات
+// الموقع», `advantages` = «المميزات».
+const ADVANTAGE_SECTION_KEYS = new Set(['location-pros', 'advantages']);
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id: param } = await params;
   const locale = (await getLocale()) as 'ar' | 'en';
@@ -261,6 +266,10 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   for (const v of listing.values) {
     const a = attrById.get(v.attributeId);
     if (!a || a.type === 'DOCUMENTS' || a.type === 'PHOTOS') continue;
+    // In an advantages card a boolean advantage set to FALSE ("not a corner", "no pool") is the
+    // ABSENCE of an advantage — don't list it (owner rule 2026-07-23). Positive booleans and any
+    // real value still show; value-less attributes are already dropped downstream (no texts).
+    if (ADVANTAGE_SECTION_KEYS.has(a.section?.key ?? '') && (a.type === 'BOOLEAN' || a.type === 'YESNO') && v.bool !== true) continue;
     if (!perAttr.has(a.id)) perAttr.set(a.id, { attr: a, texts: [] });
     const bucket = perAttr.get(a.id)!;
     if (v.listItem) {

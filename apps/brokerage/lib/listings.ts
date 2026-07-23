@@ -286,7 +286,7 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
           number: true,
           bool: true,
           text: true,
-          attribute: { select: { key: true, labelAr: true, labelEn: true, unit: true, type: true, config: true, order: true, isActive: true, section: { select: { nameAr: true, nameEn: true, order: true } } } },
+          attribute: { select: { key: true, labelAr: true, labelEn: true, unit: true, type: true, config: true, order: true, isActive: true, section: { select: { key: true, nameAr: true, nameEn: true, order: true } } } },
           option: { select: { labelAr: true, labelEn: true } },
           listItem: { select: { labelAr: true, labelEn: true } },
         },
@@ -330,9 +330,13 @@ export async function getLandDetail(id: string, locale: 'ar' | 'en'): Promise<La
     for (const g of [...ds, ...ns]) geoName.set(g.id, { ar: g.nameAr, en: g.nameEn });
   }
 
+  // Advantages sections list only POSITIVE advantages, so a boolean advantage set to false (the
+  // absence of an advantage) is dropped — mirrors the New Obour market page (owner rule 2026-07-23).
+  const ADVANTAGE_SECTION_KEYS = new Set(['location-pros', 'advantages']);
   const specs: LandDetail['specs'] = [];
   for (const v of l.values) {
     if (!v.attribute.isActive) continue;
+    if (ADVANTAGE_SECTION_KEYS.has(v.attribute.section?.key ?? '') && (v.attribute.type === 'BOOLEAN' || v.attribute.type === 'YESNO') && v.bool !== true) continue;
     const label = L(v.attribute.labelAr, v.attribute.labelEn);
     const isGeo = v.attribute.type === 'DISTRICT' || v.attribute.type === 'NEIGHBORHOOD';
     const geo = isGeo && v.text ? geoName.get(v.text) : null;
