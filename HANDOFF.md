@@ -1,11 +1,11 @@
 # Project Handoff — NOC platform (newobour.com + alsawarey.com)
 
-_Last updated: 2026-07-22 (after the admin-English sweep) · Written so a new Claude session (on any account, same device) can continue this project._
+_Last updated: 2026-07-23 (after the staff admin-view feature) · Written so a new Claude session (on any account, same device) can continue this project._
 
 > **Read `CLAUDE.md` first — it is the master onboarding doc** (architecture, the production
 > deploy runbook with every gotcha, the server map, feature map, architecture rules, and the
-> owner-blocked list; last full update 2026-07-22 — same day as this file). This HANDOFF only
-> covers **session-transition facts**: what state you're inheriting and what lives on this
+> owner-blocked list; pins added 2026-07-23 on top of the 2026-07-22 full update). This HANDOFF
+> only covers **session-transition facts**: what state you're inheriting and what lives on this
 > device but outside the repo.
 
 ## What this project is
@@ -19,23 +19,24 @@ Users are low-literacy/low-tech on phones — the design rule is *biggest, simpl
 ## Current status — NOTHING is mid-flight
 
 **Live, healthy, fully deployed, clean tree.** Local `main` and production are in sync at
-**`e6184ed`** — verified on both sides at handoff time, not assumed (last CODE commit is
-`8bbc722`; `e6184ed` is docs-only on top). **This hash is a landmark, not a guarantee — always
+**`253a416`** — verified on both sides at handoff time, not assumed (last CODE commit is
+`38f8259`; `253a416` is docs-only on top). **This hash is a landmark, not a guarantee — always
 re-verify with `git log --oneline -1` locally AND on `ssh noc`.** Every feature requested to date
 is shipped, deployed and live-verified; there is **no half-finished work**.
 
-Verified at handoff (2026-07-22, after the admin-English sweep):
-- both pm2 apps `online`; `git status` clean locally; build 3/3; `npx vitest run` 35/35
-- five live URLs 200 (both homepages, `/admin/login`, `/market`, `/listings`)
-- no new errors in `noc-portal-error.log` since the deploy (the three older entries are from
-  07-20 and 07-22 02:27 and predate it)
-- disk 31% · all 7 `noc-*` crons present · local nightly backup current (07-22 03:30, 677 MB)
-- tiered off-site backup healthy — hourly runs `SUCCESS` every hour through 07-22 10:00
+Verified at handoff (2026-07-23, after the staff admin-view feature):
+- both pm2 apps `online`; local build 3/3; `git status` clean apart from one UNTRACKED
+  `NAWABEGH.md` at the repo root (present since this session began — not mine, left in place)
+- all 5 public URLs 200 THROUGH Cloudflare (`Server: cloudflare`, `cf-cache-status: DYNAMIC`),
+  and the admin-view leak test re-run anonymously on BOTH fronts after every deploy — clean
+- crawl surface healthy: both sitemaps serve (newobour 96 URLs, alsawarey 23), robots allows
+  content while blocking `/admin` `/account` `/api`, Googlebot gets 200, both GSC verify metas
+  present (`ib3Mric…` / `1TGTv_6…` — never delete these)
 
-⚠️ The server working tree carries a modified `package-lock.json` again (npm install dirties it)
-plus three untracked `*-backup-*.json` files left in `/root/noc` from 2026-07-05. Untracked files
-are harmless, but **the lock file will abort the next `git pull --ff-only`** — the runbook's
-`git checkout -- package-lock.json` first step is not optional.
+⚠️ The server working tree may carry a modified `package-lock.json` (npm install dirties it) plus
+three untracked `*-backup-*.json` files from 2026-07-05. Untracked files are harmless, but **the
+lock file will abort the next `git pull --ff-only`** — the runbook's `git checkout --
+package-lock.json` first step is not optional.
 
 **Seven things changed the shape of the system on 2026-07-22 — read `CLAUDE.md` → "Current state
 & pending" for the detail, but do not miss these:**
@@ -95,7 +96,44 @@ deliberately forced the condition: the listing-form auto-save FAILURE panel (nee
 actually fail), the partner account page's OTP-verified email/phone change, and sold → hide → show
 restoring SOLD (covered by 10 vitest cases, never in a UI).
 
-## Done LAST (2026-07-22, final block): admin English coverage — all 93 files
+## Done LAST (2026-07-23): staff "admin view" on the PUBLIC fronts + card/layout polish
+
+Commits `9f24b2b` → `253a416`, all deployed and live-verified (owner clicked through each step and
+confirmed). The owner wanted staff, while browsing EITHER public site, to see internal listing
+details a visitor never can — including the **floor / walk-away price «أقل سعر» (`lowestPrice`)**.
+
+What a next session needs to know:
+
+1. **The feature.** Signed-in staff see one amber 🔒 card on listing **cards AND detail pages** of
+   BOTH sites: owner name, phones, «أضيف بواسطة», owner notes, official papers, and the floor
+   price. A visitor must NEVER receive any of it — I re-ran an anonymous leak test on both fronts
+   after every deploy; **re-run it if you touch this.**
+2. **Shared vs per-app, on purpose.** WHAT is exposed lives once in
+   **`@noc/partner-portal/admin-details`** so the two fronts can't drift. Only the viewer check is
+   per-app, because the auth differs: Al Sawarey is a separate domain needing the signed `sw_admin`
+   cookie (`apps/brokerage/lib/adminView.ts`, pre-existing); New Obour's admin + public share one
+   origin + NextAuth session, so it reads the session directly (NEW `apps/portal/lib/adminView.ts`).
+   **Both re-read the LIVE `User` row (STAFF + isActive + `owners:VIEW`) every request** — never the
+   JWT `perms` — so revocation is immediate. Render only via `AdminInfoStrip` (@noc/ui).
+3. **Three owner layout decisions (all pinned in CLAUDE.md — extend, don't undo):**
+   - **ONE CARD:** everything admin-only lives in that single card and nowhere else on a detail
+     page. The «تعديل (إدارة)» link and «الأوراق الرسمية» papers block were merged in. Papers thus
+     inherit the card's gate — they PREVIOUSLY rendered on a bare `session.user.type === 'STAFF'`
+     check with no permission test and no live re-read, so this also closed a real revocation gap.
+   - **COMPACT:** the card is ONE wrapping row of xs chips; papers are chips (`🗂️ تحصيص ✓ 📎`
+     links to the scan) not 112px thumbnails. Don't re-expand into a `<dl>` or bring the previews
+     back — that height is exactly what the owner asked to remove.
+   - **Advantages at the bottom:** «مميزات المنطقة» (`AreaAdvantages`) is now the LAST content
+     block on `/market/[id]` (below similar-listings + CTAs, `mb-24`, skipped when empty).
+4. **⚠️ `lowestPrice` is now rendered on publicly-ROUTED pages (staff-gated).** Its schema comment
+   still says "NEVER rendered publicly" — that meant "never to a visitor", which still holds. Don't
+   let that comment trick you into ripping the feature out.
+5. **Note for later (not acted on):** the next-intl message catalog ships admin *label* names
+   (e.g. `"lowestPrice":"أقل سعر (للإدارة فقط)"`) into the public JS bundle. It leaks no data —
+   only that such fields exist — but trimming admin-only messages from the public bundle was
+   offered and the owner hasn't asked for it.
+
+## Done earlier (2026-07-22, final block): admin English coverage — all 93 files
 
 Commits `f0f92aa` → `8bbc722` (+ docs `e6184ed`), deployed and live-verified. The owner reversed
 that morning's "deferred" decision and asked for the whole sweep, with one binding constraint:
@@ -218,12 +256,16 @@ Everything below waits on the owner or on the clock. Ordered by what unblocks so
 1. **⏳ Cloudflare B3 — the only timed item.** `ops/cloudflare-lockdown.sh on` restricts the origin
    to Cloudflare's ranges. It is **OFF**; it was enabled on 2026-07-22 and rolled back because the
    owner's browser still had the pre-flip A record cached and hit the origin directly (hard nginx
-   403 on alsawarey). **Wait ~24–48h past the DNS TTL from the 07-22 flip**, then — before enabling
-   — confirm in a NORMAL browser that both names resolve to Cloudflare. **Never validate with
-   `curl --resolve`**: it forces traffic through Cloudflare and hides exactly this failure. After
-   enabling, rollback becomes two ordered steps: `lockdown off` FIRST, then grey-cloud.
-2. **⏳ GSC page-indexing coverage** — both properties still said "Processing data" on 07-22
-   (they are only ~6 days old). Re-check in a few days. Sitemaps are already `Success` on both.
+   403 on alsawarey). It is now ~1 day past the 07-22 flip — **wait until ~24–48h past the DNS TTL
+   (≈ 07-24)**, then, before enabling, confirm in a NORMAL browser that both names resolve to
+   Cloudflare. **Never validate with `curl --resolve`**: it forces traffic through Cloudflare and
+   hides exactly this failure. After enabling, rollback is two ordered steps: `lockdown off` FIRST,
+   then grey-cloud.
+2. **⏳ GSC page-indexing coverage — the OWNER is checking this themselves.** On 2026-07-23 they
+   asked for the check, then said they'd do it in GSC directly (agent can't — no Google session).
+   Our side is verified healthy (see "Current status": sitemaps 96/23, robots, Googlebot 200, both
+   verify metas present). Coverage still likely reads "Processing data" until ~07-24/25 (properties
+   are only ~7 days old). Nothing for a next session to do here unless the owner reports a problem.
 3. **Click-test the admin in English** (owner, ~10 min) — the 2026-07-22 sweep translated all 93
    admin files, but **only `/admin/login` was ever seen rendered**; the other 92 are typechecked,
    built, deployed and HTTP-probed, never clicked. A pass through the admin with the language set
@@ -304,9 +346,12 @@ Still inside the repo: `Identity/` (tracked brand assets — real logos: ALSWARY
    `partner-portal/listingSave.ts`), plus the admin guards in `upsertAttribute`/`setSectionRequired`.
    Change one → change all. PHOTOS/DOCUMENTS must stay exempt (attachment-backed: requiring one
    soft-locks publishing) and boolean `false` counts as answered. Full rule in CLAUDE.md.
-5. **Mirrors kept identical by discipline only:** `apps/{portal,brokerage}/lib/search.ts`,
-   `apps/{portal,brokerage}/app/thumb/[...path]/route.ts`, and now
-   `apps/{portal,brokerage}/app/api/listings/alive/route.ts`. Change one → change both.
+5. **Mirrors kept identical by discipline only:** `apps/{portal,brokerage}/lib/search.ts` and
+   `apps/{portal,brokerage}/app/thumb/[...path]/route.ts` — change one → change both. **The two
+   `app/api/listings/alive/route.ts` are mirrored in SHAPE but deliberately NOT in predicate**
+   ("alive" is per-brand: New Obour = `deletedAt:null` + PUBLISHED; Al Sawarey = its full
+   `STOREFRONT_STATUS` incl. Type/Purpose + partner/`showOnBrokerage` gates). Same for the admin
+   view: the DATA is shared (`@noc/partner-portal/admin-details`), the VIEWER check is per-app.
 6. **Soft delete:** any new public listing read must respect `deletedAt: null` (use the central
    visibility helpers in `@noc/partner-portal`); the purge cleanup transaction is mirrored in the
    admin action + `ops/purge-deleted-listings.ts`.
@@ -331,7 +376,21 @@ Still inside the repo: `Identity/` (tracked brand assets — real logos: ALSWARY
 
 ## Key files — where the latest-session work lives
 
-**Admin English coverage (2026-07-22, the last block):**
+**Staff admin-view + card/layout polish (2026-07-23, the last block):**
+- `packages/partner-portal/src/adminDetails.ts` — NEW shared module: WHAT the admin view exposes
+  (owner + `lowestPrice`). Exported as `@noc/partner-portal/admin-details`; Al Sawarey re-exports it.
+- `apps/portal/lib/adminView.ts` — NEW session-based viewer check for New Obour (one origin).
+  `apps/brokerage/lib/adminView.ts` — the pre-existing `sw_admin`-cookie check, now re-exporting
+  the shared module instead of its own duplicated bodies.
+- `packages/ui/src/components/AdminInfoStrip.tsx` — NEW amber 🔒 strip (the only way to render it);
+  `ListingCard.tsx` gained an `adminInfo` slot; both exported from `packages/ui/src/index.ts`.
+- `apps/portal/app/market/[id]/page.tsx` + `apps/brokerage/app/listings/[id]/page.tsx` — the single
+  compact admin card (owner + floor + papers + edit link) and the advantages-at-bottom move.
+- `apps/portal/app/market/page.tsx` + `apps/brokerage/app/_components/StoreLandCard.tsx` — the
+  per-card compact strip on the grids.
+- `apps/portal/app/_components/AdminEditButton.tsx` — gained an optional `compact` prop (default off).
+
+**Admin English coverage (2026-07-22, an earlier block):**
 - Spread across all 93 files under `apps/portal/app/admin/` — no new module, no message files.
   The convention is the inline `L('ar','en')` helper plus `useLocale()` / `await getLocale()`.
 - `apps/portal/app/admin/(protected)/marketplace/offers/[id]/page.tsx` — the one structural change:
